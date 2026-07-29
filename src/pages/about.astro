@@ -1,0 +1,118 @@
+---
+// src/pages/about.astro
+import Layout from '../layouts/Layout.astro';
+import { SITE } from '../data/site';
+
+const title = `درباره ما | تاریخچه و رسالت مهندسی ${SITE.name}`;
+const description = 'آشنایی با کرین یدک، تخصصی‌ترین مرجع تامین قطعات جرثقیل سقفی در ایران. رسالت ما به حداقل رساندن زمان توقف (Down-time) صنایع با تامین بی‌واسطه قطعات اورجینال است.';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${SITE.url}/about#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: SITE.url },
+        { '@type': 'ListItem', position: 2, name: 'درباره ما', item: `${SITE.url}/about` },
+      ],
+    },
+    {
+      '@type': 'AboutPage',
+      '@id': `${SITE.url}/about#webpage`,
+      url: `${SITE.url}/about`,
+      name: title,
+      description: description,
+      isPartOf: { '@id': `${SITE.url}/#website` },
+      mainEntity: { '@id': `${SITE.url}/#organization` }
+    }
+  ]
+};
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd}>
+  {/* HERO Section - Clean & Solid */}
+  <section class="bg-crane-navy text-white pt-16 pb-24 px-4 border-b-[8px] border-crane-orange relative overflow-hidden">
+    <div class="absolute inset-0 z-0 opacity-[0.05]" style="background-image: radial-gradient(#fff 2px, transparent 2px); background-size: 40px 40px;" aria-hidden="true"></div>
+    <div class="max-w-4xl mx-auto relative z-10 text-center">
+      <nav class="text-sm text-gray-400 mb-8 flex items-center justify-center gap-2" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2">صفحه اصلی</a>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <span class="text-white font-bold" aria-current="page">درباره ما</span>
+      </nav>
+
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-8 tracking-tight drop-shadow-md leading-tight">
+        بازوی مهندسی شما در تامین <br/> <span class="text-crane-orange">قطعات جرثقیل سقفی</span>
+      </h1>
+      <p class="text-xl text-gray-300 leading-9 font-light">
+        کرین یدک یک فروشگاه ساده نیست؛ ما یک شبکه‌ی تخصصی تامین قطعات صنعتی هستیم تا خطوط تولید شما هرگز متوقف نشوند.
+      </p>
+    </div>
+  </section>
+
+  {/* Value Proposition Grid (Fixes the overlapping UI bug permanently) */}
+  <section class="py-16 px-4 bg-gray-50 border-b border-gray-200" aria-label="مزیت‌های رقابتی کرین یدک">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center transform transition-transform hover:-translate-y-1">
+        <span class="w-16 h-16 bg-orange-50 text-crane-orange rounded-2xl flex items-center justify-center mb-6">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+        </span>
+        <h3 class="text-xl font-bold text-crane-navy mb-3">تضمین حقوقی اصالت</h3>
+        <p class="text-sm text-gray-600 leading-7">ارائه‌ی سرتیفیکیت معتبر برای تمام قطعات حساس نظیر موتور گیربکس و دیسک ترمز.</p>
+      </div>
+      
+      <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center transform transition-transform hover:-translate-y-1">
+        <span class="w-16 h-16 bg-blue-50 text-crane-navy rounded-2xl flex items-center justify-center mb-6">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        </span>
+        <h3 class="text-xl font-bold text-crane-navy mb-3">تخصص متمرکز صنعتی</h3>
+        <p class="text-sm text-gray-600 leading-7">ما "همه‌چیزفروش" نیستیم؛ ما منحصراً در تجهیزات بالابر و وینچ‌های سنگین تخصص داریم.</p>
+      </div>
+
+      <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center transform transition-transform hover:-translate-y-1">
+        <span class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-6">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        </span>
+        <h3 class="text-xl font-bold text-crane-navy mb-3">اقلام توقف تولید (Obsolete)</h3>
+        <p class="text-sm text-gray-600 leading-7">تامین قطعات نایاب و ماشین‌کاری تخصصی قطعات فرسوده با آلیاژ و استانداردهای اصلی.</p>
+      </div>
+    </div>
+  </section>
+
+  {/* Main Story (Semantic SEO Hub) */}
+  <section class="py-20 px-4">
+    <article class="max-w-4xl mx-auto space-y-12 text-gray-700 leading-10 text-justify text-lg font-medium">
+      
+      <div>
+        <h2 class="text-3xl font-black text-crane-navy border-r-4 border-crane-orange pr-4 mb-6">داستان شکل‌گیری کرین یدک</h2>
+        <p class="mb-6">
+          در سال‌هایی که صنایع بزرگ کشور (از جمله کارخانجات فولاد، پتروشیمی‌ها و معادن) برای تامین قطعات یدکی بالابرهای خود با واسطه‌ها و چرخه‌ی قطعات تقلبی دست‌وپنجه نرم می‌کردند، جای خالی یک <strong>مرجع تخصصی، شفاف و مهندسی</strong> به شدت احساس می‌شد. قطعات فیک نه تنها عمر کوتاهی داشتند، بلکه در زمان عملیات باربرداری باعث آسیب‌های ثانویه به سیستم‌های گران‌قیمت موتور گیربکس می‌شدند.
+        </p>
+        <p>
+          با درک این دردِ عمیق در تجهیزات حساس صنعتی، هسته‌ی اولیه <strong>{SITE.legalName}</strong> با حضور جمعی از مهندسین مکانیک و برق شکل گرفت. هدف ما از روز اول روشن بود: ایجاد یک شبکه‌ی تامین بی‌واسطه برای واردات و ارائه‌ی قطعاتِ اورجینالِ برندهای تراز اول جهان مانند <a href="/brands/demag" class="text-crane-orange font-bold hover:underline">دماگ (Demag)</a>، <a href="/brands/stahl" class="text-crane-orange font-bold hover:underline">اشتال (Stahl)</a> و <a href="/brands/konecranes" class="text-crane-orange font-bold hover:underline">کونه‌کرین (Konecranes)</a>.
+        </p>
+      </div>
+
+      <div>
+        <h2 class="text-3xl font-black text-crane-navy border-r-4 border-crane-orange pr-4 mb-6">رسالت ما؛ عبور از بحرانِ Down-time</h2>
+        <p class="mb-6">
+          توقف خط تولید به دلیل خرابی یک جرثقیل سقفی، هزینه‌های نجومی برای کارخانجات به همراه دارد. ماموریت ما رساندن پارامتر <strong>Down-time (زمان توقف دستگاه)</strong> به نزدیک صفر است. ما این رسالت را از طریق ۳ استراتژی کلیدی پیش می‌بریم:
+        </p>
+        <ul class="list-disc list-inside space-y-4 pr-4">
+          <li><strong>مشاوره رایگان پیش از خرید:</strong> بررسی دقیق سازگاری قطعات با ارسال نقشه و تصویر پلاک دستگاه.</li>
+          <li><strong>تطبیق کدهای فنی (Part Numbers):</strong> جلوگیری از خطای خرید با استفاده از کاتالوگ‌ها و نقشه‌های انفجاری مرجع.</li>
+          <li><strong>ارسال فوری قطعات استراتژیک:</strong> دپوی اقلام پرمصرف نظیر <a href="/categories/conductor-bar" class="text-crane-orange font-bold hover:underline">شین‌های برق‌رسان</a>، <a href="/categories/crane-wheels" class="text-crane-orange font-bold hover:underline">چرخ‌های راهبر</a> و <a href="/categories/remote-control" class="text-crane-orange font-bold hover:underline">ریموت کنترل‌های صنعتی</a> در انبارهای مرکزی و ارسال سریع به واحدهای اورهال.</li>
+        </ul>
+      </div>
+
+      <div class="bg-crane-navy text-white rounded-3xl p-10 mt-12 text-center shadow-xl">
+        <h3 class="text-2xl font-black mb-4">آماده‌ی همکاری با واحد نت شما هستیم</h3>
+        <p class="text-gray-300 leading-8 mb-8">جهت استعلام قیمت، دریافت پیش‌فاکتور رسمی و مشاوره اورهال، همین حالا با ما تماس بگیرید.</p>
+        <a href="/contact" class="inline-block bg-crane-orange text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-orange-600 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/50">
+          ارتباط با کارشناسان فنی
+        </a>
+      </div>
+
+    </article>
+  </section>
+</Layout>

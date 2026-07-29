@@ -1,0 +1,79 @@
+---
+// src/pages/blog/index.astro
+import Layout from '../../layouts/Layout.astro';
+import { SITE } from '../../data/site';
+
+const title = `مجله تخصصی و مقالات آموزشی جرثقیل سقفی | ${SITE.name}`;
+const description = 'مقالات تخصصی، آموزش‌های اورهال، راهنمای انتخاب قطعات و اخبار صنعت بالابر. مرجع علمی مهندسین نت برای تعمیر و نگهداری جرثقیل.';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${SITE.url}/blog#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: SITE.url },
+        { '@type': 'ListItem', position: 2, name: 'مجله تخصصی', item: `${SITE.url}/blog` },
+      ],
+    },
+    {
+      '@type': 'Blog',
+      '@id': `${SITE.url}/blog#webpage`,
+      url: `${SITE.url}/blog`,
+      name: title,
+      description: description,
+      isPartOf: { '@id': `${SITE.url}/#website` }
+    }
+  ]
+};
+
+// Mock Posts (To be replaced with WP Headless API later)
+const posts = [
+  { title: 'راهنمای کالیبراسیون لنت ترمز موتورهای دماگ', excerpt: 'چگونه لنت ترمز موتور گیربکس دماگ را تنظیم کنیم تا از سقوط بار جلوگیری شود؟ بررسی گام‌به‌گام پارامترهای مکانیکی.', date: '۱۵ آبان ۱۴۰۳', category: 'آموزش فنی' },
+  { title: 'تفاوت شین‌های برق‌رسان باز و بسته', excerpt: 'بررسی مزایا و معایب شین‌های آلومینیومی و مسی در محیط‌های مرطوب و پرگردوغبار. کدام سیستم برای سوله شما مناسب‌تر است؟', date: '۰۲ آبان ۱۴۰۳', category: 'راهنمای خرید' },
+  { title: 'نشانه‌های فرسودگی سیم‌بکسل و روپ‌گاید', excerpt: 'پارگی سیم‌بکسل یکی از مرگبارترین حوادث جرثقیل است. با این ۵ نشانه، زمان دقیق تعویض کمربند و سیم‌بکسل را تشخیص دهید.', date: '۲۸ مهر ۱۴۰۳', category: 'ایمنی و نت' },
+];
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd}>
+  <section class="bg-crane-navy text-white pt-12 pb-20 px-4 border-b-[8px] border-crane-orange relative">
+    <div class="max-w-7xl mx-auto relative z-10">
+      <nav class="text-sm text-gray-400 mb-8 flex items-center gap-2" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -ml-2">صفحه اصلی</a>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <span class="text-white font-bold" aria-current="page">مجله تخصصی</span>
+      </nav>
+      <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight">دانشنامه تخصصی تجهیزات بالابر</h1>
+      <p class="text-lg text-gray-300 max-w-2xl leading-8 font-light">مقالات مهندسی، آموزش‌های گام‌به‌گام تعمیرات و راهنمای انتخاب اصولی قطعات برای بهینه‌سازی واحدهای نت.</p>
+    </div>
+  </section>
+
+  <section class="py-20 px-4 md:px-8 bg-gray-50 min-h-[60vh]">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {posts.map((post) => (
+          <article class="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col group">
+            <div class="aspect-video bg-crane-light relative flex items-center justify-center overflow-hidden">
+              <svg class="w-16 h-16 text-gray-300 group-hover:scale-110 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+              </svg>
+              <span class="absolute top-4 right-4 bg-crane-orange text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">{post.category}</span>
+            </div>
+            <div class="p-6 md:p-8 flex flex-col flex-grow">
+              <time class="text-xs font-bold text-gray-400 mb-3 block">{post.date}</time>
+              <h2 class="font-black text-crane-navy text-xl mb-4 leading-8">
+                <a href="#" class="hover:text-crane-orange before:absolute before:inset-0 focus:outline-none focus:ring-4 focus:ring-crane-orange/30 rounded">{post.title}</a>
+              </h2>
+              <p class="text-sm text-gray-600 leading-7 line-clamp-3 mb-6">{post.excerpt}</p>
+              <div class="mt-auto pt-4 border-t border-gray-100 flex items-center text-crane-orange font-bold text-sm">
+                <span>مطالعه مقاله</span>
+                <svg class="w-4 h-4 mr-2 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------
+   فونت ایران‌سنس ایکس (IRANSans X) — سلف‌هاست
+   فونت رسمی و سازمانی با بالاترین پرفورمنس برای B2B
+   نسخه‌ی Variable = یک فایل برای تمام وزن‌ها جهت جلوگیری از افت LCP
+--------------------------------------------------------- */
+@font-face {
+  font-family: "IRANSansX";
+  src: url("/fonts/IRANSansXVariable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  /* بازه کاراکترهای فارسی و لاتین پایه برای رندر بهینه */
+  unicode-range: U+0600-06FF, U+0750-077F, U+200C-200E, U+2010-2011,
+    U+FB50-FDFF, U+FE70-FEFF, U+0000-00FF, U+2000-206F, U+20AC, U+2212;
+}
+
+@theme {
+  /* پالت رنگی اختصاصی و لوکس کرین یدک */
+  --color-crane-navy: #0A192F;
+  --color-crane-orange: #F97316;
+  --color-crane-light: #F8FAFC;
+  --color-crane-white: #FFFFFF;
+
+  /* تنظیم فونت جدید به‌عنوان پیش‌فرض سایت */
+  --font-sans: "IRANSansX", "Segoe UI", Tahoma, sans-serif;
+}
+
+/* ---------------------------------------------------------
+   پایه
+--------------------------------------------------------- */
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-crane-orange);
+    outline-offset: 2px;
+  }
+
+  input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

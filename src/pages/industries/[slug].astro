@@ -1,0 +1,82 @@
+---
+// src/pages/industries/[slug].astro
+import Layout from '../../layouts/Layout.astro';
+import { SITE } from '../../data/site';
+import { INDUSTRIES } from '../../data/content';
+
+export function getStaticPaths() {
+  return INDUSTRIES.map((ind) => {
+    return {
+      params: { slug: ind.slug },
+      props: { industry: ind },
+    };
+  });
+}
+
+const { industry } = Astro.props;
+const title = `تامین قطعات جرثقیل ویژه ${industry.name} | ${SITE.name}`;
+const description = `خرید و استعلام لوازم یدکی و ${industry.keyword}. تضمین عملکرد قطعات بالابر در شرایط سخت‌کار (Heavy-Duty) ویژه ${industry.name}.`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${SITE.url}/industries/${industry.slug}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: SITE.url },
+        { '@type': 'ListItem', position: 2, name: 'صنایع تحت پوشش', item: `${SITE.url}/industries` },
+        { '@type': 'ListItem', position: 3, name: industry.name, item: `${SITE.url}/industries/${industry.slug}` },
+      ],
+    },
+    {
+      '@type': 'WebPage',
+      '@id': `${SITE.url}/industries/${industry.slug}#webpage`,
+      url: `${SITE.url}/industries/${industry.slug}`,
+      name: title,
+      description: description,
+      isPartOf: { '@id': `${SITE.url}/#website` }
+    }
+  ]
+};
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd}>
+  <section class={`${industry.bg} text-white pt-16 pb-24 px-4 border-b-[8px] border-crane-orange relative overflow-hidden`}>
+    <div class="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none" aria-hidden="true">
+      <svg class="w-96 h-96" fill="currentColor" viewBox="0 0 24 24"><path d={industry.icon}/></svg>
+    </div>
+    
+    <div class="max-w-7xl mx-auto relative z-10">
+      <nav class="text-sm text-gray-300 mb-8 flex items-center gap-2" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -ml-2">صفحه اصلی</a>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <a href="/industries" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -mx-2">صنایع تحت پوشش</a>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <span class="text-white font-bold" aria-current="page">{industry.name}</span>
+      </nav>
+
+      <div class="flex flex-col md:flex-row items-center gap-8">
+        <div class="w-24 h-24 bg-white/10 rounded-2xl flex items-center justify-center shrink-0 border border-white/20 backdrop-blur-sm" aria-hidden="true">
+          <svg class="w-12 h-12 text-crane-orange" fill="currentColor" viewBox="0 0 24 24"><path d={industry.icon}/></svg>
+        </div>
+        <div>
+          <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-gray-300 text-xs font-black tracking-widest mb-4 uppercase border border-white/20">HEAVY-DUTY CRANE PARTS</span>
+          <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">تجهیزات بالابر ویژه {industry.name}</h1>
+          <p class="text-lg text-gray-200 max-w-3xl leading-8 font-light">{industry.desc}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-20 px-4 md:px-8 bg-gray-50 min-h-[40vh]">
+    <div class="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-8 md:p-12 border border-gray-100 text-center">
+      <h2 class="text-2xl font-black text-crane-navy mb-6">استعلام اختصاصی {industry.keyword}</h2>
+      <p class="text-gray-600 leading-8 mb-10">تامین قطعات برای محیط‌های سخت‌کار نیازمند بررسی دقیق متریال و استانداردهای حفاظتی (IP و EX) است. کارشناسان ما آماده بررسی نقشه‌های فنی و ارائه پیش‌فاکتور دقیق به واحد خرید شما هستند.</p>
+      
+      <a href="/contact" class="inline-flex bg-crane-navy text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-gray-800 transition-all transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-crane-navy/30">
+        درخواست مشاوره مهندسی و استعلام قیمت
+      </a>
+    </div>
+  </section>
+</Layout>

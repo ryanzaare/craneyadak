@@ -1,0 +1,187 @@
+---
+// src/pages/datasheets/index.astro
+import Layout from '../../layouts/Layout.astro';
+import { SITE, ENRICHED_BRANDS } from '../../data/site';
+
+const title = `دانلود کاتالوگ و اسناد فنی قطعات جرثقیل | ${SITE.name}`;
+const description = 'مرجع دانلود PDF نقشه‌های انفجاری، وایرینگ، و هندبوک‌های تعمیر و نگهداری جرثقیل سقفی دماگ، اشتال، کونه‌کرین و سایر برندهای معتبر صنعتی.';
+
+// Mock Datasheets Database
+const datasheets = [
+  { title: 'هندبوک تعمیرات موتور گیربکس', brand: 'دماگ', brandEn: 'DEMAG', type: 'Maintenance Manual', size: '4.2 MB', ext: 'PDF', file: '#' },
+  { title: 'نقشه انفجاری وینچ سیم‌بکسلی', brand: 'اشتال', brandEn: 'STAHL', type: 'Exploded View', size: '2.8 MB', ext: 'PDF', file: '#' },
+  { title: 'کاتالوگ ریموت کنترل سری F21', brand: 'تله‌کرین', brandEn: 'TELECRANE', type: 'Product Catalog', size: '1.5 MB', ext: 'PDF', file: '#' },
+  { title: 'نقشه وایرینگ و تابلو برق', brand: 'کونه‌کرین', brandEn: 'KONECRANES', type: 'Wiring Diagram', size: '3.1 MB', ext: 'PDF', file: '#' },
+  { title: 'منوال نصب و راه‌اندازی شین', brand: 'آبوس', brandEn: 'ABUS', type: 'Installation Guide', size: '1.9 MB', ext: 'PDF', file: '#' },
+  { title: 'راهنمای کالیبراسیون لنت ترمز', brand: 'دماگ', brandEn: 'DEMAG', type: 'Technical Guide', size: '1.2 MB', ext: 'PDF', file: '#' },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${SITE.url}/datasheets#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: SITE.url },
+        { '@type': 'ListItem', position: 2, name: 'مرکز اسناد فنی', item: `${SITE.url}/datasheets` },
+      ],
+    },
+    {
+      '@type': ['CollectionPage', 'DataCatalog'],
+      '@id': `${SITE.url}/datasheets#webpage`,
+      url: `${SITE.url}/datasheets`,
+      name: title,
+      description: description,
+      isPartOf: { '@id': `${SITE.url}/#website` },
+      about: {
+        '@type': 'Thing',
+        name: 'Crane Technical Manuals',
+      }
+    }
+  ]
+};
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd}>
+  {/* -------------------- HERO -------------------- */}
+  <section class="bg-crane-navy text-white pt-12 pb-20 px-4 border-b-[8px] border-crane-orange relative overflow-hidden">
+    {/* Blueprint Decorative Background */}
+    <div class="absolute inset-0 z-0 opacity-10 pointer-events-none" aria-hidden="true">
+       <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path stroke="white" stroke-width="0.2" fill="none" d="M0 20 h100 M0 40 h100 M0 60 h100 M0 80 h100 M20 0 v100 M40 0 v100 M60 0 v100 M80 0 v100"></path>
+       </svg>
+    </div>
+
+    <div class="max-w-7xl mx-auto relative z-10">
+      <nav class="text-sm text-gray-400 mb-8 flex items-center gap-2" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -ml-2">صفحه اصلی</a>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <span class="text-white font-bold" aria-current="page">مرکز اسناد فنی</span>
+      </nav>
+
+      <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+        <span class="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center shrink-0 border border-white/20" aria-hidden="true">
+          <svg class="w-8 h-8 text-crane-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+        </span>
+        <div>
+          <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">آرشیو نقشه‌ها و کاتالوگ‌های فنی</h1>
+          <p class="text-lg text-gray-300 max-w-2xl leading-8 font-light">
+            دسترسی مستقیم مهندسین نت به PDF نقشه‌های انفجاری (Exploded Views)، وایرینگ برق، و منوال‌های نصب و نگهداری برندهای معتبر.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ----------------------------- FILTERS & LIST ----------------------------- */}
+  <section class="py-16 px-4 md:px-8 bg-gray-50 min-h-[60vh]">
+    <div class="max-w-7xl mx-auto">
+      
+      {/* Brand Filters (Silo Internal Linking) */}
+      <div class="mb-12 overflow-x-auto pb-4 hide-scrollbar">
+        <ul class="flex items-center gap-3 min-w-max" role="list" aria-label="فیلتر اسناد بر اساس برند">
+          <li>
+            <a href="#all" class="bg-crane-navy text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-gray-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-navy/30">همه برندها</a>
+          </li>
+          {ENRICHED_BRANDS.map((brand) => (
+            <li>
+              <a href={brand.slug} class="bg-white text-gray-600 border border-gray-200 px-6 py-2.5 rounded-full font-bold text-sm hover:border-crane-orange hover:text-crane-orange transition-colors shadow-sm flex items-center gap-2 focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
+                {brand.nameFa}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Datasheets Grid */}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {datasheets.map((doc) => (
+          <article class="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-shadow duration-300 p-6 flex flex-col relative group">
+            
+            {/* Header: Icon & Brand */}
+            <header class="flex justify-between items-start mb-6">
+               <span class="w-12 h-12 rounded-xl bg-red-50 text-red-500 flex items-center justify-center shrink-0" aria-hidden="true">
+                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"></path></svg>
+               </span>
+               <a href={`/brands/${doc.brandEn.toLowerCase()}`} class="bg-gray-50 text-gray-500 text-xs font-black tracking-widest uppercase px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-crane-light hover:text-crane-navy transition-colors focus:outline-none focus:ring-2 focus:ring-gray-200">
+                  {doc.brandEn}
+               </a>
+            </header>
+
+            {/* Content */}
+            <div class="flex-grow">
+               <p class="text-xs font-bold text-crane-orange mb-2">{doc.type}</p>
+               <h2 class="text-lg font-black text-crane-navy mb-4 leading-7 line-clamp-2">
+                 {doc.title}
+               </h2>
+               <div class="flex items-center gap-4 text-xs font-bold text-gray-400 mb-6">
+                 <span class="flex items-center gap-1.5" aria-label={`حجم فایل: ${doc.size}`}>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                    {doc.size}
+                 </span>
+                 <span class="flex items-center gap-1.5" aria-label={`فرمت فایل: ${doc.ext}`}>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    {doc.ext}
+                 </span>
+               </div>
+            </div>
+
+            {/* Actions: Download + RFQ */}
+            <footer class="border-t border-gray-100 pt-5 flex items-center justify-between gap-3 mt-auto">
+               {/* 10/10 SEO Download Link: type attr + aria-label + target blank */}
+               <a 
+                 href={doc.file} 
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 type="application/pdf"
+                 aria-label={`دانلود ${doc.title} با حجم ${doc.size}`}
+                 class="flex-1 bg-red-50 text-red-600 text-center py-3 rounded-xl font-bold text-sm hover:bg-red-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-red-500/30"
+               >
+                 دانلود PDF
+               </a>
+               
+               {/* The Conversion Loop Trigger */}
+               <a 
+                 href={`/contact?brand=${doc.brandEn}`} 
+                 aria-label={`ثبت استعلام برای قطعات ${doc.brand}`}
+                 class="flex-1 bg-crane-navy text-white text-center py-3 rounded-xl font-bold text-sm hover:bg-gray-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-navy/30"
+               >
+                 استعلام قطعه
+               </a>
+            </footer>
+
+          </article>
+        ))}
+      </div>
+
+    </div>
+  </section>
+
+  {/* ----------------------------- SEO Content ----------------------------- */}
+  <section class="bg-white py-16 px-4 border-t border-gray-100">
+    <div class="max-w-4xl mx-auto text-gray-600 text-justify leading-8">
+      <h2 class="text-2xl font-bold text-crane-navy mb-6">اهمیت استفاده از نقشه‌های فنی وایرینگ و انفجاری</h2>
+      <p class="mb-4">
+        یکی از چالش‌های اصلی واحدهای نگهداری و تعمیرات (نت) در کارخانجات، شناسایی دقیق قطعات معیوب سیستم‌های بالابر است. استفاده از قطعات ناسازگار می‌تواند به توقف طولانی‌مدت خطوط تولید و خسارات جبران‌ناپذیر منجر شود. به همین دلیل، دسترسی به <strong>نقشه‌های انفجاری (Exploded Views)</strong> و <strong>کاتالوگ‌های رسمی سازنده</strong> امری حیاتی است.
+      </p>
+      <p>
+        در این پایگاه داده، تیم مهندسی کرین یدک مستندات فنی و هندبوک‌های نگهداریِ برندهای برتر نظیر دماگ، اشتال و کونه‌کرین را گردآوری کرده است. شما پس از یافتن <strong>Part Number</strong> قطعه‌ی معیوب در این اسناد، می‌توانید آن را به صورت مستقیم از طریق فرم <a href="/contact" class="text-crane-orange font-bold hover:underline">استعلام قیمت</a> سفارش دهید.
+      </p>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  /* مخفی کردن اسکرول‌بار برای فیلترهای افقی در موبایل */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+</style>

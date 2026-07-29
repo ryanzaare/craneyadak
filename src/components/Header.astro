@@ -1,0 +1,132 @@
+---
+// src/components/Header.astro
+import { CATEGORIES, SITE } from '../data/site';
+import Logo from './Logo.astro';
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isActive = (href: string) => path === href.replace(/\/$/, '');
+
+const navLinks = [
+  { href: '/brands', label: 'برندها' },
+  { href: '/about', label: 'درباره ما' },
+  { href: '/contact', label: 'تماس با ما' },
+];
+---
+
+<header class="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-lg border-b border-gray-100 py-3 shadow-sm transition-all" role="banner">
+  <div class="w-full max-w-7xl mx-auto flex justify-between items-center px-4 md:px-8">
+    
+    <!-- Brand / Logo -->
+    <a href="/" class="flex items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label={`صفحه اصلی ${SITE.name}`}>
+      <span class="flex flex-col items-end leading-tight">
+        <span class="text-2xl md:text-3xl font-black text-crane-navy tracking-tight">{SITE.name}</span>
+        <span class="text-[10px] md:text-xs font-bold text-gray-500">{SITE.tagline}</span>
+      </span>
+      <Logo class="w-14 h-14 md:w-16 md:h-16 text-crane-navy shrink-0" aria-hidden="true" />
+    </a>
+
+    <!-- Desktop Navigation -->
+    <nav class="hidden md:block" aria-label="منوی اصلی">
+      <ul class="flex items-center gap-8 text-sm font-medium">
+        <li>
+          <a href="/" class:list={['transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-crane-orange rounded', isActive('/') ? 'text-crane-orange font-bold' : 'text-gray-700 hover:text-crane-navy']} aria-current={isActive('/') ? 'page' : undefined}>صفحه اصلی</a>
+        </li>
+        <li class="relative group">
+          <a href="/categories" aria-haspopup="true" class="flex items-center gap-1 text-gray-700 hover:text-crane-navy transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-crane-orange rounded">
+            دسته‌بندی‌ها
+            <svg class="w-4 h-4 text-gray-400 group-hover:text-crane-navy transition-transform group-hover:rotate-180" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </a>
+          <ul class="absolute top-full right-0 mt-2 w-60 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible focus-within:opacity-100 focus-within:visible transition-all flex flex-col py-2 z-50">
+            {CATEGORIES.map((cat) => (
+              <li>
+                <a href={cat.slug} class="block px-4 py-2 hover:bg-orange-50 hover:text-crane-orange text-sm transition-colors focus:bg-orange-50 focus:text-crane-orange outline-none">
+                  {cat.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </li>
+        {navLinks.map((link) => (
+          <li>
+            <a href={link.href} class:list={['transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-crane-orange rounded', isActive(link.href) ? 'text-crane-orange font-bold' : 'text-gray-700 hover:text-crane-navy']} aria-current={isActive(link.href) ? 'page' : undefined}>{link.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <!-- Mobile Menu Button -->
+    <button id="mobile-menu-btn" type="button" class="md:hidden text-crane-navy rounded-md p-2 z-50 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobile-menu">
+      <svg class="w-8 h-8" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path id="hamburger-icon-path" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile Menu Dropdown -->
+  <div id="mobile-menu" class="hidden md:hidden absolute top-full left-0 w-full bg-white border-b border-gray-100 shadow-lg z-40 max-h-[80vh] overflow-y-auto">
+    <nav aria-label="منوی موبایل">
+      <ul class="flex flex-col py-4 px-6 gap-4 text-base font-medium">
+        <li>
+          <a href="/" class:list={['block py-2', isActive('/') ? 'text-crane-orange font-bold' : 'text-gray-700']} aria-current={isActive('/') ? 'page' : undefined}>صفحه اصلی</a>
+        </li>
+        <li>
+          <a href="/categories" class="text-crane-navy font-bold mb-2 block py-2">دسته‌بندی‌ها</a>
+          <ul class="flex flex-col pr-4 gap-3 border-r-2 border-orange-100">
+            {CATEGORIES.map((cat) => (
+              <li><a href={cat.slug} class="text-gray-600 hover:text-crane-orange block text-sm py-1">{cat.name}</a></li>
+            ))}
+          </ul>
+        </li>
+        {navLinks.map((link) => (
+          <li>
+            <a href={link.href} class:list={['block py-2 hover:text-crane-orange', isActive(link.href) ? 'text-crane-orange font-bold' : 'text-gray-700']} aria-current={isActive(link.href) ? 'page' : undefined}>{link.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const btn = document.getElementById('mobile-menu-btn');
+  const menu = document.getElementById('mobile-menu');
+  const iconPath = document.getElementById('hamburger-icon-path');
+
+  const HAMBURGER = 'M4 6h16M4 12h16M4 18h16';
+  const CLOSE = 'M6 18L18 6M6 6l12 12';
+
+  if (btn && menu && iconPath) {
+    const setOpen = (open: boolean) => {
+      btn.setAttribute('aria-expanded', String(open));
+      btn.setAttribute('aria-label', open ? 'بستن منو' : 'باز کردن منو');
+      menu.classList.toggle('hidden', !open);
+      iconPath.setAttribute('d', open ? CLOSE : HAMBURGER);
+    };
+
+    const isOpen = () => btn.getAttribute('aria-expanded') === 'true';
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setOpen(!isOpen());
+    });
+
+    document.addEventListener('click', (e) => {
+      const target = e.target as Node;
+      if (isOpen() && !menu.contains(target) && !btn.contains(target)) {
+        setOpen(false);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isOpen()) {
+        setOpen(false);
+        btn.focus();
+      }
+    });
+
+    const mq = window.matchMedia('(min-width: 768px)');
+    mq.addEventListener('change', (e) => {
+      if (e.matches && isOpen()) setOpen(false);
+    });
+  }
+</script>

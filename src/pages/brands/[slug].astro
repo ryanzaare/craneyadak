@@ -1,0 +1,156 @@
+---
+// src/pages/brands/[slug].astro
+import Layout from '../../layouts/Layout.astro';
+import { ENRICHED_BRANDS, SITE } from '../../data/site';
+
+export function getStaticPaths() {
+  return ENRICHED_BRANDS.map((brand) => {
+    const slugPath = brand.slug.replace('/brands/', '');
+    return {
+      params: { slug: slugPath },
+      props: { brand: brand },
+    };
+  });
+}
+
+const { brand } = Astro.props;
+const title = `نمایندگی فروش و تامین قطعات ${brand.nameFa} (${brand.nameEn}) | ${SITE.name}`;
+const description = `تامین بی‌واسطه و فروش ${brand.seoDesc}. خرید لوازم یدکی و قطعات اورجینال ${brand.nameFa} با تضمین اصالت کالا و صدور فاکتور رسمی.`;
+
+// Mock Products for the brand (to be replaced with WP dynamic data later)
+const mockProducts = [
+  { name: `موتور گیربکس اصلی ${brand.nameFa}`, sku: `${brand.nameEn.substring(0,3)}-M1`, price: 'تماس بگیرید' },
+  { name: `ست کامل چرخ ${brand.nameFa}`, sku: `${brand.nameEn.substring(0,3)}-W4`, price: 'تماس بگیرید' },
+  { name: `قطعات برقی و شین ${brand.nameFa}`, sku: `${brand.nameEn.substring(0,3)}-E9`, price: 'استعلام' },
+  { name: `لوازم یدکی فرسایشی ${brand.nameFa}`, sku: `${brand.nameEn.substring(0,3)}-P2`, price: 'تماس بگیرید' },
+];
+
+// Complex Entity SEO Integration
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${SITE.url}${brand.slug}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: SITE.url },
+        { '@type': 'ListItem', position: 2, name: 'برندهای جهانی', item: `${SITE.url}/brands` },
+        { '@type': 'ListItem', position: 3, name: brand.nameFa, item: `${SITE.url}${brand.slug}` },
+      ],
+    },
+    {
+      '@type': 'Brand',
+      '@id': `${SITE.url}/#${brand.nameEn.toLowerCase()}`,
+      name: brand.nameEn,
+      alternateName: brand.nameFa,
+    },
+    {
+      '@type': 'CollectionPage',
+      '@id': `${SITE.url}${brand.slug}#webpage`,
+      url: `${SITE.url}${brand.slug}`,
+      name: title,
+      description: description,
+      about: { '@id': `${SITE.url}/#${brand.nameEn.toLowerCase()}` },
+      isPartOf: { '@id': `${SITE.url}/#website` },
+      mainEntity: {
+        '@type': 'ItemList',
+        itemListElement: mockProducts.map((prod, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          item: {
+            '@type': 'Product',
+            name: prod.name,
+            sku: prod.sku,
+            brand: { '@id': `${SITE.url}/#${brand.nameEn.toLowerCase()}` },
+            offers: { 
+              '@type': 'Offer', 
+              priceCurrency: 'IRR', 
+              price: '0', 
+              availability: 'https://schema.org/InStock', 
+              url: `${SITE.url}/contact?sku=${prod.sku}&brand=${brand.nameEn}` 
+            }
+          }
+        }))
+      }
+    }
+  ]
+};
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd}>
+  <section class="bg-crane-navy text-white pt-12 pb-20 px-4 border-b-[8px] border-crane-orange overflow-hidden relative">
+    {/* Background Watermark Logo */}
+    <div class="absolute -right-20 -top-20 opacity-5 pointer-events-none select-none">
+      <svg class="w-96 h-96 text-white" viewBox="0 0 200 60" fill="currentColor" aria-hidden="true">
+        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="60" font-weight="900" letter-spacing="2">{brand.logoText}</text>
+      </svg>
+    </div>
+
+    <div class="max-w-7xl mx-auto relative z-10">
+      <nav class="text-sm text-gray-400 mb-8 flex items-center gap-2" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -ml-2">صفحه اصلی</a>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <a href="/brands" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -mx-2">برندهای جهانی</a>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <span class="text-white font-bold" aria-current="page">{brand.nameFa}</span>
+      </nav>
+
+      <div class="flex flex-col md:flex-row items-center md:items-start gap-8">
+        <div class="w-32 h-32 md:w-40 md:h-40 bg-white rounded-3xl flex items-center justify-center shrink-0 border-4 border-white/20 shadow-2xl p-4">
+          <svg class={`w-full h-full ${brand.brandColor.replace('group-hover:', '')}`} viewBox="0 0 200 60" fill="currentColor" aria-hidden="true">
+            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="40" font-weight="900" letter-spacing="1">{brand.logoText}</text>
+          </svg>
+        </div>
+        <div class="text-center md:text-right mt-2">
+          <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-gray-300 text-xs font-black tracking-[0.2em] mb-3 uppercase border border-white/20">{brand.nameEn} GENUINE PARTS</span>
+          <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">تامین قطعات {brand.nameFa}</h1>
+          <p class="text-lg text-gray-300 max-w-2xl leading-8">مرجع تخصصی خرید قطعات اورجینال، {brand.seoDesc} با تضمین ۱۰۰ درصدی اصالت کالا و پشتیبانی فنی.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* Product Grid */}
+  <section class="py-16 px-4 md:px-8 bg-gray-50 min-h-[40vh]">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex justify-between items-end mb-10 border-b border-gray-200 pb-4">
+        <h2 class="text-2xl font-bold text-crane-navy">قطعات و لوازم یدکی {brand.nameFa}</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {mockProducts.map((product) => (
+          <article class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col group relative">
+            <div class="aspect-square bg-crane-light relative flex items-center justify-center p-6">
+              <svg class="w-full h-12 text-gray-300 group-hover:scale-110 transition-transform duration-300" viewBox="0 0 200 60" fill="currentColor" aria-hidden="true">
+                 <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="34" font-weight="900" letter-spacing="2">{brand.logoText}</text>
+              </svg>
+            </div>
+            <div class="p-5 flex flex-col flex-grow border-t border-gray-50">
+              <p class="text-xs text-gray-400 mb-1 font-mono">{product.sku}</p>
+              <h3 class="font-bold text-crane-navy text-lg mb-4 line-clamp-2 leading-7">
+                {/* 10/10 Interlinking to Contact Form with auto-fill parameters */}
+                <a href={`/contact?sku=${product.sku}&brand=${brand.nameEn}`} class="hover:text-crane-orange before:absolute before:inset-0 focus:outline-none focus:ring-4 focus:ring-crane-orange/30 rounded">{product.name}</a>
+              </h3>
+              <div class="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between relative z-10">
+                <span class="text-sm font-bold text-gray-700">{product.price}</span>
+                <span class="w-8 h-8 rounded-full bg-orange-50 text-crane-orange flex items-center justify-center group-hover:bg-crane-orange group-hover:text-white transition-colors" aria-hidden="true">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                </span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+      
+      {/* Search / Part Finder CTA */}
+      <div class="mt-12 bg-white rounded-3xl p-8 border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+         <div>
+            <h3 class="font-bold text-xl text-crane-navy mb-2">به دنبال کد فنی خاصی از {brand.nameFa} هستید؟</h3>
+            <p class="text-gray-600 text-sm leading-6">در صورتی که Part Number قطعه را در اختیار دارید، برای استعلام سریع کلیک کنید.</p>
+         </div>
+         <a href={`/search?brand=${brand.nameEn.toLowerCase()}`} class="bg-crane-navy text-white px-8 py-3 rounded-full font-bold hover:bg-gray-800 transition-colors shrink-0 focus:outline-none focus:ring-4 focus:ring-crane-navy/30">
+            جستجوی قطعات {brand.nameFa}
+         </a>
+      </div>
+    </div>
+  </section>
+</Layout>

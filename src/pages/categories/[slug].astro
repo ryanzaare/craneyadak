@@ -1,0 +1,127 @@
+---
+// src/pages/categories/[slug].astro
+import Layout from '../../layouts/Layout.astro';
+import { CATEGORIES, SITE } from '../../data/site';
+
+export function getStaticPaths() {
+  return CATEGORIES.map((cat) => {
+    const slugPath = cat.slug.replace('/categories/', '');
+    return {
+      params: { slug: slugPath },
+      props: { category: cat },
+    };
+  });
+}
+
+const { category } = Astro.props;
+const title = `خرید و قیمت ${category.keyword} | ${SITE.name}`;
+const description = `مرجع تخصصی خرید ${category.keyword}. ${category.blurb} تضمین اصالت کالا و ارسال سریع به سراسر ایران.`;
+
+// Mock Products
+const mockProducts = [
+  { name: `${category.name} صنعتی مدل X1`, sku: 'DMG-1024', brand: 'دماگ', price: 'تماس بگیرید' },
+  { name: `${category.name} وایرلس F21`, sku: 'TLC-F21', brand: 'تله‌کرین', price: 'تماس بگیرید' },
+  { name: `${category.name} سنگین کار`, sku: 'STL-990', brand: 'اشتال', price: 'تماس بگیرید' },
+  { name: `${category.name} سفارشی`, sku: 'KNC-88', brand: 'کونه‌کرین', price: 'استعلام' },
+];
+
+// Advanced E-Commerce Schema
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${SITE.url}${category.slug}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: SITE.url },
+        { '@type': 'ListItem', position: 2, name: 'دسته‌بندی‌ها', item: `${SITE.url}/categories` },
+        { '@type': 'ListItem', position: 3, name: category.name, item: `${SITE.url}${category.slug}` },
+      ],
+    },
+    {
+      '@type': 'ItemList',
+      url: `${SITE.url}${category.slug}`,
+      name: `لیست محصولات ${category.keyword}`,
+      numberOfItems: mockProducts.length,
+      itemListElement: mockProducts.map((prod, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        item: {
+          '@type': 'Product',
+          name: prod.name,
+          sku: prod.sku,
+          brand: { '@type': 'Brand', name: prod.brand },
+          offers: { '@type': 'Offer', priceCurrency: 'IRR', availability: 'https://schema.org/InStock' }
+        }
+      }))
+    }
+  ]
+};
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd}>
+  {/* -------------------- Hero & Breadcrumb -------------------- */}
+  <section class="bg-crane-navy text-white pt-12 pb-20 px-4 border-b-[8px] border-crane-orange">
+    <div class="max-w-7xl mx-auto">
+      <nav class="text-sm text-gray-400 mb-8 flex items-center gap-2" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -ml-2">صفحه اصلی</a>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <a href="/categories" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -mx-2">دسته‌بندی‌ها</a>
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        <span class="text-white font-bold" aria-current="page">{category.name}</span>
+      </nav>
+      <div class="flex flex-col md:flex-row items-start gap-6">
+        <span class="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center shrink-0 border border-white/20" aria-hidden="true">
+          <svg class="w-8 h-8 text-crane-orange" fill="currentColor" viewBox="0 0 24 24"><path d={category.icon} /></svg>
+        </span>
+        <div>
+          <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">{category.keyword}</h1>
+          <p class="text-lg text-gray-300 max-w-2xl leading-8">{category.blurb}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ----------------------------- Product Grid ----------------------------- */}
+  <section class="py-16 px-4 md:px-8 bg-gray-50 min-h-[50vh]">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex justify-between items-end mb-10 border-b border-gray-200 pb-4">
+        <h2 class="text-2xl font-bold text-crane-navy">محصولات این دسته</h2>
+        <span class="text-sm text-gray-500 font-bold bg-gray-100 px-3 py-1 rounded-full">{mockProducts.length} محصول</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {mockProducts.map((product) => (
+          <article class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col group relative">
+            <div class="aspect-square bg-gray-100 relative flex items-center justify-center">
+              <svg class="w-16 h-16 text-gray-300 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <span class="absolute top-3 right-3 bg-white/90 backdrop-blur text-xs font-bold px-2 py-1 rounded text-gray-600 shadow-sm">{product.brand}</span>
+            </div>
+            <div class="p-5 flex flex-col flex-grow">
+              <p class="text-xs text-gray-400 mb-1 font-mono">{product.sku}</p>
+              <h3 class="font-bold text-crane-navy text-lg mb-4 line-clamp-2 leading-7">
+                <a href={`/contact?sku=${product.sku}`} class="hover:text-crane-orange before:absolute before:inset-0 focus:outline-none focus:ring-4 focus:ring-crane-orange/30 rounded">{product.name}</a>
+              </h3>
+              <div class="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between relative z-10">
+                <span class="text-sm font-bold text-gray-700">{product.price}</span>
+                <span class="w-8 h-8 rounded-full bg-orange-50 text-crane-orange flex items-center justify-center group-hover:bg-crane-orange group-hover:text-white transition-colors" aria-hidden="true">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                </span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  {/* ----------------------------- SEO Content ----------------------------- */}
+  <section class="bg-white py-16 px-4 border-t border-gray-100">
+    <div class="max-w-4xl mx-auto text-gray-600 text-justify leading-8">
+      <h2 class="text-2xl font-bold text-crane-navy mb-6">راهنمای خرید {category.keyword}</h2>
+      <p class="mb-4">جهت دریافت اطلاعات دقیق فنی و ثبت سفارش <strong class="text-crane-navy">{category.keyword}</strong>، پیشنهاد می‌شود پیش از خرید، با تیم مهندسی ما مشورت نمایید تا از سازگاری کامل قطعه با تجهیزات شما اطمینان حاصل شود.</p>
+      <p>در صورتی که کد فنی (Part Number) قطعه مورد نظر در لیست بالا موجود نیست، مشخصات دستگاه خود را از طریق فرم تماس برای ما ارسال کنید تا در اسرع وقت تامین گردد.</p>
+    </div>
+  </section>
+</Layout>
