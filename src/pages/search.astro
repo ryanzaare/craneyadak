@@ -22,8 +22,17 @@ import Layout from '../layouts/Layout.astro';
     const el = document.getElementById('search');
     if (!el) return;
     try {
+      // نکته‌ی رفع باگ بیلد (یافته‌شده هنگام اجرای واقعی `npm run build`):
+      // این مسیر عمداً در زمان build وجود ندارد — پکیج pagefind آن را در
+      // اسکریپت `postbuild` (بعد از خودِ `astro build`) داخل dist/pagefind/
+      // می‌سازد. بدون `@vite-ignore`، Vite/Rolldown این importِ رشته‌ای
+      // مطلق را در زمان build به‌صورت استاتیک resolve می‌کند و چون فایل
+      // هنوز نیست، کل بیلد با خطای «Module not found» شکست می‌خورد. با
+      // `@vite-ignore`، ایمپورت به مرورگر واگذار می‌شود و فقط در runtime
+      // (بعد از این‌که postbuild فایل را تولید کرده) اجرا می‌شود — همان
+      // الگوی رسمی مستندشده در راهنمای Pagefind + Astro.
       // @ts-expect-error Pagefind is built dynamically
-      const { PagefindUI } = await import('/pagefind/pagefind-ui.js');
+      const { PagefindUI } = await import(/* @vite-ignore */ '/pagefind/pagefind-ui.js');
       const params = new URLSearchParams(window.location.search);
       new PagefindUI({
         element: '#search',
