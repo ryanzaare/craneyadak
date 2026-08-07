@@ -3,7 +3,7 @@
 interface ImportMetaEnv {
   /**
    * آدرس پایه‌ی وردپرس برای واکشی کاتالوگ در زمان BUILD (بدون اسلش انتهایی)،
-   * مثال: https://cms.craneyadak.com
+   * مثال: https://admin.craneyadak.com
    *
    * مصرف‌کننده: `src/lib/wp.ts` (فقط سمت سرور/بیلد — عمداً بدون پیشوند
    * PUBLIC_ تا داخل باندل کلاینت منتشر نشود).
@@ -15,7 +15,7 @@ interface ImportMetaEnv {
 
   /**
    * آدرس پایه‌ی وردپرس برای ارسال فرم استعلام از مرورگر کاربر (بدون اسلش
-   * انتهایی)، مثال: https://cms.craneyadak.com
+   * انتهایی)، مثال: https://admin.craneyadak.com
    *
    * مصرف‌کننده: `src/pages/contact.astro` →
    * `${PUBLIC_WP_API_URL}/wp-json/crane/v1/inquiry`.
