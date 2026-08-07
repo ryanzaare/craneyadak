@@ -1,0 +1,65 @@
+---
+// src/components/Breadcrumb.astro
+// نکته معماری: پیش‌تر مارک‌آپ ناوبری Breadcrumb (nav + chevron svg + لینک‌ها)
+// عیناً در ۱۰+ فایل صفحه تکرار شده بود. تکرار یعنی هر اصلاح آینده
+// (مثلاً یک رفع باگ دسترس‌پذیری یا تغییر استایل) باید در همه‌ی فایل‌ها
+// دستی و به‌صورت هم‌سان اعمال شود — دقیقاً جایی که باگ‌های خزنده‌ی UI به
+// وجود می‌آیند. این کامپوننت تنها منبع حقیقتِ مارک‌آپ Breadcrumb است؛
+// اسکیمای BreadcrumbList هر صفحه در frontmatter خودش می‌ماند چون
+// URLهای @id به ازای هر صفحه فرق دارند و نیازی به انتزاع اضافه نیست.
+export interface BreadcrumbItem {
+  label: string;
+  href?: string; // اگر href نداشته باشد، به‌عنوان صفحه‌ی فعلی (آخرین آیتم) رندر می‌شود
+}
+
+export interface Props {
+  items: BreadcrumbItem[];
+  center?: boolean;
+  /**
+   * صفحاتی که پس‌زمینه‌شان navy ثابت نیست (مثل industries/[slug].astro که
+   * bg آن بین amber-800/zinc-800/emerald-900 در تغییر است) باید از "light"
+   * استفاده کنند: روی amber-800، gray-400 فقط کنتراست ۲.۷۹:۱ می‌دهد (رد
+   * می‌شود) در حالی که gray-300 روی همان پس‌زمینه ۴.۸۱:۱ (قبول) می‌دهد.
+   */
+  light?: boolean;
+}
+
+const { items, center = false, light = false } = Astro.props;
+---
+
+<nav
+  class:list={[
+    'text-sm mb-8 flex flex-wrap items-center gap-2',
+    light ? 'text-gray-300' : 'text-gray-400',
+    center ? 'justify-center' : '',
+  ]}
+  aria-label="Breadcrumb"
+>
+  {items.map((item, i) => {
+    const isFirst = i === 0;
+    const isLast = i === items.length - 1;
+    return (
+      <Fragment>
+        {!isLast && item.href ? (
+          <a
+            href={item.href}
+            class:list={[
+              'hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2',
+              isFirst && !center ? '-ml-2' : '',
+              !isFirst ? '-mx-2' : '',
+            ]}
+          >
+            {item.label}
+          </a>
+        ) : (
+          <span class="text-white font-bold" aria-current="page">{item.label}</span>
+        )}
+        {!isLast && (
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        )}
+      </Fragment>
+    );
+  })}
+</nav>

@@ -1,20 +1,22 @@
 ---
 // src/pages/datasheets/index.astro
 import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { SITE, ENRICHED_BRANDS } from '../../data/site';
+import { getAvailableDatasheets } from '../../lib/datasheets';
 
-const title = `دانلود کاتالوگ و اسناد فنی قطعات جرثقیل | ${SITE.name}`;
-const description = 'مرجع دانلود PDF نقشه‌های انفجاری، وایرینگ، و هندبوک‌های تعمیر و نگهداری جرثقیل سقفی دماگ، اشتال، کونه‌کرین و سایر برندهای معتبر صنعتی.';
+// نکته صداقت داده: فقط اسنادی که فایل PDF واقعی‌شان در public/ موجود است
+// رندر می‌شوند (حجم هم از خود فایل خوانده می‌شود، نه از یک فیلد دستی).
+// جزئیات در src/lib/datasheets.ts.
+const datasheets = getAvailableDatasheets();
+const hasDatasheets = datasheets.length > 0;
 
-// Mock Datasheets Database
-const datasheets = [
-  { title: 'هندبوک تعمیرات موتور گیربکس', brand: 'دماگ', brandEn: 'DEMAG', type: 'Maintenance Manual', size: '4.2 MB', ext: 'PDF', file: '#' },
-  { title: 'نقشه انفجاری وینچ سیم‌بکسلی', brand: 'اشتال', brandEn: 'STAHL', type: 'Exploded View', size: '2.8 MB', ext: 'PDF', file: '#' },
-  { title: 'کاتالوگ ریموت کنترل سری F21', brand: 'تله‌کرین', brandEn: 'TELECRANE', type: 'Product Catalog', size: '1.5 MB', ext: 'PDF', file: '#' },
-  { title: 'نقشه وایرینگ و تابلو برق', brand: 'کونه‌کرین', brandEn: 'KONECRANES', type: 'Wiring Diagram', size: '3.1 MB', ext: 'PDF', file: '#' },
-  { title: 'منوال نصب و راه‌اندازی شین', brand: 'آبوس', brandEn: 'ABUS', type: 'Installation Guide', size: '1.9 MB', ext: 'PDF', file: '#' },
-  { title: 'راهنمای کالیبراسیون لنت ترمز', brand: 'دماگ', brandEn: 'DEMAG', type: 'Technical Guide', size: '1.2 MB', ext: 'PDF', file: '#' },
-];
+const title = hasDatasheets
+  ? `دانلود کاتالوگ و اسناد فنی قطعات جرثقیل | ${SITE.name}`
+  : `اسناد و کاتالوگ‌های فنی جرثقیل سقفی | ${SITE.name}`;
+const description = hasDatasheets
+  ? 'مرجع دانلود PDF نقشه‌های انفجاری، وایرینگ، و هندبوک‌های تعمیر و نگهداری جرثقیل سقفی دماگ، اشتال، کونه‌کرین و سایر برندهای معتبر صنعتی.'
+  : 'درخواست نقشه‌های انفجاری، دیاگرام وایرینگ و هندبوک‌های تعمیر و نگهداری جرثقیل سقفی دماگ، اشتال و کونه‌کرین از کارشناسان فنی کرین یدک.';
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -43,7 +45,12 @@ const jsonLd = {
 };
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd}>
+{/* نکته سئو: تا وقتی هیچ PDF واقعی منتشر نشده، این صفحه noindex است.
+    صفحه‌ای که در عنوانش «دانلود» وعده می‌دهد ولی هیچ فایلی ندارد، مصداق
+    محتوای نازک/گمراه‌کننده است. به‌محض قرارگرفتن اولین فایل در public/pdfs/
+    این صفحه خودکار قابل ایندکس می‌شود (و در sitemap هم ظاهر می‌شود —
+    نگاه کنید به فیلتر sitemap در astro.config.mjs). */}
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={!hasDatasheets}>
   {/* -------------------- HERO -------------------- */}
   <section class="bg-crane-navy text-white pt-12 pb-20 px-4 border-b-[8px] border-crane-orange relative overflow-hidden">
     {/* Blueprint Decorative Background */}
@@ -54,11 +61,7 @@ const jsonLd = {
     </div>
 
     <div class="max-w-7xl mx-auto relative z-10">
-      <nav class="text-sm text-gray-400 mb-8 flex items-center gap-2" aria-label="Breadcrumb">
-        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -ml-2">صفحه اصلی</a>
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-        <span class="text-white font-bold" aria-current="page">مرکز اسناد فنی</span>
-      </nav>
+      <Breadcrumb items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'مرکز اسناد فنی' }]} />
 
       <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
         <span class="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center shrink-0 border border-white/20" aria-hidden="true">
@@ -69,7 +72,9 @@ const jsonLd = {
         <div>
           <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">آرشیو نقشه‌ها و کاتالوگ‌های فنی</h1>
           <p class="text-lg text-gray-300 max-w-2xl leading-8 font-light">
-            دسترسی مستقیم مهندسین نت به PDF نقشه‌های انفجاری (Exploded Views)، وایرینگ برق، و منوال‌های نصب و نگهداری برندهای معتبر.
+            {hasDatasheets
+              ? 'دسترسی مستقیم مهندسین نت به PDF نقشه‌های انفجاری (Exploded Views)، وایرینگ برق، و منوال‌های نصب و نگهداری برندهای معتبر.'
+              : 'نقشه‌های انفجاری (Exploded Views)، دیاگرام وایرینگ و منوال‌های نصب و نگهداری برندهای معتبر را از کارشناسان فنی ما درخواست کنید.'}
           </p>
         </div>
       </div>
@@ -96,7 +101,25 @@ const jsonLd = {
         </ul>
       </div>
 
-      {/* Datasheets Grid */}
+      {/* Datasheets Grid — فقط اسناد با فایل واقعی موجود */}
+      {!hasDatasheets && (
+        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 md:p-12 max-w-3xl">
+          <span class="w-14 h-14 rounded-2xl bg-orange-50 text-crane-orange flex items-center justify-center mb-6" aria-hidden="true">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          </span>
+          <h2 class="text-xl md:text-2xl font-black text-crane-navy mb-4 leading-9">آرشیو عمومی اسناد در حال آماده‌سازی است</h2>
+          <p class="text-gray-700 leading-8 mb-4">
+            بسیاری از منوال‌ها و نقشه‌های انفجاری سازندگان، دارای محدودیت انتشار عمومی هستند و ما تنها اسنادی را روی سایت منتشر می‌کنیم که اجازه‌ی بازنشر آن‌ها را داشته باشیم. به همین دلیل در این صفحه هیچ فایل ناقص یا لینک غیرفعالی قرار داده نشده است.
+          </p>
+          <p class="text-gray-700 leading-8 mb-8">
+            اگر به نقشه‌ی انفجاری، دیاگرام برق یا منوال یک مدل مشخص نیاز دارید، برند و مدل دستگاه را برای ما بفرستید؛ کارشناسان فنی ما سند مربوطه را بررسی و در صورت امکان برایتان ارسال می‌کنند.
+          </p>
+          <a href="/contact" class="inline-flex items-center justify-center bg-crane-orange text-white px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px]">
+            درخواست سند فنی
+          </a>
+        </div>
+      )}
+
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {datasheets.map((doc) => (
           <article class="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-shadow duration-300 p-6 flex flex-col relative group">

@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------
-   فونت ایران‌سنس ایکس (IRANSans X) — سلف‌هاست
-   فونت رسمی و سازمانی با بالاترین پرفورمنس برای B2B
+   فونت وزیرمتن (Vazirmatn) — سلف‌هاست، متن‌باز (SIL OFL 1.1)
    نسخه‌ی Variable = یک فایل برای تمام وزن‌ها جهت جلوگیری از افت LCP
+   توجه: پیش‌تر این پروژه به یک فایل فونت تجاری (IRANSansX) اشاره می‌کرد
+   که در ریپازیتوری موجود نبود (۴۰۴ در preload و font-face، باعث افت
+   پرفورمنس می‌شد). Vazirmatn جایگزین متن‌باز و کاملاً رایگان برای
+   استفاده تجاری است. مجوز کامل: public/fonts/Vazirmatn-OFL-LICENSE.txt
 --------------------------------------------------------- */
 @font-face {
-  font-family: "IRANSansX";
-  src: url("/fonts/IRANSansXVariable.woff2") format("woff2-variations");
+  font-family: "Vazirmatn";
+  src: url("/fonts/Vazirmatn-Variable.woff2") format("woff2-variations");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -19,12 +22,21 @@
 @theme {
   /* پالت رنگی اختصاصی و لوکس کرین یدک */
   --color-crane-navy: #0A192F;
-  --color-crane-orange: #F97316;
+  /* ⚠️ سئو/دسترس‌پذیری (WCAG 2.1 AA): مقدار برند اولیه #F97316 روی پس‌زمینه
+     سفید و به‌عنوان متن سفید روی دکمه‌ها فقط کنتراست ۲.۸۳:۱ می‌داد (نیاز
+     واقعی: حداقل ۴.۵:۱ برای متن و ۳:۱ برای اجزای غیرمتنی/فوکوس‌رینگ) و در
+     صدها لینک و دکمه‌ی سراسر سایت افت رتبه‌ی تجربه‌ی کاربری و ریسک خطای
+     ابزارهای Accessibility (Lighthouse/axe) ایجاد می‌کرد. با یک تغییر
+     توکن (Single Source of Truth)، مقدار به Tailwind orange-700 تغییر کرد
+     که کنتراست ۵.۱۸:۱ روی سفید می‌دهد و هم‌زمان هر دو جهت (متن روی سفید و
+     متن سفید روی این پس‌زمینه) را به‌درستی پاس می‌کند؛ چون کنتراست متقارن است.
+  */
+  --color-crane-orange: #C2410C;
   --color-crane-light: #F8FAFC;
   --color-crane-white: #FFFFFF;
 
   /* تنظیم فونت جدید به‌عنوان پیش‌فرض سایت */
-  --font-sans: "IRANSansX", "Segoe UI", Tahoma, sans-serif;
+  --font-sans: "Vazirmatn", "Segoe UI", Tahoma, sans-serif;
 }
 
 /* ---------------------------------------------------------
@@ -62,4 +74,42 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* ---------------------------------------------------------
+   لینک پرش به محتوای اصلی (WCAG 2.4.1 - Bypass Blocks)
+   به‌صورت پیش‌فرض مخفی است و فقط با فوکوس کیبورد (Tab) نمایان می‌شود.
+--------------------------------------------------------- */
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  right: 1rem;
+  z-index: 100;
+  background: var(--color-crane-navy);
+  color: #fff;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0 0 0.75rem 0.75rem;
+  transition: top 0.2s ease-out;
+}
+
+.skip-to-content:focus {
+  top: 0;
+}
+
+/* ---------------------------------------------------------
+   فیلد هانی‌پات ضداسپم فرم تماس (src/pages/contact.astro)
+   عمداً به‌جای display:none یا visibility:hidden (که برخی ربات‌های ساده
+   آن را تشخیص می‌دهند و از پرکردنش صرف‌نظر می‌کنند)، از موقعیت‌دهی خارج
+   از صفحه استفاده شده — هم از دید کاربر و هم screen reader مخفی است
+   (به‌کمک aria-hidden روی wrapper) اما همچنان در جریان عادی DOM قرار دارد.
+--------------------------------------------------------- */
+.cyh-honeypot {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  height: 0;
+  width: 0;
+  overflow: hidden;
+  pointer-events: none;
 }

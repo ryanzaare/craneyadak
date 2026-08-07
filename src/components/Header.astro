@@ -31,12 +31,12 @@ const navLinks = [
         <li>
           <a href="/" class:list={['transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-crane-orange rounded', isActive('/') ? 'text-crane-orange font-bold' : 'text-gray-700 hover:text-crane-navy']} aria-current={isActive('/') ? 'page' : undefined}>صفحه اصلی</a>
         </li>
-        <li class="relative group">
-          <a href="/categories" aria-haspopup="true" class="flex items-center gap-1 text-gray-700 hover:text-crane-navy transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-crane-orange rounded">
+        <li class="relative group" id="cat-dropdown-wrap">
+          <a href="/categories" id="cat-dropdown-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="cat-dropdown-menu" class="flex items-center gap-1 text-gray-700 hover:text-crane-navy transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-crane-orange rounded">
             دسته‌بندی‌ها
             <svg class="w-4 h-4 text-gray-400 group-hover:text-crane-navy transition-transform group-hover:rotate-180" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </a>
-          <ul class="absolute top-full right-0 mt-2 w-60 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible focus-within:opacity-100 focus-within:visible transition-all flex flex-col py-2 z-50">
+          <ul id="cat-dropdown-menu" class="absolute top-full right-0 mt-2 w-60 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible focus-within:opacity-100 focus-within:visible transition-all flex flex-col py-2 z-50">
             {CATEGORIES.map((cat) => (
               <li>
                 <a href={cat.slug} class="block px-4 py-2 hover:bg-orange-50 hover:text-crane-orange text-sm transition-colors focus:bg-orange-50 focus:text-crane-orange outline-none">
@@ -127,6 +127,36 @@ const navLinks = [
     const mq = window.matchMedia('(min-width: 768px)');
     mq.addEventListener('change', (e) => {
       if (e.matches && isOpen()) setOpen(false);
+    });
+  }
+
+  // --------------------------------------------------------------
+  // نکته دسترس‌پذیری (WCAG 4.1.2 - Name, Role, Value): زیرمنوی
+  // «دسته‌بندی‌ها» در دسکتاپ پیش‌تر صرفاً با CSS (group-hover) باز/بسته
+  // می‌شد و aria-haspopup داشت اما aria-expanded هرگز مقداردهی نمی‌شد؛
+  // یعنی کاربران screen reader هیچ‌وقت متوجه نمی‌شدند این منو باز است یا
+  // بسته. اکنون با هاور موس و همچنین focus/blur کیبوردی (Tab)، وضعیت
+  // واقعی state با aria-expanded هم‌گام نگه داشته می‌شود.
+  const catWrap = document.getElementById('cat-dropdown-wrap');
+  const catTrigger = document.getElementById('cat-dropdown-trigger');
+
+  if (catWrap && catTrigger) {
+    const setCatExpanded = (open: boolean) => catTrigger.setAttribute('aria-expanded', String(open));
+
+    catWrap.addEventListener('mouseenter', () => setCatExpanded(true));
+    catWrap.addEventListener('mouseleave', () => setCatExpanded(false));
+
+    catWrap.addEventListener('focusin', () => setCatExpanded(true));
+    catWrap.addEventListener('focusout', (e) => {
+      const next = e.relatedTarget as Node | null;
+      if (!next || !catWrap.contains(next)) setCatExpanded(false);
+    });
+
+    catWrap.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        setCatExpanded(false);
+        catTrigger.focus();
+      }
     });
   }
 </script>

@@ -1,0 +1,80 @@
+{
+    "key": "group_cyh_brand_fields",
+    "title": "Brand Fields",
+    "fields": [
+        {
+            "key": "field_cyh_brand_name_en",
+            "label": "نام انگلیسی برند",
+            "name": "name_en",
+            "type": "text",
+            "instructions": "مثال: DEMAG — عنوان فارسی از فیلد استاندارد Title وردپرس خوانده می‌شود.",
+            "required": 1,
+            "wrapper": { "width": "50" },
+            "show_in_graphql": 1,
+            "graphql_field_name": "nameEn"
+        },
+        {
+            "key": "field_cyh_brand_logo_text",
+            "label": "متن لوگوی تایپوگرافیک",
+            "name": "logo_text",
+            "type": "text",
+            "instructions": "در صورت نبود فایل لوگوی وکتور، این متن به‌عنوان لوگوی تایپوگرافیک SVG رندر می‌شود (همان الگوی فعلی brands/index.astro).",
+            "required": 0,
+            "wrapper": { "width": "50" },
+            "show_in_graphql": 1,
+            "graphql_field_name": "logoText"
+        },
+        {
+            "key": "field_cyh_brand_color",
+            "label": "رنگ برند (Hex)",
+            "name": "brand_color",
+            "type": "color_picker",
+            "instructions": "رنگ اصلی برند برای حالت hover لوگو — فرانت‌اند این مقدار Hex را به توکن رنگی Tailwind نگاشت می‌کند.",
+            "required": 0,
+            "wrapper": { "width": "33" },
+            "show_in_graphql": 1,
+            "graphql_field_name": "brandColor"
+        },
+        {
+            "key": "field_cyh_brand_seo_anchor",
+            "label": "انکر متن سئو",
+            "name": "seo_anchor",
+            "type": "text",
+            "instructions": "مثال: «خرید قطعات اورجینال و موتور گیربکس دماگ آلمان» — برای متن sr-only لینک لوگو در صفحه‌ی برندها.",
+            "required": 0,
+            "wrapper": { "width": "33" },
+            "show_in_graphql": 1,
+            "graphql_field_name": "seoAnchor"
+        },
+        {
+            "key": "field_cyh_brand_seo_desc",
+            "label": "توضیح کوتاه سئو",
+            "name": "seo_desc",
+            "type": "text",
+            "instructions": "برای عنصر <desc> داخل SVG لوگو (دسترس‌پذیری + سئوی تصویر).",
+            "required": 0,
+            "wrapper": { "width": "34" },
+            "show_in_graphql": 1,
+            "graphql_field_name": "seoDesc"
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "brand"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "active": true,
+    "show_in_rest": 1,
+    "show_in_graphql": 1,
+    "graphql_field_name": "brandFields",
+    "graphql_types": [ "craneBrand" ]
+}

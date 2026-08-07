@@ -65,7 +65,11 @@ import Layout from '../layouts/Layout.astro';
     --pagefind-ui-border: #e5e7eb;
     --pagefind-ui-tag: #f8fafc;
     --pagefind-ui-border-radius: 0.75rem;
-    --pagefind-ui-font: 'IRANSansX', sans-serif;
+    /* نکته دیباگ: قبلاً به فونت تجاری 'IRANSansX' اشاره می‌کرد که هرگز در
+       پروژه وجود نداشت (۴۰۴ در بارگذاری فونت). سایت اکنون سراسر از
+       Vazirmatn (سلف‌هاست، متن‌باز) استفاده می‌کند — همان مقداری که در
+       src/styles/global.css به‌عنوان --font-sans تعریف شده. */
+    --pagefind-ui-font: 'Vazirmatn', sans-serif;
   }
   .pagefind-ui {
     direction: rtl;

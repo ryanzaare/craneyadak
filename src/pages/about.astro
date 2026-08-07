@@ -1,6 +1,7 @@
 ---
 // src/pages/about.astro
 import Layout from '../layouts/Layout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import { SITE } from '../data/site';
 
 const title = `درباره ما | تاریخچه و رسالت مهندسی ${SITE.name}`;
@@ -35,11 +36,7 @@ const jsonLd = {
   <section class="bg-crane-navy text-white pt-16 pb-24 px-4 border-b-[8px] border-crane-orange relative overflow-hidden">
     <div class="absolute inset-0 z-0 opacity-[0.05]" style="background-image: radial-gradient(#fff 2px, transparent 2px); background-size: 40px 40px;" aria-hidden="true"></div>
     <div class="max-w-4xl mx-auto relative z-10 text-center">
-      <nav class="text-sm text-gray-400 mb-8 flex items-center justify-center gap-2" aria-label="Breadcrumb">
-        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2">صفحه اصلی</a>
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-        <span class="text-white font-bold" aria-current="page">درباره ما</span>
-      </nav>
+      <Breadcrumb center items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'درباره ما' }]} />
 
       <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-8 tracking-tight drop-shadow-md leading-tight">
         بازوی مهندسی شما در تامین <br/> <span class="text-crane-orange">قطعات جرثقیل سقفی</span>
@@ -108,7 +105,7 @@ const jsonLd = {
       <div class="bg-crane-navy text-white rounded-3xl p-10 mt-12 text-center shadow-xl">
         <h3 class="text-2xl font-black mb-4">آماده‌ی همکاری با واحد نت شما هستیم</h3>
         <p class="text-gray-300 leading-8 mb-8">جهت استعلام قیمت، دریافت پیش‌فاکتور رسمی و مشاوره اورهال، همین حالا با ما تماس بگیرید.</p>
-        <a href="/contact" class="inline-block bg-crane-orange text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-orange-600 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/50">
+        <a href="/contact" class="inline-block bg-crane-orange text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/50">
           ارتباط با کارشناسان فنی
         </a>
       </div>

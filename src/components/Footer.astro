@@ -75,7 +75,10 @@ const shortCategories = CATEGORIES.slice(0, 6);
       </nav>
     </div>
 
-    <div class="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
+    {/* دسترس‌پذیری (WCAG AA): رنگ قبلی gray-500 روی پس‌زمینه‌ی crane-navy
+        فقط ~۴.۱:۱ کنتراست می‌داد که برای متن کوچک (۱۲px) رد می‌شود؛
+        gray-400 روی همان پس‌زمینه ~۷.۴:۱ می‌دهد. */}
+    <div class="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-400">
       <p>کپی‌رایت © {year} {SITE.name}. تمامی حقوق محفوظ است.</p>
       <p>توسعه‌یافته با استانداردهای سئوی مهندسی B2B</p>
     </div>

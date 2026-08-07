@@ -1,6 +1,7 @@
 ---
 // src/pages/categories/index.astro
 import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { CATEGORIES, SITE } from '../../data/site';
 
 const title = `دسته‌بندی قطعات جرثقیل سقفی | ${SITE.name}`;
@@ -34,11 +35,7 @@ const jsonLd = {
   {/* -------------------- Hero & Breadcrumb -------------------- */}
   <section class="bg-crane-navy text-white pt-12 pb-20 px-4 border-b-[8px] border-crane-orange">
     <div class="max-w-7xl mx-auto">
-      <nav class="text-sm text-gray-400 mb-8 flex items-center gap-2" aria-label="Breadcrumb">
-        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -ml-2">صفحه اصلی</a>
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-        <span class="text-white font-bold" aria-current="page">دسته‌بندی‌ها</span>
-      </nav>
+      <Breadcrumb items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'دسته‌بندی‌ها' }]} />
       <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">دسته‌بندی قطعات و تجهیزات</h1>
       <p class="text-lg text-gray-300 max-w-2xl leading-8 font-light">تامین بی‌واسطه تمامی اقلام مکانیکی و الکتریکال مورد نیاز جرثقیل‌های سقفی صنعتی.</p>
     </div>

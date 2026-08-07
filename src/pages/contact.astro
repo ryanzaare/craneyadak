@@ -1,10 +1,46 @@
 ---
 // src/pages/contact.astro
 import Layout from '../layouts/Layout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import { SITE } from '../data/site';
 
 const title = `استعلام قیمت و تماس با کرین یدک | تامین قطعات جرثقیل سقفی`;
 const description = 'ثبت درخواست پیش‌فاکتور رسمی، مشاوره فنی رایگان و استعلام قیمت قطعات جرثقیل سقفی. ارسال تصویر پلاک دستگاه و کدهای فنی جهت تایید سازگاری.';
+
+// ---------------------------------------------------------------------------
+// اندپوینت واقعی ثبت استعلام (پلاگین وردپرس crane-yadak-headless).
+//
+// چرا این‌طور نوشته شده:
+// فرم قبلاً به `/api/contact` پست می‌شد. آن مسیر یک Astro API Route بود و
+// چون پروژه در حالت `output: 'static'` بیلد می‌شود (بدون server adapter)،
+// در خروجی نهایی اصلاً وجود نداشت — یعنی هر کاربری که جاوااسکریپت‌اش
+// غیرفعال بود یا اسکریپت صفحه بارگذاری نمی‌شد، فرم را پر می‌کرد و به یک
+// صفحه‌ی ۴۰۴ می‌رسید و لید بی‌سروصدا از بین می‌رفت. آن فایل حذف شد.
+//
+// حالا `action` خودِ فرم مستقیماً به اندپوینت وردپرس اشاره می‌کند؛ بنابراین
+// حتی بدون جاوااسکریپت هم ارسال واقعاً ثبت می‌شود (WP REST هم JSON و هم
+// form-encoded را می‌پذیرد). اسکریپت پایین صفحه فقط یک بهبود تدریجی است:
+// جلوگیری از ترک صفحه و نمایش خطا/موفقیت درجا.
+//
+// اگر PUBLIC_WP_API_URL تنظیم نشده باشد، هیچ فرمی که به جایی نمی‌رسد نمایش
+// داده نمی‌شود؛ به‌جای آن کانال‌های تماس مستقیم برجسته می‌شوند — بهتر از
+// فرمی که وانمود می‌کند کار می‌کند.
+// ---------------------------------------------------------------------------
+const wpApiBase = (import.meta.env.PUBLIC_WP_API_URL ?? '').replace(/\/+$/, '');
+const inquiryEndpoint = wpApiBase ? `${wpApiBase}/wp-json/crane/v1/inquiry` : null;
+
+// نکته سئوی محلی: آدرس کامل برای Google Maps embed query — تا زمانی که
+// آدرس واقعی جایگزین placeholder فعلی نشده، این نقشه موقعیت دقیقی نشان
+// نمی‌دهد (فقط شهر تهران). این خودش یک TODO سئوی محلی است — نگاه کنید
+// به کامنت‌های src/data/site.ts.
+const fullAddress = `${SITE.address.street}, ${SITE.address.city}, ${SITE.address.region}, Iran`;
+const mapQuery = encodeURIComponent(fullAddress);
+
+const localCitations = [
+  SITE.social.googleBusinessProfile && { label: 'گوگل بیزینس پروفایل', href: SITE.social.googleBusinessProfile },
+  SITE.social.neshan && { label: 'نشان', href: SITE.social.neshan },
+  SITE.social.balad && { label: 'بلد', href: SITE.social.balad },
+].filter((c): c is { label: string; href: string } => Boolean(c));
 
 // E-E-A-T & Local Business Schema Integration
 const jsonLd = {
@@ -35,11 +71,7 @@ const jsonLd = {
   {/* -------------------- Hero & Breadcrumb -------------------- */}
   <section class="bg-crane-navy text-white pt-12 pb-20 px-4 border-b-[8px] border-crane-orange relative overflow-hidden">
     <div class="max-w-7xl mx-auto relative z-10">
-      <nav class="text-sm text-gray-400 mb-8 flex items-center gap-2" aria-label="Breadcrumb">
-        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -ml-2">صفحه اصلی</a>
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-        <span class="text-white font-bold" aria-current="page">تماس و استعلام قیمت</span>
-      </nav>
+      <Breadcrumb items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'تماس و استعلام قیمت' }]} />
 
       <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">
         استعلام قیمت و مشاوره فنی قطعات
@@ -53,7 +85,7 @@ const jsonLd = {
   {/* ----------------------------- Main Content Grid ----------------------------- */}
   <section class="py-16 px-4 md:px-8 lg:px-12 bg-gray-50 min-h-[60vh]">
     <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-      
+
       {/* Right Column: Contact Info & E-E-A-T Signals (5 Cols) */}
       <div class="lg:col-span-5 space-y-8">
         
@@ -81,6 +113,16 @@ const jsonLd = {
                 <span class="text-lg font-black dir-ltr text-right block">ارسال سریع تصویر قطعه</span>
               </div>
             </a>
+
+            <a href={`https://t.me/${SITE.telegram}`} target="_blank" rel="noopener noreferrer" class="flex items-center gap-4 bg-sky-50 hover:bg-sky-500 hover:text-white p-4 rounded-2xl transition-all duration-300 text-sky-700 group focus:outline-none focus:ring-4 focus:ring-sky-500/30">
+              <span class="w-12 h-12 rounded-xl bg-white text-sky-500 flex items-center justify-center shrink-0 shadow-sm group-hover:bg-white/20 group-hover:text-white" aria-hidden="true">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M22.05 2.638a1.68 1.68 0 00-1.72-.24L2.36 9.75c-1.15.46-1.14 1.03-.2 1.32l4.6 1.44 10.68-6.74c.5-.31.96-.14.58.2l-8.65 7.82h0l-.32 4.65c.46 0 .67-.21.92-.46l2.21-2.14 4.6 3.4c.85.47 1.46.23 1.67-.79l3.03-14.29c.3-1.25-.47-1.82-1.43-2.32z"/></svg>
+              </span>
+              <div>
+                <span class="text-xs text-gray-500 group-hover:text-white/80 block font-medium">پاسخ‌گویی سریع در تلگرام</span>
+                <span class="text-lg font-black dir-ltr text-right block">@{SITE.telegram}</span>
+              </div>
+            </a>
           </div>
         </div>
 
@@ -92,6 +134,33 @@ const jsonLd = {
             <p><strong>ایمیل رسمی:</strong> {SITE.email}</p>
             <p><strong>ساعات کاری:</strong> شنبه تا چهارشنبه: ۸:۳۰ الی ۱۷:۰۰ | پنجشنبه: ۸:۳۰ الی ۱۳:۰۰</p>
           </address>
+
+          {/* نکته سئوی محلی: نقشه‌ی جاسازی‌شده بر اساس متن آدرس (بدون نیاز
+              به API Key). دقت موقعیت وابسته به صحت SITE.address است — با
+              آدرس placeholder فعلی فقط مرکز تهران را نشان می‌دهد؛ به محض
+              ثبت آدرس واقعی دفتر/انبار در src/data/site.ts، این نقشه
+              خودکار روی موقعیت درست متمرکز می‌شود. */}
+          <div class="rounded-2xl overflow-hidden border border-gray-200 aspect-video">
+            <iframe
+              title={`نقشه موقعیت ${SITE.name}`}
+              src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
+              width="100%"
+              height="100%"
+              style="border:0;"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+
+          {localCitations.length > 0 && (
+            <div class="flex flex-wrap gap-2 pt-2">
+              {localCitations.map((c) => (
+                <a href={c.href} target="_blank" rel="noopener noreferrer" class="text-xs font-bold bg-gray-50 hover:bg-orange-50 hover:text-crane-orange text-gray-600 px-3 py-1.5 rounded-full border border-gray-200 transition-colors">
+                  {c.label}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Guarantee Banner */}
@@ -106,10 +175,43 @@ const jsonLd = {
 
       {/* Left Column: RFQ Form (7 Cols) */}
       <div class="lg:col-span-7 bg-white rounded-3xl p-8 md:p-10 border border-gray-100 shadow-lg">
-        <h2 class="text-2xl font-black text-crane-navy mb-2">فرم درخواست پیش‌فاکتور و استعلام</h2>
-        <p class="text-sm text-gray-500 mb-8">مشخصات قطعه مورد نیاز را وارد کنید. کارشناسان ما ظرف حداکثر ۲ ساعت کاری با شما تماس می‌گیرند.</p>
+        {!inquiryEndpoint && (
+          /* حالت «بک‌اند هنوز وصل نشده»: به‌جای نمایش فرمی که ارسالش به هیچ
+             مقصدی نمی‌رسد (و لید را بی‌صدا از بین می‌برد)، کانال‌های واقعی
+             و فعال تماس نمایش داده می‌شوند. */
+          <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6" role="status">
+            <h2 class="text-2xl font-black text-crane-navy mb-3">ثبت آنلاین درخواست موقتاً در دسترس نیست</h2>
+            <p class="text-sm text-gray-700 leading-7 mb-6">
+              سامانه‌ی ثبت آنلاین استعلام در حال راه‌اندازی است. تا آن زمان، سریع‌ترین راه دریافت پیش‌فاکتور، تماس تلفنی یا ارسال عکس قطعه در واتساپ/تلگرام است — پاسخ‌گویی در ساعات کاری انجام می‌شود.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <a href={`tel:${SITE.phone}`} class="flex-1 bg-crane-orange text-white text-center px-6 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px] flex items-center justify-center">تماس تلفنی</a>
+              <a href={`https://wa.me/${SITE.whatsapp.replace('+', '')}`} target="_blank" rel="noopener noreferrer" class="flex-1 bg-emerald-600 text-white text-center px-6 py-4 rounded-xl font-black hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال در واتساپ</a>
+              <a href={`https://t.me/${SITE.telegram}`} target="_blank" rel="noopener noreferrer" class="flex-1 bg-sky-500 text-white text-center px-6 py-4 rounded-xl font-black hover:bg-sky-600 transition-colors focus:outline-none focus:ring-4 focus:ring-sky-500/30 min-h-[52px] flex items-center justify-center">ارسال در تلگرام</a>
+            </div>
+          </div>
+        )}
 
-        <form action="/api/contact" method="POST" class="space-y-6">
+        {inquiryEndpoint && (
+        <>
+        <h2 class="text-2xl font-black text-crane-navy mb-2">فرم درخواست پیش‌فاکتور و استعلام</h2>
+        <p class="text-sm text-gray-600 mb-8">مشخصات قطعه مورد نیاز را وارد کنید. کارشناسان ما در اولین فرصت کاری با شما تماس می‌گیرند.</p>
+
+        {/* Progressive enhancement: `action` مستقیماً به اندپوینت REST وردپرس
+            اشاره می‌کند، پس ارسال بدون جاوااسکریپت هم واقعاً ثبت می‌شود.
+            اسکریپت پایین صفحه فقط تجربه را بهتر می‌کند (بدون ترک صفحه). */}
+        <div id="form-feedback" class="hidden mb-6 border rounded-2xl p-5 text-sm font-bold leading-6" role="alert"></div>
+
+        <form id="rfq-form" action={inquiryEndpoint} data-endpoint={inquiryEndpoint} method="POST" class="space-y-6">
+          {/* هانی‌پات ضداسپم: برای کاربران واقعی نامرئی (هم بصری و هم برای
+              screen reader)، اما ربات‌های فرم‌پرکن معمولاً این فیلد را هم پر
+              می‌کنند. اگر پر شده باشد، بک‌اند (class-rest-contact.php) بی‌سروصدا
+              رد می‌کند. */}
+          <div class="cyh-honeypot" aria-hidden="true">
+            <label for="contact-website">وب‌سایت (خالی بگذارید)</label>
+            <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off" />
+          </div>
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Name */}
@@ -149,11 +251,13 @@ const jsonLd = {
           </div>
 
           {/* Submit Button */}
-          <button type="submit" class="w-full bg-crane-orange text-white font-black py-4 rounded-xl text-lg hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20 focus:outline-none focus:ring-4 focus:ring-crane-orange/40 flex items-center justify-center gap-2 min-h-[52px]">
+          <button id="rfq-submit-btn" type="submit" class="w-full bg-crane-orange text-white font-black py-4 rounded-xl text-lg hover:bg-orange-800 transition-colors shadow-lg shadow-orange-500/20 focus:outline-none focus:ring-4 focus:ring-crane-orange/40 flex items-center justify-center gap-2 min-h-[52px] disabled:opacity-60 disabled:cursor-not-allowed">
             <span>ثبت و ارسال درخواست استعلام</span>
             <svg class="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
           </button>
         </form>
+        </>
+        )}
 
       </div>
 
@@ -179,6 +283,72 @@ const jsonLd = {
       const brandText = brand ? `برند: ${brand}` : '';
       const skuText = sku ? `کد فنی: ${sku}` : '';
       msgInput.value = `درخواست استعلام قیمت برای ${skuText} ${brandText}`.trim();
+    }
+
+    // ------------------------------------------------------------
+    // بهبود تدریجی (Progressive Enhancement) ارسال فرم.
+    //
+    // مقصد ارسال از خودِ `action`/`data-endpoint` فرم خوانده می‌شود — تک
+    // منبع حقیقت. اگر جاوااسکریپت اجرا نشود، مرورگر همان `action` را
+    // به‌صورت native POST می‌کند و لید باز هم در وردپرس ثبت می‌شود؛ این
+    // اسکریپت فقط جلوی ترک صفحه را می‌گیرد و خطا/موفقیت را درجا نشان
+    // می‌دهد. (مسیر قدیمی /api/contact حذف شد: در بیلد static اصلاً وجود
+    // نداشت و باعث ۴۰۴ و از دست رفتن خاموش لید می‌شد.)
+    // ------------------------------------------------------------
+    const form = document.getElementById('rfq-form') as HTMLFormElement | null;
+    const submitBtn = document.getElementById('rfq-submit-btn') as HTMLButtonElement | null;
+    const feedback = document.getElementById('form-feedback') as HTMLDivElement | null;
+    const endpoint = form?.dataset.endpoint;
+
+    const showFeedback = (message: string, tone: 'error' | 'success') => {
+      if (!feedback) return;
+      feedback.textContent = message;
+      feedback.classList.remove('hidden', 'bg-red-50', 'border-red-200', 'text-red-700', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+      if (tone === 'error') {
+        feedback.classList.add('bg-red-50', 'border-red-200', 'text-red-700');
+      } else {
+        feedback.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-700');
+      }
+      feedback.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    if (form && submitBtn && endpoint) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (submitBtn.disabled) return; // جلوگیری از ارسال دوباره با دابل‌کلیک
+        submitBtn.disabled = true;
+        const originalHtml = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span>در حال ارسال...</span>';
+
+        try {
+          const formData = new FormData(form);
+          const payload = Object.fromEntries(formData.entries());
+
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          const data = (await res.json().catch(() => ({}))) as { success?: boolean; message?: string };
+
+          if (res.ok && data.success) {
+            window.location.href = '/thank-you';
+            return;
+          }
+
+          showFeedback(
+            data.message ||
+              'ارسال درخواست انجام نشد. لطفاً نام، شماره همراه (۰۹۱۲XXXXXXX) و توضیحات را کامل وارد کنید و دوباره تلاش نمایید. در صورت تکرار مشکل، از طریق واتساپ یا تلگرام با ما در ارتباط باشید.',
+            'error'
+          );
+        } catch {
+          showFeedback('خطا در ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی کنید یا از طریق واتساپ/تلگرام پیام دهید.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalHtml;
+        }
+      });
     }
   });
 </script>

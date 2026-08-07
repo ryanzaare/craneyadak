@@ -1,0 +1,47 @@
+---
+// src/pages/404.astro
+// صفحه‌ی ۴۰۴ اختصاصی — عمداً noindex (استاندارد سئو برای صفحات خطا)
+// اما همچنان لینک‌های داخلی معتبر برای نگه‌داشتن کاربر و عبور Link Equity دارد.
+import Layout from '../layouts/Layout.astro';
+import { CATEGORIES, SITE } from '../data/site';
+
+const title = `صفحه یافت نشد (۴۰۴) | ${SITE.name}`;
+const description = 'صفحه مورد نظر شما یافت نشد. از طریق دسته‌بندی‌ها یا جستجوی سریع، قطعه یا صفحه مورد نظر خود را بیابید.';
+---
+
+<Layout title={title} description={description} noindex={true}>
+  <section class="min-h-[70vh] flex items-center justify-center px-4 py-24 bg-gray-50">
+    <div class="max-w-2xl mx-auto text-center">
+      <span class="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-orange-50 text-crane-orange mb-8" aria-hidden="true">
+        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </span>
+      <h1 class="text-3xl md:text-4xl font-black text-crane-navy mb-4">۴۰۴ — این صفحه پیدا نشد</h1>
+      <p class="text-gray-600 text-lg leading-8 mb-10">
+        ممکن است آدرس اشتباه وارد شده باشد یا این صفحه منتقل/حذف شده باشد. می‌توانید از طریق لینک‌های زیر قطعه یا صفحه مورد نظر خود را پیدا کنید.
+      </p>
+
+      <form class="w-full max-w-lg mx-auto mb-10 relative" action="/search" method="GET" role="search">
+        <label for="notfound-search" class="sr-only">جستجوی نام یا کد فنی قطعه</label>
+        <div class="flex items-center bg-white rounded-full p-2 shadow-lg border border-gray-100 focus-within:ring-4 focus-within:ring-crane-orange/30">
+          <input id="notfound-search" type="search" name="q" placeholder="جستجوی قطعه یا کد فنی..." class="flex-grow bg-transparent text-gray-800 px-5 py-3 focus:outline-none text-right" dir="rtl" />
+          <button type="submit" class="bg-crane-orange text-white px-6 py-3 rounded-full font-bold hover:bg-orange-800 transition-colors">جستجو</button>
+        </div>
+      </form>
+
+      <div class="flex flex-wrap justify-center gap-3 mb-12">
+        {CATEGORIES.slice(0, 4).map((cat) => (
+          <a href={cat.slug} class="bg-white border border-gray-200 text-gray-700 hover:border-crane-orange hover:text-crane-orange px-4 py-2 rounded-full text-sm font-bold transition-colors">
+            {cat.name}
+          </a>
+        ))}
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/" class="bg-crane-navy text-white px-8 py-3.5 rounded-full font-bold hover:bg-gray-800 transition-colors">بازگشت به صفحه اصلی</a>
+        <a href="/contact" class="bg-white border border-gray-200 text-crane-navy px-8 py-3.5 rounded-full font-bold hover:border-crane-orange hover:text-crane-orange transition-colors">تماس با کارشناس فروش</a>
+      </div>
+    </div>
+  </section>
+</Layout>

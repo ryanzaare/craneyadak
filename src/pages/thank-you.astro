@@ -1,0 +1,53 @@
+---
+// src/pages/thank-you.astro
+// نکته سئو/دیباگ: پیش‌تر api/contact.ts پس از ثبت موفق فرم، کاربر را
+// مستقیم به صفحه اصلی (/?status=success) ریدایرکت می‌کرد — یعنی هیچ
+// بازخورد دیداری‌ای مبنی بر «درخواست شما ثبت شد» وجود نداشت (دقیقاً
+// همان گپ‌ای که خودِ کامنت داخل api/contact.ts هم به آن اشاره کرده بود:
+// «برای سئوی بهتر می‌توانیم یک صفحه /thank-you بسازیم»). عدم بازخورد در
+// مهم‌ترین لحظه‌ی تبدیل (Conversion) یک سایت B2B، اعتماد کاربر را از بین
+// می‌برد. این صفحه noindex است (استاندارد سئو برای صفحات تراکنشی/تشکر)
+// اما مسیرهای بازگشت معتبر برای عبور Link Equity دارد.
+import Layout from '../layouts/Layout.astro';
+import { SITE } from '../data/site';
+
+const title = `درخواست شما ثبت شد | ${SITE.name}`;
+// نکته صداقت داده: ادعای «حداکثر ۲ ساعت کاری» یک SLA مشخص است که تا
+// تایید صریح صاحب کسب‌وکار قابل تضمین نیست؛ تا آن زمان با یک تعهد صادقانه
+// و قابل‌نگه‌داشتن جایگزین شد (همین متن در contact.astro هم یکسان است).
+const description = 'درخواست استعلام قیمت شما با موفقیت ثبت شد. کارشناسان فنی کرین یدک در اولین فرصت کاری با شما تماس خواهند گرفت.';
+---
+
+<Layout title={title} description={description} noindex={true}>
+  <section class="min-h-[70vh] flex items-center justify-center px-4 py-24 bg-gray-50">
+    <div class="max-w-2xl mx-auto text-center">
+      <span class="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-emerald-50 text-emerald-600 mb-8" aria-hidden="true">
+        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 13l4 4L19 7" />
+        </svg>
+      </span>
+      <h1 class="text-3xl md:text-4xl font-black text-crane-navy mb-4">درخواست شما با موفقیت ثبت شد</h1>
+      <p class="text-gray-600 text-lg leading-8 mb-6">
+        از تماس شما با <strong class="text-crane-navy">{SITE.name}</strong> سپاسگزاریم. کارشناسان واحد فروش و نت درخواست شما را بررسی و
+        <strong class="text-crane-navy"> در اولین فرصت کاری</strong> با شما تماس خواهند گرفت.
+      </p>
+      <p class="text-gray-600 text-sm leading-7 mb-10">
+        برای پیگیری فوری‌تر یا ارسال عکس قطعه، می‌توانید مستقیماً از طریق واتساپ یا تلگرام هم با ما در ارتباط باشید.
+      </p>
+
+      <div class="flex flex-wrap justify-center gap-4 mb-12">
+        <a href={`https://wa.me/${SITE.whatsapp.replace('+', '')}`} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 px-6 py-3 rounded-full font-bold text-sm transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30">
+          پیگیری در واتساپ
+        </a>
+        <a href={`https://t.me/${SITE.telegram}`} target="_blank" rel="noopener noreferrer" class="bg-sky-50 hover:bg-sky-500 hover:text-white text-sky-700 px-6 py-3 rounded-full font-bold text-sm transition-colors focus:outline-none focus:ring-4 focus:ring-sky-500/30">
+          پیگیری در تلگرام
+        </a>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/" class="bg-crane-navy text-white px-8 py-3.5 rounded-full font-bold hover:bg-gray-800 transition-colors">بازگشت به صفحه اصلی</a>
+        <a href="/categories" class="bg-white border border-gray-200 text-crane-navy px-8 py-3.5 rounded-full font-bold hover:border-crane-orange hover:text-crane-orange transition-colors">مشاهده دسته‌بندی قطعات</a>
+      </div>
+    </div>
+  </section>
+</Layout>

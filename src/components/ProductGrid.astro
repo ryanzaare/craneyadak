@@ -1,0 +1,144 @@
+---
+// src/components/ProductGrid.astro
+// ---------------------------------------------------------------------------
+// شبکه‌ی نمایش محصولات واقعی + «حالت خالیِ صادقانه».
+//
+// این کامپوننت جایگزین آرایه‌های `mockProducts` (داده‌ی جعلی) در صفحات
+// دسته‌بندی و برند است. قانون غیرقابل‌مذاکره‌ی پروژه: نبود داده همیشه بهتر
+// از داده‌ی ساختگی است. بنابراین وقتی هیچ محصول واقعی‌ای از وردپرس نیامده،
+// به‌جای پرکردن صفحه با کارت‌های الکی، یک بلوک تبدیل (RFQ) واقعی نمایش
+// داده می‌شود که برای کاربر صنعتی مفیدتر هم هست: او معمولاً یک Part Number
+// مشخص در دست دارد و می‌خواهد سریع استعلام بگیرد.
+// ---------------------------------------------------------------------------
+import type { CraneProduct } from '../lib/wp';
+import { inquiryHref } from '../lib/wp';
+import { SITE } from '../data/site';
+
+export interface Props {
+  products: CraneProduct[];
+  /** عنوان بخش (h2) — همیشه رندر می‌شود تا سلسله‌مراتب هدینگ نشکند. */
+  heading: string;
+  /** عنوان حالت خالی؛ باید مشخص و مرتبط با همان دسته/برند باشد. */
+  emptyTitle: string;
+  /** توضیح حالت خالی — بدون ادعای غیرواقعی. */
+  emptyBody: string;
+  /** پارامترهای از پیش پرشده‌ی فرم استعلام در حالت خالی. */
+  inquiryQuery?: Record<string, string>;
+}
+
+const { products, heading, emptyTitle, emptyBody, inquiryQuery = {} } = Astro.props;
+
+const emptyInquiryParams = new URLSearchParams(inquiryQuery).toString();
+const emptyInquiryHref = emptyInquiryParams ? `/contact?${emptyInquiryParams}` : '/contact';
+const whatsappHref = `https://wa.me/${SITE.whatsapp.replace('+', '')}`;
+---
+
+<section class="py-16 px-4 md:px-8 bg-gray-50" aria-labelledby="product-grid-heading">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex flex-wrap gap-4 justify-between items-end mb-10 border-b border-gray-200 pb-4">
+      <h2 id="product-grid-heading" class="text-2xl font-bold text-crane-navy">{heading}</h2>
+      {products.length > 0 && (
+        <span class="text-sm text-gray-600 font-bold bg-gray-100 px-3 py-1 rounded-full">
+          {products.length} محصول
+        </span>
+      )}
+    </div>
+
+    {products.length > 0 ? (
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {products.map((product, index) => (
+          <article class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col group relative">
+            <div class="aspect-square bg-gray-100 relative flex items-center justify-center overflow-hidden">
+              {product.image ? (
+                <img
+                  src={product.image.url}
+                  alt={product.image.altText}
+                  width={product.image.width ?? 600}
+                  height={product.image.height ?? 600}
+                  loading={index < 4 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                /* بدون تصویر واقعی، یک آیکون خنثی نمایش می‌دهیم (نه تصویر
+                   محصول دیگری) — aria-hidden چون هیچ معنای اطلاعاتی ندارد. */
+                <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              )}
+              {product.brandNameFa && (
+                <span class="absolute top-3 right-3 bg-white/95 backdrop-blur text-xs font-bold px-2 py-1 rounded text-gray-700 shadow-sm">
+                  {product.brandNameFa}
+                </span>
+              )}
+            </div>
+
+            <div class="p-5 flex flex-col grow">
+              {product.sku && <p class="text-xs text-gray-500 mb-1 font-mono" dir="ltr">{product.sku}</p>}
+              <h3 class="font-bold text-crane-navy text-lg mb-4 line-clamp-2 leading-7">
+                <a
+                  href={inquiryHref(product)}
+                  class="hover:text-crane-orange before:absolute before:inset-0 focus:outline-none focus:ring-4 focus:ring-crane-orange/30 rounded"
+                >
+                  {product.name}
+                </a>
+              </h3>
+
+              {product.oemCrossReference.length > 0 && (
+                /* کدهای معادل OEM — مهم‌ترین سیگنال سئویی این صفحات: خریدار
+                   صنعتی معمولاً با کد سازنده‌ی اصلی جستجو می‌کند، نه با کد
+                   داخلی فروشگاه. */
+                <p class="text-xs text-gray-600 mb-4 leading-6">
+                  <span class="font-bold">کدهای معادل:</span>{' '}
+                  <span dir="ltr" class="font-mono">
+                    {product.oemCrossReference.map((ref) => `${ref.oemBrand} ${ref.oemPartNumber}`).join(' · ')}
+                  </span>
+                </p>
+              )}
+
+              <div class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between relative z-10">
+                <span class="text-sm font-bold text-gray-700">{product.priceDisplay ?? 'استعلام قیمت'}</span>
+                <span class="w-8 h-8 rounded-full bg-orange-50 text-crane-orange flex items-center justify-center group-hover:bg-crane-orange group-hover:text-white transition-colors" aria-hidden="true">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                </span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    ) : (
+      /* ------------------------- حالت خالیِ صادقانه ------------------------- */
+      <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 md:p-12 max-w-3xl">
+        <span class="w-14 h-14 rounded-2xl bg-orange-50 text-crane-orange flex items-center justify-center mb-6" aria-hidden="true">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
+        </span>
+
+        <h3 class="text-xl md:text-2xl font-black text-crane-navy mb-4 leading-9">{emptyTitle}</h3>
+        <p class="text-gray-600 leading-8 mb-8">{emptyBody}</p>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <a
+            href={emptyInquiryHref}
+            class="bg-crane-orange text-white px-8 py-4 rounded-xl font-black text-center hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px] flex items-center justify-center"
+          >
+            ثبت استعلام با کد فنی
+          </a>
+          <a
+            href={`tel:${SITE.phone}`}
+            class="bg-crane-navy text-white px-8 py-4 rounded-xl font-black text-center hover:bg-gray-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-navy/30 min-h-[52px] flex items-center justify-center"
+          >
+            تماس با واحد فروش
+          </a>
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-xl font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center"
+          >
+            ارسال عکس قطعه در واتساپ
+          </a>
+        </div>
+      </div>
+    )}
+  </div>
+</section>

@@ -1,0 +1,170 @@
+{
+    "key": "group_cyh_product_fields",
+    "title": "Product Fields",
+    "fields": [
+        {
+            "key": "field_cyh_product_sku",
+            "label": "کد فنی (SKU / Part Number)",
+            "name": "sku",
+            "type": "text",
+            "instructions": "کد فنی داخلی فروشگاه — معادل product.sku در فرانت‌اند فعلی.",
+            "required": 1,
+            "wrapper": { "width": "50" },
+            "show_in_graphql": 1,
+            "graphql_field_name": "sku"
+        },
+        {
+            "key": "field_cyh_product_brand",
+            "label": "برند سازنده",
+            "name": "brand",
+            "type": "relationship",
+            "instructions": "برند مرتبط با این محصول.",
+            "required": 1,
+            "wrapper": { "width": "50" },
+            "post_type": [ "brand" ],
+            "filters": [ "search" ],
+            "max": 1,
+            "return_format": "object",
+            "show_in_graphql": 1,
+            "graphql_field_name": "brand"
+        },
+        {
+            "key": "field_cyh_product_price_display",
+            "label": "قیمت نمایشی",
+            "name": "price_display",
+            "type": "text",
+            "instructions": "چون فروش این محصولات معمولاً استعلامی است، به‌جای قیمت عددی صرف، یک متن نمایشی مثل «تماس بگیرید» یا مقدار عددی واقعی وارد کنید. توجه: اگر قیمت واقعی و ثابت وارد شد، Schema.org Offer در فرانت‌اند باید priceCurrency: IRR هم دریافت کند (نگاه کنید به کامنت‌های categories/[slug].astro).",
+            "required": 0,
+            "default_value": "تماس بگیرید",
+            "wrapper": { "width": "50" },
+            "show_in_graphql": 1,
+            "graphql_field_name": "priceDisplay"
+        },
+        {
+            "key": "field_cyh_product_gallery",
+            "label": "گالری تصاویر محصول",
+            "name": "gallery",
+            "type": "gallery",
+            "instructions": "حداقل یک تصویر واقعی از قطعه (نه تصویر عمومی/استوک) برای اعتماد خریدار صنعتی توصیه می‌شود.",
+            "required": 0,
+            "wrapper": { "width": "50" },
+            "return_format": "array",
+            "library": "all",
+            "min": 0,
+            "max": 12,
+            "insert": "append",
+            "show_in_graphql": 1,
+            "graphql_field_name": "gallery"
+        },
+        {
+            "key": "field_cyh_product_datasheet_files",
+            "label": "اسناد فنی مرتبط",
+            "name": "datasheet_files",
+            "type": "relationship",
+            "instructions": "نقشه‌های انفجاری / وایرینگ / منوال‌های مرتبط با این محصول.",
+            "required": 0,
+            "post_type": [ "datasheet" ],
+            "filters": [ "search" ],
+            "return_format": "object",
+            "show_in_graphql": 1,
+            "graphql_field_name": "datasheetFiles"
+        },
+        {
+            "key": "field_cyh_product_oem_cross_reference",
+            "label": "کدهای معادل OEM",
+            "name": "oem_cross_reference",
+            "type": "repeater",
+            "instructions": "ایده‌ی سئوی مهم: بیشتر خریداران صنعتی با کد فنی اصلی سازنده (OEM) سرچ می‌کنند، نه کد داخلی فروشگاه. هر ردیف یک کد معادل/جایگزین را ثبت می‌کند تا این صفحه برای چند Part Number مختلف هم رتبه بگیرد.",
+            "required": 0,
+            "layout": "table",
+            "button_label": "افزودن کد معادل",
+            "sub_fields": [
+                {
+                    "key": "field_cyh_oem_brand",
+                    "label": "برند OEM",
+                    "name": "oem_brand",
+                    "type": "text"
+                },
+                {
+                    "key": "field_cyh_oem_part_number",
+                    "label": "کد فنی OEM",
+                    "name": "oem_part_number",
+                    "type": "text"
+                }
+            ],
+            "show_in_graphql": 1,
+            "graphql_field_name": "oemCrossReference"
+        },
+        {
+            "key": "field_cyh_product_compatible_models",
+            "label": "مدل‌های سازگار",
+            "name": "compatible_models",
+            "type": "repeater",
+            "instructions": "لیست مدل‌های جرثقیل/دستگاهی که این قطعه با آن‌ها سازگار است — محتوای «سازگار با...» اعتماد خریدار را جلب می‌کند.",
+            "required": 0,
+            "layout": "table",
+            "button_label": "افزودن مدل سازگار",
+            "sub_fields": [
+                {
+                    "key": "field_cyh_compat_brand",
+                    "label": "برند",
+                    "name": "crane_brand",
+                    "type": "text"
+                },
+                {
+                    "key": "field_cyh_compat_model",
+                    "label": "نام مدل",
+                    "name": "model_name",
+                    "type": "text"
+                }
+            ],
+            "show_in_graphql": 1,
+            "graphql_field_name": "compatibleModels"
+        },
+        {
+            "key": "field_cyh_product_technical_specs",
+            "label": "مشخصات فنی",
+            "name": "technical_specs",
+            "type": "repeater",
+            "instructions": "برای تولید جدول مشخصات فنی در صفحه‌ی محصول + additionalProperty در Schema.org Product.",
+            "required": 0,
+            "layout": "table",
+            "button_label": "افزودن مشخصه",
+            "sub_fields": [
+                {
+                    "key": "field_cyh_spec_label",
+                    "label": "عنوان مشخصه",
+                    "name": "spec_label",
+                    "type": "text"
+                },
+                {
+                    "key": "field_cyh_spec_value",
+                    "label": "مقدار",
+                    "name": "spec_value",
+                    "type": "text"
+                }
+            ],
+            "show_in_graphql": 1,
+            "graphql_field_name": "technicalSpecs"
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "product"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "active": true,
+    "show_in_rest": 1,
+    "show_in_graphql": 1,
+    "graphql_field_name": "productFields",
+    "graphql_types": [ "craneProduct" ]
+}

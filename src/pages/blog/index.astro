@@ -1,7 +1,9 @@
 ---
 // src/pages/blog/index.astro
 import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { SITE } from '../../data/site';
+import { BLOG_POSTS } from '../../data/content';
 
 const title = `مجله تخصصی و مقالات آموزشی جرثقیل سقفی | ${SITE.name}`;
 const description = 'مقالات تخصصی، آموزش‌های اورهال، راهنمای انتخاب قطعات و اخبار صنعت بالابر. مرجع علمی مهندسین نت برای تعمیر و نگهداری جرثقیل.';
@@ -23,27 +25,21 @@ const jsonLd = {
       url: `${SITE.url}/blog`,
       name: title,
       description: description,
-      isPartOf: { '@id': `${SITE.url}/#website` }
+      isPartOf: { '@id': `${SITE.url}/#website` },
+      blogPost: BLOG_POSTS.map((p) => ({ '@type': 'BlogPosting', '@id': `${SITE.url}/blog/${p.slug}#article`, headline: p.title, url: `${SITE.url}/blog/${p.slug}` })),
     }
   ]
 };
 
-// Mock Posts (To be replaced with WP Headless API later)
-const posts = [
-  { title: 'راهنمای کالیبراسیون لنت ترمز موتورهای دماگ', excerpt: 'چگونه لنت ترمز موتور گیربکس دماگ را تنظیم کنیم تا از سقوط بار جلوگیری شود؟ بررسی گام‌به‌گام پارامترهای مکانیکی.', date: '۱۵ آبان ۱۴۰۳', category: 'آموزش فنی' },
-  { title: 'تفاوت شین‌های برق‌رسان باز و بسته', excerpt: 'بررسی مزایا و معایب شین‌های آلومینیومی و مسی در محیط‌های مرطوب و پرگردوغبار. کدام سیستم برای سوله شما مناسب‌تر است؟', date: '۰۲ آبان ۱۴۰۳', category: 'راهنمای خرید' },
-  { title: 'نشانه‌های فرسودگی سیم‌بکسل و روپ‌گاید', excerpt: 'پارگی سیم‌بکسل یکی از مرگبارترین حوادث جرثقیل است. با این ۵ نشانه، زمان دقیق تعویض کمربند و سیم‌بکسل را تشخیص دهید.', date: '۲۸ مهر ۱۴۰۳', category: 'ایمنی و نت' },
-];
+// تک منبع داده (src/data/content.ts) — همین آرایه در blog/[slug].astro هم
+// استفاده می‌شود تا عنوان/تاریخ هرگز بین لیست و صفحه‌ی مقاله واگرا نشود.
+const posts = BLOG_POSTS;
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
   <section class="bg-crane-navy text-white pt-12 pb-20 px-4 border-b-[8px] border-crane-orange relative">
     <div class="max-w-7xl mx-auto relative z-10">
-      <nav class="text-sm text-gray-400 mb-8 flex items-center gap-2" aria-label="Breadcrumb">
-        <a href="/" class="hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2 -ml-2">صفحه اصلی</a>
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-        <span class="text-white font-bold" aria-current="page">مجله تخصصی</span>
-      </nav>
+      <Breadcrumb items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'مجله تخصصی' }]} />
       <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight">دانشنامه تخصصی تجهیزات بالابر</h1>
       <p class="text-lg text-gray-300 max-w-2xl leading-8 font-light">مقالات مهندسی، آموزش‌های گام‌به‌گام تعمیرات و راهنمای انتخاب اصولی قطعات برای بهینه‌سازی واحدهای نت.</p>
     </div>
@@ -61,9 +57,9 @@ const posts = [
               <span class="absolute top-4 right-4 bg-crane-orange text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">{post.category}</span>
             </div>
             <div class="p-6 md:p-8 flex flex-col flex-grow">
-              <time class="text-xs font-bold text-gray-400 mb-3 block">{post.date}</time>
+              <time datetime={post.isoDate} class="text-xs font-bold text-gray-400 mb-3 block">{post.date}</time>
               <h2 class="font-black text-crane-navy text-xl mb-4 leading-8">
-                <a href="#" class="hover:text-crane-orange before:absolute before:inset-0 focus:outline-none focus:ring-4 focus:ring-crane-orange/30 rounded">{post.title}</a>
+                <a href={`/blog/${post.slug}`} class="hover:text-crane-orange before:absolute before:inset-0 focus:outline-none focus:ring-4 focus:ring-crane-orange/30 rounded">{post.title}</a>
               </h2>
               <p class="text-sm text-gray-600 leading-7 line-clamp-3 mb-6">{post.excerpt}</p>
               <div class="mt-auto pt-4 border-t border-gray-100 flex items-center text-crane-orange font-bold text-sm">

@@ -11,6 +11,9 @@ export const SITE = {
   phone: '021-12345678',
   phoneDisplay: '۰۲۱-۱۲۳۴۵۶۷۸',
   whatsapp: '+989120000000',
+  // یوزرنیم تلگرام (بدون @) — کانال ارتباطی اصلی مهندسین/مدیران خرید صنعتی
+  // ایران؛ نرخ پاسخ‌دهی و نصب آن معمولاً از واتساپ در مخاطب B2B ایرانی بالاتر است.
+  telegram: 'craneyadak',
   email: 'info@craneyadak.com',
   address: {
     street: 'خیابان صنعتی، پلاک ۱۰',
@@ -19,8 +22,36 @@ export const SITE = {
     postalCode: '1234567890',
     country: 'IR',
   },
+  // ⚠️ سئوی محلی (Local SEO) — TODO قبل از انتشار نهایی:
+  // مقادیر lat/lng فعلاً null هستند چون آدرس بالا خودش placeholder است
+  // («خیابان صنعتی پلاک ۱۰» + کدپستی ۱۲۳۴۵۶۷۸۹۰ واقعی نیست). ثبت یک
+  // مختصات جغرافیایی برای یک آدرس جعلی، به‌اندازه‌ی ساختن ریویوی تقلبی
+  // گمراه‌کننده است — یک پین اشتباه روی نقشه اعتماد خریدار B2B را از بین
+  // می‌برد. به محض داشتن آدرس واقعی دفتر/انبار، مقدار را از روی Google
+  // Maps (کلیک راست روی موقعیت → کپی مختصات) یا نشان جایگزین کنید؛ کد
+  // مصرف‌کننده (index.astro, contact.astro) به‌صورت خودکار GeoCoordinates
+  // را در Schema.org و نقشه‌ی جاسازی‌شده فعال می‌کند.
+  geo: {
+    lat: null as number | null,
+    lng: null as number | null,
+  },
+  // ساعات کاری ساختاریافته — همان مقداری که در contact.astro به‌صورت متن
+  // نمایش داده می‌شود، اما این‌جا هم برای Schema.org openingHoursSpecification
+  // استفاده می‌شود تا هرگز بین متن نمایشی و داده‌ی ساختاریافته واگرا نشود.
+  hours: [
+    { dayOfWeek: ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday'], opens: '08:30', closes: '17:00' },
+    { dayOfWeek: ['Thursday'], opens: '08:30', closes: '13:00' },
+  ],
   social: {
     instagram: 'https://www.instagram.com/craneyadak',
+    // ⚠️ سئوی محلی — TODO: این دو مورد مهم‌ترین منابع «Local Citation» در
+    // ایران هستند (کاربران ایرانی برای جستجوی محلی از نشان/بلد بیش از
+    // گوگل‌مپ استفاده می‌کنند). پس از ساخت پروفایل کسب‌وکار واقعی در هرکدام،
+    // لینک را اینجا قرار دهید تا در sameAs اسکیمای LocalBusiness و کارت
+    // تماس نمایش داده شود.
+    googleBusinessProfile: '',
+    neshan: '',
+    balad: '',
   },
 } as const;
 

@@ -2,22 +2,69 @@
 // src/pages/index.astro
 import Layout from '../layouts/Layout.astro';
 import { CATEGORIES, ENRICHED_BRANDS, SITE } from '../data/site';
-import { ADVANTAGES as advantages, FAQS as faqs } from '../data/content';
+import { ADVANTAGES as advantages, FAQS as faqs, INDUSTRIES as industries } from '../data/content';
+import { getAvailableDatasheets } from '../lib/datasheets';
+
+// نکته صداقت داده: فقط اسنادی که فایل PDF واقعی‌شان در public/ موجود است.
+// پیش‌تر این‌جا طول آرایه‌ی خام DATASHEETS شمرده می‌شد و صفحه‌ی اصلی «+۶ سند
+// قابل دانلود» را تبلیغ می‌کرد در حالی که هیچ‌کدام از آن شش فایل وجود
+// نداشت — یعنی هم آمار نادرست بود و هم هر دو کارت دانلود ۴۰۴ می‌دادند.
+const datasheets = getAvailableDatasheets();
+const featuredDatasheets = datasheets.slice(0, 2);
+
+// نکته صداقت داده (E-E-A-T): این آمار به‌عمد به‌جای اعداد ادعایی و غیرقابل
+// اثبات (مثل «+۱۰۰۰۰ مشتری راضی» یا نشان اعتماد ساختگی) مستقیماً از طول
+// آرایه‌های واقعی محتوا (تک منبع حقیقت در src/data) محاسبه می‌شود. اگر فردا
+// دسته یا برند جدیدی اضافه شود، این عدد بدون نیاز به ویرایش دستی به‌روز
+// می‌ماند و هرگز با واقعیت سایت واگرا نمی‌شود. آمار اسناد فنی هم فقط وقتی
+// نمایش داده می‌شود که واقعاً فایلی برای دانلود وجود داشته باشد.
+const trustStats = [
+  { value: `+${CATEGORIES.length}`, label: 'دسته‌بندی تخصصی قطعات' },
+  { value: `+${ENRICHED_BRANDS.length}`, label: 'برند جهانی تحت پوشش' },
+  { value: `${industries.length}`, label: 'صنعت هدف (فولاد، پتروشیمی، معادن)' },
+  ...(datasheets.length > 0
+    ? [{ value: `+${datasheets.length}`, label: 'سند و کاتالوگ فنی قابل دانلود' }]
+    : [{ value: `${faqs.length}`, label: 'پرسش فنی پاسخ‌داده‌شده توسط کارشناسان' }]),
+];
 
 const title = 'قطعات جرثقیل سقفی | تامین تخصصی با تضمین اصالت — کرین یدک';
 const description = 'تامین تخصصی قطعات جرثقیل سقفی: ریموت کنترل، شین، چرخ، جاروبک، قلاب و دیسک ترمز. جستجو بر اساس نام قطعه، برند یا کد فنی با تضمین اصالت و ارسال به سراسر ایران.';
+
+// نکته سئوی محلی (Local SEO): sameAs محلی (نشان/بلد/گوگل بیزینس پروفایل) فقط
+// وقتی به اسکیما اضافه می‌شود که SITE.social مقدار واقعی (غیرخالی) داشته
+// باشد — لینک خالی در sameAs بی‌ارزش/نامعتبر است و بهتر از نبودنش نیست.
+const localSameAs = [SITE.social.googleBusinessProfile, SITE.social.neshan, SITE.social.balad].filter(
+  (url): url is string => Boolean(url)
+);
+
+// GeoCoordinates فقط وقتی ساخته می‌شود که مختصات واقعی (نه null) در
+// SITE.geo موجود باشد — نگاه کنید به کامنت TODO در src/data/site.ts.
+const geoCoordinates =
+  SITE.geo.lat !== null && SITE.geo.lng !== null
+    ? { '@type': 'GeoCoordinates', latitude: SITE.geo.lat, longitude: SITE.geo.lng }
+    : undefined;
 
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
     {
-      '@type': ['LocalBusiness', 'HardwareStore', 'B2BBusiness'],
+      // نکته سئو: «B2BBusiness» یک نوع رسمی schema.org نیست (بررسی شد:
+      // schema.org/B2BBusiness نتیجه‌ی 404 برمی‌گرداند) و باعث خطای
+      // "Unrecognized type" در Rich Results Test می‌شد. LocalBusiness +
+      // HardwareStore هر دو نوع معتبر و رسمی هستند؛ ماهیت B2B از طریق
+      // priceRange، knowsAbout و محتوای صفحه (نه یک تایپ جعلی) بیان می‌شود.
+      '@type': ['LocalBusiness', 'HardwareStore'],
       '@id': `${SITE.url}/#organization`,
       name: SITE.name,
       legalName: SITE.legalName,
       url: SITE.url,
-      priceRange: '$$$',
+      // نکته صداقت داده: کلید `priceRange` حذف شد. مقدار قبلی `'$$$'` یک
+      // ادعای غیرقابل‌اثبات درباره‌ی سطح قیمت بود، در حالی که سایت اصلاً
+      // قیمتی منتشر نمی‌کند (همه‌ی اقلام استعلامی‌اند). این فیلد اختیاری
+      // است و حذف آن هیچ خطای اسکیما ایجاد نمی‌کند؛ درج یک مقدار حدسی
+      // اما هم گمراه‌کننده است و هم می‌تواند خریدار B2B را پیشاپیش دلسرد کند.
       areaServed: 'IR',
+      knowsAbout: CATEGORIES.map((c) => c.keyword),
       logo: { '@type': 'ImageObject', '@id': `${SITE.url}/#logo`, url: `${SITE.url}/logo.png`, width: 512, height: 512, caption: SITE.name },
       image: { '@id': `${SITE.url}/#logo` },
       description: SITE.description,
@@ -30,11 +77,28 @@ const jsonLd = {
         postalCode: SITE.address.postalCode,
         addressCountry: SITE.address.country,
       },
+      // نکته سئوی محلی: تا وقتی SITE.geo مقدار واقعی نداشته باشد، این کلید
+      // اصلاً به آبجکت اضافه نمی‌شود (به‌جای فرستادن یک مختصات جعلی که
+      // پین اشتباه روی نقشه‌ی گوگل/نتایج محلی می‌سازد).
+      ...(geoCoordinates ? { geo: geoCoordinates } : {}),
+      // نکته سئوی محلی: openingHoursSpecification دقیقاً همان ساعات کاری‌ای
+      // است که در contact.astro به‌صورت متن نمایش داده می‌شود (تک منبع
+      // حقیقت: SITE.hours) — بدون این کلید، ساعات کاری فقط برای انسان
+      // قابل‌خواندن است، نه برای الگوریتم رتبه‌بندی محلی گوگل.
+      openingHoursSpecification: SITE.hours.map((h) => ({
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: h.dayOfWeek,
+        opens: h.opens,
+        closes: h.closes,
+      })),
       contactPoint: { '@type': 'ContactPoint', telephone: SITE.phone, contactType: 'sales', areaServed: 'IR', availableLanguage: ['fa', 'en'] },
-      sameAs: [
-        SITE.social.instagram,
-        "https://en.wikipedia.org/wiki/Overhead_crane"
-      ],
+      // نکته سئو: sameAs فقط باید به پروفایل‌های خودِ این کسب‌وکار اشاره کند
+      // (شبکه‌های اجتماعی، ویکی‌پدیای مربوط به برند و...)، نه به یک مقاله‌ی
+      // عمومی درباره‌ی "جرثقیل سقفی". آن ارجاع در پایین‌تر، در WebPage.about
+      // به‌درستی استفاده شده چون آنجا درباره‌ی موضوع صفحه است، نه هویت شرکت.
+      // نشان و بلد (localSameAs) فقط با لینک واقعی اضافه می‌شوند — نگاه
+      // کنید به کامنت TODO سئوی محلی در src/data/site.ts.
+      sameAs: [SITE.social.instagram, ...localSameAs],
     },
     {
       '@type': 'WebSite',
@@ -101,7 +165,7 @@ const jsonLd = {
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
           </span>
           <input id="site-search" type="search" name="q" placeholder="مثال: موتور گیربکس حرکت طولی دماگ مدل KBA-71" class="flex-grow bg-transparent text-gray-800 px-6 md:px-2 py-4 md:py-5 focus:outline-none text-right placeholder-gray-400 text-lg font-medium w-full" dir="rtl" autocomplete="off" required />
-          <button type="submit" aria-label="شروع جستجو در قطعات" class="w-full md:w-auto bg-crane-orange text-white px-12 py-4 md:py-5 rounded-xl md:rounded-full font-bold text-lg hover:bg-orange-600 transition-colors shadow-md mt-2 md:mt-0">جستجو در فروشگاه</button>
+          <button type="submit" aria-label="شروع جستجو در قطعات" class="w-full md:w-auto bg-crane-orange text-white px-12 py-4 md:py-5 rounded-xl md:rounded-full font-bold text-lg hover:bg-orange-800 transition-colors shadow-md mt-2 md:mt-0">جستجو در فروشگاه</button>
         </div>
       </form>
 
@@ -159,6 +223,18 @@ const jsonLd = {
     </div>
   </section>
 
+  <!-- Trust / Stats Strip -->
+  <section class="bg-gray-50 pb-14 px-4 md:px-12 lg:px-20" aria-label="آمار پوشش تخصصی کرین یدک">
+    <ul class="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      {trustStats.map((stat) => (
+        <li class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 md:p-7 text-center">
+          <span class="block text-3xl md:text-4xl font-black text-crane-orange mb-1.5">{stat.value}</span>
+          <span class="block text-xs md:text-sm font-bold text-gray-500 leading-6">{stat.label}</span>
+        </li>
+      ))}
+    </ul>
+  </section>
+
   <!-- Advantages -->
   <section class="bg-gray-50 pb-14 px-4 md:px-12 lg:px-20 border-b border-gray-200" aria-labelledby="advantages-heading">
     <h2 id="advantages-heading" class="sr-only">مزیت‌های خرید از کرین یدک</h2>
@@ -206,7 +282,7 @@ const jsonLd = {
           <h2 id="categories-heading" class="text-3xl md:text-4xl font-black text-crane-navy tracking-tight">پربازدیدترین دسته‌بندی‌ها</h2>
           <span class="w-16 h-2 bg-crane-orange rounded-full hidden md:block mt-2" aria-hidden="true"></span>
         </div>
-        <a href="/categories" class="text-base md:text-lg font-bold text-crane-orange hover:text-orange-600 flex items-center gap-2 transition-colors group">
+        <a href="/categories" class="text-base md:text-lg font-bold text-crane-orange hover:text-orange-800 flex items-center gap-2 transition-colors group">
           مشاهده همه دسته‌بندی‌ها
           <svg aria-hidden="true" class="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
         </a>
@@ -315,25 +391,43 @@ const jsonLd = {
   <section class="py-16 px-4 border-y border-gray-100 bg-crane-light" aria-labelledby="datasheet-heading">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start justify-between gap-12">
       <div class="md:w-1/2">
-        <h2 id="datasheet-heading" class="text-2xl md:text-3xl font-black text-crane-navy mb-4">مرجع دانلود اسناد فنی و کاتالوگ ها</h2>
-        <p class="text-gray-600 leading-7 text-justify">دسترسی مستقیم به نقشه‌های انفجاری (Exploded Views)، هندبوک‌های نگهداری و فایل‌های PDF ابعاد و اندازه‌ی قطعات برندهای معتبر جهانی.</p>
+        <h2 id="datasheet-heading" class="text-2xl md:text-3xl font-black text-crane-navy mb-4">
+          {featuredDatasheets.length > 0 ? 'مرجع دانلود اسناد فنی و کاتالوگ‌ها' : 'نقشه‌ها و اسناد فنی قطعات'}
+        </h2>
+        <p class="text-gray-600 leading-7 text-justify">
+          {featuredDatasheets.length > 0
+            ? 'دسترسی مستقیم به نقشه‌های انفجاری (Exploded Views)، هندبوک‌های نگهداری و فایل‌های PDF ابعاد و اندازه‌ی قطعات برندهای معتبر جهانی.'
+            : 'برای شناسایی دقیق قطعه، نقشه‌ی انفجاری (Exploded View)، دیاگرام وایرینگ یا هندبوک نگهداری مدل دستگاه خود را از کارشناسان فنی ما درخواست کنید.'}
+        </p>
       </div>
-      
+
       <div class="md:w-1/2 w-full flex flex-col gap-6">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <a href="/datasheets/demag-drives" class="flex items-center gap-4 bg-white p-4 rounded-2xl border border-gray-200 hover:border-crane-orange hover:shadow-md transition-all group focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
-            <span class="bg-red-50 text-red-500 p-3 rounded-xl shrink-0 group-hover:bg-red-500 group-hover:text-white transition-colors" aria-hidden="true"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"></path></svg></span>
-            <div><h4 class="font-bold text-gray-800 text-sm">کاتالوگ موتور دماگ</h4><span class="text-xs text-gray-500">PDF - 2.4MB</span></div>
-          </a>
-          <a href="/datasheets/telecrane-manual" class="flex items-center gap-4 bg-white p-4 rounded-2xl border border-gray-200 hover:border-crane-orange hover:shadow-md transition-all group focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
-            <span class="bg-red-50 text-red-500 p-3 rounded-xl shrink-0 group-hover:bg-red-500 group-hover:text-white transition-colors" aria-hidden="true"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"></path></svg></span>
-            <div><h4 class="font-bold text-gray-800 text-sm">منوال تله‌کرین F21</h4><span class="text-xs text-gray-500">PDF - 1.1MB</span></div>
-          </a>
-        </div>
-        <div class="flex justify-start border-t border-gray-200 pt-4">
-          <a href="/datasheets" class="inline-flex items-center gap-2 text-crane-orange font-bold hover:text-orange-700 transition-colors group focus:outline-none focus:ring-2 focus:ring-crane-orange focus:ring-offset-2 rounded">
-            <svg aria-hidden="true" class="w-5 h-5 transform transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        <!-- نکته صداقت داده/سئو: این کارت‌ها فقط برای اسنادی رندر می‌شوند که
+             فایل PDF واقعی‌شان در public/ موجود است (src/lib/datasheets.ts).
+             پیش‌تر همین بخش دو لینک ۴۰۴ با حجم فایل ساختگی نمایش می‌داد. -->
+        {featuredDatasheets.length > 0 ? (
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {featuredDatasheets.map((doc) => (
+              <a href={doc.file} target="_blank" rel="noopener noreferrer" aria-label={`دانلود ${doc.title} با حجم ${doc.size}`} class="flex items-center gap-4 bg-white p-4 rounded-2xl border border-gray-200 hover:border-crane-orange hover:shadow-md transition-all group focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
+                <span class="bg-red-50 text-red-500 p-3 rounded-xl shrink-0 group-hover:bg-red-500 group-hover:text-white transition-colors" aria-hidden="true"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"></path></svg></span>
+                <div><h3 class="font-bold text-gray-800 text-sm line-clamp-1">{doc.title}</h3><span class="text-xs text-gray-600" dir="ltr">{doc.ext} — {doc.size}</span></div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div class="bg-white p-6 rounded-2xl border border-gray-200">
+            <p class="text-sm text-gray-700 leading-7">
+              اسنادی که اجازه‌ی بازنشر عمومی داشته باشند به‌تدریج در آرشیو منتشر می‌شوند. تا آن زمان، درخواست سند برای یک مدل مشخص از طریق کارشناسان فنی انجام می‌شود.
+            </p>
+          </div>
+        )}
+        <div class="flex flex-wrap gap-6 justify-start border-t border-gray-200 pt-4">
+          <a href="/datasheets" class="inline-flex items-center gap-2 text-crane-orange font-bold hover:text-orange-800 transition-colors group focus:outline-none focus:ring-2 focus:ring-crane-orange focus:ring-offset-2 rounded">
+            <svg aria-hidden="true" class="w-5 h-5 transform transition-transform group-hover:translate-x-1 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
             ورود به آرشیو اسناد فنی
+          </a>
+          <a href="/contact" class="inline-flex items-center gap-2 text-crane-navy font-bold hover:text-crane-orange transition-colors focus:outline-none focus:ring-2 focus:ring-crane-navy focus:ring-offset-2 rounded">
+            درخواست سند فنی مدل خاص
           </a>
         </div>
       </div>
@@ -401,7 +495,7 @@ const jsonLd = {
       <h2 id="cta-heading" class="text-3xl md:text-4xl font-black text-white mb-5">قطعه‌ی مورد نظرتان را پیدا نکردید؟</h2>
       <p class="text-gray-300 text-lg leading-8 mb-10 text-center">مشخصات، کد فنی یا حتی عکس قطعه را برای ما بفرستید. کارشناس فنی ما امکان تامین و زمان تحویل را بررسی و اعلام می‌کند.</p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="/contact" class="bg-crane-orange text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-orange-600 transition-all transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-crane-orange/50">ثبت درخواست استعلام</a>
+        <a href="/contact" class="bg-crane-orange text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-orange-800 transition-all transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-crane-orange/50">ثبت درخواست استعلام</a>
         <a href={`tel:${SITE.phone}`} class="bg-white/10 backdrop-blur-lg border border-white/20 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-white/20 transition-all transform hover:-translate-y-1 focus:outline-none focus:ring-4 focus:ring-white/50">تماس مستقیم: {SITE.phoneDisplay}</a>
       </div>
     </div>
