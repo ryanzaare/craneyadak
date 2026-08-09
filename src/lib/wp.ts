@@ -122,6 +122,23 @@ export function isWpConfigured(): boolean {
   return typeof WP_BASE_URL === 'string' && WP_BASE_URL.trim() !== '';
 }
 
+/**
+ * خطای سطح GraphQL (نه شبکه) — یعنی سرور پاسخ داد اما خودِ کوئری را رد کرد.
+ * این نوع خطا با تلاش مجدد درست نمی‌شود.
+ */
+class WpGraphQLError extends Error {
+  // عمداً از «parameter property» تایپ‌اسکریپت استفاده نشده: آن سینتکس نیاز
+  // به ترنسپایل کامل دارد و در حالت strip-only (مثلاً اجرای مستقیم با Node
+  // برای تست) پشتیبانی نمی‌شود. این شکل ساده همه‌جا کار می‌کند.
+  readonly messages: string[];
+
+  constructor(messages: string[]) {
+    super(`خطای WPGraphQL: ${messages.join(' | ')}`);
+    this.name = 'WpGraphQLError';
+    this.messages = messages;
+  }
+}
+
 async function wpQuery<T>(query: string, variables: Record<string, unknown>): Promise<T | null> {
   if (!isWpConfigured()) return null;
 
@@ -141,10 +158,13 @@ async function wpQuery<T>(query: string, variables: Record<string, unknown>): Pr
 
       const json = (await res.json()) as { data?: T; errors?: { message: string }[] };
       if (json.errors?.length) {
-        throw new Error(`خطای WPGraphQL: ${json.errors.map((e) => e.message).join(' | ')}`);
+        // بدون تلاش مجدد: خطای اسکیما/مجوز قطعی است و سه بار تکرارش فقط
+        // زمان بیلد را هدر می‌دهد. فقط خطاهای شبکه‌ای ارزش retry دارند.
+        throw new WpGraphQLError(json.errors.map((e) => e.message));
       }
       return json.data ?? null;
     } catch (error) {
+      if (error instanceof WpGraphQLError) throw error;
       lastError = error;
       if (attempt < MAX_ATTEMPTS) {
         await new Promise((r) => setTimeout(r, 500 * 2 ** (attempt - 1)));
@@ -410,76 +430,69 @@ interface AllProductsResponse {
 /* ------------------------- بررسی اولیه‌ی اسکیما ------------------------- */
 
 /**
- * تایپ‌ها و فیلدهایی که پلاگین `crane-yadak-headless` باید در اسکیما ثبت
- * کرده باشد. اگر نباشند، یعنی پلاگین نصب/فعال نیست یا نسخه‌ی نصب‌شده قدیمی
- * است — نه این‌که کوئری فرانت‌اند اشتباه باشد.
+ * کوئری کاوش سبک — عمداً از introspection (`__schema` / `__type`) استفاده
+ * نمی‌کند.
+ *
+ * ⚠️ درس گرفته‌شده: نسخه‌ی اول این بررسی با introspection نوشته شده بود و
+ * روی سرور واقعی شکست خورد، چون WPGraphQL به‌صورت پیش‌فرض introspection را
+ * برای درخواست‌های عمومی می‌بندد. نتیجه این شد که خودِ ابزارِ تشخیص، جلوی
+ * دیدن مشکل اصلی را گرفت. یک کوئری واقعی و کوچک، همان اطلاعات را بدون هیچ
+ * وابستگی به تنظیمات سرور می‌دهد.
  */
-const REQUIRED_ROOT_FIELDS = ['craneProducts', 'craneBrands', 'craneCategories'] as const;
-
-const SCHEMA_PREFLIGHT_QUERY = `
-  query CraneSchemaPreflight {
-    __schema { queryType { fields { name } } }
-    __type(name: "CraneProduct") { fields { name } }
+const SCHEMA_PROBE_QUERY = `
+  query CraneSchemaProbe {
+    craneProducts(first: 1) { nodes { slug } }
   }
 `;
-
-interface PreflightResponse {
-  __schema: { queryType: { fields: { name: string }[] } | null } | null;
-  __type: { fields: { name: string }[] | null } | null;
-}
 
 let preflightDone = false;
 
 /**
- * پیش از واکشی کاتالوگ، بررسی می‌کند که بک‌اند واقعاً اسکیمای مورد انتظار را
- * دارد.
+ * پیش از واکشی کاتالوگ، با یک کوئری واقعی و کوچک بررسی می‌کند که بک‌اند
+ * اسکیمای مورد انتظار را دارد؛ و اگر نداشت، خطای قابل‌اقدام تولید می‌کند.
  *
- * چرا این وجود دارد: بدون آن، ناهماهنگی اسکیما به‌صورت یک پیام خام
- * GraphQL ظاهر می‌شود («Cannot query field craneProducts… Did you mean
- * craneParts?») که به‌نظر باگ کد فرانت‌اند می‌آید، در حالی که علت واقعی
- * سمت وردپرس است: پلاگین فعال نیست، نسخه‌اش قدیمی است، یا افزونه‌ی دیگری
- * نوع پستی با نام مشابه ثبت کرده. تشخیص درست، یک چرخه‌ی دیباگ صرفه‌جویی
- * می‌کند.
+ * چرا لازم است: پیام خام WPGraphQL («Cannot query field craneProducts…
+ * Did you mean craneParts?») طوری به‌نظر می‌رسد که انگار کوئری فرانت‌اند
+ * غلط است. نیست — علت سمت وردپرس است: پلاگین فعال نیست، نسخه‌اش قدیمی
+ * است، یا افزونه‌ی دیگری نوع پستی با نام مشابه ثبت کرده.
  */
 async function assertSchemaReady(): Promise<void> {
   if (preflightDone || !isWpConfigured()) return;
 
-  const data = await wpQuery<PreflightResponse>(SCHEMA_PREFLIGHT_QUERY, {});
-  const rootFields = new Set((data?.__schema?.queryType?.fields ?? []).map((f) => f.name));
-  const missing = REQUIRED_ROOT_FIELDS.filter((f) => !rootFields.has(f));
+  try {
+    await wpQuery<{ craneProducts: unknown }>(SCHEMA_PROBE_QUERY, {});
+    preflightDone = true;
+    return;
+  } catch (error) {
+    if (!(error instanceof WpGraphQLError)) throw error;
 
-  if (missing.length > 0) {
-    // نام‌های مشابهی که در اسکیما هست — کمک می‌کند بفهمیم کدام افزونه
-    // نوع پست را با نام دیگری ثبت کرده است.
-    const lookalikes = [...rootFields].filter((f) => /^crane/i.test(f)).sort();
+    const raw = error.messages.join(' | ');
+    const missingType = /Cannot query field|Unknown type/i.test(raw);
+    if (!missingType) throw error;
+
+    // WPGraphQL خودش نام‌های مشابه را پیشنهاد می‌دهد؛ همان بهترین سرنخ برای
+    // فهمیدن این است که کدام افزونه نوع پست را با نام دیگری ثبت کرده.
+    const suggestions = [...raw.matchAll(/"([A-Za-z]*[Cc]rane[A-Za-z]*)"/g)]
+      .map((m) => m[1])
+      .filter((name) => name !== 'craneProducts');
+    const unique = [...new Set(suggestions)];
 
     throw new Error(
       `[wp] اسکیمای وردپرس با پلاگین crane-yadak-headless هم‌خوانی ندارد.\n` +
-        `  • فیلدهای غایب در RootQuery: ${missing.join(', ')}\n` +
-        `  • تایپ‌های crane که واقعاً وجود دارند: ${lookalikes.length ? lookalikes.join(', ') : '— هیچ‌کدام —'}\n` +
+        `  • پاسخ سرور: ${raw}\n` +
+        (unique.length
+          ? `  • نام‌های مشابهی که روی سرور وجود دارند: ${unique.join(', ')}\n`
+          : '') +
         `\n` +
         `  این خطای کد فرانت‌اند نیست؛ سمت وردپرس باید بررسی شود:\n` +
         `  ۱) آیا افزونه‌ی «Crane Yadak — Headless Backend» در wp-admin ← افزونه‌ها «فعال» است؟\n` +
-        `  ۲) آیا نسخه‌ی نصب‌شده همان zip فعلی است؟ (پوشه‌ی قدیمی را حذف و دوباره نصب کنید)\n` +
-        `  ۳) آیا افزونه‌ی دیگری نوع پست مشابهی ثبت کرده که با این تداخل دارد؟\n` +
-        `     (نام‌های بالا سرنخ می‌دهند — مثلاً cranePart در برابر craneProduct)\n` +
+        `  ۲) آیا نسخه‌ی نصب‌شده همان zip فعلی است؟ پوشه‌ی قدیمی را کامل حذف کنید،\n` +
+        `     بعد zip جدید را نصب کنید (نصب روی نسخه‌ی قبلی گاهی ناقص انجام می‌شود).\n` +
+        `  ۳) آیا افزونه‌ی دیگری نوع پست مشابهی ثبت کرده که تداخل ایجاد می‌کند؟\n` +
+        `     (نام‌های بالا سرنخ‌اند — مثلاً cranePart در برابر craneProduct)\n` +
         `  ۴) پس از هر تغییر، Settings ← Permalinks را یک‌بار ذخیره کنید.`
     );
   }
-
-  // فیلدهای ACF روی خود تایپ محصول — اگر پلاگین فعال باشد ولی نسخه‌اش قدیمی،
-  // این‌جا لو می‌رود (مثلاً نبودِ productFields به‌دلیل غیرفعال‌بودن
-  // WPGraphQL for ACF).
-  const productFields = new Set((data?.__type?.fields ?? []).map((f) => f.name));
-  if (data?.__type && !productFields.has('productFields')) {
-    throw new Error(
-      `[wp] تایپ CraneProduct وجود دارد اما فیلد «productFields» ندارد.\n` +
-        `  معمولاً یعنی افزونه‌ی «WPGraphQL for ACF» نصب/فعال نیست، یا گروه فیلد\n` +
-        `  Product Fields گزینه‌ی «Show in GraphQL» را روشن ندارد.`
-    );
-  }
-
-  preflightDone = true;
 }
 
 /** کش سطح ماژول: کل کاتالوگ فقط یک‌بار در هر build از شبکه گرفته می‌شود. */
