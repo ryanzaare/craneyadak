@@ -407,6 +407,81 @@ interface AllProductsResponse {
   } | null;
 }
 
+/* ------------------------- بررسی اولیه‌ی اسکیما ------------------------- */
+
+/**
+ * تایپ‌ها و فیلدهایی که پلاگین `crane-yadak-headless` باید در اسکیما ثبت
+ * کرده باشد. اگر نباشند، یعنی پلاگین نصب/فعال نیست یا نسخه‌ی نصب‌شده قدیمی
+ * است — نه این‌که کوئری فرانت‌اند اشتباه باشد.
+ */
+const REQUIRED_ROOT_FIELDS = ['craneProducts', 'craneBrands', 'craneCategories'] as const;
+
+const SCHEMA_PREFLIGHT_QUERY = `
+  query CraneSchemaPreflight {
+    __schema { queryType { fields { name } } }
+    __type(name: "CraneProduct") { fields { name } }
+  }
+`;
+
+interface PreflightResponse {
+  __schema: { queryType: { fields: { name: string }[] } | null } | null;
+  __type: { fields: { name: string }[] | null } | null;
+}
+
+let preflightDone = false;
+
+/**
+ * پیش از واکشی کاتالوگ، بررسی می‌کند که بک‌اند واقعاً اسکیمای مورد انتظار را
+ * دارد.
+ *
+ * چرا این وجود دارد: بدون آن، ناهماهنگی اسکیما به‌صورت یک پیام خام
+ * GraphQL ظاهر می‌شود («Cannot query field craneProducts… Did you mean
+ * craneParts?») که به‌نظر باگ کد فرانت‌اند می‌آید، در حالی که علت واقعی
+ * سمت وردپرس است: پلاگین فعال نیست، نسخه‌اش قدیمی است، یا افزونه‌ی دیگری
+ * نوع پستی با نام مشابه ثبت کرده. تشخیص درست، یک چرخه‌ی دیباگ صرفه‌جویی
+ * می‌کند.
+ */
+async function assertSchemaReady(): Promise<void> {
+  if (preflightDone || !isWpConfigured()) return;
+
+  const data = await wpQuery<PreflightResponse>(SCHEMA_PREFLIGHT_QUERY, {});
+  const rootFields = new Set((data?.__schema?.queryType?.fields ?? []).map((f) => f.name));
+  const missing = REQUIRED_ROOT_FIELDS.filter((f) => !rootFields.has(f));
+
+  if (missing.length > 0) {
+    // نام‌های مشابهی که در اسکیما هست — کمک می‌کند بفهمیم کدام افزونه
+    // نوع پست را با نام دیگری ثبت کرده است.
+    const lookalikes = [...rootFields].filter((f) => /^crane/i.test(f)).sort();
+
+    throw new Error(
+      `[wp] اسکیمای وردپرس با پلاگین crane-yadak-headless هم‌خوانی ندارد.\n` +
+        `  • فیلدهای غایب در RootQuery: ${missing.join(', ')}\n` +
+        `  • تایپ‌های crane که واقعاً وجود دارند: ${lookalikes.length ? lookalikes.join(', ') : '— هیچ‌کدام —'}\n` +
+        `\n` +
+        `  این خطای کد فرانت‌اند نیست؛ سمت وردپرس باید بررسی شود:\n` +
+        `  ۱) آیا افزونه‌ی «Crane Yadak — Headless Backend» در wp-admin ← افزونه‌ها «فعال» است؟\n` +
+        `  ۲) آیا نسخه‌ی نصب‌شده همان zip فعلی است؟ (پوشه‌ی قدیمی را حذف و دوباره نصب کنید)\n` +
+        `  ۳) آیا افزونه‌ی دیگری نوع پست مشابهی ثبت کرده که با این تداخل دارد؟\n` +
+        `     (نام‌های بالا سرنخ می‌دهند — مثلاً cranePart در برابر craneProduct)\n` +
+        `  ۴) پس از هر تغییر، Settings ← Permalinks را یک‌بار ذخیره کنید.`
+    );
+  }
+
+  // فیلدهای ACF روی خود تایپ محصول — اگر پلاگین فعال باشد ولی نسخه‌اش قدیمی،
+  // این‌جا لو می‌رود (مثلاً نبودِ productFields به‌دلیل غیرفعال‌بودن
+  // WPGraphQL for ACF).
+  const productFields = new Set((data?.__type?.fields ?? []).map((f) => f.name));
+  if (data?.__type && !productFields.has('productFields')) {
+    throw new Error(
+      `[wp] تایپ CraneProduct وجود دارد اما فیلد «productFields» ندارد.\n` +
+        `  معمولاً یعنی افزونه‌ی «WPGraphQL for ACF» نصب/فعال نیست، یا گروه فیلد\n` +
+        `  Product Fields گزینه‌ی «Show in GraphQL» را روشن ندارد.`
+    );
+  }
+
+  preflightDone = true;
+}
+
 /** کش سطح ماژول: کل کاتالوگ فقط یک‌بار در هر build از شبکه گرفته می‌شود. */
 let catalogPromise: Promise<CraneProduct[]> | null = null;
 
@@ -418,6 +493,9 @@ async function fetchAllProducts(): Promise<CraneProduct[]> {
     );
     return [];
   }
+
+  // تشخیص زودهنگام و دقیق ناهماهنگی اسکیما، پیش از اولین کوئری کاتالوگ.
+  await assertSchemaReady();
 
   const products: CraneProduct[] = [];
   let after: string | null = null;
