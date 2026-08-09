@@ -9,7 +9,9 @@
             "type": "text",
             "instructions": "مثال: «وینچ و جرثقیل ضدانفجار EX» — برای عنوان H1/Meta Title صفحه‌ی این صنعت.",
             "required": 1,
-            "wrapper": { "width": "50" },
+            "wrapper": {
+                "width": "50"
+            },
             "show_in_graphql": 1,
             "graphql_field_name": "keyword"
         },
@@ -20,7 +22,9 @@
             "type": "select",
             "instructions": "به‌جای نام کلاس Tailwind خام (که جزئیات پیاده‌سازی فرانت‌اند را به دیتابیس محتوا نشت می‌دهد)، یک مقدار معنایی انتخاب کنید؛ فرانت‌اند خودش این را به کلاس واقعی نگاشت می‌کند.",
             "required": 1,
-            "wrapper": { "width": "50" },
+            "wrapper": {
+                "width": "50"
+            },
             "choices": {
                 "dark": "تیره (زغالی)",
                 "emerald": "سبز زمردی",
@@ -73,5 +77,8 @@
     "show_in_rest": 1,
     "show_in_graphql": 1,
     "graphql_field_name": "industryFields",
-    "graphql_types": [ "craneIndustry" ]
+    "graphql_types": [
+        "CraneIndustry"
+    ],
+    "modified": 20260809
 }

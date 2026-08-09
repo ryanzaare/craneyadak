@@ -258,7 +258,7 @@
     "show_in_graphql": 1,
     "graphql_field_name": "productFields",
     "graphql_types": [
-        "craneProduct"
+        "CraneProduct"
     ],
     "modified": 20260809
 }

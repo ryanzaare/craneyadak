@@ -8,8 +8,12 @@
             "name": "brand",
             "type": "relationship",
             "required": 1,
-            "wrapper": { "width": "50" },
-            "post_type": [ "brand" ],
+            "wrapper": {
+                "width": "50"
+            },
+            "post_type": [
+                "brand"
+            ],
             "max": 1,
             "return_format": "object",
             "show_in_graphql": 1,
@@ -21,7 +25,9 @@
             "name": "doc_type",
             "type": "select",
             "required": 1,
-            "wrapper": { "width": "50" },
+            "wrapper": {
+                "width": "50"
+            },
             "choices": {
                 "Maintenance Manual": "Maintenance Manual",
                 "Exploded View": "Exploded View",
@@ -76,5 +82,8 @@
     "show_in_rest": 1,
     "show_in_graphql": 1,
     "graphql_field_name": "datasheetFields",
-    "graphql_types": [ "craneDatasheet" ]
+    "graphql_types": [
+        "CraneDatasheet"
+    ],
+    "modified": 20260809
 }

@@ -33,7 +33,11 @@ function cyh_register_post_types() {
 			'show_ui'              => true,
 			'show_in_menu'         => true,
 			'menu_icon'            => 'dashicons-admin-tools',
-			'supports'             => [ 'title', 'editor', 'thumbnail', 'custom-fields' ],
+			// 'excerpt' لازم است: فرانت‌اند از آن برای توضیح کوتاه محصول و متا
+			// دیسکریپشن استفاده می‌کند. WPGraphQL فیلد excerpt را فقط وقتی
+			// expose می‌کند که CPT صراحتاً از آن پشتیبانی کند — نبودش خطای
+			// «Cannot query field "excerpt" on type "CraneProduct"» می‌دهد.
+			'supports'             => [ 'title', 'editor', 'excerpt', 'thumbnail', 'custom-fields' ],
 			'has_archive'          => false,
 			'rewrite'              => false,
 			'show_in_rest'         => true, // لازم برای ویرایشگر Gutenberg و پیش‌نمایش

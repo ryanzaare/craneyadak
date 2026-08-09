@@ -59,6 +59,39 @@ function cyh_check_dependencies() {
 }
 add_action( 'admin_init', 'cyh_check_dependencies' );
 
+/**
+ * ⚠️ حیاتی: معرفی پوشه‌ی acf-json این پلاگین به ACF.
+ *
+ * باگی که این تابع رفع می‌کند: ACF به‌صورت پیش‌فرض فقط پوشه‌ی `acf-json`
+ * داخل *قالب* را برای Local JSON اسکن می‌کند. یک پلاگین باید مسیر خودش را
+ * صراحتاً با فیلتر `acf/settings/load_json` معرفی کند؛ وگرنه فایل‌های JSON
+ * گروه‌های فیلد هرگز خوانده نمی‌شوند و عملاً انگار وجود ندارند.
+ *
+ * علامت این باگ در فرانت‌اند دقیقاً همین بود:
+ *   Cannot query field "productFields" on type "CraneProduct"
+ *   Cannot query field "brandFields" on type "CraneBrand"
+ * یعنی CPTها درست ثبت شده بودند اما هیچ گروه فیلدی به آن‌ها وصل نبود، چون
+ * ACF اصلاً این پنج فایل JSON را ندیده بود.
+ *
+ * نکته: مسیر پیش‌فرض قالب حذف نمی‌شود، فقط مسیر این پلاگین به آن اضافه
+ * می‌شود — تا اگر روزی گروه فیلدی سمت قالب تعریف شد، از کار نیفتد.
+ */
+function cyh_register_acf_json_load_path( $paths ) {
+	$paths[] = CYH_PLUGIN_DIR . 'acf-json';
+	return $paths;
+}
+add_filter( 'acf/settings/load_json', 'cyh_register_acf_json_load_path' );
+
+/**
+ * محل ذخیره‌ی تغییرات گروه‌های فیلد نیز همین پوشه است، تا اگر مدیر سایت در
+ * پنل ACF چیزی را ویرایش کرد، همان فایل JSON داخل پلاگین به‌روز شود و
+ * تعریف فیلدها بین وردپرس و مخزن کد از هم واگرا نشود.
+ */
+function cyh_register_acf_json_save_path( $path ) {
+	return CYH_PLUGIN_DIR . 'acf-json';
+}
+add_filter( 'acf/settings/save_json', 'cyh_register_acf_json_save_path' );
+
 require_once CYH_PLUGIN_DIR . 'includes/class-post-types.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-cors.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-rest-contact.php';
