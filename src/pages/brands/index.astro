@@ -1,76 +1,126 @@
 ---
 // src/pages/brands/index.astro
+// ---------------------------------------------------------------------------
+// هاب برندها.
+//
+// ⚠️ واقع‌بینی سئویی: تقاضای جستجو برای «برندهای جرثقیل» تقریباً صفر است.
+// این صفحه یک صفحه‌ی فرود (Landing Page) نیست و نباید طوری بهینه شود که با
+// صفحات تک‌برند رقابت کند. نقشش «ناوبری و توزیع اعتبار به صفحات برند» است —
+// آن‌جاست که نیت خرید واقعی وجود دارد («قطعات دماگ»، «ریموت تله‌کرین»).
+//
+// گروه‌بندی سه‌گانه عمدی است: سازنده‌ی جرثقیل، سازنده‌ی سیستم کنترل و
+// سازنده‌ی قطعه‌ی برقی سه نیت جستجوی متفاوت‌اند و یک فهرست تخت آن‌ها را
+// در هم می‌ریزد.
+// ---------------------------------------------------------------------------
 import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { ENRICHED_BRANDS, SITE } from '../../data/site';
+import { SITE } from '../../data/site';
+import { BRANDS, BRAND_CLASSES, brandsByClass, type BrandClass } from '../../data/taxonomy';
 
 const title = `برندهای تحت پوشش | تامین قطعات اصلی | ${SITE.name}`;
-const description = 'تامین بی‌واسطه و فروش قطعات اورجینال معتبرترین برندهای تجهیزات بالابر صنعتی نظیر دماگ، اشتال، کونه‌کرین و تله‌کرین با تضمین اصالت و گارانتی معتبر.';
+const description = `تامین قطعات ${BRANDS.length} برند تجهیزات بالابر صنعتی — از سازندگان جرثقیل مانند دماگ و اشتال تا سیستم‌های کنترل تله‌کرین و HBC.`;
+const canonical = `${SITE.url}/brands`;
 
-// Entity SEO: Breadcrumb + CollectionPage
+const classOrder: BrandClass[] = ['oem', 'control', 'electrical'];
+const breadcrumbItems = [{ label: 'صفحه اصلی', href: '/' }, { label: 'برندهای جهانی' }];
+
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
     {
       '@type': 'BreadcrumbList',
-      '@id': `${SITE.url}/brands#breadcrumb`,
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: SITE.url },
-        { '@type': 'ListItem', position: 2, name: 'برندهای جهانی', item: `${SITE.url}/brands` },
-      ],
+      '@id': `${canonical}#breadcrumb`,
+      itemListElement: breadcrumbItems.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.label,
+        ...(item.href ? { item: `${SITE.url}${item.href}` } : {}),
+      })),
     },
     {
       '@type': 'CollectionPage',
-      '@id': `${SITE.url}/brands#webpage`,
-      url: `${SITE.url}/brands`,
+      '@id': `${canonical}#webpage`,
+      url: canonical,
       name: title,
-      description: description,
-      isPartOf: { '@id': `${SITE.url}/#website` }
-    }
-  ]
+      description,
+      isPartOf: { '@id': `${SITE.url}/#website` },
+      inLanguage: SITE.locale,
+      mainEntity: {
+        '@type': 'ItemList',
+        '@id': `${canonical}#brands`,
+        numberOfItems: BRANDS.length,
+        itemListElement: BRANDS.map((brand, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: brand.nameEn,
+          url: `${SITE.url}/brands/${brand.slug}`,
+        })),
+      },
+    },
+  ],
 };
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
-  {/* HERO Section */}
-  <section class="bg-crane-navy text-white pt-12 pb-20 px-4 border-b-[8px] border-crane-orange">
+  <section class="bg-crane-navy text-white pt-10 pb-16 px-4 border-b-[8px] border-crane-orange">
     <div class="max-w-7xl mx-auto">
-      <Breadcrumb items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'برندهای جهانی' }]} />
-      <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">برندهای تحت پوشش و تامین</h1>
-      <p class="text-lg text-gray-300 max-w-2xl leading-8 font-light">
-        ما در کرین یدک به عنوان تامین‌کننده‌ی معتمد صنایع، قطعات اورجینال برترین غول‌های مهندسی بالابر جهان را به صورت مستقیم و با مدارک تایید اصالت (Certificate) در اختیار شما قرار می‌دهیم.
+      <Breadcrumb items={breadcrumbItems} />
+      <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">برندهای تحت پوشش</h1>
+      <p class="text-lg text-gray-300 max-w-3xl leading-8">
+        قطعات {BRANDS.length} برند تجهیزات بالابر تامین می‌شود. برندها بر اساس نقششان دسته‌بندی شده‌اند: سازنده‌ی جرثقیل، سازنده‌ی سیستم کنترل، و سازنده‌ی تجهیزات برقی — چون معمولاً روی یک دستگاه، هر سه از شرکت‌های متفاوتی هستند.
       </p>
     </div>
   </section>
 
-  {/* Brands Grid */}
-  <section class="py-20 px-4 md:px-8 lg:px-12 bg-gray-50 min-h-[50vh]">
-    <div class="max-w-7xl mx-auto">
-      <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-        {ENRICHED_BRANDS.map((brand) => (
-          <li>
-            <a href={brand.slug} class="group block bg-white rounded-3xl border border-transparent shadow-sm hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden focus:outline-none focus:ring-4 focus:ring-crane-orange/30 hover:border-orange-100">
-              <span class="sr-only">{brand.seoAnchor}</span>
-              <div class="p-8 flex flex-col items-center justify-center h-[180px] bg-crane-light/30 relative">
-                <div class="transform transition-transform duration-500 group-hover:-translate-y-3">
-                  <svg class={`w-full h-12 md:h-14 text-gray-400 transition-colors duration-500 ${brand.brandColor.replace('group-hover:', '')}`} viewBox="0 0 200 60" fill="currentColor" aria-hidden="true">
-                    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black, Impact, system-ui, sans-serif" font-size="34" font-weight="900" letter-spacing="2">{brand.logoText}</text>
-                  </svg>
-                </div>
-                <div class="absolute bottom-6 flex flex-col items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
-                  <span class="text-sm font-bold text-crane-navy mt-1">قطعات {brand.nameFa}</span>
-                </div>
-              </div>
-              <div class="p-5 border-t border-gray-100 flex justify-between items-center bg-white relative z-10">
-                <span class="text-xs font-bold text-gray-500 tracking-widest">{brand.nameEn}</span>
-                <span class="w-8 h-8 rounded-full bg-orange-50 text-crane-orange flex items-center justify-center group-hover:bg-crane-orange group-hover:text-white transition-colors" aria-hidden="true">
-                  <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+  <section class="bg-gray-50 px-4 py-14">
+    <div class="max-w-7xl mx-auto space-y-12">
+      {classOrder.map((brandClass) => {
+        const meta = BRAND_CLASSES[brandClass];
+        const items = brandsByClass(brandClass);
+        return (
+          <section aria-labelledby={`class-${meta.slug}`}>
+            <div class="mb-6 border-b border-gray-200 pb-4">
+              <h2 id={`class-${meta.slug}`} class="text-xl md:text-2xl font-black text-crane-navy mb-2">
+                {meta.name}
+                <span class="text-sm font-bold text-gray-600 bg-white border border-gray-200 px-3 py-1 rounded-full mr-3 tabular-nums align-middle">
+                  {items.length} برند
                 </span>
-              </div>
-            </a>
-          </li>
-        ))}
-      </ul>
+              </h2>
+              <p class="text-gray-700 leading-8 max-w-3xl">{meta.intro}</p>
+            </div>
+
+            <ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" role="list">
+              {items.map((brand) => (
+                <li>
+                  <a
+                    href={`/brands/${brand.slug}`}
+                    class="group h-full bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-orange-100 transition-all flex flex-col items-center text-center gap-1 focus:outline-none focus:ring-4 focus:ring-crane-orange/30"
+                  >
+                    <span class="text-sm font-black tracking-wider text-crane-navy group-hover:text-crane-orange transition-colors uppercase" dir="ltr">
+                      {brand.nameEn}
+                    </span>
+                    <span class="text-sm font-bold text-gray-700">{brand.nameFa}</span>
+                    <span class="text-xs text-gray-500 mt-1">{brand.country}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
+  </section>
+
+  <section class="bg-white px-4 py-14 border-t border-gray-100">
+    <div class="max-w-4xl mx-auto text-gray-700 leading-8 text-justify">
+      <h2 class="text-2xl font-black text-crane-navy mb-6">برند مورد نظر شما در فهرست نیست؟</h2>
+      <p class="mb-4">
+        فهرست بالا برندهایی است که به‌طور منظم تامین می‌شوند. اگر قطعه‌ی شما از سازنده‌ی دیگری است، کد فنی (Part Number) یا عکس پلاک دستگاه را بفرستید؛ در بسیاری از موارد قطعه‌ی معادل با همان مشخصات فنی از سازنده‌ی دیگری قابل تامین است.
+      </p>
+      <p>
+        در نظر داشته باشید که روی یک جرثقیل، معمولاً بدنه از یک برند، ریموت کنترل از برند دوم و تجهیزات تابلو برق از برند سوم است — بنابراین برای هر قطعه، برند همان قطعه اهمیت دارد، نه برند کل دستگاه.
+        <a href="/contact" class="text-crane-orange font-bold hover:underline mr-1">ثبت استعلام</a>
+      </p>
     </div>
   </section>
 </Layout>

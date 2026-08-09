@@ -2,7 +2,13 @@
 // src/pages/datasheets/index.astro
 import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { SITE, ENRICHED_BRANDS } from '../../data/site';
+import { SITE } from '../../data/site';
+import { brandsByClass } from '../../data/taxonomy';
+
+// فیلتر برند در این صفحه فقط «سازندگان جرثقیل» را نشان می‌دهد — اسناد فنی
+// (نقشه انفجاری، منوال نگهداری) متعلق به سازنده‌ی دستگاه است، نه سازنده‌ی
+// ریموت یا کنتاکتور. نمایش هر ۱۸ برند اینجا فیلتر را بی‌معنا می‌کرد.
+const documentBrands = brandsByClass('oem');
 import { getAvailableDatasheets } from '../../lib/datasheets';
 
 // نکته صداقت داده: فقط اسنادی که فایل PDF واقعی‌شان در public/ موجود است
@@ -91,9 +97,9 @@ const jsonLd = {
           <li>
             <a href="#all" class="bg-crane-navy text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-gray-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-navy/30">همه برندها</a>
           </li>
-          {ENRICHED_BRANDS.map((brand) => (
+          {documentBrands.map((brand) => (
             <li>
-              <a href={brand.slug} class="bg-white text-gray-600 border border-gray-200 px-6 py-2.5 rounded-full font-bold text-sm hover:border-crane-orange hover:text-crane-orange transition-colors shadow-sm flex items-center gap-2 focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
+              <a href={`/brands/${brand.slug}`} class="bg-white text-gray-600 border border-gray-200 px-6 py-2.5 rounded-full font-bold text-sm hover:border-crane-orange hover:text-crane-orange transition-colors shadow-sm flex items-center gap-2 focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
                 {brand.nameFa}
               </a>
             </li>

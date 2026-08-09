@@ -9,7 +9,9 @@
             "type": "text",
             "instructions": "کد فنی داخلی فروشگاه — معادل product.sku در فرانت‌اند فعلی.",
             "required": 1,
-            "wrapper": { "width": "50" },
+            "wrapper": {
+                "width": "50"
+            },
             "show_in_graphql": 1,
             "graphql_field_name": "sku"
         },
@@ -20,25 +22,108 @@
             "type": "relationship",
             "instructions": "برند مرتبط با این محصول.",
             "required": 1,
-            "wrapper": { "width": "50" },
-            "post_type": [ "brand" ],
-            "filters": [ "search" ],
+            "wrapper": {
+                "width": "50"
+            },
+            "post_type": [
+                "brand"
+            ],
+            "filters": [
+                "search"
+            ],
             "max": 1,
             "return_format": "object",
             "show_in_graphql": 1,
             "graphql_field_name": "brand"
         },
         {
-            "key": "field_cyh_product_price_display",
-            "label": "قیمت نمایشی",
-            "name": "price_display",
-            "type": "text",
-            "instructions": "چون فروش این محصولات معمولاً استعلامی است، به‌جای قیمت عددی صرف، یک متن نمایشی مثل «تماس بگیرید» یا مقدار عددی واقعی وارد کنید. توجه: اگر قیمت واقعی و ثابت وارد شد، Schema.org Offer در فرانت‌اند باید priceCurrency: IRR هم دریافت کند (نگاه کنید به کامنت‌های categories/[slug].astro).",
+            "key": "field_cyh_product_price",
+            "label": "قیمت عادی (ریال)",
+            "name": "price",
+            "type": "number",
+            "instructions": "قیمت واقعی و جاری این قطعه به ریال. اگر قیمت مشخصی ندارد یا استعلامی است، این فیلد را خالی بگذارید — در آن صورت سایت به‌جای عدد، «استعلام قیمت» نمایش می‌دهد. هرگز عدد تقریبی یا ساختگی وارد نکنید.",
             "required": 0,
-            "default_value": "تماس بگیرید",
-            "wrapper": { "width": "50" },
             "show_in_graphql": 1,
-            "graphql_field_name": "priceDisplay"
+            "graphql_field_name": "price",
+            "min": 0,
+            "step": "1"
+        },
+        {
+            "key": "field_cyh_product_sale_price",
+            "label": "قیمت با تخفیف (ریال)",
+            "name": "sale_price",
+            "type": "number",
+            "instructions": "⚠️ فقط زمانی پر کنید که واقعاً تخفیف داده‌اید. قیمت خط‌خورده‌ای که در سایت نمایش داده می‌شود همان «قیمت عادی» بالاست و باید قیمتی باشد که واقعاً قبلاً دریافت می‌شده. نمایش یک قیمت قبلیِ ساختگی، هم خلاف سیاست گوگل و هم از نظر قانون حمایت از مصرف‌کننده تخلف است. اگر این عدد از قیمت عادی بیشتر یا مساوی باشد، سایت آن را نادیده می‌گیرد.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "salePrice",
+            "min": 0,
+            "step": "1"
+        },
+        {
+            "key": "field_cyh_product_sale_start",
+            "label": "شروع تخفیف",
+            "name": "sale_start",
+            "type": "date_picker",
+            "instructions": "خالی = بدون محدودیت شروع.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "saleStart",
+            "display_format": "Y/m/d",
+            "return_format": "Y-m-d",
+            "first_day": 6
+        },
+        {
+            "key": "field_cyh_product_sale_end",
+            "label": "پایان تخفیف",
+            "name": "sale_end",
+            "type": "date_picker",
+            "instructions": "خالی = بدون تاریخ پایان. توجه: سایت استاتیک است؛ تخفیف منقضی‌شده تا اولین بازسازی سایت روی صفحه باقی می‌ماند.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "saleEnd",
+            "display_format": "Y/m/d",
+            "return_format": "Y-m-d",
+            "first_day": 6
+        },
+        {
+            "key": "field_cyh_product_buy_mode",
+            "label": "روش خرید",
+            "name": "buy_mode",
+            "type": "select",
+            "instructions": "برای اقلام موجود، ارزان و بدون نیاز به تطابق فنی «خرید آنلاین» را انتخاب کنید. برای قطعات سنگین، وارداتی یا نیازمند بررسی سازگاری، «استعلام و پیش‌فاکتور» درست است — مدیر خرید صنعتی معمولاً برای تایید داخلی به پیش‌فاکتور رسمی نیاز دارد، نه درگاه پرداخت.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "buyMode",
+            "choices": {
+                "rfq": "استعلام و پیش‌فاکتور (پیش‌فرض)",
+                "cart": "خرید آنلاین (افزودن به سبد)"
+            },
+            "default_value": "rfq",
+            "allow_null": 0,
+            "multiple": 0,
+            "ui": 0,
+            "return_format": "value"
+        },
+        {
+            "key": "field_cyh_product_stock_status",
+            "label": "وضعیت موجودی",
+            "name": "stock_status",
+            "type": "select",
+            "instructions": "اگر مطمئن نیستید، «نامشخص» را انتخاب کنید. سایت در این حالت هیچ ادعایی درباره‌ی موجودی در داده‌ی ساختاریافته ثبت نمی‌کند. ادعای نادرست «موجود» ریسک جریمه‌ی ریچ‌ریزالت گوگل دارد.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "stockStatus",
+            "choices": {
+                "unknown": "نامشخص (پیش‌فرض امن)",
+                "in_stock": "موجود در انبار",
+                "on_order": "تامین به‌سفارش"
+            },
+            "default_value": "unknown",
+            "allow_null": 0,
+            "multiple": 0,
+            "ui": 0,
+            "return_format": "value"
         },
         {
             "key": "field_cyh_product_gallery",
@@ -47,7 +132,9 @@
             "type": "gallery",
             "instructions": "حداقل یک تصویر واقعی از قطعه (نه تصویر عمومی/استوک) برای اعتماد خریدار صنعتی توصیه می‌شود.",
             "required": 0,
-            "wrapper": { "width": "50" },
+            "wrapper": {
+                "width": "50"
+            },
             "return_format": "array",
             "library": "all",
             "min": 0,
@@ -63,8 +150,12 @@
             "type": "relationship",
             "instructions": "نقشه‌های انفجاری / وایرینگ / منوال‌های مرتبط با این محصول.",
             "required": 0,
-            "post_type": [ "datasheet" ],
-            "filters": [ "search" ],
+            "post_type": [
+                "datasheet"
+            ],
+            "filters": [
+                "search"
+            ],
             "return_format": "object",
             "show_in_graphql": 1,
             "graphql_field_name": "datasheetFiles"
@@ -166,5 +257,8 @@
     "show_in_rest": 1,
     "show_in_graphql": 1,
     "graphql_field_name": "productFields",
-    "graphql_types": [ "craneProduct" ]
+    "graphql_types": [
+        "craneProduct"
+    ],
+    "modified": 20260809
 }

@@ -1,7 +1,13 @@
 ---
 // src/components/Header.astro
-import { CATEGORIES, SITE } from '../data/site';
+import { SITE } from '../data/site';
+import { SILOS, siloPath } from '../data/taxonomy';
 import Logo from './Logo.astro';
+
+// منوی کشویی عمداً «گروه‌های سیلو» را نشان می‌دهد نه هر ۳۰ دسته را.
+// یک منوی ۳۰تایی هم برای کاربر غیرقابل اسکن است و هم ارزش لینک داخلی را
+// یکنواخت پخش می‌کند؛ نمایش ۷ گروه، مسیر حرکت کاربر و جریان اعتبار صفحه
+// را به‌سمت والدهای سیلو هدایت می‌کند و از آن‌جا به فرزندان می‌رسد.
 
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const isActive = (href: string) => path === href.replace(/\/$/, '');
@@ -37,13 +43,19 @@ const navLinks = [
             <svg class="w-4 h-4 text-gray-400 group-hover:text-crane-navy transition-transform group-hover:rotate-180" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </a>
           <ul id="cat-dropdown-menu" class="absolute top-full right-0 mt-2 w-60 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible focus-within:opacity-100 focus-within:visible transition-all flex flex-col py-2 z-50">
-            {CATEGORIES.map((cat) => (
+            {SILOS.map((silo) => (
               <li>
-                <a href={cat.slug} class="block px-4 py-2 hover:bg-orange-50 hover:text-crane-orange text-sm transition-colors focus:bg-orange-50 focus:text-crane-orange outline-none">
-                  {cat.name}
+                <a href={siloPath(silo)} class="block px-4 py-2.5 hover:bg-orange-50 hover:text-crane-orange text-sm transition-colors focus:bg-orange-50 focus:text-crane-orange outline-none">
+                  {silo.name}
+                  <span class="block text-xs text-gray-500 mt-0.5">{silo.categories.length} دسته</span>
                 </a>
               </li>
             ))}
+            <li class="border-t border-gray-100 mt-2 pt-2">
+              <a href="/categories" class="block px-4 py-2 text-sm font-bold text-crane-orange hover:bg-orange-50 outline-none focus:bg-orange-50">
+                مشاهده همه دسته‌بندی‌ها ←
+              </a>
+            </li>
           </ul>
         </li>
         {navLinks.map((link) => (
@@ -72,9 +84,10 @@ const navLinks = [
         <li>
           <a href="/categories" class="text-crane-navy font-bold mb-2 block py-2">دسته‌بندی‌ها</a>
           <ul class="flex flex-col pr-4 gap-3 border-r-2 border-orange-100">
-            {CATEGORIES.map((cat) => (
-              <li><a href={cat.slug} class="text-gray-600 hover:text-crane-orange block text-sm py-1">{cat.name}</a></li>
+            {SILOS.map((silo) => (
+              <li><a href={siloPath(silo)} class="text-gray-600 hover:text-crane-orange block text-sm py-1">{silo.name}</a></li>
             ))}
+            <li><a href="/categories" class="text-crane-orange font-bold block text-sm py-1">همه دسته‌بندی‌ها ←</a></li>
           </ul>
         </li>
         {navLinks.map((link) => (

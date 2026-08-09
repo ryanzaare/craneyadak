@@ -50,7 +50,18 @@ import Layout from '../layouts/Layout.astro';
         },
       });
 
-      const q = params.get('q');
+      // ⚠️ رفع باگ: پیش‌تر فقط `q` خوانده می‌شد، در حالی که ابزار
+      // Part-Finder صفحه‌ی اصلی سه پارامتر `pn`، `brand` و `cat` می‌فرستاد.
+      // نتیجه: هر ارسال آن فرم به یک صفحه‌ی جستجوی خالی می‌رسید و کاربر
+      // فکر می‌کرد هیچ قطعه‌ای موجود نیست. حالا اگر `q` نبود، همان سه
+      // پارامتر به یک عبارت جستجوی واحد ترکیب می‌شوند.
+      const q =
+        params.get('q') ||
+        ['pn', 'brand', 'cat']
+          .map((key) => (params.get(key) ?? '').trim())
+          .filter(Boolean)
+          .join(' ');
+
       if (q) {
         const input = el.querySelector<HTMLInputElement>('input[type="text"]');
         if (input) {

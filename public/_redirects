@@ -1,0 +1,21 @@
+# 301 های سمت سرور — مسیرهای تخت قدیمی به ساختار تودرتوی سیلو.
+#
+# این فرمت را Netlify و Cloudflare Pages مستقیماً می‌خوانند. اگر روی هاست
+# دیگری (ArvanCloud / nginx / Apache) دیپلوی می‌کنید، معادل همین قوانین را
+# طبق docs/deployment-guide.md در تنظیمات سرور اعمال کنید.
+#
+# چرا علاوه بر تنظیم `redirects` در astro.config.mjs: خروجی استاتیک Astro
+# برای ریدایرکت‌ها صفحه‌ی meta-refresh می‌سازد که کد وضعیت 200 برمی‌گرداند.
+# گوگل آن را دنبال می‌کند اما 301 واقعی سریع‌تر و بدون ابهام است.
+
+/categories/remote-control      /categories/control-safety/remote-control      301
+/categories/conductor-bar       /categories/power-supply/busbar-power-line      301
+/categories/crane-wheels        /categories/drive-units/crane-wheel             301
+/categories/rope-guide          /categories/hoist-accessories/rope-guide        301
+/categories/crane-hook          /categories/lifting-rigging/crane-hook          301
+/categories/brake-disk          /categories/brake/brake-wheel-disc              301
+/categories/wire-rope-hoist     /categories/drive-units/gearbox-motor           301
+
+# «جاروبک» صفحه‌ی اختصاصی خودش را دارد؛ فقط یک سطح تودرتو شده و اسلاگ
+# دست‌نخورده مانده تا ارزش آدرس منتشرشده‌ی فعلی حفظ شود.
+/categories/current-collector   /categories/power-supply/current-collector      301

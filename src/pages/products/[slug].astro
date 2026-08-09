@@ -1,0 +1,380 @@
+---
+// src/pages/products/[slug].astro
+// ---------------------------------------------------------------------------
+// صفحه‌ی محصول — مهم‌ترین صفحه‌ی کل سایت.
+//
+// چرا: خریدار صنعتی معمولاً با یک «کد فنی» در دست جستجو می‌کند
+// («موتور گیربکس دماگ KBA-71»، «DMG-1024»). تا پیش از این، سایت هیچ صفحه‌ای
+// نداشت که بتواند برای یک کد فنی رتبه بگیرد — بزرگ‌ترین شکاف سئویی پروژه.
+//
+// بخش «کدهای معادل و سازگاری» (Fitment & Cross-Reference) عمداً در بالای
+// صفحه و داخل اسکیما قرار گرفته: تحقیقات فروش قطعات صنعتی نشان می‌دهد
+// خریدار قبل از هر چیز می‌خواهد مطمئن شود قطعه با دستگاه او می‌خورد.
+// ---------------------------------------------------------------------------
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import PriceTag from '../../components/PriceTag.astro';
+import { SITE } from '../../data/site';
+import { findCategory, categoryPath, siloPath } from '../../data/taxonomy';
+import {
+  getAllProducts,
+  getRelatedProducts,
+  computePrice,
+  productJsonLd,
+  productPath,
+  inquiryHref,
+  type CraneProduct,
+} from '../../lib/wp';
+
+export async function getStaticPaths() {
+  const products = await getAllProducts();
+  return Promise.all(
+    products.map(async (product) => ({
+      params: { slug: product.slug },
+      props: { product, related: await getRelatedProducts(product) },
+    }))
+  );
+}
+
+interface Props {
+  product: CraneProduct;
+  related: CraneProduct[];
+}
+
+const { product, related } = Astro.props as Props;
+const price = computePrice(product);
+
+// دسته‌ی اصلی: نخستین دسته‌ای که در تاکسونومی شناخته می‌شود. مسیر بردکرامب
+// از همین‌جا ساخته می‌شود تا سلسله‌مراتب سیلو در صفحه‌ی محصول هم حفظ شود.
+const primaryCategory = product.categorySlugs.map((s) => findCategory(s)).find(Boolean) ?? null;
+
+const title = product.sku
+  ? `${product.name} | کد ${product.sku} | ${SITE.name}`
+  : `${product.name} | ${SITE.name}`;
+
+// متا دیسکریپشن از خلاصه‌ی واقعی محصول ساخته می‌شود؛ اگر خلاصه‌ای ثبت نشده
+// باشد، از مشخصات واقعی (برند/دسته/کد فنی) — نه از یک متن عمومی ساختگی.
+const descriptionParts = [
+  product.summary,
+  product.brandNameFa ? `برند ${product.brandNameFa}` : null,
+  product.sku ? `کد فنی ${product.sku}` : null,
+  'استعلام قیمت، بررسی سازگاری فنی و صدور پیش‌فاکتور رسمی.',
+].filter(Boolean);
+const description = descriptionParts.join(' — ').slice(0, 300);
+
+const breadcrumbItems = [
+  { label: 'صفحه اصلی', href: '/' },
+  { label: 'دسته‌بندی‌ها', href: '/categories' },
+  ...(primaryCategory
+    ? [
+        { label: primaryCategory.silo.name, href: siloPath(primaryCategory.silo) },
+        { label: primaryCategory.name, href: categoryPath(primaryCategory) },
+      ]
+    : []),
+  { label: product.name },
+];
+
+const canonical = `${SITE.url}${productPath(product)}`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${canonical}#breadcrumb`,
+      itemListElement: breadcrumbItems.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.label,
+        ...(item.href ? { item: `${SITE.url}${item.href}` } : {}),
+      })),
+    },
+    productJsonLd(product, SITE.url, price),
+  ],
+};
+
+const hasFitment =
+  product.oemCrossReference.length > 0 || product.compatibleModels.length > 0;
+const heroImage = product.images[0] ?? null;
+const canBuyOnline = product.buyMode === 'cart' && price.hasPrice;
+
+const stockLabel: Record<CraneProduct['stockStatus'], string | null> = {
+  in_stock: 'موجود در انبار',
+  on_order: 'تامین به‌سفارش',
+  unknown: null,
+};
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd} ogImage={heroImage?.url}>
+  <section class="bg-crane-navy text-white pt-10 pb-6 px-4">
+    <div class="max-w-7xl mx-auto">
+      <Breadcrumb items={breadcrumbItems} />
+    </div>
+  </section>
+
+  {/* ---------------------------- بخش اصلی محصول ---------------------------- */}
+  <section class="bg-white px-4 py-10 md:py-14 border-b-[8px] border-crane-orange">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10">
+      {/* گالری */}
+      <div class="lg:col-span-5">
+        <div class="aspect-square bg-gray-50 rounded-3xl border border-gray-100 overflow-hidden flex items-center justify-center">
+          {heroImage ? (
+            <img
+              src={heroImage.url}
+              alt={heroImage.altText}
+              width={heroImage.width ?? 800}
+              height={heroImage.height ?? 800}
+              loading="eager"
+              fetchpriority="high"
+              decoding="async"
+              class="w-full h-full object-cover"
+            />
+          ) : (
+            <svg class="w-24 h-24 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          )}
+        </div>
+
+        {product.images.length > 1 && (
+          <ul class="grid grid-cols-4 gap-3 mt-4" role="list">
+            {product.images.slice(1, 5).map((image) => (
+              <li class="aspect-square bg-gray-50 rounded-xl border border-gray-100 overflow-hidden">
+                <img
+                  src={image.url}
+                  alt={image.altText}
+                  width={image.width ?? 200}
+                  height={image.height ?? 200}
+                  loading="lazy"
+                  decoding="async"
+                  class="w-full h-full object-cover"
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* اطلاعات و اقدام */}
+      <div class="lg:col-span-7">
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+          {product.brandNameFa && (
+            <a
+              href={`/brands/${product.brandSlug}`}
+              class="bg-gray-50 border border-gray-200 text-crane-navy text-sm font-bold px-3 py-1.5 rounded-lg hover:border-crane-orange hover:text-crane-orange transition-colors"
+            >
+              {product.brandNameFa}
+              {product.brandNameEn && <span class="text-gray-500 font-normal" dir="ltr"> ({product.brandNameEn})</span>}
+            </a>
+          )}
+          {stockLabel[product.stockStatus] && (
+            <span
+              class:list={[
+                'text-sm font-bold px-3 py-1.5 rounded-lg border',
+                product.stockStatus === 'in_stock'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-amber-50 text-amber-800 border-amber-200',
+              ]}
+            >
+              {stockLabel[product.stockStatus]}
+            </span>
+          )}
+        </div>
+
+        <h1 class="text-2xl md:text-4xl font-black text-crane-navy leading-relaxed mb-4">{product.name}</h1>
+
+        {product.sku && (
+          <p class="text-sm text-gray-700 mb-6">
+            کد فنی (Part Number):
+            <strong class="font-mono text-crane-navy mr-2" dir="ltr">{product.sku}</strong>
+          </p>
+        )}
+
+        {product.summary && <p class="text-gray-700 leading-8 mb-8">{product.summary}</p>}
+
+        <div class="bg-gray-50 border border-gray-100 rounded-3xl p-6 md:p-8 mb-8">
+          <PriceTag price={price} size="page" />
+
+          <div class="flex flex-col sm:flex-row gap-3 mt-6">
+            {canBuyOnline ? (
+              <>
+                {/* دکمه‌ی خرید فقط برای اقلام موجودِ دارای قیمت واقعی.
+                    برای قطعات سنگین/سفارشی، مسیر درست پیش‌فاکتور است نه سبد. */}
+                <button
+                  type="button"
+                  data-add-to-cart
+                  data-slug={product.slug}
+                  data-name={product.name}
+                  data-price={price.effective}
+                  class="flex-1 bg-crane-orange text-white px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px]"
+                >
+                  افزودن به سبد خرید
+                </button>
+                <a
+                  href={inquiryHref(product)}
+                  class="flex-1 bg-white border-2 border-crane-navy text-crane-navy text-center px-8 py-4 rounded-xl font-black hover:bg-crane-navy hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-crane-navy/30 min-h-[52px] flex items-center justify-center"
+                >
+                  درخواست پیش‌فاکتور
+                </a>
+              </>
+            ) : (
+              <>
+                <a
+                  href={inquiryHref(product)}
+                  class="flex-1 bg-crane-orange text-white text-center px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px] flex items-center justify-center"
+                >
+                  استعلام قیمت و پیش‌فاکتور
+                </a>
+                <a
+                  href={`https://wa.me/${SITE.whatsapp.replace('+', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-center px-8 py-4 rounded-xl font-black hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center"
+                >
+                  ارسال عکس قطعه در واتساپ
+                </a>
+              </>
+            )}
+          </div>
+
+          <p class="text-xs text-gray-600 leading-6 mt-5">
+            کارشناسان فنی پیش از صدور پیش‌فاکتور، سازگاری قطعه با مدل دستگاه شما را بررسی می‌کنند. صدور فاکتور رسمی و ضمانت اصالت کالا برای تمام سفارش‌ها انجام می‌شود.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ------------------- کدهای معادل و سازگاری (Fitment) ------------------- */}
+  {hasFitment && (
+    <section class="bg-gray-50 px-4 py-14 border-b border-gray-100" aria-labelledby="fitment-heading">
+      <div class="max-w-7xl mx-auto">
+        <h2 id="fitment-heading" class="text-2xl font-black text-crane-navy mb-3">کدهای معادل و سازگاری</h2>
+        <p class="text-gray-700 leading-8 mb-8 max-w-3xl">
+          اگر کد فنی روی قطعه‌ی فرسوده‌ی شما با کد بالا یکی نیست، جدول زیر را بررسی کنید؛ بسیاری از قطعات با چند کد مختلف سازنده عرضه می‌شوند.
+        </p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {product.oemCrossReference.length > 0 && (
+            <div class="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+              <h3 class="font-black text-crane-navy px-6 py-4 border-b border-gray-100 bg-gray-50">کدهای معادل سازنده (OEM)</h3>
+              <table class="w-full text-sm">
+                <caption class="sr-only">فهرست کدهای فنی معادل این قطعه نزد سازندگان مختلف</caption>
+                <thead>
+                  <tr class="text-gray-600 text-xs">
+                    <th scope="col" class="text-right font-bold px-6 py-3">سازنده</th>
+                    <th scope="col" class="text-right font-bold px-6 py-3">کد فنی</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {product.oemCrossReference.map((ref) => (
+                    <tr class="border-t border-gray-50">
+                      <td class="px-6 py-3 text-gray-700">{ref.oemBrand}</td>
+                      <td class="px-6 py-3 font-mono text-crane-navy font-bold" dir="ltr">{ref.oemPartNumber}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {product.compatibleModels.length > 0 && (
+            <div class="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+              <h3 class="font-black text-crane-navy px-6 py-4 border-b border-gray-100 bg-gray-50">مدل‌های سازگار</h3>
+              <table class="w-full text-sm">
+                <caption class="sr-only">مدل‌های جرثقیل که این قطعه با آن‌ها سازگار است</caption>
+                <thead>
+                  <tr class="text-gray-600 text-xs">
+                    <th scope="col" class="text-right font-bold px-6 py-3">برند</th>
+                    <th scope="col" class="text-right font-bold px-6 py-3">مدل</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {product.compatibleModels.map((model) => (
+                    <tr class="border-t border-gray-50">
+                      <td class="px-6 py-3 text-gray-700">{model.craneBrand}</td>
+                      <td class="px-6 py-3 font-mono text-crane-navy font-bold" dir="ltr">{model.modelName}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <p class="text-sm text-gray-700 leading-7 mt-6 max-w-3xl">
+          مدل دستگاه شما در فهرست نیست؟ عکس پلاک دستگاه را برای ما بفرستید تا سازگاری را بررسی کنیم —
+          <a href={inquiryHref(product)} class="text-crane-orange font-bold hover:underline">بررسی سازگاری</a>.
+        </p>
+      </div>
+    </section>
+  )}
+
+  {/* --------------------------- مشخصات فنی --------------------------- */}
+  {product.technicalSpecs.length > 0 && (
+    <section class="bg-white px-4 py-14 border-b border-gray-100" aria-labelledby="specs-heading">
+      <div class="max-w-4xl mx-auto">
+        <h2 id="specs-heading" class="text-2xl font-black text-crane-navy mb-8">مشخصات فنی</h2>
+        <table class="w-full text-sm border border-gray-100 rounded-2xl overflow-hidden">
+          <caption class="sr-only">جدول مشخصات فنی {product.name}</caption>
+          <tbody>
+            {product.technicalSpecs.map((spec, index) => (
+              <tr class:list={[index % 2 === 0 ? 'bg-gray-50' : 'bg-white']}>
+                <th scope="row" class="text-right font-bold text-crane-navy px-6 py-3.5 w-1/3 align-top">{spec.label}</th>
+                <td class="px-6 py-3.5 text-gray-700 leading-7">{spec.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {/* --------------------------- توضیحات کامل --------------------------- */}
+  {product.bodyHtml && (
+    <section class="bg-gray-50 px-4 py-14 border-b border-gray-100" aria-labelledby="description-heading">
+      <div class="max-w-4xl mx-auto">
+        <h2 id="description-heading" class="text-2xl font-black text-crane-navy mb-6">توضیحات فنی محصول</h2>
+        {/* محتوا از ویرایشگر وردپرس می‌آید (منبع مورد اعتماد، فقط ادمین‌ها). */}
+        <div class="prose-crane text-gray-700 leading-8" set:html={product.bodyHtml} />
+      </div>
+    </section>
+  )}
+
+  {/* --------------------------- محصولات مرتبط --------------------------- */}
+  {related.length > 0 && (
+    <section class="bg-white px-4 py-14" aria-labelledby="related-heading">
+      <div class="max-w-7xl mx-auto">
+        <h2 id="related-heading" class="text-xl md:text-2xl font-black text-crane-navy mb-8">قطعات مرتبط</h2>
+        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" role="list">
+          {related.map((item) => {
+            const itemPrice = computePrice(item);
+            const image = item.images[0] ?? null;
+            return (
+              <li>
+                <article class="h-full bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-shadow overflow-hidden flex flex-col group relative">
+                  <div class="aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
+                    {image ? (
+                      <img src={image.url} alt={image.altText} width={image.width ?? 400} height={image.height ?? 400} loading="lazy" decoding="async" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    )}
+                  </div>
+                  <div class="p-5 flex flex-col grow">
+                    {item.sku && <p class="text-xs text-gray-500 font-mono mb-1" dir="ltr">{item.sku}</p>}
+                    <h3 class="font-bold text-crane-navy leading-7 mb-4 line-clamp-2">
+                      <a href={productPath(item)} class="hover:text-crane-orange before:absolute before:inset-0 focus:outline-none focus:ring-4 focus:ring-crane-orange/30 rounded">{item.name}</a>
+                    </h3>
+                    <div class="mt-auto pt-4 border-t border-gray-100">
+                      <PriceTag price={itemPrice} />
+                    </div>
+                  </div>
+                </article>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  )}
+</Layout>

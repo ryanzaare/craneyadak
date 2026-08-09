@@ -1,0 +1,76 @@
+---
+// src/components/PriceTag.astro
+// ---------------------------------------------------------------------------
+// نمایش قیمت — تنها کامپوننت مجاز برای رندر قیمت در کل سایت.
+//
+// چرا متمرکز: قانون «قیمت خط‌خورده فقط وقتی قیمت قبلی واقعی باشد» نباید در
+// چند فایل تکرار (و روزی فراموش) شود. هر جای سایت که قیمت نشان داده می‌شود
+// از همین کامپوننت و همان محاسبه‌ی `computePrice` استفاده می‌کند.
+//
+// وقتی قیمت واقعی وجود ندارد، هیچ عددی ساخته نمی‌شود — به‌جای آن برچسب
+// صادقانه‌ی «استعلام قیمت» نمایش داده می‌شود.
+// ---------------------------------------------------------------------------
+import { formatPrice, type PriceState } from '../lib/wp';
+
+export interface Props {
+  price: PriceState;
+  /** اندازه‌ی نمایش: کارت فهرست یا صفحه‌ی محصول. */
+  size?: 'card' | 'page';
+  class?: string;
+}
+
+const { price, size = 'card', class: className = '' } = Astro.props;
+
+const isPage = size === 'page';
+---
+
+{price.hasPrice && price.effective !== null ? (
+  <div class:list={['flex flex-wrap items-baseline gap-x-3 gap-y-1', className]}>
+    {price.onSale && price.previous !== null && (
+      <>
+        {/* قیمت قبلی فقط زمانی رندر می‌شود که واقعاً یک قیمت عادیِ ثبت‌شده
+            وجود داشته باشد و از قیمت فعلی بیشتر باشد — نگاه کنید به
+            computePrice در src/lib/wp.ts. */}
+        <s class:list={['text-gray-500 tabular-nums', isPage ? 'text-lg' : 'text-sm']}>
+          {formatPrice(price.previous)}
+        </s>
+        <span
+          class:list={[
+            'inline-flex items-center justify-center rounded-full bg-rose-600 text-white font-black tabular-nums shrink-0',
+            isPage ? 'text-sm w-14 h-14' : 'text-xs w-11 h-11',
+          ]}
+          aria-label={`${price.discountPercent} درصد تخفیف`}
+        >
+          ٪{price.discountPercent}
+        </span>
+      </>
+    )}
+    <span
+      class:list={[
+        'font-black text-crane-navy tabular-nums',
+        isPage ? 'text-3xl md:text-4xl' : 'text-base',
+      ]}
+    >
+      {formatPrice(price.effective)}
+    </span>
+  </div>
+) : (
+  <span
+    class:list={[
+      'inline-flex items-center gap-2 font-bold text-crane-orange',
+      isPage ? 'text-xl' : 'text-sm',
+      className,
+    ]}
+  >
+    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h8M8 14h5m-9 7l3-3h10a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v13z" />
+    </svg>
+    استعلام قیمت
+  </span>
+)}
+
+{price.onSale && price.saleEnd && isPage && (
+  <p class="text-xs text-gray-600 mt-2">
+    اعتبار این قیمت تا <time datetime={price.saleEnd}>{new Date(price.saleEnd).toLocaleDateString('fa-IR')}</time>
+  </p>
+)}

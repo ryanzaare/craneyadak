@@ -1,9 +1,12 @@
 ---
 // src/components/Footer.astro
-import { CATEGORIES, SITE } from '../data/site';
+import { SITE } from '../data/site';
+import { SILOS, siloPath } from '../data/taxonomy';
 
 const year = new Date().getFullYear();
-const shortCategories = CATEGORIES.slice(0, 6);
+// فوتر گروه‌های سیلو را نشان می‌دهد، نه ۳۰ دسته را — لینک داخلی متمرکز
+// روی والدها، که از آن‌جا اعتبار به فرزندان توزیع می‌شود.
+const footerSilos = SILOS.slice(0, 6);
 ---
 
 <footer class="bg-crane-navy text-gray-300 mt-auto" role="contentinfo">
@@ -44,15 +47,15 @@ const shortCategories = CATEGORIES.slice(0, 6);
       <nav aria-labelledby="footer-cats">
         <h2 id="footer-cats" class="text-white font-bold mb-5 text-base">دسته‌بندی‌های اصلی</h2>
         <ul class="space-y-3 text-sm">
-          {shortCategories.map((cat) => (
+          {footerSilos.map((silo) => (
             <li>
-              <a href={cat.slug} class="hover:text-crane-orange transition-colors inline-block py-1 focus:outline-none focus:text-crane-orange">
-                {cat.name}
+              <a href={siloPath(silo)} class="hover:text-crane-orange transition-colors inline-block py-1 focus:outline-none focus:text-crane-orange">
+                {silo.name}
               </a>
             </li>
           ))}
           <li class="pt-2">
-            <a href="/categories" class="text-crane-orange font-bold hover:underline py-1 inline-block">مشاهده همه محصولات ←</a>
+            <a href="/categories" class="text-crane-orange font-bold hover:underline py-1 inline-block">مشاهده همه دسته‌بندی‌ها ←</a>
           </li>
         </ul>
       </nav>

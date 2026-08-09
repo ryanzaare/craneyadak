@@ -20,10 +20,41 @@ const pdfDir = fileURLToPath(new URL('./public/pdfs/', import.meta.url));
 const hasPublishedDatasheets =
   existsSync(pdfDir) && readdirSync(pdfDir).some((file) => file.toLowerCase().endsWith('.pdf'));
 
+// ---------------------------------------------------------------------------
+// نقشه‌ی ریدایرکت: مسیرهای تخت قدیمی → مسیرهای تودرتوی سیلو.
+//
+// چرا لازم است: ساختار قبلی `/categories/[slug]` بود و ۸ دسته با آن آدرس‌ها
+// منتشر شده بودند. ساختار جدید `/categories/[silo]/[category]` است تا
+// سلسله‌مراتب سیلو در URL و بردکرامب منعکس شود. بدون 301، هر لینک خارجی و
+// هر ارزش خزش انباشته‌ی آن آدرس‌ها از بین می‌رود.
+//
+// ⚠️ محدودیت خروجی استاتیک: Astro در حالت static برای این‌ها صفحه‌ی
+// meta-refresh می‌سازد، نه پاسخ 301 واقعی. گوگل آن را دنبال می‌کند اما
+// 301 سمت سرور به‌مراتب تمیزتر است — به همین دلیل `public/_redirects` هم
+// تولید شده و قوانین معادل nginx/apache در docs/deployment-guide.md آمده.
+// ---------------------------------------------------------------------------
+const legacyCategoryRedirects = {
+  '/categories/remote-control': '/categories/control-safety/remote-control',
+  '/categories/conductor-bar': '/categories/power-supply/busbar-power-line',
+  '/categories/crane-wheels': '/categories/drive-units/crane-wheel',
+  '/categories/rope-guide': '/categories/hoist-accessories/rope-guide',
+  '/categories/crane-hook': '/categories/lifting-rigging/crane-hook',
+  '/categories/brake-disk': '/categories/brake/brake-wheel-disc',
+  // آدرس قدیمی «wire-rope-hoist» در واقع «موتور گیربکس و وینچ» بود (نه
+  // جرثقیل بکسلی) — طبق blurb همان صفحه. بنابراین به موتور گیربکس می‌رود.
+  '/categories/wire-rope-hoist': '/categories/drive-units/gearbox-motor',
+  // «جاروبک» در فهرست نهایی جا افتاده بود؛ کارفرما تایید کرد که فروخته
+  // می‌شود و صفحه‌ی اختصاصی خودش را نگه می‌دارد (زیر سیلوی برق‌رسانی).
+  // اسلاگ یکسان مانده و فقط یک سطح تودرتو شده است.
+  '/categories/current-collector': '/categories/power-supply/current-collector',
+};
+
 // https://astro.build/config
 export default defineConfig({
   // ⚠️ حیاتی برای سئو: بدون این، canonical و sitemap آدرس درست تولید نمی‌کنند
   site: 'https://craneyadak.com',
+
+  redirects: legacyCategoryRedirects,
 
   build: {
     inlineStylesheets: 'auto',

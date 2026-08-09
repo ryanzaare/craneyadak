@@ -1,55 +1,81 @@
 ---
 // src/pages/brands/[slug].astro
+// ---------------------------------------------------------------------------
+// صفحه‌ی برند — نیت جستجوی «قطعات <برند>» را هدف می‌گیرد.
+//
+// تفکیک از صفحه‌ی دسته (ضد هم‌نوع‌خواری):
+//   • /categories/.../remote-control → «ریموت کنترل جرثقیل سقفی» (نوع قطعه)
+//   • /brands/telecrane             → «قطعات تله‌کرین» (موجودیت برند)
+// این دو نباید یک عبارت را هدف بگیرند. متن و عنوان این صفحه حول «برند» است،
+// نه حول یک نوع قطعه.
+//
+// آرایه‌ی mockProducts قبلی (نام و کد فنی جعلی + Offer بدون price +
+// availability ساختگی) کاملاً حذف شده؛ محصولات واقعی از وردپرس می‌آیند.
+// ---------------------------------------------------------------------------
 import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import ProductGrid from '../../components/ProductGrid.astro';
-import { CATEGORIES, ENRICHED_BRANDS, SITE } from '../../data/site';
-import { getProductsByBrand, productJsonLd, type CraneProduct } from '../../lib/wp';
+import ProductCard from '../../components/ProductCard.astro';
+import { SITE } from '../../data/site';
+import {
+  BRANDS,
+  BRAND_CLASSES,
+  brandsByClass,
+  categoryPath,
+  findCategory,
+  type Brand,
+} from '../../data/taxonomy';
+import { getProductsByBrand, computePrice, productJsonLd, type CraneProduct } from '../../lib/wp';
 
-// ---------------------------------------------------------------------------
-// نکته‌ی معماری: محصولات واقعی در زمان BUILD از WPGraphQL می‌آیند (نه زمان
-// اجرا). آرایه‌ی `mockProducts` قبلی — که نام و کد فنی جعلی می‌ساخت و
-// علاوه بر آن یک `Offer` بدون فیلد `price` و یک ادعای `availability:
-// InStock` بی‌پشتوانه وارد JSON-LD می‌کرد — کاملاً حذف شد. هر دو مورد در
-// Rich Results Test خطا/هشدار تولید می‌کردند و نقض قانون «هرگز داده‌ی
-// ساختگی» پروژه بودند.
-// ---------------------------------------------------------------------------
 export async function getStaticPaths() {
   return Promise.all(
-    ENRICHED_BRANDS.map(async (brand) => {
-      const slugPath = brand.slug.replace('/brands/', '');
-      return {
-        params: { slug: slugPath },
-        props: { brand, products: await getProductsByBrand(slugPath) },
-      };
-    })
+    BRANDS.map(async (brand) => ({
+      params: { slug: brand.slug },
+      props: { brand, products: await getProductsByBrand(brand.slug) },
+    }))
   );
 }
 
 interface Props {
-  brand: (typeof ENRICHED_BRANDS)[number];
+  brand: Brand;
   products: CraneProduct[];
 }
 
 const { brand, products } = Astro.props as Props;
 
-const title = `نمایندگی فروش و تامین قطعات ${brand.nameFa} (${brand.nameEn}) | ${SITE.name}`;
-const description = `تامین بی‌واسطه و فروش ${brand.seoDesc}. خرید لوازم یدکی و قطعات اورجینال ${brand.nameFa} با تضمین اصالت کالا و صدور فاکتور رسمی.`;
+const classMeta = BRAND_CLASSES[brand.brandClass];
+const title = `قطعات ${brand.nameFa} (${brand.nameEn}) | تامین و استعلام قیمت | ${SITE.name}`;
+const description = `تامین ${brand.seoDesc}، ساخت ${brand.country}. استعلام قیمت با کد فنی، بررسی سازگاری و صدور فاکتور رسمی.`;
+const canonical = `${SITE.url}/brands/${brand.slug}`;
 
-// دیگر برندهای تحت پوشش — لینک‌سازی داخلی بین صفحات برند (Entity/Brand Silo)
-const relatedBrands = ENRICHED_BRANDS.filter((b) => b.slug !== brand.slug).slice(0, 4);
-const brandNodeId = `${SITE.url}/#${brand.nameEn.toLowerCase()}`;
+// برندهای هم‌کلاس — لینک‌سازی داخلی بین موجودیت‌های هم‌نوع، نه همه‌ی ۱۸ برند.
+const siblings = brandsByClass(brand.brandClass).filter((b) => b.slug !== brand.slug);
+
+// دسته‌هایی که واقعاً برای این برند محصول دارند — لینک به تقاطع واقعی
+// «برند × دسته». اگر محصولی نباشد، لینکی ساخته نمی‌شود (بدون صفحه‌ی توخالی).
+const categoriesWithProducts = [
+  ...new Set(products.flatMap((p) => p.categorySlugs)),
+]
+  .map((slug) => findCategory(slug))
+  .filter((c): c is NonNullable<typeof c> => Boolean(c));
+
+const breadcrumbItems = [
+  { label: 'صفحه اصلی', href: '/' },
+  { label: 'برندهای جهانی', href: '/brands' },
+  { label: brand.nameFa },
+];
+
+const brandNodeId = `${canonical}#brand`;
 
 const itemList =
   products.length > 0
     ? {
         '@type': 'ItemList',
-        '@id': `${SITE.url}${brand.slug}#products`,
+        '@id': `${canonical}#products`,
         numberOfItems: products.length,
         itemListElement: products.map((product, index) => ({
           '@type': 'ListItem',
           position: index + 1,
-          item: productJsonLd(product, SITE.url),
+          item: productJsonLd(product, SITE.url, computePrice(product)),
         })),
       }
     : null;
@@ -59,12 +85,13 @@ const jsonLd = {
   '@graph': [
     {
       '@type': 'BreadcrumbList',
-      '@id': `${SITE.url}${brand.slug}#breadcrumb`,
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: SITE.url },
-        { '@type': 'ListItem', position: 2, name: 'برندهای جهانی', item: `${SITE.url}/brands` },
-        { '@type': 'ListItem', position: 3, name: brand.nameFa, item: `${SITE.url}${brand.slug}` },
-      ],
+      '@id': `${canonical}#breadcrumb`,
+      itemListElement: breadcrumbItems.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.label,
+        ...(item.href ? { item: `${SITE.url}${item.href}` } : {}),
+      })),
     },
     {
       '@type': 'Brand',
@@ -74,15 +101,13 @@ const jsonLd = {
     },
     {
       '@type': 'CollectionPage',
-      '@id': `${SITE.url}${brand.slug}#webpage`,
-      url: `${SITE.url}${brand.slug}`,
+      '@id': `${canonical}#webpage`,
+      url: canonical,
       name: title,
       description,
       about: { '@id': brandNodeId },
       isPartOf: { '@id': `${SITE.url}/#website` },
       inLanguage: SITE.locale,
-      // نکته سئو: `mainEntity` فقط وقتی اضافه می‌شود که فهرست محصول واقعی
-      // وجود داشته باشد — یک ItemList خالی یا ساختگی بدتر از نبودنش است.
       ...(itemList ? { mainEntity: itemList } : {}),
     },
   ],
@@ -90,95 +115,111 @@ const jsonLd = {
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
-  <section class="bg-crane-navy text-white pt-12 pb-20 px-4 border-b-[8px] border-crane-orange overflow-hidden relative">
-    {/* Background Watermark Logo */}
-    <div class="absolute -right-20 -top-20 opacity-5 pointer-events-none select-none" aria-hidden="true">
-      <svg class="w-96 h-96 text-white" viewBox="0 0 200 60" fill="currentColor">
-        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="60" font-weight="900" letter-spacing="2">{brand.logoText}</text>
+  <section class="bg-crane-navy text-white pt-10 pb-16 px-4 border-b-[8px] border-crane-orange relative overflow-hidden">
+    <div class="absolute -left-16 -top-16 opacity-[0.06] pointer-events-none select-none" aria-hidden="true">
+      <svg class="w-[28rem] h-[28rem] text-white" viewBox="0 0 200 60" fill="currentColor">
+        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="46" font-weight="900">{brand.logoText}</text>
       </svg>
     </div>
 
     <div class="max-w-7xl mx-auto relative z-10">
-      <Breadcrumb items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'برندهای جهانی', href: '/brands' }, { label: brand.nameFa }]} />
-
-      <div class="flex flex-col md:flex-row items-center md:items-start gap-8">
-        <div class="w-32 h-32 md:w-40 md:h-40 bg-white rounded-3xl flex items-center justify-center shrink-0 border-4 border-white/20 shadow-2xl p-4">
-          <svg class={`w-full h-full ${brand.brandColor.replace('group-hover:', '')}`} viewBox="0 0 200 60" fill="currentColor" role="img" aria-label={`لوگوی ${brand.nameFa}`}>
-            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="40" font-weight="900" letter-spacing="1">{brand.logoText}</text>
+      <Breadcrumb items={breadcrumbItems} />
+      <div class="flex flex-col md:flex-row items-start gap-8">
+        <div class="w-28 h-28 bg-white rounded-3xl flex items-center justify-center shrink-0 border-4 border-white/20 shadow-2xl p-3">
+          <svg class="w-full h-full text-crane-navy" viewBox="0 0 200 60" fill="currentColor" role="img" aria-label={`لوگوی ${brand.nameFa}`}>
+            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="34" font-weight="900">{brand.logoText}</text>
           </svg>
         </div>
-        <div class="text-center md:text-right mt-2">
-          <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-gray-200 text-xs font-black tracking-[0.2em] mb-3 uppercase border border-white/20" dir="ltr">{brand.nameEn} GENUINE PARTS</span>
-          <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">تامین قطعات {brand.nameFa}</h1>
-          <p class="text-lg text-gray-300 max-w-2xl leading-8">مرجع تخصصی خرید قطعات اورجینال، {brand.seoDesc} با تضمین اصالت کالا و پشتیبانی فنی.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  {/* --------------------------- Product Grid --------------------------- */}
-  <ProductGrid
-    products={products}
-    heading={`قطعات و لوازم یدکی ${brand.nameFa}`}
-    emptyTitle={`استعلام قطعات ${brand.nameFa} با کد فنی سازنده`}
-    emptyBody={`فهرست آنلاین قطعات ${brand.nameFa} در حال تکمیل است و تنها اقلامی منتشر می‌شود که تامین آن‌ها قطعی باشد. اگر Part Number اصلی سازنده یا پلاک دستگاه را در اختیار دارید، همان را برای ما بفرستید؛ کارشناسان ما معادل اورجینال یا جایگزین استاندارد را شناسایی و پیش‌فاکتور رسمی صادر می‌کنند.`}
-    inquiryQuery={{ brand: brand.nameEn }}
-  />
-
-  {/* ---------------- Part Finder CTA + Category Silo Linking ---------------- */}
-  <section class="bg-white py-16 px-4 border-t border-gray-100" aria-labelledby="brand-categories-heading">
-    <div class="max-w-7xl mx-auto">
-      <h2 id="brand-categories-heading" class="text-xl md:text-2xl font-black text-crane-navy mb-3">
-        دسته‌بندی قطعات قابل تامین برای جرثقیل‌های {brand.nameFa}
-      </h2>
-      <p class="text-gray-600 leading-8 mb-8 max-w-3xl">
-        برای مشاهده‌ی توضیحات فنی هر گروه قطعه و ثبت استعلام، وارد دسته‌بندی مربوطه شوید.
-      </p>
-      <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" role="list">
-        {CATEGORIES.map((cat) => (
-          <li>
-            <a
-              href={cat.slug}
-              class="group h-full bg-gray-50 hover:bg-white p-5 rounded-2xl border border-gray-100 hover:border-orange-100 hover:shadow-md transition-all flex items-center gap-3 focus:outline-none focus:ring-4 focus:ring-crane-orange/30"
-            >
-              <span class="w-10 h-10 shrink-0 bg-white text-crane-navy group-hover:text-crane-orange group-hover:bg-orange-50 rounded-xl flex items-center justify-center transition-colors" aria-hidden="true">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" d={cat.icon} /></svg>
-              </span>
-              <span class="text-sm font-bold text-crane-navy group-hover:text-crane-orange transition-colors leading-6">{cat.name}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-
-      <div class="mt-12 bg-crane-light rounded-3xl p-8 border border-gray-200 flex flex-col md:flex-row items-center justify-between gap-6">
         <div>
-          <h3 class="font-bold text-xl text-crane-navy mb-2">به دنبال کد فنی خاصی از {brand.nameFa} هستید؟</h3>
-          <p class="text-gray-700 text-sm leading-6">اگر Part Number قطعه را در اختیار دارید، مستقیماً استعلام بگیرید.</p>
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-gray-200 text-xs font-bold border border-white/20">{classMeta.name}</span>
+            <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-gray-200 text-xs font-bold border border-white/20">ساخت {brand.country}</span>
+          </div>
+          <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md leading-relaxed">
+            قطعات {brand.nameFa}
+            <span class="text-gray-400 font-bold text-2xl md:text-3xl" dir="ltr">({brand.nameEn})</span>
+          </h1>
+          <p class="text-lg text-gray-300 max-w-2xl leading-8">
+            تامین {brand.seoDesc} با بررسی سازگاری فنی، تضمین اصالت کالا و صدور فاکتور رسمی.
+          </p>
         </div>
-        <a
-          href={`/contact?brand=${encodeURIComponent(brand.nameEn)}`}
-          class="bg-crane-navy text-white px-8 py-4 rounded-full font-bold hover:bg-gray-800 transition-colors shrink-0 focus:outline-none focus:ring-4 focus:ring-crane-navy/30 min-h-[52px] flex items-center"
-        >
-          استعلام قطعات {brand.nameFa}
-        </a>
       </div>
     </div>
   </section>
 
-  {/* ------------------- Related Brands (Internal Linking) ------------------- */}
-  <section class="bg-gray-50 py-16 px-4 border-t border-gray-100" aria-labelledby="related-brands-heading">
+  {/* ------------------------------ محصولات ------------------------------ */}
+  <section class="bg-gray-50 px-4 py-14" aria-labelledby="brand-products-heading">
     <div class="max-w-7xl mx-auto">
-      <h2 id="related-brands-heading" class="text-xl md:text-2xl font-black text-crane-navy mb-8">سایر برندهای تحت پوشش</h2>
-      <ul class="grid grid-cols-2 md:grid-cols-4 gap-4" role="list">
-        {relatedBrands.map((rb) => (
-          <li>
-            <a href={rb.slug} class="group h-full bg-white hover:shadow-md p-6 rounded-2xl border border-gray-100 hover:border-orange-100 transition-all flex flex-col items-center text-center focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
-              <span class="text-xs font-black tracking-widest text-gray-500 group-hover:text-crane-orange transition-colors uppercase" dir="ltr">{rb.nameEn}</span>
-              <span class="text-sm font-bold text-crane-navy mt-1">{rb.nameFa}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
+      <div class="flex flex-wrap gap-4 justify-between items-end mb-8 border-b border-gray-200 pb-4">
+        <h2 id="brand-products-heading" class="text-2xl font-black text-crane-navy">قطعات {brand.nameFa}</h2>
+        {products.length > 0 && (
+          <span class="text-sm text-gray-600 font-bold bg-white border border-gray-200 px-3 py-1 rounded-full tabular-nums">{products.length} قطعه</span>
+        )}
+      </div>
+
+      {products.length > 0 ? (
+        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" role="list">
+          {products.map((product, index) => (
+            <li><ProductCard product={product} eager={index < 4} showBrand={false} /></li>
+          ))}
+        </ul>
+      ) : (
+        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 md:p-12 max-w-3xl">
+          <h3 class="text-xl md:text-2xl font-black text-crane-navy mb-4 leading-9">
+            استعلام قطعات {brand.nameFa} با کد فنی سازنده
+          </h3>
+          <p class="text-gray-700 leading-8 mb-8">
+            فهرست آنلاین قطعات {brand.nameFa} در حال تکمیل است و تنها اقلامی منتشر می‌شود که تامین آن‌ها قطعی باشد. اگر Part Number اصلی سازنده یا عکس پلاک دستگاه را دارید، همان را بفرستید؛ کارشناسان ما قطعه‌ی اورجینال یا معادل استاندارد را شناسایی می‌کنند.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <a href={`/contact?brand=${encodeURIComponent(brand.nameEn)}`} class="bg-crane-orange text-white px-8 py-4 rounded-xl font-black text-center hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
+            <a href={`https://wa.me/${SITE.whatsapp.replace('+', '')}`} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-xl font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
+          </div>
+        </div>
+      )}
     </div>
   </section>
+
+  {/* -------- تقاطع واقعی برند × دسته (فقط جایی که محصول وجود دارد) -------- */}
+  {categoriesWithProducts.length > 0 && (
+    <section class="bg-white px-4 py-14 border-t border-gray-100" aria-labelledby="brand-categories-heading">
+      <div class="max-w-7xl mx-auto">
+        <h2 id="brand-categories-heading" class="text-xl md:text-2xl font-black text-crane-navy mb-8">
+          دسته‌بندی قطعات موجود {brand.nameFa}
+        </h2>
+        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" role="list">
+          {categoriesWithProducts.map((category) => (
+            <li>
+              <a href={categoryPath(category)} class="group h-full bg-gray-50 hover:bg-white p-5 rounded-2xl border border-gray-100 hover:border-orange-100 hover:shadow-md transition-all flex items-center gap-3 focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
+                <span class="w-10 h-10 shrink-0 bg-white text-crane-navy group-hover:text-crane-orange group-hover:bg-orange-50 rounded-xl flex items-center justify-center transition-colors" aria-hidden="true">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={category.icon} /></svg>
+                </span>
+                <span class="text-sm font-bold text-crane-navy group-hover:text-crane-orange transition-colors leading-6">{category.name}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )}
+
+  {/* ---------------------- برندهای هم‌گروه ---------------------- */}
+  {siblings.length > 0 && (
+    <section class="bg-gray-50 px-4 py-14 border-t border-gray-100" aria-labelledby="sibling-brands-heading">
+      <div class="max-w-7xl mx-auto">
+        <h2 id="sibling-brands-heading" class="text-xl md:text-2xl font-black text-crane-navy mb-3">سایر {classMeta.name}</h2>
+        <p class="text-gray-600 leading-8 mb-8 max-w-3xl">{classMeta.intro}</p>
+        <ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" role="list">
+          {siblings.map((sibling) => (
+            <li>
+              <a href={`/brands/${sibling.slug}`} class="group h-full bg-white hover:shadow-md p-5 rounded-2xl border border-gray-100 hover:border-orange-100 transition-all flex flex-col items-center text-center focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
+                <span class="text-sm font-black tracking-wider text-crane-navy group-hover:text-crane-orange transition-colors uppercase" dir="ltr">{sibling.nameEn}</span>
+                <span class="text-sm font-bold text-gray-700 mt-0.5">{sibling.nameFa}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )}
 </Layout>

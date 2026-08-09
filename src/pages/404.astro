@@ -3,7 +3,8 @@
 // صفحه‌ی ۴۰۴ اختصاصی — عمداً noindex (استاندارد سئو برای صفحات خطا)
 // اما همچنان لینک‌های داخلی معتبر برای نگه‌داشتن کاربر و عبور Link Equity دارد.
 import Layout from '../layouts/Layout.astro';
-import { CATEGORIES, SITE } from '../data/site';
+import { SITE } from '../data/site';
+import { SILOS, siloPath } from '../data/taxonomy';
 
 const title = `صفحه یافت نشد (۴۰۴) | ${SITE.name}`;
 const description = 'صفحه مورد نظر شما یافت نشد. از طریق دسته‌بندی‌ها یا جستجوی سریع، قطعه یا صفحه مورد نظر خود را بیابید.';
@@ -31,9 +32,9 @@ const description = 'صفحه مورد نظر شما یافت نشد. از طر�
       </form>
 
       <div class="flex flex-wrap justify-center gap-3 mb-12">
-        {CATEGORIES.slice(0, 4).map((cat) => (
-          <a href={cat.slug} class="bg-white border border-gray-200 text-gray-700 hover:border-crane-orange hover:text-crane-orange px-4 py-2 rounded-full text-sm font-bold transition-colors">
-            {cat.name}
+        {SILOS.slice(0, 4).map((silo) => (
+          <a href={siloPath(silo)} class="bg-white border border-gray-200 text-gray-700 hover:border-crane-orange hover:text-crane-orange px-4 py-2 rounded-full text-sm font-bold transition-colors">
+            {silo.name}
           </a>
         ))}
       </div>
