@@ -1,0 +1,78 @@
+---
+// src/components/PartNumber.astro
+// ---------------------------------------------------------------------------
+// نمایش کد فنی با دکمه‌ی کپی.
+//
+// چرا این ارزش یک کامپوننت مستقل را دارد: کد فنی پرکاربردترین داده‌ی این
+// سایت است. مهندس نت آن را در ایمیل سفارش، فرم استعلام، پیام واتساپ به
+// همکار و سیستم انبار داخلی کپی می‌کند. تایپ دستی کدی مثل «MT318-K2/L»
+// منبع رایج خطای انسانی است و خطا در کد فنی یعنی سفارش قطعه‌ی اشتباه —
+// گران‌ترین اشتباه ممکن در این حوزه.
+//
+// بدون جاوااسکریپت: متن کد کاملاً قابل انتخاب و خواندن است و فقط دکمه‌ی
+// کپی نمایش داده نمی‌شود.
+// ---------------------------------------------------------------------------
+
+export interface Props {
+  sku: string;
+  label?: string;
+  /** شناسه‌ی یکتا — چون این کامپوننت ممکن است چند بار در صفحه بیاید. */
+  id: string;
+}
+
+const { sku, label = 'کد فنی (Part Number)', id } = Astro.props;
+---
+
+<div class="flex flex-wrap items-center gap-3">
+  <span class="text-sm text-gray-700">{label}:</span>
+  <code
+    id={`sku-${id}`}
+    class="font-mono font-bold text-crane-navy bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5 select-all"
+    dir="ltr"
+  >{sku}</code>
+  <button
+    type="button"
+    class="copy-sku hidden items-center gap-1.5 text-sm font-bold text-crane-orange hover:text-orange-800 transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded px-2 py-1 print:hidden"
+    data-target={`sku-${id}`}
+    data-sku={sku}
+  >
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+    <span class="copy-label">کپی کد</span>
+  </button>
+  {/* بازخورد برای صفحه‌خوان — تغییر متن دکمه به‌تنهایی اعلام نمی‌شود. */}
+  <span class="sr-only" role="status" aria-live="polite" id={`sku-status-${id}`}></span>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.copy-sku').forEach((button) => {
+    // دکمه فقط وقتی ظاهر می‌شود که API کپی واقعاً در دسترس باشد.
+    // (clipboard فقط در context امن — https یا localhost — کار می‌کند؛
+    //  نمایش دکمه‌ای که در http کار نمی‌کند بدتر از نبودنش است.)
+    if (!navigator.clipboard) return;
+    button.classList.remove('hidden');
+    button.classList.add('inline-flex');
+
+    const label = button.querySelector('.copy-label');
+    const status = document.getElementById(`sku-status-${button.dataset.target?.replace('sku-', '')}`);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    button.addEventListener('click', async () => {
+      const sku = button.dataset.sku ?? '';
+      try {
+        await navigator.clipboard.writeText(sku);
+        if (label) label.textContent = 'کپی شد ✓';
+        if (status) status.textContent = `کد فنی ${sku} کپی شد`;
+      } catch {
+        if (label) label.textContent = 'کپی نشد';
+        if (status) status.textContent = 'کپی انجام نشد؛ کد را دستی انتخاب کنید';
+      }
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (label) label.textContent = 'کپی کد';
+        if (status) status.textContent = '';
+      }, 2000);
+    });
+  });
+</script>

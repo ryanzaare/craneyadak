@@ -1,0 +1,133 @@
+---
+// src/components/ProductGallery.astro
+// ---------------------------------------------------------------------------
+// گالری تصویر محصول با امکان بزرگ‌نمایی.
+//
+// چرا بزرگ‌نمایی مهم است (و تزئینی نیست): کاربر این صفحه معمولاً قطعه‌ی
+// فرسوده را در دست دارد و می‌خواهد شکل شیار، تعداد پیچ، جهت مارپیچ یا فرم
+// دقیق قطعه را با تصویر مقایسه کند. تصویر ۴۰۰ پیکسلی برای این کار کافی
+// نیست و کاربر مجبور می‌شود از خرید منصرف شود یا تماس بگیرد.
+//
+// پیاده‌سازی با عنصر بومی <dialog>: بدون کتابخانه، بستن با ESC و مدیریت
+// فوکوس به‌صورت بومی مرورگر. بدون جاوااسکریپت هم تصاویر کاملاً قابل مشاهده
+// می‌مانند — فقط بزرگ‌نمایی غیرفعال می‌شود.
+// ---------------------------------------------------------------------------
+import type { CraneImage } from '../lib/wp';
+
+export interface Props {
+  images: CraneImage[];
+  productName: string;
+}
+
+const { images, productName } = Astro.props;
+const hero = images[0] ?? null;
+---
+
+<div class="product-gallery">
+  <figure class="aspect-square bg-gray-50 rounded-3xl border border-gray-100 overflow-hidden flex items-center justify-center relative m-0">
+    {hero ? (
+      <>
+        <img
+          id="gallery-main"
+          src={hero.url}
+          alt={hero.altText}
+          width={hero.width ?? 900}
+          height={hero.height ?? 900}
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+          class="w-full h-full object-cover"
+        />
+        <button
+          type="button"
+          id="gallery-zoom"
+          class="absolute bottom-4 left-4 bg-white/95 backdrop-blur text-crane-navy border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm hover:bg-white transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 hidden print:hidden"
+        >
+          <span class="flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" /></svg>
+            بزرگ‌نمایی تصویر
+          </span>
+        </button>
+      </>
+    ) : (
+      <svg class="w-24 h-24 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    )}
+  </figure>
+
+  {images.length > 1 && (
+    <ul class="grid grid-cols-5 gap-3 mt-4 print:hidden" role="list">
+      {images.slice(0, 5).map((image, index) => (
+        <li>
+          <button
+            type="button"
+            class="gallery-thumb aspect-square w-full bg-gray-50 rounded-xl border-2 border-gray-100 overflow-hidden hover:border-crane-orange transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/30 aria-[current=true]:border-crane-orange"
+            data-src={image.url}
+            data-alt={image.altText}
+            aria-current={index === 0 ? 'true' : 'false'}
+            aria-label={`نمایش تصویر ${index + 1} از ${productName}`}
+          >
+            <img src={image.url} alt="" width={image.width ?? 200} height={image.height ?? 200} loading="lazy" decoding="async" class="w-full h-full object-cover" />
+          </button>
+        </li>
+      ))}
+    </ul>
+  )}
+</div>
+
+{hero && (
+  <dialog id="gallery-dialog" class="backdrop:bg-black/80 bg-transparent p-0 max-w-[95vw] max-h-[95vh] w-full">
+    <div class="relative bg-white rounded-2xl overflow-hidden">
+      <img id="gallery-dialog-img" src={hero.url} alt={hero.altText} class="w-full h-auto max-h-[90vh] object-contain" />
+      <button
+        type="button"
+        id="gallery-close"
+        class="absolute top-3 left-3 bg-white/95 text-crane-navy rounded-full w-11 h-11 flex items-center justify-center shadow-md hover:bg-white focus:outline-none focus:ring-4 focus:ring-crane-orange/40"
+        aria-label="بستن تصویر"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+  </dialog>
+)}
+
+<script>
+  const main = document.getElementById('gallery-main') as HTMLImageElement | null;
+  const dialog = document.getElementById('gallery-dialog') as HTMLDialogElement | null;
+  const dialogImg = document.getElementById('gallery-dialog-img') as HTMLImageElement | null;
+  const zoomBtn = document.getElementById('gallery-zoom');
+  const closeBtn = document.getElementById('gallery-close');
+
+  // دکمه‌ی بزرگ‌نمایی فقط وقتی نمایش داده می‌شود که جاوااسکریپت واقعاً اجرا
+  // شده و <dialog> پشتیبانی می‌شود — یعنی هرگز دکمه‌ی بی‌اثر دیده نمی‌شود.
+  if (zoomBtn && dialog && typeof dialog.showModal === 'function') {
+    zoomBtn.classList.remove('hidden');
+    zoomBtn.addEventListener('click', () => dialog.showModal());
+  }
+
+  closeBtn?.addEventListener('click', () => dialog?.close());
+
+  // کلیک روی پس‌زمینه (خارج از تصویر) هم می‌بندد — رفتار مورد انتظار کاربر.
+  dialog?.addEventListener('click', (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.gallery-thumb').forEach((thumb) => {
+    thumb.addEventListener('click', () => {
+      const src = thumb.dataset.src;
+      const alt = thumb.dataset.alt ?? '';
+      if (!src || !main) return;
+
+      main.src = src;
+      main.alt = alt;
+      if (dialogImg) {
+        dialogImg.src = src;
+        dialogImg.alt = alt;
+      }
+      document
+        .querySelectorAll<HTMLButtonElement>('.gallery-thumb')
+        .forEach((t) => t.setAttribute('aria-current', String(t === thumb)));
+    });
+  });
+</script>
