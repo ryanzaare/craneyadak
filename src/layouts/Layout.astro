@@ -69,7 +69,14 @@ const canonicalURL = new URL(cleanPath, SITE.url).toString();
     
     {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
   </head>
-  <body class="bg-gray-50 text-gray-900 font-sans antialiased overflow-x-hidden selection:bg-crane-orange selection:text-white flex flex-col min-h-screen pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
+  {/* ⚠️ رفع باگ هدر چسبان (Sticky):
+      کلاس قبلی `overflow-x-hidden` روی <body> بود. این مقدار یک «زمینه‌ی
+      اسکرول» جدید می‌سازد و `position: sticky` را در فرزندان از کار
+      می‌اندازد — دقیقاً همان رفتار متناوبی که دیده می‌شد (گاهی هدر موقع
+      اسکرول به بالا ناپدید یا نصفه می‌شد).
+      `overflow-x: clip` همان بریدن افقی را انجام می‌دهد اما زمینه‌ی اسکرول
+      نمی‌سازد، بنابراین sticky سالم می‌ماند. */}
+  <body class="bg-gray-50 text-gray-900 font-sans antialiased [overflow-x:clip] selection:bg-crane-orange selection:text-white flex flex-col min-h-screen pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
     <a href="#main-content" class="skip-to-content">پرش به محتوای اصلی</a>
     <Header />
     <main id="main-content" class="flex-grow" role="main">

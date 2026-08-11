@@ -37,56 +37,6 @@
             "graphql_field_name": "brand"
         },
         {
-            "key": "field_cyh_product_price",
-            "label": "قیمت عادی (ریال)",
-            "name": "price",
-            "type": "number",
-            "instructions": "قیمت واقعی و جاری این قطعه به ریال. اگر قیمت مشخصی ندارد یا استعلامی است، این فیلد را خالی بگذارید — در آن صورت سایت به‌جای عدد، «استعلام قیمت» نمایش می‌دهد. هرگز عدد تقریبی یا ساختگی وارد نکنید.",
-            "required": 0,
-            "show_in_graphql": 1,
-            "graphql_field_name": "price",
-            "min": 0,
-            "step": "1"
-        },
-        {
-            "key": "field_cyh_product_sale_price",
-            "label": "قیمت با تخفیف (ریال)",
-            "name": "sale_price",
-            "type": "number",
-            "instructions": "⚠️ فقط زمانی پر کنید که واقعاً تخفیف داده‌اید. قیمت خط‌خورده‌ای که در سایت نمایش داده می‌شود همان «قیمت عادی» بالاست و باید قیمتی باشد که واقعاً قبلاً دریافت می‌شده. نمایش یک قیمت قبلیِ ساختگی، هم خلاف سیاست گوگل و هم از نظر قانون حمایت از مصرف‌کننده تخلف است. اگر این عدد از قیمت عادی بیشتر یا مساوی باشد، سایت آن را نادیده می‌گیرد.",
-            "required": 0,
-            "show_in_graphql": 1,
-            "graphql_field_name": "salePrice",
-            "min": 0,
-            "step": "1"
-        },
-        {
-            "key": "field_cyh_product_sale_start",
-            "label": "شروع تخفیف",
-            "name": "sale_start",
-            "type": "date_picker",
-            "instructions": "خالی = بدون محدودیت شروع.",
-            "required": 0,
-            "show_in_graphql": 1,
-            "graphql_field_name": "saleStart",
-            "display_format": "Y/m/d",
-            "return_format": "Y-m-d",
-            "first_day": 6
-        },
-        {
-            "key": "field_cyh_product_sale_end",
-            "label": "پایان تخفیف",
-            "name": "sale_end",
-            "type": "date_picker",
-            "instructions": "خالی = بدون تاریخ پایان. توجه: سایت استاتیک است؛ تخفیف منقضی‌شده تا اولین بازسازی سایت روی صفحه باقی می‌ماند.",
-            "required": 0,
-            "show_in_graphql": 1,
-            "graphql_field_name": "saleEnd",
-            "display_format": "Y/m/d",
-            "return_format": "Y-m-d",
-            "first_day": 6
-        },
-        {
             "key": "field_cyh_product_buy_mode",
             "label": "روش خرید",
             "name": "buy_mode",
@@ -124,6 +74,92 @@
             "multiple": 0,
             "ui": 0,
             "return_format": "value"
+        },
+        {
+            "key": "field_cyh_product_price",
+            "label": "قیمت عادی (ریال)",
+            "name": "price",
+            "type": "number",
+            "instructions": "قیمت واقعی و جاری این قطعه به ریال. این فیلد فقط در حالت «خرید آنلاین» معنا دارد؛ در حالت «استعلام و پیش‌فاکتور» سایت هیچ قیمتی منتشر نمی‌کند (نمایش هم‌زمان قیمت و دکمه‌ی استعلام برای خریدار متناقض است). هرگز عدد تقریبی یا ساختگی وارد نکنید.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "price",
+            "min": 0,
+            "step": "1",
+            "conditional_logic": [
+                [
+                    {
+                        "field": "field_cyh_product_buy_mode",
+                        "operator": "==",
+                        "value": "cart"
+                    }
+                ]
+            ]
+        },
+        {
+            "key": "field_cyh_product_sale_price",
+            "label": "قیمت با تخفیف (ریال)",
+            "name": "sale_price",
+            "type": "number",
+            "instructions": "⚠️ فقط زمانی پر کنید که واقعاً تخفیف داده‌اید. قیمت خط‌خورده‌ای که در سایت نمایش داده می‌شود همان «قیمت عادی» بالاست و باید قیمتی باشد که واقعاً قبلاً دریافت می‌شده. نمایش یک قیمت قبلیِ ساختگی، هم خلاف سیاست گوگل و هم از نظر قانون حمایت از مصرف‌کننده تخلف است. اگر این عدد از قیمت عادی بیشتر یا مساوی باشد، سایت آن را نادیده می‌گیرد.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "salePrice",
+            "min": 0,
+            "step": "1",
+            "conditional_logic": [
+                [
+                    {
+                        "field": "field_cyh_product_buy_mode",
+                        "operator": "==",
+                        "value": "cart"
+                    }
+                ]
+            ]
+        },
+        {
+            "key": "field_cyh_product_sale_start",
+            "label": "شروع تخفیف",
+            "name": "sale_start",
+            "type": "date_picker",
+            "instructions": "خالی = بدون محدودیت شروع.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "saleStart",
+            "display_format": "Y/m/d",
+            "return_format": "Y-m-d",
+            "first_day": 6,
+            "conditional_logic": [
+                [
+                    {
+                        "field": "field_cyh_product_buy_mode",
+                        "operator": "==",
+                        "value": "cart"
+                    }
+                ]
+            ]
+        },
+        {
+            "key": "field_cyh_product_sale_end",
+            "label": "پایان تخفیف",
+            "name": "sale_end",
+            "type": "date_picker",
+            "instructions": "خالی = بدون تاریخ پایان. توجه: سایت استاتیک است؛ تخفیف منقضی‌شده تا اولین بازسازی سایت روی صفحه باقی می‌ماند.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "saleEnd",
+            "display_format": "Y/m/d",
+            "return_format": "Y-m-d",
+            "first_day": 6,
+            "conditional_logic": [
+                [
+                    {
+                        "field": "field_cyh_product_buy_mode",
+                        "operator": "==",
+                        "value": "cart"
+                    }
+                ]
+            ]
         },
         {
             "key": "field_cyh_product_gallery",
@@ -260,5 +296,5 @@
     "graphql_types": [
         "CraneProduct"
     ],
-    "modified": 20260809
+    "modified": 20260811
 }

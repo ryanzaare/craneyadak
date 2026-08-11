@@ -278,6 +278,21 @@ function stripHtml(input: string | null | undefined): string | null {
  * وب‌هوک بازسازی (WP publish → rebuild) برای این پروژه اختیاری نیست.
  */
 export function computePrice(product: CraneProduct, now: Date = new Date()): PriceState {
+  // ⚠️ قانون یکپارچگی: در حالت «استعلام و پیش‌فاکتور» هیچ قیمتی منتشر
+  // نمی‌شود — نه روی صفحه، نه در کارت، نه در Schema.org.
+  //
+  // چرا: نمایش هم‌زمان یک عدد و دکمه‌ی «استعلام قیمت» به کاربر پیام متناقض
+  // می‌دهد؛ اگر قیمت مشخص است چرا باید استعلام بگیرد؟ و اگر عدد نمایش‌داده‌شده
+  // قیمت نهایی نیست، یعنی سایت عددی را نشان داده که به آن پایبند نیست.
+  // این دقیقاً همان «داده‌ای که واقعیت ندارد» است، فقط در قالب قیمت.
+  //
+  // این بررسی عمداً اینجاست و نه در قالب‌ها: هر جای سایت که قیمت رندر
+  // می‌شود از همین تابع عبور می‌کند، پس قانون یک‌بار و برای همیشه اعمال
+  // می‌شود و امکان فراموش‌شدنش در یک کامپوننت وجود ندارد.
+  if (product.buyMode === 'rfq') {
+    return { hasPrice: false, effective: null, previous: null, discountPercent: null, onSale: false, saleEnd: null };
+  }
+
   const base = product.price;
   const sale = product.salePrice;
 
