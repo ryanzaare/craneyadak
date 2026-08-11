@@ -1,0 +1,386 @@
+---
+// src/components/CategoryGuide.astro
+// ---------------------------------------------------------------------------
+// رندر محتوای تخصصی دسته — لایه‌ی «راهنما» در برابر لایه‌ی «فروشگاه».
+//
+// تصمیم‌های طراحی (نه سلیقه‌ای — هرکدام دلیل دارد):
+//
+// ۱) تفکیک بصری صریح بین محتوای تجاری (کارت محصول) و محتوای تحریریه‌ای
+//    (راهنمای فنی). این دو نیت متفاوت‌اند و وقتی با یک زبان بصری رندر شوند،
+//    کاربر راهنما را «تبلیغ» می‌خواند و اعتماد نمی‌کند. راهنما پس‌زمینه‌ی
+//    روشن‌تر، عرض متن محدودتر و ریتم فضای متفاوت دارد.
+//
+// ۲) عرض خط متن محدود به ~۷۰ کاراکتر. متن فارسی با خط بلند در عرض ۱۲۸۰
+//    پیکسل عملاً خوانده نمی‌شود؛ چشم مسیر برگشت به ابتدای خط را گم می‌کند.
+//    جدول‌ها و شبکه‌ها عمداً از این محدودیت خارج‌اند چون اسکن می‌شوند نه
+//    خوانده.
+//
+// ۳) ناوبری چسبان درون‌صفحه‌ای. صفحه‌ای با ۱۰۰۰+ کلمه بدون فهرست، کاربری را
+//    که دنبال «جدول نشانه‌های خرابی» است مجبور به اسکرول کور می‌کند.
+//
+// ۴) شماره‌گذاری بخش‌ها. در محتوای فنی، شماره یک نشانه‌ی جهت‌یابی است نه
+//    تزئین: کاربر می‌تواند بگوید «بخش ۳ را ببین».
+//
+// ۵) حالت بازبینی: ردیف‌های تاییدنشده فقط با CONTENT_REVIEW=1 نشان‌دار
+//    می‌شوند و هرگز در خروجی پروداکشن دیده نمی‌شوند.
+// ---------------------------------------------------------------------------
+import type { CategoryContent } from '../lib/category-content';
+
+export interface Props {
+  content: CategoryContent;
+  categoryName: string;
+  reviewMode: boolean;
+}
+
+const { content, categoryName, reviewMode } = Astro.props;
+
+// فهرست بخش‌ها فقط شامل بخش‌هایی که واقعاً محتوا دارند — فهرستی که به
+// بخش خالی لینک بدهد، بدتر از نبود فهرست است.
+const sections = [
+  { id: 'guide-intro', label: 'معرفی', show: Boolean(content.introHtml) },
+  { id: 'guide-symptoms', label: 'نشانه‌های خرابی', show: content.symptoms.length > 0 },
+  { id: 'guide-causes', label: 'علت‌های خرابی', show: content.causes.length > 0 },
+  { id: 'guide-selection', label: 'راهنمای سفارش', show: content.selectionChecklist.length > 0 },
+  { id: 'guide-materials', label: 'انتخاب جنس', show: content.materials.length > 0 },
+  { id: 'guide-inspection', label: 'بازرسی', show: content.inspection.length > 0 },
+  { id: 'guide-faq', label: 'پرسش‌های متداول', show: content.faqs.length > 0 },
+].filter((s) => s.show);
+
+const numbered = sections.filter((s) => s.id !== 'guide-intro');
+const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
+---
+
+{content.hasContent && (
+  <>
+    {reviewMode && content.pendingReview > 0 && (
+      <div class="bg-amber-100 border-y-2 border-amber-400 px-4 py-3 print:hidden">
+        <p class="max-w-7xl mx-auto text-sm font-bold text-amber-900">
+          حالت بازبینی محتوا — {content.pendingReview} ردیف با نشان زرد نیاز به تایید دارد.
+          پس از اصلاح، تیک «نیاز به بازبینی» را در پنل وردپرس بردارید.
+        </p>
+      </div>
+    )}
+
+    {/* ------------------- ناوبری چسبان درون‌صفحه‌ای ------------------- */}
+    {sections.length > 2 && (
+      <nav
+        id="guide-nav"
+        class="sticky top-[68px] z-30 bg-white/95 backdrop-blur-sm border-y border-gray-200 print:hidden"
+        style="transform: translateZ(0);"
+        aria-label="بخش‌های راهنمای فنی"
+      >
+        <div class="max-w-7xl mx-auto px-4">
+          <ul class="flex items-center gap-1 overflow-x-auto hide-scrollbar py-2.5" role="list">
+            <li class="shrink-0 text-xs font-black text-gray-500 pl-3 border-l border-gray-200 ml-1">راهنمای فنی</li>
+            {sections.map((section) => (
+              <li class="shrink-0">
+                <a
+                  href={`#${section.id}`}
+                  data-guide-link={section.id}
+                  class="block px-3.5 py-1.5 rounded-full text-sm font-bold text-gray-600 hover:text-crane-orange hover:bg-orange-50 transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-crane-orange"
+                >
+                  {section.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
+    )}
+
+    <div class="bg-white">
+      {/* ------------------------------ مقدمه ------------------------------ */}
+      {content.introHtml && (
+        <section id="guide-intro" class="px-4 pt-16 pb-12 scroll-mt-32" aria-labelledby="guide-intro-heading">
+          <div class="max-w-7xl mx-auto">
+            <p class="text-sm font-black text-crane-orange tracking-widest mb-3">راهنمای فنی</p>
+            <h2 id="guide-intro-heading" class="text-3xl md:text-4xl font-black text-crane-navy leading-relaxed mb-8 max-w-3xl">
+              {categoryName} چیست و چه می‌کند؟
+            </h2>
+            {/* عرض محدود عمدی: متن فارسی در خط بلند خوانده نمی‌شود. */}
+            <div class="prose-crane max-w-[70ch] text-lg text-gray-700 leading-9" set:html={content.introHtml} />
+          </div>
+        </section>
+      )}
+
+      {/* -------------------------- نشانه‌های خرابی -------------------------- */}
+      {content.symptoms.length > 0 && (
+        <section id="guide-symptoms" class="px-4 py-16 border-t border-gray-100 scroll-mt-32" aria-labelledby="symptoms-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-6">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('guide-symptoms')}</span>
+              <div>
+                <h2 id="symptoms-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">نشانه‌های خرابی {categoryName}</h2>
+                <p class="text-gray-600 leading-8 mt-2 max-w-[70ch]">
+                  خرابی تقریباً همیشه پیش از شکست کامل خودش را نشان می‌دهد. موارد «فوری» یعنی کارکرد دستگاه باید تا رفع عیب متوقف شود.
+                </p>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-2xl border border-gray-200">
+              <table class="w-full text-sm min-w-[640px]">
+                <caption class="sr-only">نشانه‌های خرابی، علت محتمل و فوریت اقدام</caption>
+                <thead>
+                  <tr class="bg-gray-50 text-gray-700">
+                    <th scope="col" class="text-right font-black px-5 py-3.5 w-[40%]">نشانه</th>
+                    <th scope="col" class="text-right font-black px-5 py-3.5">علت محتمل</th>
+                    <th scope="col" class="text-right font-black px-5 py-3.5 w-32">فوریت</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {content.symptoms.map((row, i) => (
+                    <tr class:list={['border-t border-gray-100', i % 2 ? 'bg-gray-50/50' : 'bg-white', reviewMode && row.needsReview && 'ring-2 ring-inset ring-amber-400']}>
+                      <td class="px-5 py-4 text-gray-800 leading-7 font-medium">
+                        {reviewMode && row.needsReview && <span class="text-amber-600 font-black ml-1">⚠️</span>}
+                        {row.symptom}
+                      </td>
+                      <td class="px-5 py-4 text-gray-700 leading-7">{row.cause}</td>
+                      <td class="px-5 py-4">
+                        <span class:list={[
+                          'inline-block px-3 py-1 rounded-full text-xs font-black whitespace-nowrap',
+                          row.urgency === 'فوری' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800',
+                        ]}>{row.urgency}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <aside class="mt-6 bg-rose-50 border-r-4 border-rose-500 rounded-l-2xl p-6 max-w-[70ch]">
+              <h3 class="font-black text-rose-900 mb-2">چرا نباید تعویض را عقب انداخت</h3>
+              <p class="text-rose-900/90 leading-8 text-sm">
+                هزینه‌ی این قطعه در برابر قطعه‌ای که محافظت می‌کند ناچیز است، و هزینه‌ی آن قطعه در برابر توقف خط تولید ناچیز است. قطعه‌ی فرسوده عملاً در حال از بین بردن قطعه‌ی گران‌تر بالادست خودش است.
+              </p>
+            </aside>
+          </div>
+        </section>
+      )}
+
+      {/* --------------------------- علت‌های خرابی --------------------------- */}
+      {content.causes.length > 0 && (
+        <section id="guide-causes" class="px-4 py-16 border-t border-gray-100 bg-gray-50 scroll-mt-32" aria-labelledby="causes-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('guide-causes')}</span>
+              <div>
+                <h2 id="causes-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">علت‌های خرابی زودرس</h2>
+                <p class="text-gray-600 leading-8 mt-2 max-w-[70ch]">
+                  تا وقتی علت ریشه‌ای رفع نشود، قطعه‌ی نو هم به‌سرعت از بین می‌رود.
+                </p>
+              </div>
+            </div>
+
+            <ol class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {content.causes.map((cause, i) => (
+                <li class:list={['bg-white rounded-2xl border border-gray-200 p-5 flex gap-4', reviewMode && cause.needsReview && 'ring-2 ring-amber-400']}>
+                  <span class="shrink-0 w-8 h-8 rounded-lg bg-orange-50 text-crane-orange flex items-center justify-center font-black text-sm tabular-nums" aria-hidden="true">{i + 1}</span>
+                  <p class="text-gray-700 leading-8 text-sm">
+                    {reviewMode && cause.needsReview && <span class="text-amber-600 font-black ml-1">⚠️</span>}
+                    {cause.text}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+      )}
+
+      {/* --------------------------- راهنمای سفارش --------------------------- */}
+      {content.selectionChecklist.length > 0 && (
+        <section id="guide-selection" class="px-4 py-16 border-t border-gray-100 scroll-mt-32" aria-labelledby="selection-heading">
+          <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <div class="lg:col-span-5">
+              <div class="flex items-start gap-4">
+                <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('guide-selection')}</span>
+                <div>
+                  <h2 id="selection-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">راهنمای انتخاب و سفارش</h2>
+                  <p class="text-gray-600 leading-8 mt-3">
+                    برای اینکه قطعه‌ی درست در نخستین سفارش ارسال شود، این اطلاعات لازم است. اگر همه را ندارید، عکس پلاک دستگاه معمولاً بیشترشان را پوشش می‌دهد.
+                  </p>
+                  <a href="/contact" class="inline-flex items-center gap-2 mt-6 bg-crane-orange text-white px-6 py-3.5 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40">
+                    ارسال مشخصات برای بررسی
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <ul class="lg:col-span-7 space-y-2.5" role="list">
+              {content.selectionChecklist.map((item) => (
+                <li class:list={['flex items-start gap-3 bg-gray-50 rounded-xl border border-gray-100 px-5 py-3.5', reviewMode && item.needsReview && 'ring-2 ring-amber-400']}>
+                  <svg class="w-5 h-5 shrink-0 text-emerald-600 mt-0.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4" /></svg>
+                  <span class="text-gray-800 leading-7 text-sm">
+                    {reviewMode && item.needsReview && <span class="text-amber-600 font-black ml-1">⚠️</span>}
+                    {item.text}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {/* ----------------------------- جنس/نوع ----------------------------- */}
+      {content.materials.length > 0 && (
+        <section id="guide-materials" class="px-4 py-16 border-t border-gray-100 bg-gray-50 scroll-mt-32" aria-labelledby="materials-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('guide-materials')}</span>
+              <div>
+                <h2 id="materials-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">انتخاب جنس متناسب با محیط کاری</h2>
+                <p class="text-gray-600 leading-8 mt-2 max-w-[70ch]">
+                  انتخاب نادرست جنس، شایع‌ترین دلیل تکرار خرابی پس از تعویض است.
+                </p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {content.materials.map((material) => (
+                <article class:list={['bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col', reviewMode && material.needsReview && 'ring-2 ring-amber-400']}>
+                  <h3 class="font-black text-crane-navy px-6 py-4 bg-gray-50 border-b border-gray-100">
+                    {reviewMode && material.needsReview && <span class="text-amber-600 ml-1">⚠️</span>}
+                    {material.name}
+                  </h3>
+                  <dl class="p-6 space-y-4 text-sm grow">
+                    <div>
+                      <dt class="font-bold text-emerald-700 mb-1">مزیت</dt>
+                      <dd class="text-gray-700 leading-7">{material.advantage}</dd>
+                    </div>
+                    <div>
+                      <dt class="font-bold text-rose-700 mb-1">محدودیت</dt>
+                      <dd class="text-gray-700 leading-7">{material.limitation}</dd>
+                    </div>
+                    <div class="pt-3 border-t border-gray-100">
+                      <dt class="font-bold text-crane-navy mb-1">مناسب برای</dt>
+                      <dd class="text-gray-700 leading-7">{material.suitableFor}</dd>
+                    </div>
+                  </dl>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ------------------------------ بازرسی ------------------------------ */}
+      {content.inspection.length > 0 && (
+        <section id="guide-inspection" class="px-4 py-16 border-t border-gray-100 scroll-mt-32" aria-labelledby="inspection-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('guide-inspection')}</span>
+              <div>
+                <h2 id="inspection-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">بازرسی دوره‌ای و زمان تعویض</h2>
+                <p class="text-gray-600 leading-8 mt-2 max-w-[70ch]">
+                  بازه‌های زیر نقطه‌ی شروع محافظه‌کارانه‌اند؛ در محیط ساینده یا سیکل کاری سنگین باید کوتاه‌تر شوند.
+                </p>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-2xl border border-gray-200">
+              <table class="w-full text-sm min-w-[640px]">
+                <caption class="sr-only">برنامه‌ی پیشنهادی بازرسی</caption>
+                <thead>
+                  <tr class="bg-gray-50 text-gray-700">
+                    <th scope="col" class="text-right font-black px-5 py-3.5 w-1/4">نوع بازرسی</th>
+                    <th scope="col" class="text-right font-black px-5 py-3.5 w-1/4">بازه</th>
+                    <th scope="col" class="text-right font-black px-5 py-3.5">موارد بررسی</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {content.inspection.map((row, i) => (
+                    <tr class:list={['border-t border-gray-100', i % 2 ? 'bg-gray-50/50' : 'bg-white', reviewMode && row.needsReview && 'ring-2 ring-inset ring-amber-400']}>
+                      <th scope="row" class="text-right px-5 py-4 font-bold text-crane-navy align-top">{row.type}</th>
+                      <td class="px-5 py-4 text-gray-800 font-medium">
+                        {reviewMode && row.needsReview && <span class="text-amber-600 font-black ml-1">⚠️</span>}
+                        {row.interval}
+                      </td>
+                      <td class="px-5 py-4 text-gray-700 leading-7">{row.checks}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* --------------------------- پرسش‌های متداول --------------------------- */}
+      {content.faqs.length > 0 && (
+        <section id="guide-faq" class="px-4 py-16 border-t border-gray-100 bg-gray-50 scroll-mt-32" aria-labelledby="faq-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('guide-faq')}</span>
+              <h2 id="faq-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">پرسش‌های متداول</h2>
+            </div>
+
+            <div class="max-w-[75ch] space-y-3">
+              {content.faqs.map((faq) => (
+                <details class:list={['group bg-white rounded-2xl border border-gray-200 overflow-hidden', reviewMode && faq.needsReview && 'ring-2 ring-amber-400']}>
+                  <summary class="cursor-pointer list-none px-6 py-5 font-bold text-crane-navy flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-crane-orange/30">
+                    <span class="leading-8">
+                      {reviewMode && faq.needsReview && <span class="text-amber-600 ml-1">⚠️</span>}
+                      {faq.question}
+                    </span>
+                    <svg class="w-5 h-5 shrink-0 text-crane-orange transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                  </summary>
+                  <p class="px-6 pb-6 text-gray-700 leading-9">{faq.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ---------------------------- استانداردها ---------------------------- */}
+      {content.standards.length > 0 && (
+        <section class="px-4 py-14 border-t border-gray-100" aria-labelledby="standards-heading">
+          <div class="max-w-7xl mx-auto">
+            <h2 id="standards-heading" class="text-lg font-black text-crane-navy mb-2">استانداردهای مرجع</h2>
+            <p class="text-sm text-gray-600 mb-6 max-w-[70ch]">
+              محتوای این صفحه بر پایه‌ی استانداردهای زیر تنظیم شده است.
+            </p>
+            <ul class="flex flex-wrap gap-3" role="list">
+              {content.standards.map((standard) => (
+                <li class="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                  <span class="block font-mono font-black text-crane-navy text-sm" dir="ltr">{standard.code}</span>
+                  <span class="block text-xs text-gray-600 mt-0.5 max-w-[28ch] leading-5">{standard.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+    </div>
+
+    <script>
+      // برجسته‌کردن بخش فعال در ناوبری چسبان.
+      // IntersectionObserver به‌جای رویداد scroll: بدون هزینه‌ی محاسباتی روی
+      // هر پیکسل، که روی موبایل ضعیف تفاوت محسوسی دارد.
+      const links = document.querySelectorAll<HTMLAnchorElement>('[data-guide-link]');
+      if (links.length > 0 && 'IntersectionObserver' in window) {
+        const ACTIVE = ['text-crane-orange', 'bg-orange-50'];
+        const setActive = (id: string) =>
+          links.forEach((link) =>
+            link.dataset.guideLink === id
+              ? link.classList.add(...ACTIVE)
+              : link.classList.remove(...ACTIVE)
+          );
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            const visible = entries.filter((e) => e.isIntersecting);
+            if (visible.length > 0) setActive(visible[0].target.id);
+          },
+          // ناحیه‌ی فعال، نوار بالایی صفحه است تا بخش «در حال خواندن» درست
+          // تشخیص داده شود، نه بخشی که تازه از پایین وارد شده.
+          { rootMargin: '-140px 0px -70% 0px' }
+        );
+
+        links.forEach((link) => {
+          const section = document.getElementById(link.dataset.guideLink ?? '');
+          if (section) observer.observe(section);
+        });
+      }
+    </script>
+  </>
+)}

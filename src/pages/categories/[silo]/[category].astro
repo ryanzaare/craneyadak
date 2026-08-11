@@ -21,14 +21,21 @@ import {
   type Category,
   type Silo,
 } from '../../../data/taxonomy';
+import CategoryGuide from '../../../components/CategoryGuide.astro';
 import { getProductsByCategory, computePrice, productJsonLd, type CraneProduct } from '../../../lib/wp';
+import { getCategoryContent, isReviewMode, type CategoryContent } from '../../../lib/category-content';
 
 export async function getStaticPaths() {
   return Promise.all(
     SILOS.flatMap((silo) =>
       silo.categories.map(async (category) => ({
         params: { silo: silo.slug, category: category.slug },
-        props: { silo, category, products: await getProductsByCategory(category.slug) },
+        props: {
+          silo,
+          category,
+          products: await getProductsByCategory(category.slug),
+          content: await getCategoryContent(category.slug),
+        },
       }))
     )
   );
@@ -38,9 +45,11 @@ interface Props {
   silo: Silo;
   category: Category;
   products: CraneProduct[];
+  content: CategoryContent;
 }
 
-const { silo, category, products } = Astro.props as Props;
+const { silo, category, products, content } = Astro.props as Props;
+const reviewMode = isReviewMode();
 
 const title = `${category.keyword} | خرید و استعلام قیمت | ${SITE.name}`;
 const description = `${category.blurb} تامین ${category.keyword} با تضمین اصالت کالا، بررسی سازگاری فنی و صدور فاکتور رسمی.`;
@@ -74,6 +83,24 @@ const itemList =
       }
     : null;
 
+// نکته سئو: پرسش‌های واقعیِ ثبت‌شده در وردپرس مستقیماً وارد اسکیمای
+// FAQPage می‌شوند. بدون این، محتوای پرسش و پاسخ فقط برای انسان مفید است و
+// شانس ریچ‌ریزالت را از دست می‌دهد. گره فقط وقتی ساخته می‌شود که پرسش
+// واقعی وجود داشته باشد — FAQPage خالی خطای اعتبارسنجی می‌دهد.
+const faqNode =
+  content.faqs.length > 0
+    ? {
+        '@type': 'FAQPage',
+        '@id': `${canonical}#faq`,
+        isPartOf: { '@id': `${canonical}#webpage` },
+        mainEntity: content.faqs.map((faq) => ({
+          '@type': 'Question',
+          name: faq.question,
+          acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+        })),
+      }
+    : null;
+
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -97,6 +124,7 @@ const jsonLd = {
       inLanguage: SITE.locale,
       ...(itemList ? { mainEntity: itemList } : {}),
     },
+    ...(faqNode ? [faqNode] : []),
   ],
 };
 ---
@@ -164,6 +192,9 @@ const jsonLd = {
       )}
     </div>
   </section>
+
+  {/* ------------------ راهنمای فنی (محتوای وردپرس) ------------------ */}
+  <CategoryGuide content={content} categoryName={category.name} reviewMode={reviewMode} />
 
   {/* --------------------- لینک‌سازی داخلی درون سیلو --------------------- */}
   {siblings.length > 0 && (

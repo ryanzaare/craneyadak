@@ -139,6 +139,14 @@ class WpGraphQLError extends Error {
   }
 }
 
+/**
+ * نسخه‌ی عمومی `wpQuery` برای ماژول‌های دیگر (مثل محتوای دسته‌بندی).
+ * همان سیاست خطا: شکست شبکه‌ای retry، خطای GraphQL بدون retry و با توقف بیلد.
+ */
+export function wpQueryPublic<T>(query: string, variables: Record<string, unknown>): Promise<T | null> {
+  return wpQuery<T>(query, variables);
+}
+
 async function wpQuery<T>(query: string, variables: Record<string, unknown>): Promise<T | null> {
   if (!isWpConfigured()) return null;
 

@@ -161,6 +161,8 @@ function cyh_render_settings_page() {
 				</button>
 			</form>
 		<?php endif; ?>
+
+		<?php cyh_render_seed_button(); ?>
 	</div>
 	<?php
 }
