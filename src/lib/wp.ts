@@ -200,19 +200,53 @@ function normalizeDigits(input: string): string {
  * تبدیل ورودی قیمت به عدد — فقط وقتی واقعاً عدد باشد.
  * «تماس بگیرید» / «استعلام» / خالی → `null`.
  */
-export function parsePrice(input: string | number | null | undefined): number | null {
-  if (input === null || input === undefined || input === '') return null;
+export function parsePrice(input: unknown): number | null {
   if (typeof input === 'number') return Number.isFinite(input) && input > 0 ? input : null;
 
-  const normalized = normalizeDigits(input);
+  const text = asString(input);
+  if (!text) return null;
+
+  const normalized = normalizeDigits(text);
   if (!/^\d+(\.\d+)?$/.test(normalized)) return null;
   const value = Number(normalized);
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-function cleanText(input: string | null | undefined): string | null {
-  const trimmed = input?.trim();
-  return trimmed ? trimmed : null;
+/**
+ * تبدیل هر مقدار ACF به رشته‌ی ساده.
+ *
+ * ⚠️ چرا این تابع لازم است (باگ واقعی، نه احتیاط تئوریک):
+ * WPGraphQL for ACF بسته به نوع فیلد و نسخه‌ی افزونه، مقدار را در چند شکل
+ * متفاوت برمی‌گرداند. مشخصاً فیلد `select` ممکن است رشته، آرایه‌ای با یک
+ * عضو (`['rfq']`)، یا شیئی مثل `{ value, label }` باشد. کد قبلی فرض کرده
+ * بود همیشه رشته است و روی اولین محصول واقعی با
+ * «raw?.trim is not a function» شکست.
+ *
+ * درس: شکل پاسخ یک لایه‌ی خارجی باید تایید شود، نه فرض. این تابع همه‌ی
+ * شکل‌های ممکن را به یک قرارداد واحد تبدیل می‌کند تا این دسته از خطا فقط
+ * یک بار — همین‌جا — حل شود.
+ */
+function asString(input: unknown): string | null {
+  if (input === null || input === undefined) return null;
+  if (typeof input === 'string') return input.trim() || null;
+  if (typeof input === 'number' || typeof input === 'boolean') return String(input);
+
+  // آرایه (select تک‌مقداری گاهی آرایه‌ی یک‌عضوی برمی‌گرداند)
+  if (Array.isArray(input)) return input.length > 0 ? asString(input[0]) : null;
+
+  // شیء {value, label} یا {name}
+  if (typeof input === 'object') {
+    const obj = input as Record<string, unknown>;
+    for (const key of ['value', 'name', 'label', 'slug']) {
+      if (key in obj) return asString(obj[key]);
+    }
+  }
+
+  return null;
+}
+
+function cleanText(input: unknown): string | null {
+  return asString(input);
 }
 
 /** حذف تگ‌های HTML برای متن خلاصه (که در متا دیسکریپشن هم می‌رود). */
@@ -301,13 +335,13 @@ interface RawProductNode {
   modified: string | null;
   craneCategories?: { nodes?: { slug: string | null }[] } | null;
   productFields?: {
-    sku: string | null;
-    price: string | number | null;
-    salePrice: string | number | null;
-    saleStart: string | null;
-    saleEnd: string | null;
-    buyMode: string | null;
-    stockStatus: string | null;
+    sku: unknown;
+    price: unknown;
+    salePrice: unknown;
+    saleStart: unknown;
+    saleEnd: unknown;
+    buyMode: unknown;
+    stockStatus: unknown;
     brand: { nodes?: RawBrandNode[] } | RawBrandNode[] | null;
     gallery: { nodes?: RawImageNode[] } | RawImageNode[] | null;
     oemCrossReference: ({ oemBrand: string | null; oemPartNumber: string | null } | null)[] | null;
@@ -316,12 +350,12 @@ interface RawProductNode {
   } | null;
 }
 
-function parseBuyMode(raw: string | null | undefined): BuyMode {
-  return raw?.trim().toLowerCase() === 'cart' ? 'cart' : 'rfq';
+function parseBuyMode(raw: unknown): BuyMode {
+  return asString(raw)?.toLowerCase() === 'cart' ? 'cart' : 'rfq';
 }
 
-function parseStockStatus(raw: string | null | undefined): StockStatus {
-  const value = raw?.trim().toLowerCase();
+function parseStockStatus(raw: unknown): StockStatus {
+  const value = asString(raw)?.toLowerCase();
   if (value === 'in_stock') return 'in_stock';
   if (value === 'on_order') return 'on_order';
   return 'unknown';
