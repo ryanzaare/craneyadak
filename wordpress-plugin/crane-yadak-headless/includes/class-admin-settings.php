@@ -15,8 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 function cyh_register_settings_page() {
 	add_options_page(
-		'تنظیمات کرین یدک Headless',
-		'کرین یدک Headless',
+		'کرین یدک — اتصال، دیپلوی و ابزارها',
+		'کرین یدک: اتصال و دیپلوی',
 		'manage_options',
 		'crane-yadak-headless',
 		'cyh_render_settings_page'

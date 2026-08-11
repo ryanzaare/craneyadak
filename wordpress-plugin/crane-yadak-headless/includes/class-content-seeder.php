@@ -184,3 +184,36 @@ function cyh_seed_admin_notice() {
 	printf( '<div class="notice notice-success is-dismissible"><p><strong>پیش‌نویس محتوا:</strong> %s</p></div>', esc_html( $notice ) );
 }
 add_action( 'admin_notices', 'cyh_seed_admin_notice' );
+
+/**
+ * دکمه‌ی بارگذاری پیش‌نویس، روی صفحه‌ی فهرست دسته‌بندی قطعات.
+ *
+ * ⚠️ باگی که این تابع رفع می‌کند: دکمه ابتدا فقط در صفحه‌ی تنظیمات پلاگین
+ * قرار داشت، که زیر «تنظیمات» وردپرس پنهان است و نامش تقریباً شبیه صفحه‌ی
+ * ACF Options («تنظیمات کرین یدک») بود. مدیر سایت سراغ آن یکی رفت، دکمه را
+ * ندید و نتیجه گرفت که دکمه اصلاً وجود ندارد.
+ *
+ * درس: در وردپرس، «کد درست ولی در جای نادرست» از دید کاربر با «کد ننوشته»
+ * فرقی ندارد. جای درستِ این دکمه همان‌جایی است که مدیر محتوا برای کار با
+ * دسته‌بندی‌ها می‌رود — نه در تنظیمات فنی.
+ */
+function cyh_seed_button_on_category_screen() {
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	if ( ! $screen || 'edit-crane_category' !== $screen->id ) {
+		return;
+	}
+
+	$url   = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_seed_content' ), 'cyh_seed_content' );
+	$ready = array_keys( cyh_content_drafts() );
+
+	printf(
+		'<div class="notice notice-info"><p><strong>پیش‌نویس محتوای سئو آماده است</strong> برای: %1$s<br>'
+		. 'با یک کلیک، مقدمه، جدول نشانه‌های خرابی، علت‌ها، چک‌لیست سفارش، جدول جنس، برنامه‌ی بازرسی، '
+		. 'پرسش‌های متداول و استانداردها داخل همان دسته نوشته می‌شود تا فقط بازبینی و اصلاح کنید. '
+		. 'محتوای موجود هرگز بازنویسی نمی‌شود.</p>'
+		. '<p><a href="%2$s" class="button button-primary">بارگذاری پیش‌نویس محتوا</a></p></div>',
+		esc_html( implode( '، ', $ready ) ),
+		esc_url( $url )
+	);
+}
+add_action( 'admin_notices', 'cyh_seed_button_on_category_screen' );

@@ -9,6 +9,7 @@
 // می‌شود. یک کارت = یک نقطه‌ی حقیقت.
 // ---------------------------------------------------------------------------
 import PriceTag from './PriceTag.astro';
+import RemoteImage from './RemoteImage.astro';
 import { computePrice, productPath, type CraneProduct } from '../lib/wp';
 
 export interface Props {
@@ -27,22 +28,15 @@ const image = product.images[0] ?? null;
 
 <article class="h-full bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col group relative">
   <div class="aspect-square bg-gray-50 relative flex items-center justify-center overflow-hidden">
-    {image ? (
-      <img
-        src={image.url}
-        alt={image.altText}
-        width={image.width ?? 600}
-        height={image.height ?? 600}
-        loading={eager ? 'eager' : 'lazy'}
-        decoding="async"
-        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-      />
-    ) : (
-      /* بدون تصویر واقعی، آیکون خنثی — نه تصویر یک محصول دیگر. */
-      <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    )}
+    <RemoteImage
+      src={image?.url}
+      alt={image?.altText ?? product.name}
+      width={600}
+      height={600}
+      eager={eager}
+      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+    />
 
     {price.onSale && price.discountPercent !== null && (
       <span class="absolute top-3 left-3 bg-rose-600 text-white text-xs font-black px-2.5 py-1.5 rounded-lg shadow-sm tabular-nums">

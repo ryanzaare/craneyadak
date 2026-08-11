@@ -1,18 +1,24 @@
 ---
 // src/components/ProductGallery.astro
 // ---------------------------------------------------------------------------
-// گالری تصویر محصول با امکان بزرگ‌نمایی.
+// گالری تصویر محصول با بزرگ‌نمایی.
 //
-// چرا بزرگ‌نمایی مهم است (و تزئینی نیست): کاربر این صفحه معمولاً قطعه‌ی
-// فرسوده را در دست دارد و می‌خواهد شکل شیار، تعداد پیچ، جهت مارپیچ یا فرم
-// دقیق قطعه را با تصویر مقایسه کند. تصویر ۴۰۰ پیکسلی برای این کار کافی
-// نیست و کاربر مجبور می‌شود از خرید منصرف شود یا تماس بگیرد.
+// چرا بزرگ‌نمایی تزئینی نیست: کاربر معمولاً قطعه‌ی فرسوده را در دست دارد و
+// می‌خواهد شکل شیار، تعداد پیچ یا فرم دقیق قطعه را با تصویر مقایسه کند.
+// تصویر ۴۰۰ پیکسلی این سوال را حل نمی‌کند و کاربر یا تماس می‌گیرد یا می‌رود.
 //
-// پیاده‌سازی با عنصر بومی <dialog>: بدون کتابخانه، بستن با ESC و مدیریت
-// فوکوس به‌صورت بومی مرورگر. بدون جاوااسکریپت هم تصاویر کاملاً قابل مشاهده
-// می‌مانند — فقط بزرگ‌نمایی غیرفعال می‌شود.
+// ⚠️ تصمیم پیاده‌سازی (رفع باگی که خودم ساختم):
+// نسخه‌ی اول یک تگ <img> واحد داشت و با جاوااسکریپت `src` آن را عوض می‌کرد.
+// وقتی تصاویر به `astro:assets` منتقل شدند این روش شکست — چون خروجی بهینه
+// یک `srcset` چندنسخه‌ای است و بازنویسی دستی `src` آن را دور می‌زند و
+// عملاً تصویر بهینه‌نشده بارگذاری می‌شود.
+//
+// راه‌حل: همه‌ی تصاویر رندر می‌شوند و فقط نمایش‌شان جابه‌جا می‌شود. هزینه‌ی
+// اضافی ندارد (تصاویر غیرفعال lazy هستند) و سوییچ بین آن‌ها بدون هیچ
+// درخواست شبکه و بدون پرش، آنی است.
 // ---------------------------------------------------------------------------
 import type { CraneImage } from '../lib/wp';
+import RemoteImage from './RemoteImage.astro';
 
 export interface Props {
   images: CraneImage[];
@@ -20,55 +26,56 @@ export interface Props {
 }
 
 const { images, productName } = Astro.props;
-const hero = images[0] ?? null;
+const gallery = images.slice(0, 6);
+const hasImages = gallery.length > 0;
 ---
 
 <div class="product-gallery">
-  <figure class="aspect-square bg-gray-50 rounded-3xl border border-gray-100 overflow-hidden flex items-center justify-center relative m-0">
-    {hero ? (
-      <>
-        <img
-          id="gallery-main"
-          src={hero.url}
-          alt={hero.altText}
-          width={hero.width ?? 900}
-          height={hero.height ?? 900}
-          loading="eager"
-          fetchpriority="high"
-          decoding="async"
-          class="w-full h-full object-cover"
-        />
-        <button
-          type="button"
-          id="gallery-zoom"
-          class="absolute bottom-4 left-4 bg-white/95 backdrop-blur text-crane-navy border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm hover:bg-white transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 hidden print:hidden"
-        >
-          <span class="flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" /></svg>
-            بزرگ‌نمایی تصویر
-          </span>
-        </button>
-      </>
+  <figure class="aspect-square bg-gray-50 rounded-3xl border border-gray-100 overflow-hidden relative m-0">
+    {hasImages ? (
+      gallery.map((image, index) => (
+        <div class="gallery-slide absolute inset-0" data-index={index} hidden={index !== 0}>
+          <RemoteImage
+            src={image.url}
+            alt={image.altText}
+            width={900}
+            height={900}
+            eager={index === 0}
+            sizes="(max-width: 1024px) 100vw, 40vw"
+            class="w-full h-full object-cover"
+          />
+        </div>
+      ))
     ) : (
-      <svg class="w-24 h-24 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
+      <RemoteImage src={null} alt={productName} width={900} height={900} class="w-full h-full" />
+    )}
+
+    {hasImages && (
+      <button
+        type="button"
+        id="gallery-zoom"
+        class="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur text-crane-navy border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm hover:bg-white transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 hidden print:hidden"
+      >
+        <span class="flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" /></svg>
+          بزرگ‌نمایی
+        </span>
+      </button>
     )}
   </figure>
 
-  {images.length > 1 && (
-    <ul class="grid grid-cols-5 gap-3 mt-4 print:hidden" role="list">
-      {images.slice(0, 5).map((image, index) => (
+  {gallery.length > 1 && (
+    <ul class="grid grid-cols-6 gap-2.5 mt-4 print:hidden" role="list">
+      {gallery.map((image, index) => (
         <li>
           <button
             type="button"
-            class="gallery-thumb aspect-square w-full bg-gray-50 rounded-xl border-2 border-gray-100 overflow-hidden hover:border-crane-orange transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/30 aria-[current=true]:border-crane-orange"
-            data-src={image.url}
-            data-alt={image.altText}
+            class="gallery-thumb aspect-square w-full bg-gray-50 rounded-xl border-2 overflow-hidden transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/30 aria-[current=true]:border-crane-orange border-gray-100 hover:border-gray-300"
+            data-index={index}
             aria-current={index === 0 ? 'true' : 'false'}
-            aria-label={`نمایش تصویر ${index + 1} از ${productName}`}
+            aria-label={`نمایش تصویر ${index + 1} از ${gallery.length} — ${productName}`}
           >
-            <img src={image.url} alt="" width={image.width ?? 200} height={image.height ?? 200} loading="lazy" decoding="async" class="w-full h-full object-cover" />
+            <RemoteImage src={image.url} alt="" width={200} height={200} sizes="90px" class="w-full h-full object-cover" />
           </button>
         </li>
       ))}
@@ -76,10 +83,22 @@ const hero = images[0] ?? null;
   )}
 </div>
 
-{hero && (
-  <dialog id="gallery-dialog" class="backdrop:bg-black/80 bg-transparent p-0 max-w-[95vw] max-h-[95vh] w-full">
+{hasImages && (
+  <dialog id="gallery-dialog" class="backdrop:bg-black/85 bg-transparent p-0 max-w-[95vw] max-h-[95vh] w-full">
     <div class="relative bg-white rounded-2xl overflow-hidden">
-      <img id="gallery-dialog-img" src={hero.url} alt={hero.altText} class="w-full h-auto max-h-[90vh] object-contain" />
+      {gallery.map((image, index) => (
+        <div class="gallery-zoom-slide" data-index={index} hidden={index !== 0}>
+          {/* عرض بزرگ‌تر عمدی: هدف این نما دیدن جزئیات سطح قطعه است. */}
+          <RemoteImage
+            src={image.url}
+            alt={image.altText}
+            width={1600}
+            height={1600}
+            sizes="95vw"
+            class="w-full h-auto max-h-[90vh] object-contain"
+          />
+        </div>
+      ))}
       <button
         type="button"
         id="gallery-close"
@@ -93,14 +112,26 @@ const hero = images[0] ?? null;
 )}
 
 <script>
-  const main = document.getElementById('gallery-main') as HTMLImageElement | null;
   const dialog = document.getElementById('gallery-dialog') as HTMLDialogElement | null;
-  const dialogImg = document.getElementById('gallery-dialog-img') as HTMLImageElement | null;
   const zoomBtn = document.getElementById('gallery-zoom');
   const closeBtn = document.getElementById('gallery-close');
 
-  // دکمه‌ی بزرگ‌نمایی فقط وقتی نمایش داده می‌شود که جاوااسکریپت واقعاً اجرا
-  // شده و <dialog> پشتیبانی می‌شود — یعنی هرگز دکمه‌ی بی‌اثر دیده نمی‌شود.
+  /** نمایش تصویر با اندیس مشخص در همه‌ی مجموعه‌ها (اصلی، بزرگ‌نمایی، بندانگشتی). */
+  const show = (index: number) => {
+    document.querySelectorAll<HTMLElement>('.gallery-slide, .gallery-zoom-slide').forEach((slide) => {
+      slide.hidden = slide.dataset.index !== String(index);
+    });
+    document.querySelectorAll<HTMLButtonElement>('.gallery-thumb').forEach((thumb) => {
+      thumb.setAttribute('aria-current', String(thumb.dataset.index === String(index)));
+    });
+  };
+
+  document.querySelectorAll<HTMLButtonElement>('.gallery-thumb').forEach((thumb) => {
+    thumb.addEventListener('click', () => show(Number(thumb.dataset.index ?? 0)));
+  });
+
+  // دکمه فقط وقتی ظاهر می‌شود که <dialog> واقعاً پشتیبانی شود — هرگز دکمه‌ی
+  // بی‌اثر نمایش داده نمی‌شود.
   if (zoomBtn && dialog && typeof dialog.showModal === 'function') {
     zoomBtn.classList.remove('hidden');
     zoomBtn.addEventListener('click', () => dialog.showModal());
@@ -108,26 +139,18 @@ const hero = images[0] ?? null;
 
   closeBtn?.addEventListener('click', () => dialog?.close());
 
-  // کلیک روی پس‌زمینه (خارج از تصویر) هم می‌بندد — رفتار مورد انتظار کاربر.
+  // کلیک روی پس‌زمینه هم می‌بندد — رفتار مورد انتظار کاربر.
   dialog?.addEventListener('click', (event) => {
     if (event.target === dialog) dialog.close();
   });
 
-  document.querySelectorAll<HTMLButtonElement>('.gallery-thumb').forEach((thumb) => {
-    thumb.addEventListener('click', () => {
-      const src = thumb.dataset.src;
-      const alt = thumb.dataset.alt ?? '';
-      if (!src || !main) return;
+  // پیمایش با کیبورد داخل نمای بزرگ.
+  dialog?.addEventListener('keydown', (event) => {
+    const slides = document.querySelectorAll<HTMLElement>('.gallery-zoom-slide');
+    if (slides.length < 2) return;
 
-      main.src = src;
-      main.alt = alt;
-      if (dialogImg) {
-        dialogImg.src = src;
-        dialogImg.alt = alt;
-      }
-      document
-        .querySelectorAll<HTMLButtonElement>('.gallery-thumb')
-        .forEach((t) => t.setAttribute('aria-current', String(t === thumb)));
-    });
+    const current = [...slides].findIndex((s) => !s.hidden);
+    if (event.key === 'ArrowLeft') show((current + 1) % slides.length);
+    if (event.key === 'ArrowRight') show((current - 1 + slides.length) % slides.length);
   });
 </script>
