@@ -92,6 +92,59 @@ function cyh_register_acf_json_save_path( $path ) {
 }
 add_filter( 'acf/settings/save_json', 'cyh_register_acf_json_save_path' );
 
+/**
+ * هشدار «شما در صفحه‌ی اشتباه هستید».
+ *
+ * مسئله‌ی واقعی که این تابع حل می‌کند: روی این نصب وردپرس، یک نوع پست
+ * دیگر با نامی شبیه «قطعات جرثقیل» وجود دارد که متعلق به این پلاگین نیست.
+ * ادمین سایت (که لزوماً فنی نیست) وارد آن صفحه می‌شود، هیچ فیلدی از
+ * فیلدهای محصول را نمی‌بیند و طبیعتاً نتیجه می‌گیرد که «پلاگین خراب است».
+ * این دقیقاً یک بار اتفاق افتاد و یک چرخه‌ی کامل دیباگ هدر داد.
+ *
+ * وردپرس راهی برای جلوگیری از ثبت CPT توسط کد دیگر ندارد؛ اما می‌توان
+ * لحظه‌ای که کاربر در صفحه‌ی اشتباه است را تشخیص داد و او را به صفحه‌ی
+ * درست هدایت کرد.
+ */
+function cyh_warn_on_foreign_crane_post_type() {
+	if ( ! function_exists( 'get_current_screen' ) ) {
+		return;
+	}
+
+	$screen = get_current_screen();
+	if ( ! $screen || ! in_array( $screen->base, [ 'post', 'edit' ], true ) ) {
+		return;
+	}
+
+	$current = $screen->post_type;
+	$ours    = [ 'product', 'brand', 'industry', 'datasheet', 'inquiry' ];
+
+	// فقط وقتی هشدار می‌دهیم که: نوع پست جاری مال ما نباشد، و نامش به‌وضوح
+	// شبیه محتوای همین پلاگین باشد. این محدودیت عمدی است تا روی نوشته‌ها و
+	// برگه‌های عادی وردپرس هشدار بی‌ربط نشان داده نشود.
+	if ( in_array( $current, $ours, true ) ) {
+		return;
+	}
+
+	$object = get_post_type_object( $current );
+	if ( ! $object ) {
+		return;
+	}
+
+	$label = $object->labels->name ?? '';
+	if ( ! preg_match( '/جرثقیل|قطعه|قطعات|crane|part/iu', $label . ' ' . $current ) ) {
+		return;
+	}
+
+	$correct_url = admin_url( 'post-new.php?post_type=product' );
+
+	printf(
+		'<div class="notice notice-warning"><p><strong>توجه:</strong> این صفحه («%1$s») متعلق به افزونه‌ی کرین یدک نیست و فیلدهای محصول (کد فنی، برند، قیمت، دسته‌بندی) در آن نمایش داده نمی‌شوند. برای ثبت قطعه از منوی <strong>«محصولات کرین یدک»</strong> استفاده کنید. &nbsp;<a class="button button-primary" href="%2$s">افزودن محصول در صفحه‌ی درست</a></p></div>',
+		esc_html( $label ),
+		esc_url( $correct_url )
+	);
+}
+add_action( 'admin_notices', 'cyh_warn_on_foreign_crane_post_type' );
+
 require_once CYH_PLUGIN_DIR . 'includes/class-post-types.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-cors.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-rest-contact.php';

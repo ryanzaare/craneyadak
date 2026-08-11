@@ -22,8 +22,8 @@ function cyh_register_post_types() {
 		'product',
 		[
 			'labels'              => [
-				'name'          => 'محصولات',
-				'singular_name' => 'محصول',
+				'name'          => 'محصولات کرین یدک',
+				'singular_name' => 'محصول کرین یدک',
 				'add_new_item'  => 'افزودن محصول جدید',
 				'edit_item'     => 'ویرایش محصول',
 				'search_items'  => 'جستجوی محصولات',
@@ -54,7 +54,7 @@ function cyh_register_post_types() {
 		'brand',
 		[
 			'labels'              => [
-				'name'          => 'برندها',
+				'name'          => 'برندهای کرین یدک',
 				'singular_name' => 'برند',
 				'add_new_item'  => 'افزودن برند جدید',
 				'edit_item'     => 'ویرایش برند',
