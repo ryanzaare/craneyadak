@@ -1,0 +1,81 @@
+---
+// src/components/AuthorityStrip.astro
+// ---------------------------------------------------------------------------
+// نوار اعتبار زیر هیرو.
+//
+// ⚠️ این جایگزین «نوار آمار» حذف‌شده نیست و نباید به آن تبدیل شود.
+// نوار قبلی تعداد دسته‌بندی‌ها و پرسش‌های خودِ سایت را می‌شمرد — یعنی یک
+// عدد بی‌معنا برای مدیر خرید، که عملاً کوچک‌بودن را تبلیغ می‌کرد.
+//
+// این نوار به‌جای «ما چقدر بزرگیم»، به سه سوالی پاسخ می‌دهد که خریدار
+// صنعتی در ده ثانیه‌ی اول از خودش می‌پرسد:
+//   ۱) آیا قطعه‌ی من را دارند؟        → دامنه‌ی پوشش (برند/دسته)
+//   ۲) آیا می‌توانم بهشان اعتماد کنم؟ → فاکتور رسمی، ضمانت کتبی
+//   ۳) چقدر طول می‌کشد؟              → مسیر پاسخ‌گویی
+//
+// هر عدد اینجا از داده‌ی واقعی تاکسونومی می‌آید، نه از یک ادعای دستی.
+// ---------------------------------------------------------------------------
+import { ALL_CATEGORIES, BRANDS, INDUSTRIES } from '../data/taxonomy';
+
+const facts = [
+  {
+    value: `${BRANDS.length}`,
+    label: 'برند تحت پوشش',
+    detail: 'از سازنده‌ی جرثقیل تا ریموت و تجهیزات برقی',
+    icon: 'M12 2l8 4v6c0 5-3 8-8 10-5-2-8-5-8-10V6l8-4z',
+  },
+  {
+    value: `${ALL_CATEGORIES.length}`,
+    label: 'دسته قطعه',
+    detail: 'در ۷ گروه فنی، قابل جستجو با کد فنی',
+    icon: 'M4 6h16M4 12h16M4 18h10',
+  },
+  {
+    value: `${INDUSTRIES.length}`,
+    label: 'صنعت هدف',
+    detail: 'هر کدام با الزام فنی مخصوص خودش',
+    icon: 'M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6',
+  },
+];
+
+const assurances = [
+  { title: 'بررسی سازگاری پیش از فاکتور', detail: 'قطعه با مدل دستگاه شما تطبیق داده می‌شود' },
+  { title: 'فاکتور رسمی', detail: 'قابل ارائه به واحد مالی و حسابرسی' },
+  { title: 'ضمانت کتبی اصالت', detail: 'همراه کالا تحویل می‌شود' },
+];
+---
+
+<section class="bg-white border-b border-gray-100" aria-label="دامنه‌ی پوشش و تعهدات">
+  <div class="max-w-7xl mx-auto px-4 py-10">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      {/* اعداد واقعی از تاکسونومی */}
+      <ul class="lg:col-span-6 grid grid-cols-3 gap-4" role="list">
+        {facts.map((fact) => (
+          <li class="text-center sm:text-right">
+            <span class="flex sm:inline-flex items-center justify-center sm:justify-start gap-2 mb-1.5">
+              <span class="w-8 h-8 rounded-lg bg-orange-50 text-crane-orange flex items-center justify-center shrink-0" aria-hidden="true">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={fact.icon} /></svg>
+              </span>
+              <span class="text-3xl md:text-4xl font-black text-crane-navy tabular-nums leading-none">{fact.value}</span>
+            </span>
+            <span class="block font-bold text-crane-navy text-sm">{fact.label}</span>
+            <span class="block text-xs text-gray-600 leading-5 mt-1">{fact.detail}</span>
+          </li>
+        ))}
+      </ul>
+
+      {/* تعهدات — پاسخ به سوال «آیا می‌توانم اعتماد کنم» */}
+      <ul class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-3 gap-4 lg:border-r lg:border-gray-100 lg:pr-8" role="list">
+        {assurances.map((item) => (
+          <li class="flex items-start gap-2.5">
+            <svg class="w-5 h-5 shrink-0 text-emerald-600 mt-0.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4" /></svg>
+            <span class="min-w-0">
+              <span class="block font-bold text-crane-navy text-sm leading-6">{item.title}</span>
+              <span class="block text-xs text-gray-600 leading-5 mt-0.5">{item.detail}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>

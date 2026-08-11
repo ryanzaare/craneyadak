@@ -25,6 +25,7 @@
 // ---------------------------------------------------------------------------
 import Layout from '../layouts/Layout.astro';
 import PartFinder from '../components/PartFinder.astro';
+import AuthorityStrip from '../components/AuthorityStrip.astro';
 import ProductCard from '../components/ProductCard.astro';
 import { SITE } from '../data/site';
 import { ADVANTAGES as advantages, FAQS as faqs } from '../data/content';
@@ -123,51 +124,67 @@ const jsonLd = {
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
   {/* ================================ HERO ================================ */}
-  <section class="relative flex flex-col items-center overflow-hidden bg-crane-navy border-b-[8px] border-crane-orange px-4 pt-24 md:pt-32 pb-32 md:pb-44" aria-labelledby="hero-heading">
-    <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
-      <div class="absolute inset-0 opacity-[0.12]" style="background-image: radial-gradient(#fff 1.5px, transparent 1.5px); background-size: 32px 32px;"></div>
-      <svg class="absolute -left-32 md:left-4 top-12 w-[400px] md:w-[620px] h-[400px] md:h-[620px] text-white opacity-[0.13] -rotate-6" viewBox="0 0 500 600" fill="none" stroke="currentColor">
+  {/* بازطراحی: نسخه‌ی قبلی یک نوار جستجو روی پس‌زمینه‌ی تزئینی بود — که
+      نمی‌گفت این سایت چیست، برای کیست، و چرا باید به آن اعتماد کرد.
+      نسخه‌ی جدید در سه ثانیه‌ی اول سه چیز را روشن می‌کند: چه می‌فروشیم،
+      برای چه کسی، و چرا قابل اتکاست. جستجو همچنان اولین اقدام است، اما
+      حالا در یک زمینه‌ی معنادار قرار دارد نه در خلأ. */}
+  <section class="relative overflow-hidden bg-crane-navy" aria-labelledby="hero-heading">
+    <div class="absolute inset-0 z-0 pointer-events-none" aria-hidden="true">
+      <div class="absolute inset-0 opacity-[0.10]" style="background-image: radial-gradient(#fff 1.5px, transparent 1.5px); background-size: 34px 34px;"></div>
+      <svg class="absolute -left-24 -top-10 w-[560px] h-[560px] text-white opacity-[0.07] -rotate-6" viewBox="0 0 500 600" fill="none" stroke="currentColor">
         <circle cx="250" cy="150" r="85" stroke-width="4" stroke-dasharray="8 4" /><circle cx="250" cy="150" r="70" stroke-width="2" /><circle cx="250" cy="150" r="20" stroke-width="6" />
         <path d="M 140 150 L 140 270 C 140 330, 360 330, 360 270 L 360 150" stroke-width="5" />
         <path d="M 250 350 V 380 C 250 420, 160 440, 160 510 C 160 580, 280 600, 340 550 C 380 510, 350 450, 310 460 C 270 470, 240 490, 230 460 C 220 430, 270 410, 280 380" stroke-width="18" stroke-linecap="round" />
       </svg>
-      <div class="absolute inset-0 bg-gradient-to-r from-crane-navy/40 via-crane-navy/80 to-crane-navy/40"></div>
-      <div class="absolute inset-0 bg-gradient-to-t from-crane-navy via-transparent to-transparent"></div>
+      <div class="absolute inset-0 bg-gradient-to-l from-crane-navy via-crane-navy/85 to-crane-navy/60"></div>
     </div>
 
-    <div class="relative z-10 text-center w-full max-w-[1200px] mx-auto px-2">
-      <h1 id="hero-heading" class="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 tracking-tight leading-tight drop-shadow-lg">
-        تامین تخصصی <span class="text-crane-orange">قطعات جرثقیل سقفی</span>
-      </h1>
-      <p class="text-gray-200 text-lg md:text-xl lg:text-2xl mb-10 font-light drop-shadow-md">
-        جستجو بر اساس نام قطعه، برند سازنده یا کد فنی (Part Number)
-      </p>
+    <div class="relative z-10 max-w-7xl mx-auto px-4 pt-16 md:pt-20 pb-28 md:pb-36">
+      <div class="max-w-3xl">
+        <p class="inline-flex items-center gap-2 text-xs md:text-sm font-bold text-crane-orange bg-orange-500/10 border border-orange-500/25 rounded-full px-4 py-1.5 mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-crane-orange" aria-hidden="true"></span>
+          تامین تخصصی، نه فروشگاه عمومی
+        </p>
 
-      <form class="w-full max-w-5xl mx-auto mb-8 relative" action="/search" method="GET" role="search">
-        <label for="site-search" class="sr-only">جستجوی نام یا کد فنی قطعه</label>
-        <div class="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full p-2 shadow-[0_20px_50px_rgba(0,0,0,0.4)] focus-within:ring-4 focus-within:ring-crane-orange/30 transition-all duration-300">
-          <span class="hidden md:flex pl-4 pr-6 text-gray-400" aria-hidden="true">
-            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          </span>
-          <input id="site-search" type="search" name="q" placeholder="مثال: موتور گیربکس دماگ یا DMG-1024" class="grow bg-transparent text-gray-800 px-6 md:px-2 py-4 md:py-5 focus:outline-none text-right placeholder-gray-500 text-lg font-medium w-full" dir="rtl" autocomplete="off" required />
-          <button type="submit" class="w-full md:w-auto bg-crane-orange text-white px-12 py-4 md:py-5 rounded-xl md:rounded-full font-bold text-lg hover:bg-orange-800 transition-colors shadow-md mt-2 md:mt-0">جستجو</button>
+        <h1 id="hero-heading" class="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 tracking-tight leading-[1.25]">
+          قطعه‌ی جرثقیل سقفی را با
+          <span class="text-crane-orange">کد فنی</span>
+          پیدا کنید — نه با حدس
+        </h1>
+
+        <p class="text-gray-300 text-lg md:text-xl leading-9 mb-10 max-w-2xl">
+          کد فنی، عکس پلاک دستگاه یا حتی عکس قطعه‌ی فرسوده کافی است. سازگاری را
+          پیش از صدور پیش‌فاکتور بررسی می‌کنیم تا قطعه‌ی اشتباه سفارش داده نشود.
+        </p>
+
+        <form class="w-full mb-6" action="/search" method="GET" role="search">
+          <label for="site-search" class="sr-only">جستجوی نام یا کد فنی قطعه</label>
+          <div class="flex flex-col md:flex-row items-stretch bg-white rounded-2xl md:rounded-full p-2 shadow-[0_20px_60px_rgba(0,0,0,0.45)] focus-within:ring-4 focus-within:ring-crane-orange/40 transition-all">
+            <span class="hidden md:flex items-center pl-4 pr-6 text-gray-400" aria-hidden="true">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </span>
+            <input id="site-search" type="search" name="q" placeholder="مثال: MT318 یا کمربند پودم" class="grow bg-transparent text-gray-800 px-6 md:px-2 py-4 focus:outline-none text-right placeholder-gray-500 text-lg font-medium w-full" dir="rtl" autocomplete="off" required />
+            <button type="submit" class="w-full md:w-auto bg-crane-orange text-white px-10 py-4 rounded-xl md:rounded-full font-black text-lg hover:bg-orange-800 transition-colors shrink-0 mt-2 md:mt-0">جستجو</button>
+          </div>
+        </form>
+
+        <div class="flex flex-wrap items-center gap-2.5 text-sm">
+          <span class="text-gray-400">{QUICK_LINKS_LABEL}</span>
+          {quickSuggestions.map((item) => (
+            <a href={item.href} class="text-gray-200 hover:text-white hover:bg-white/15 transition-colors bg-white/[0.07] px-3.5 py-1.5 rounded-full border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/50">
+              {item.label}
+            </a>
+          ))}
         </div>
-      </form>
-
-      {/* برچسب عمداً یک ادعای آماری نیست — نگاه کنید به src/data/popular-searches.ts */}
-      <div class="flex flex-wrap justify-center items-center gap-3 text-sm font-medium">
-        <span class="text-gray-400 drop-shadow-sm">{QUICK_LINKS_LABEL}</span>
-        {quickSuggestions.map((item) => (
-          <a href={item.href} class="text-gray-200 hover:text-white hover:bg-white/20 transition-colors bg-white/10 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/50">
-            {item.label}
-          </a>
-        ))}
       </div>
     </div>
   </section>
 
   {/* ============================ PART FINDER ============================ */}
   <PartFinder />
+
+  <AuthorityStrip />
 
   {/* ====================== ویترین: محصولات واقعی ====================== */}
   {storefront.onSale.length > 0 && (
