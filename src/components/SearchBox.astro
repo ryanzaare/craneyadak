@@ -1,0 +1,275 @@
+---
+// src/components/SearchBox.astro
+// ---------------------------------------------------------------------------
+// کادر جستجو با پیشنهاد آنی (اتوکامپلیت).
+//
+// چرا پیشنهادها از Pagefind نمی‌آیند: Pagefind تا دانلود فایل ایندکس هیچ
+// جوابی نمی‌دهد، و دقیقاً همان اولین کاراکترها — جایی که اتوکامپلیت
+// بیشترین ارزش را دارد — خالی می‌ماند. ۳۱ دسته و ۱۸ برند از زمان build
+// معلوم‌اند، پس به‌صورت یک آرایه‌ی کوچک (~۵۶ مدخل) همراه صفحه می‌آیند و از
+// اولین حرف جواب می‌دهند. Pagefind کار خودش را جای دیگری می‌کند: جستجوی
+// تمام‌متن داخل محصولات.
+//
+// دسترس‌پذیری: الگوی رسمی combobox از APG — `role="combobox"` روی input،
+// `aria-expanded`، `aria-controls`، `aria-activedescendant` و پیمایش با
+// کلیدهای جهت‌دار. یک فهرست پیشنهاد که فقط با ماوس کار کند، برای کاربر
+// کیبورد و اسکرین‌ریدر عملاً وجود ندارد.
+// ---------------------------------------------------------------------------
+import { buildSuggestIndex } from '../lib/search-index';
+
+interface Props {
+  id?: string;
+  placeholder?: string;
+  /** ظاهر تیره برای هیرو، روشن برای صفحه‌ی جستجو. */
+  tone?: 'dark' | 'light';
+  autofocus?: boolean;
+  class?: string;
+}
+
+const {
+  id = 'search-box',
+  placeholder = 'کد فنی، نام قطعه یا برند — مثال: MT318',
+  tone = 'dark',
+  autofocus = false,
+  class: className = '',
+} = Astro.props;
+
+// در زمان build سریال می‌شود و به‌صورت JSON داخل صفحه می‌نشیند.
+const index = buildSuggestIndex();
+const listId = `${id}-listbox`;
+---
+
+<div class={`cy-search relative ${className}`} data-search-root>
+  <form action="/search" method="GET" role="search" class="w-full">
+    <label for={id} class="sr-only">جستجوی نام، برند یا کد فنی قطعه</label>
+
+    <div
+      class={
+        tone === 'dark'
+          ? 'flex flex-col md:flex-row items-stretch bg-white rounded-lg p-1.5 ring-1 ring-black/20 focus-within:ring-4 focus-within:ring-accent/60 transition-shadow'
+          : 'flex flex-col md:flex-row items-stretch bg-white rounded-lg p-1.5 ring-2 ring-steel-300 focus-within:ring-4 focus-within:ring-accent/60 transition-shadow'
+      }
+    >
+      <span class="hidden md:flex items-center px-4 text-steel-600" aria-hidden="true">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </span>
+
+      <input
+        id={id}
+        type="search"
+        name="q"
+        placeholder={placeholder}
+        class="grow bg-transparent text-steel-900 px-4 md:px-0 py-3.5 focus:outline-none text-right placeholder-steel-600 text-base font-medium w-full"
+        dir="rtl"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        required
+        role="combobox"
+        aria-expanded="false"
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        data-search-input
+        autofocus={autofocus || undefined}
+      />
+
+      <button
+        type="submit"
+        class="w-full md:w-auto bg-accent text-white px-8 py-3.5 rounded-md font-black hover:bg-accent-ink transition-colors shrink-0 mt-1.5 md:mt-0"
+      >
+        جستجو
+      </button>
+    </div>
+  </form>
+
+  {/* فهرست پیشنهاد. تا وقتی پیشنهادی نیست، از DOM حذف نمی‌شود بلکه مخفی
+      می‌ماند — تا `aria-controls` همیشه به یک عنصر موجود اشاره کند. */}
+  <ul
+    id={listId}
+    role="listbox"
+    aria-label="پیشنهادهای جستجو"
+    hidden
+    class="absolute z-50 top-full mt-1.5 w-full bg-white rounded-lg border-2 border-steel-900 max-h-[22rem] overflow-y-auto text-right"
+    data-search-list
+  >
+  </ul>
+
+  <script is:inline define:vars={{ index, listId, id }}>
+    (function () {
+      const root = document.currentScript.closest('[data-search-root]');
+      if (!root) return;
+
+      const input = root.querySelector('[data-search-input]');
+      const list = root.querySelector('[data-search-list]');
+      if (!input || !list) return;
+
+      /* ---- همان منطق امتیازدهی src/lib/search-index.ts ----
+         عمداً inline است: این کد باید پیش از هر بارگذاری شبکه‌ای آماده
+         باشد، وگرنه «آنی» بودن پیشنهادها از بین می‌رود. */
+      const STOP = new Set(['خرید','قیمت','فروش','فروشگاه','انواع','لیست','بهترین','ارزان','جرثقیل','سقفی','buy','price']);
+
+      function norm(s) {
+        return s.toLowerCase()
+          .replace(/[يى]/g, 'ی').replace(/ك/g, 'ک')
+          .replace(/[ً-ِٰ]/g, '').replace(/ـ/g, '')
+          .replace(/[‌‎‏]/g, ' ')
+          .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+          .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+          .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+      }
+
+      function lev(a, b, max) {
+        if (a === b) return 0;
+        if (Math.abs(a.length - b.length) > max) return max + 1;
+        let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+        for (let i = 1; i <= a.length; i++) {
+          const cur = [i];
+          let rowMin = i;
+          for (let j = 1; j <= b.length; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            const v = Math.min(cur[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+            cur.push(v);
+            if (v < rowMin) rowMin = v;
+          }
+          if (rowMin > max) return max + 1;
+          prev = cur;
+        }
+        return prev[b.length];
+      }
+
+      function words(q) {
+        const all = q.split(' ').filter((w) => w.length >= 2);
+        const kept = all.filter((w) => !STOP.has(w));
+        return kept.length ? kept : all;
+      }
+
+      function score(entry, q) {
+        const ws = words(q);
+        if (!ws.length) return 0;
+        let phrase = 0;
+        for (const hay of entry.haystack) {
+          if (!hay) continue;
+          if (hay === q) phrase = Math.max(phrase, 100);
+          else if (hay.startsWith(q)) phrase = Math.max(phrase, 85);
+          else if (hay.includes(q)) phrase = Math.max(phrase, 65);
+        }
+        let sum = 0;
+        for (const qw of ws) {
+          let best = 0;
+          for (const hay of entry.haystack) {
+            if (!hay) continue;
+            for (const hw of hay.split(' ')) {
+              if (!hw) continue;
+              if (hw === qw) best = Math.max(best, 60);
+              else if (hw.startsWith(qw)) best = Math.max(best, 50);
+              else if (qw.length >= 3 && hw.includes(qw)) best = Math.max(best, 32);
+              else if (qw.length >= 4 && hw.length >= 4 &&
+                       Math.abs(qw.length - hw.length) <= 2 && lev(qw, hw, 1) <= 1) best = Math.max(best, 28);
+            }
+          }
+          sum += best;
+        }
+        const wordScore = sum / ws.length;
+        if (wordScore === 0) return phrase >= 65 ? phrase : 0;
+        return Math.max(phrase, wordScore);
+      }
+
+      function suggest(q, limit) {
+        const n = norm(q);
+        if (!n) return [];
+        return index
+          .map((e) => ({ e, s: score(e, n) }))
+          .filter((x) => x.s > 0)
+          .sort((a, b) => b.s - a.s || a.e.label.length - b.e.label.length)
+          .slice(0, limit)
+          .map((x) => x.e);
+      }
+
+      const KIND_LABEL = { category: 'دسته', brand: 'برند', silo: 'گروه' };
+      let active = -1;
+      let current = [];
+
+      function close() {
+        list.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+        active = -1;
+      }
+
+      function render(items, query) {
+        current = items;
+        active = -1;
+        input.removeAttribute('aria-activedescendant');
+
+        if (!query.trim()) return close();
+
+        if (!items.length) {
+          /* حالت «پیدا نشد» — عمداً یک بن‌بست نیست.
+             کاربری که چیزی پیدا نمی‌کند نباید فقط پیام خطا ببیند؛ باید
+             راه ادامه داشته باشد. */
+          list.innerHTML =
+            '<li class="px-4 py-3 text-sm text-steel-700 leading-6">' +
+            '<strong class="block text-steel-900 mb-1">موردی با این عبارت پیدا نشد.</strong>' +
+            'می‌توانید همین عبارت را در تمام محصولات جستجو کنید یا از فهرست دسته‌ها پیش بروید.' +
+            '</li>' +
+            '<li class="border-t border-steel-100">' +
+            '<a href="/search?q=' + encodeURIComponent(query) + '" class="block px-4 py-2.5 text-sm font-bold text-accent-ink hover:bg-accent-soft">' +
+            'جستجوی «' + query.replace(/[<>&]/g, '') + '» در تمام محصولات ←</a></li>' +
+            '<li class="border-t border-steel-100">' +
+            '<a href="/categories" class="block px-4 py-2.5 text-sm font-bold text-accent-ink hover:bg-accent-soft">' +
+            'مشاهده‌ی همه‌ی دسته‌بندی‌ها ←</a></li>';
+          list.hidden = false;
+          input.setAttribute('aria-expanded', 'true');
+          return;
+        }
+
+        list.innerHTML = items
+          .map((e, i) =>
+            '<li role="option" id="' + id + '-opt-' + i + '" aria-selected="false" class="border-b border-steel-100 last:border-b-0">' +
+            '<a href="' + e.href + '" tabindex="-1" class="flex items-baseline justify-between gap-3 px-4 py-2.5 hover:bg-accent-soft focus:bg-accent-soft">' +
+            '<span class="min-w-0"><span class="block font-bold text-steel-900 text-sm truncate">' + e.label + '</span>' +
+            '<span class="block text-xs text-steel-600 truncate">' + e.context + '</span></span>' +
+            '<span class="text-[10px] font-black text-steel-600 bg-steel-100 rounded px-1.5 py-0.5 shrink-0">' + (KIND_LABEL[e.kind] || '') + '</span>' +
+            '</a></li>'
+          )
+          .join('');
+        list.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+      }
+
+      function highlight(next) {
+        const opts = list.querySelectorAll('[role="option"]');
+        if (!opts.length) return;
+        if (active >= 0) opts[active].setAttribute('aria-selected', 'false');
+        active = (next + opts.length) % opts.length;
+        const el = opts[active];
+        el.setAttribute('aria-selected', 'true');
+        input.setAttribute('aria-activedescendant', el.id);
+        el.scrollIntoView({ block: 'nearest' });
+      }
+
+      input.addEventListener('input', () => render(suggest(input.value, 7), input.value));
+      input.addEventListener('focus', () => {
+        if (input.value.trim()) render(suggest(input.value, 7), input.value);
+      });
+
+      input.addEventListener('keydown', (ev) => {
+        if (list.hidden) return;
+        if (ev.key === 'ArrowDown') { ev.preventDefault(); highlight(active + 1); }
+        else if (ev.key === 'ArrowUp') { ev.preventDefault(); highlight(active - 1); }
+        else if (ev.key === 'Escape') { close(); }
+        else if (ev.key === 'Enter' && active >= 0) {
+          // فقط وقتی کاربر عمداً یک پیشنهاد را انتخاب کرده، ارسال فرم را
+          // نادیده می‌گیریم. در غیر این صورت جستجوی کامل انجام می‌شود.
+          const link = list.querySelectorAll('[role="option"] a')[active];
+          if (link) { ev.preventDefault(); window.location.href = link.getAttribute('href'); }
+        }
+      });
+
+      document.addEventListener('click', (ev) => { if (!root.contains(ev.target)) close(); });
+    })();
+  </script>
+</div>

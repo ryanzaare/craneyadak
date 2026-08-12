@@ -27,28 +27,47 @@ const { class: className = '' } = Astro.props;
 const hasPlaceholder = COMPANY_METRICS.some((m) => !m.verified);
 ---
 
-<section class={`bg-steel-900 border-y border-white/10 ${className}`} aria-labelledby="metrics-heading">
-  <div class="max-w-7xl mx-auto px-4 py-8">
+<section class={`relative bg-steel-950 ${className}`} aria-labelledby="metrics-heading">
+  {/* شبکه‌ی ظریف پس‌زمینه — زبان بصری داشبورد صنعتی/کنترل‌روم.
+      یک گرادیان تکرارشونده، بدون تصویر و بدون هزینه‌ی شبکه. */}
+  <div
+    class="absolute inset-0 opacity-[0.5] pointer-events-none"
+    aria-hidden="true"
+    style="background-image: linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px); background-size: 46px 46px;"
+  >
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-4 py-9">
     <h2 id="metrics-heading" class="sr-only">چرا کرین یدک</h2>
 
-    <ul role="list" class="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-7">
+    {/* کارت‌های داشبورد: هر سنجه یک «پنل» با نوار وضعیت رنگی بالای آن.
+        قبلاً چهار آیکون و متن روی پس‌زمینه‌ی تخت بود که از یک فوتر معمولی
+        قابل تشخیص نبود. */}
+    <ul role="list" class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       {
         COMPANY_METRICS.map((metric) => (
-          <li class="flex items-start gap-3 min-w-0">
-            <span class="w-9 h-9 shrink-0 text-accent" aria-hidden="true">
-              <svg class="w-full h-full" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d={metric.icon} />
-              </svg>
-            </span>
+          <li class="group relative bg-steel-900/80 border border-white/10 rounded-lg overflow-hidden hover:border-accent/50 transition-colors">
+            <span class="block h-1 bg-accent" aria-hidden="true" />
 
-            <div class="min-w-0">
-              <p class="text-xl md:text-2xl font-black text-white leading-8 tabular-nums">{metric.value}</p>
-              <p class="text-xs md:text-sm text-steel-300 leading-6 mt-0.5">{metric.label}</p>
-              {!metric.verified && (
-                <span class="inline-block mt-1.5 text-[10px] font-bold text-steel-900 bg-amber-400 px-1.5 py-0.5 rounded">
-                  جای‌گذار
+            <div class="p-4 md:p-5">
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <span class="w-9 h-9 shrink-0 rounded-md bg-accent/10 border border-accent/25 text-accent flex items-center justify-center" aria-hidden="true">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d={metric.icon} />
+                  </svg>
                 </span>
-              )}
+
+                {!metric.verified && (
+                  <span class="text-[10px] font-black text-amber-400 border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 rounded">
+                    جای‌گذار
+                  </span>
+                )}
+              </div>
+
+              <p class="text-2xl md:text-3xl font-black text-white leading-9 tabular-nums tracking-tight">
+                {metric.value}
+              </p>
+              <p class="text-xs md:text-[13px] text-steel-300 leading-6 mt-1">{metric.label}</p>
             </div>
           </li>
         ))

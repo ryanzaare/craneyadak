@@ -1,6 +1,7 @@
 ---
 import AuthorBox from './AuthorBox.astro';
 import { DEFAULT_AUTHOR } from '../data/trust';
+import { autolinkHtml } from '../lib/autolink';
 // src/components/CategoryGuide.astro
 // ---------------------------------------------------------------------------
 // رندر محتوای تخصصی دسته — لایه‌ی «راهنما» در برابر لایه‌ی «فروشگاه».
@@ -102,7 +103,13 @@ const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
 
             <AuthorBox author={DEFAULT_AUTHOR} class="mb-8 max-w-3xl" />
             {/* عرض محدود عمدی: متن فارسی در خط بلند خوانده نمی‌شود. */}
-            <div class="prose-crane max-w-[70ch] text-lg text-gray-700 leading-9" set:html={content.introHtml} />
+            {/* لینک‌دهی داخلی خودکار. متن از ویرایشگر وردپرس می‌آید و مدیر
+                محتوا لینک داخلی نمی‌گذارد؛ بدون این، بلندترین متن سایت هیچ
+                ارزش پیوندی توزیع نمی‌کرد. */}
+            <div
+              class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9"
+              set:html={autolinkHtml(content.introHtml, { currentPath: Astro.url.pathname })}
+            />
           </div>
         </section>
       )}

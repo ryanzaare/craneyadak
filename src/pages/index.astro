@@ -25,6 +25,7 @@
 // ---------------------------------------------------------------------------
 import Layout from '../layouts/Layout.astro';
 import PartFinder from '../components/PartFinder.astro';
+import SearchBox from '../components/SearchBox.astro';
 import AuthorityStrip from '../components/AuthorityStrip.astro';
 import MetricsStrip from '../components/MetricsStrip.astro';
 import ProductCard from '../components/ProductCard.astro';
@@ -154,41 +155,28 @@ const jsonLd = {
 
     <div class="relative max-w-7xl mx-auto px-4 py-10 md:py-14 grid lg:grid-cols-[minmax(0,1fr)_20rem] gap-10 lg:gap-12 items-start">
       <div class="min-w-0">
-        <h1 id="hero-heading" class="text-3xl md:text-4xl lg:text-[2.75rem] font-black text-white tracking-tight leading-[1.3] mb-4">
-          قطعات جرثقیل سقفی
-          <span class="block text-xl md:text-2xl font-bold text-steel-300 mt-2 leading-9">
-            تأمین تخصصی بر اساس <span class="text-white">کد فنی</span> — نه حدس و نمونه‌برداری
+        <h1 id="hero-heading" class="text-3xl md:text-4xl lg:text-[2.6rem] font-black text-white tracking-tight leading-[1.4] mb-4 text-right">
+          مرجع تخصصی تأمین قطعات یدکی
+          <span class="text-accent">جرثقیل سقفی</span>
+          {/* اعداد این خط از خودِ تاکسونومی می‌آیند، نه از حدس. یک لحظه
+              «بیش از ۳۰۰ قلم قطعه» اینجا نوشتم و پاکش کردم: هیچ مبنایی
+              برایش نداشتم و دقیقاً همان داده‌ی ساختگی‌ای بود که کل پروژه
+              حذفش کرده. این دو عدد با شمارش واقعی به‌روز می‌مانند. */}
+          <span class="block text-lg md:text-xl font-bold text-steel-300 mt-3 leading-8 text-right">
+            {ALL_CATEGORIES.length} دسته قطعه از {BRANDS.length} برند — اصل، قابل ردیابی با کد فنی،
+            با ضمانت اصالت و فاکتور رسمی
           </span>
         </h1>
 
-        <p class="text-steel-300 leading-8 mb-7 max-w-2xl">
+        <p class="text-steel-300 leading-8 mb-7 max-w-2xl text-right">
           کد فنی، عکس پلاک دستگاه یا حتی عکس قطعه‌ی فرسوده کافی است. سازگاری را
-          پیش از صدور پیش‌فاکتور بررسی می‌کنیم تا قطعه‌ی اشتباه سفارش داده نشود.
+          <strong class="text-white font-bold">پیش از صدور پیش‌فاکتور</strong> بررسی می‌کنیم تا
+          قطعه‌ی اشتباه روی جرثقیلِ در حال کار نصب نشود.
         </p>
 
         {/* جستجو: مستطیل با گوشه‌ی کم — «ابزار» است نه «بنر». گوشه‌ی کاملاً
             گرد و سایه‌ی ۶۰ پیکسلی قبلی، زبان بصری نرم‌افزار مصرفی بود. */}
-        <form class="w-full mb-4" action="/search" method="GET" role="search">
-          <label for="site-search" class="sr-only">جستجوی نام یا کد فنی قطعه</label>
-          <div class="flex flex-col md:flex-row items-stretch bg-white rounded-lg p-1.5 ring-1 ring-black/20 focus-within:ring-4 focus-within:ring-accent/60 transition-shadow">
-            <span class="hidden md:flex items-center px-4 text-steel-600" aria-hidden="true">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            </span>
-            <input
-              id="site-search"
-              type="search"
-              name="q"
-              placeholder="کد فنی، نام قطعه یا برند — مثال: MT318"
-              class="grow bg-transparent text-steel-900 px-4 md:px-0 py-3.5 focus:outline-none text-right placeholder-steel-600 text-base font-medium w-full"
-              dir="rtl"
-              autocomplete="off"
-              required
-            />
-            <button type="submit" class="w-full md:w-auto bg-accent text-white px-8 py-3.5 rounded-md font-black hover:bg-accent-ink transition-colors shrink-0 mt-1.5 md:mt-0">
-              جستجو
-            </button>
-          </div>
-        </form>
+        <SearchBox id="hero-search" tone="dark" class="mb-4" />
 
         <div class="flex flex-wrap items-center gap-2 text-sm">
           <span class="text-steel-300 shrink-0">{QUICK_LINKS_LABEL}</span>
@@ -369,26 +357,69 @@ const jsonLd = {
   </section>
 
   {/* =============================== برندها =============================== */}
-  <section class="bg-gray-50 px-4 py-10 border-b border-gray-100" aria-labelledby="brands-heading">
+  {/* ========================= برندهای تحت پوشش =========================
+      درباره‌ی لوگوها — یک تصمیم عمدی که با درخواست اولیه فرق دارد:
+      خواسته شده بود «مسیرهای SVG ساختگی که لوگوی دماگ/اشتال/پودم را
+      نمایندگی کنند» کشیده شود. این کار انجام *نشد*، به دو دلیل:
+
+      ۱) حقوقی: این لوگوها علامت تجاری ثبت‌شده‌اند. کشیدن نسخه‌ی شبیه‌سازی‌شده
+         نقض علامت تجاری است — برخلاف استفاده از خودِ لوگوی رسمی توسط
+         فروشنده که در بیشتر حوزه‌های قضایی «استفاده‌ی نام‌بردنانه» و مجاز
+         است. یعنی لوگوی جعلی از لوگوی واقعی پرریسک‌تر است.
+      ۲) بصری: لوگوی تقریبیِ دماگ برای مهندس نگهداری‌ای که روزانه با
+         تجهیزات دماگ کار می‌کند فوراً «قلابی» به نظر می‌رسد و دقیقاً همان
+         اعتمادی را از بین می‌برد که قرار بود بسازد.
+
+      جایگزین: پلاک تایپوگرافیک صنعتی — نام لاتین برند با فاصله‌گذاری
+      حروف روی پلاک تیره، به‌علاوه کشور سازنده. حس «فروشگاه سخت‌افزار» را
+      می‌دهد بدون جعل هیچ علامتی. به‌محض دریافت فایل لوگوی رسمی، فقط کافی
+      است در همین کامپوننت تصویر جایگزین متن شود.
+  =================================================================== */}
+  <section class="bg-white px-4 py-10 border-b border-steel-100" aria-labelledby="brands-heading">
     <div class="max-w-7xl mx-auto">
-      <div class="flex flex-wrap items-end justify-between gap-4 mb-8 border-b border-gray-200 pb-4">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6 border-b border-steel-300 pb-4">
         <div>
-          <h2 id="brands-heading" class="text-2xl md:text-3xl font-black text-crane-navy mb-2">برندهای تحت پوشش</h2>
-          <p class="text-gray-600 leading-8">روی یک جرثقیل معمولاً بدنه، سیستم کنترل و تجهیزات برقی از سه سازنده‌ی متفاوت‌اند.</p>
+          <h2 id="brands-heading" class="text-2xl md:text-3xl font-black text-steel-900 mb-2">
+            برندهای تحت پوشش
+          </h2>
+          <p class="text-steel-600 leading-7">
+            روی یک جرثقیل معمولاً بدنه، سیستم کنترل و تجهیزات برقی از سه سازنده‌ی متفاوت‌اند.
+          </p>
         </div>
-        <a href="/brands" class="text-sm font-bold text-crane-orange hover:underline focus:outline-none focus:ring-2 focus:ring-crane-orange rounded">همه برندها ←</a>
+        <a href="/brands" class="text-sm font-bold text-accent-ink hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded">
+          همه برندها ←
+        </a>
       </div>
 
-      <div class="space-y-8">
+      <div class="space-y-7">
         {(['oem', 'control'] as const).map((brandClass) => (
           <div>
-            <h3 class="text-sm font-black text-gray-700 mb-4">{BRAND_CLASSES[brandClass].name}</h3>
-            <ul class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" role="list">
+            <h3 class="text-xs font-black text-steel-600 tracking-wide mb-3 pb-2 border-b border-steel-100">
+              {BRAND_CLASSES[brandClass].name}
+            </h3>
+            <ul class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" role="list">
               {brandsByClass(brandClass).map((brand) => (
                 <li>
-                  <a href={`/brands/${brand.slug}`} class="group h-full bg-white p-5 rounded-lg border border-gray-100 hover:border-orange-100 hover:shadow-md transition-all flex flex-col items-center text-center focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
-                    <span class="text-xs font-black tracking-wider text-crane-navy group-hover:text-crane-orange transition-colors uppercase" dir="ltr">{brand.nameEn}</span>
-                    <span class="text-sm font-bold text-gray-700 mt-1">{brand.nameFa}</span>
+                  <a
+                    href={`/brands/${brand.slug}`}
+                    class="group h-full bg-steel-900 rounded-lg overflow-hidden border-2 border-steel-900 hover:border-accent transition-colors flex flex-col focus:outline-none focus:ring-4 focus:ring-accent/40"
+                  >
+                    {/* پلاک لوگو — نسبت ثابت تا با آمدن تصویر واقعی
+                        چیدمان جابه‌جا نشود (CLS = 0). */}
+                    <span class="flex items-center justify-center h-14 px-2 bg-steel-800 group-hover:bg-steel-700 transition-colors">
+                      <span
+                        class="text-[13px] font-black tracking-[0.2em] text-white uppercase truncate"
+                        dir="ltr"
+                      >
+                        {brand.nameEn}
+                      </span>
+                    </span>
+                    <span class="flex items-center justify-between gap-2 px-3 py-2 bg-white grow">
+                      <span class="text-sm font-bold text-steel-900 group-hover:text-accent-ink transition-colors truncate">
+                        {brand.nameFa}
+                      </span>
+                      <span class="text-[10px] text-steel-600 shrink-0">{brand.country}</span>
+                    </span>
                   </a>
                 </li>
               ))}
@@ -403,8 +434,17 @@ const jsonLd = {
   <section class="bg-crane-light px-4 py-10 border-b border-gray-100" aria-labelledby="datasheet-heading">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start justify-between gap-12">
       <div class="md:w-1/2">
-        <h2 id="datasheet-heading" class="text-2xl md:text-3xl font-black text-crane-navy mb-4">
-          {featuredDatasheets.length > 0 ? 'مرجع دانلود اسناد فنی و کاتالوگ‌ها' : 'نقشه‌ها و اسناد فنی قطعات'}
+        {/* «کاتالوگ» در هر دو حالت اول می‌آید.
+            باگ ظریف نسخه‌ی قبل: کلیدواژه فقط در شاخه‌ی «سند موجود است»
+            بود. چون هنوز هیچ PDF واقعی منتشر نشده، همیشه شاخه‌ی خالی
+            رندر می‌شد — یعنی کلیدواژه دقیقاً در تنها حالتی که واقعاً
+            نمایش داده می‌شد، غایب بود. */}
+        <h2 id="datasheet-heading" class="text-2xl md:text-3xl font-black text-steel-900 mb-4">
+          {
+            featuredDatasheets.length > 0
+              ? 'کاتالوگ و اسناد فنی قطعات جرثقیل سقفی'
+              : 'کاتالوگ، نقشه و اسناد فنی قطعات جرثقیل سقفی'
+          }
         </h2>
         <p class="text-gray-700 leading-8 text-right">
           {featuredDatasheets.length > 0

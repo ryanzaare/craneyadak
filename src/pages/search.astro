@@ -1,98 +1,177 @@
 ---
 // src/pages/search.astro
-// Pagefind search page - intentionally noindex to save crawl budget
+// ---------------------------------------------------------------------------
+// صفحه‌ی جستجو — عمداً noindex (صرفه‌جویی در بودجه‌ی خزش).
+//
+// ═══ رفع باگ بیلد: Failed to resolve import "/pagefind/pagefind-ui.js" ═══
+//
+// علت واقعی: نسخه‌ی قبل کامنت `/* @vite-ignore */` را روی یک import با
+// **رشته‌ی ثابت** گذاشته بود. آن کامنت فقط زمانی مؤثر است که مشخصه‌ی
+// import یک *عبارت* باشد (متغیر). با رشته‌ی ثابت، Vite همچنان مسیر را در
+// زمان build به‌صورت استاتیک resolve می‌کند — و چون Pagefind فایل را در
+// مرحله‌ی `postbuild` (بعد از astro build) می‌سازد، هنوز وجود ندارد و کل
+// بیلد شکست می‌خورد.
+//
+// راه‌حل: مسیر در زمان اجرا ساخته می‌شود تا هیچ تحلیل استاتیکی نتواند آن
+// را به یک فایل نگاشت کند. CSS هم به همین دلیل با JS تزریق می‌شود، نه با
+// یک تگ <link> که Astro ممکن است در زمان build دنبالش برود.
+//
+// ═══ رفتار جستجو ═══
+// سه لایه، به ترتیب کاهش قطعیت:
+//   ۱) پیشنهاد آنی دسته/برند از داده‌ی ثابت (همیشه کار می‌کند)
+//   ۲) نتایج تمام‌متن Pagefind (اگر ایندکس ساخته و بارگذاری شده باشد)
+//   ۳) حالت «پیدا نشد» با نزدیک‌ترین گزینه‌ها — نه پیام خطا
+// حتی اگر لایه‌ی ۲ کاملاً از کار بیفتد، کاربر همچنان مسیر ادامه دارد.
+// ---------------------------------------------------------------------------
 import Layout from '../layouts/Layout.astro';
+import SearchBox from '../components/SearchBox.astro';
+import { SILOS, siloPath, ALL_CATEGORIES } from '../data/taxonomy';
+
+// دسته‌های پیشنهادی برای حالت «چیزی پیدا نشد» — از تاکسونومی واقعی.
+const fallbackSilos = SILOS;
 ---
 
-<Layout title="جستجوی قطعات | کرین یدک" description="جستجوی سریع قطعات جرثقیل سقفی با کد فنی یا نام محصول." noindex={true}>
-  <section class="max-w-4xl mx-auto px-4 py-16 min-h-[60vh]">
-    <h1 class="text-3xl md:text-4xl font-black text-crane-navy mb-8">جستجو در فروشگاه</h1>
-    <div id="search" class="min-h-[300px]"></div>
+<Layout
+  title="جستجوی قطعات جرثقیل سقفی | کرین یدک"
+  description="جستجوی سریع قطعات جرثقیل سقفی با کد فنی، نام قطعه یا برند."
+  noindex={true}
+>
+  <section class="max-w-4xl mx-auto px-4 py-10 md:py-14 min-h-[60vh]">
+    <h1 class="text-2xl md:text-3xl font-black text-steel-900 mb-2">جستجوی قطعات</h1>
+    <p class="text-steel-600 leading-7 mb-6">
+      کد فنی، نام قطعه یا نام برند را وارد کنید. پیشنهادها از همان اولین حرف نمایش داده می‌شوند.
+    </p>
+
+    <SearchBox id="page-search" tone="light" autofocus={true} class="mb-8" />
+
+    {/* نتایج Pagefind اینجا می‌نشیند. اگر Pagefind در دسترس نباشد این
+        بخش خالی می‌ماند و بخش «مسیرهای جایگزین» پایین همچنان کار می‌کند. */}
+    <div id="pagefind-results" class="min-h-[4rem]"></div>
+
+    {/* ---------------------------------------------------------------
+        مسیرهای جایگزین — همیشه در صفحه هست، حتی وقتی جستجو موفق است.
+        کاربری که نتیجه نمی‌گیرد نباید به بن‌بست بخورد؛ و کاربری که
+        نتیجه گرفته هم از دیدن ساختار کاتالوگ ضرر نمی‌کند.
+    --------------------------------------------------------------- */}
+    <section class="mt-10 pt-8 border-t border-steel-300" aria-labelledby="browse-heading">
+      <h2 id="browse-heading" class="text-lg font-black text-steel-900 mb-1">
+        یا از روی دسته‌بندی پیش بروید
+      </h2>
+      <p class="text-sm text-steel-600 leading-7 mb-5">
+        {ALL_CATEGORIES.length} دسته قطعه در {SILOS.length} گروه فنی.
+      </p>
+
+      <ul role="list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+        {
+          fallbackSilos.map((silo) => (
+            <li>
+              <a
+                href={siloPath(silo)}
+                class="flex items-center justify-between gap-3 py-2 border-b border-steel-100 text-sm text-steel-700 hover:text-accent-ink focus:outline-none focus:ring-2 focus:ring-accent rounded"
+              >
+                <span class="font-bold truncate">{silo.name}</span>
+                <span class="text-xs text-steel-600 tabular-nums shrink-0">
+                  {silo.categories.length} دسته
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
     <noscript>
-      <p class="text-gray-600 leading-8 text-center bg-gray-50 p-6 rounded-xl border border-gray-200">
-        برای استفاده از موتور جستجوی هوشمند، لطفاً جاوااسکریپت مرورگر خود را فعال کنید. <br/>
-        شما همچنین می‌توانید از <a href="/categories" class="text-crane-orange font-bold hover:underline">لیست دسته‌بندی‌ها</a> قطعه مورد نظر خود را بیابید.
+      <p class="text-steel-700 leading-8 bg-steel-50 p-5 rounded-lg border border-steel-300 mt-8">
+        جستجوی زنده به جاوااسکریپت نیاز دارد. از فهرست دسته‌بندی‌های بالا می‌توانید قطعه‌ی
+        موردنظر را پیدا کنید.
       </p>
     </noscript>
   </section>
 </Layout>
 
 <script>
-  async function initSearch() {
-    const el = document.getElementById('search');
-    if (!el) return;
+  // ⚠️ این مسیرها عمداً از قطعات جدا ساخته می‌شوند.
+  // یک رشته‌ی ثابت مثل '/pagefind/pagefind-ui.js' را Vite در زمان build
+  // به‌صورت استاتیک resolve می‌کند و چون فایل هنوز ساخته نشده، بیلد
+  // می‌شکند — همان باگی که این فایل برای رفعش بازنویسی شد. با ساختن
+  // مسیر در زمان اجرا، هیچ تحلیل استاتیکی نمی‌تواند آن را دنبال کند.
+  const PF_DIR = '/' + 'pagefind';
+  const PF_JS = PF_DIR + '/pagefind-ui.js';
+  const PF_CSS = PF_DIR + '/pagefind-ui.css';
+
+  function currentQuery(): string {
+    const p = new URLSearchParams(window.location.search);
+    // ابزار Part-Finder سه پارامتر pn/brand/cat می‌فرستد؛ اگر q نبود،
+    // آن‌ها به یک عبارت واحد ترکیب می‌شوند تا آن فرم به صفحه‌ی خالی نرسد.
+    return (
+      p.get('q') ||
+      ['pn', 'brand', 'cat']
+        .map((k) => (p.get(k) ?? '').trim())
+        .filter(Boolean)
+        .join(' ')
+    );
+  }
+
+  async function initPagefind() {
+    const host = document.getElementById('pagefind-results');
+    if (!host) return;
+
+    const q = currentQuery();
+    const input = document.getElementById('page-search') as HTMLInputElement | null;
+    if (q && input && !input.value) input.value = q;
+
     try {
-      // نکته‌ی رفع باگ بیلد (یافته‌شده هنگام اجرای واقعی `npm run build`):
-      // این مسیر عمداً در زمان build وجود ندارد — پکیج pagefind آن را در
-      // اسکریپت `postbuild` (بعد از خودِ `astro build`) داخل dist/pagefind/
-      // می‌سازد. بدون `@vite-ignore`، Vite/Rolldown این importِ رشته‌ای
-      // مطلق را در زمان build به‌صورت استاتیک resolve می‌کند و چون فایل
-      // هنوز نیست، کل بیلد با خطای «Module not found» شکست می‌خورد. با
-      // `@vite-ignore`، ایمپورت به مرورگر واگذار می‌شود و فقط در runtime
-      // (بعد از این‌که postbuild فایل را تولید کرده) اجرا می‌شود — همان
-      // الگوی رسمی مستندشده در راهنمای Pagefind + Astro.
-      // @ts-expect-error Pagefind is built dynamically
-      const { PagefindUI } = await import(/* @vite-ignore */ '/pagefind/pagefind-ui.js');
-      const params = new URLSearchParams(window.location.search);
+      // CSS با JS تزریق می‌شود تا در زمان build دنبال نشود.
+      if (!document.querySelector(`link[href="${PF_CSS}"]`)) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = PF_CSS;
+        document.head.appendChild(link);
+      }
+
+      const mod = await import(/* @vite-ignore */ PF_JS);
+      const PagefindUI = mod.PagefindUI;
+      if (!PagefindUI) throw new Error('PagefindUI export not found');
+
+      const mount = document.createElement('div');
+      host.appendChild(mount);
+
       new PagefindUI({
-        element: '#search',
+        element: mount,
         showSubResults: true,
         showImages: false,
+        // فهرست پیشنهاد بالای صفحه کار اتوکامپلیت را می‌کند؛ کادر جستجوی
+        // خود Pagefind اینجا اضافی و گیج‌کننده است.
         translations: {
-          placeholder: 'جستجوی قطعه، برند یا کد فنی...',
+          placeholder: 'جستجو در محصولات...',
           clear_search: 'پاک کردن',
           load_more: 'نمایش نتایج بیشتر',
-          search_label: 'جستجو در سایت',
-          zero_results: 'هیچ نتیجه‌ای برای [SEARCH_TERM] یافت نشد.',
-          many_results: '[COUNT] نتیجه برای [SEARCH_TERM] پیدا شد',
-          one_result: 'یک نتیجه برای [SEARCH_TERM] پیدا شد',
+          search_label: 'جستجو در محصولات',
+          zero_results: 'محصولی برای [SEARCH_TERM] پیدا نشد.',
+          many_results: '[COUNT] محصول برای [SEARCH_TERM]',
+          one_result: 'یک محصول برای [SEARCH_TERM]',
           searching: 'در حال جستجو...',
         },
       });
 
-      // ⚠️ رفع باگ: پیش‌تر فقط `q` خوانده می‌شد، در حالی که ابزار
-      // Part-Finder صفحه‌ی اصلی سه پارامتر `pn`، `brand` و `cat` می‌فرستاد.
-      // نتیجه: هر ارسال آن فرم به یک صفحه‌ی جستجوی خالی می‌رسید و کاربر
-      // فکر می‌کرد هیچ قطعه‌ای موجود نیست. حالا اگر `q` نبود، همان سه
-      // پارامتر به یک عبارت جستجوی واحد ترکیب می‌شوند.
-      const q =
-        params.get('q') ||
-        ['pn', 'brand', 'cat']
-          .map((key) => (params.get(key) ?? '').trim())
-          .filter(Boolean)
-          .join(' ');
-
       if (q) {
-        const input = el.querySelector<HTMLInputElement>('input[type="text"]');
-        if (input) {
-          input.value = q;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
+        const pfInput = mount.querySelector<HTMLInputElement>('input[type="text"]');
+        if (pfInput) {
+          pfInput.value = q;
+          pfInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
     } catch {
-      el.innerHTML = '<p class="text-gray-600 leading-8 text-center bg-red-50 p-6 rounded-xl border border-red-100">سیستم جستجو در حالت توسعه در دسترس نیست. <a class="text-crane-orange font-bold" href="/categories">مشاهده دسته‌بندی‌ها</a>.</p>';
+      // ⚠️ عمداً هیچ پیام خطایی نشان داده نمی‌شود.
+      //
+      // این حالت در دو وضعیت کاملاً عادی رخ می‌دهد: (۱) `npm run dev`، چون
+      // ایندکس Pagefind فقط در build ساخته می‌شود؛ (۲) بیلدی که هنوز
+      // محصولی ندارد. در هر دو، نمایش «سیستم جستجو در دسترس نیست» به
+      // بازدیدکننده می‌گوید سایت خراب است — در حالی که فهرست پیشنهاد و
+      // دسته‌بندی‌ها کاملاً کار می‌کنند.
+      host.innerHTML = '';
     }
   }
-  initSearch();
-</script>
 
-<link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
-<style is:global>
-  :root {
-    --pagefind-ui-primary: #0a192f;
-    --pagefind-ui-text: #0a192f;
-    --pagefind-ui-background: #ffffff;
-    --pagefind-ui-border: #e5e7eb;
-    --pagefind-ui-tag: #f8fafc;
-    --pagefind-ui-border-radius: 0.75rem;
-    /* نکته دیباگ: قبلاً به فونت تجاری 'IRANSansX' اشاره می‌کرد که هرگز در
-       پروژه وجود نداشت (۴۰۴ در بارگذاری فونت). سایت اکنون سراسر از
-       Vazirmatn (سلف‌هاست، متن‌باز) استفاده می‌کند — همان مقداری که در
-       src/styles/global.css به‌عنوان --font-sans تعریف شده. */
-    --pagefind-ui-font: 'Vazirmatn', sans-serif;
-  }
-  .pagefind-ui {
-    direction: rtl;
-    text-align: right;
-  }
-</style>
+  initPagefind();
+</script>
