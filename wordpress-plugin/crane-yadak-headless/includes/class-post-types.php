@@ -77,33 +77,6 @@ function cyh_register_post_types() {
 	);
 
 	// ---------------------------------------------------------------
-	// CPT: industry — معادل INDUSTRIES در src/data/content.ts
-	// ---------------------------------------------------------------
-	register_post_type(
-		'industry',
-		[
-			'labels'              => [
-				'name'          => 'صنایع تحت پوشش',
-				'singular_name' => 'صنعت',
-				'add_new_item'  => 'افزودن صنعت جدید',
-				'edit_item'     => 'ویرایش صنعت',
-			],
-			'public'               => true,
-			'publicly_queryable'   => false,
-			'show_ui'              => true,
-			'show_in_menu'         => true,
-			'menu_icon'            => 'dashicons-building',
-			'supports'             => [ 'title', 'editor' ],
-			'has_archive'          => false,
-			'rewrite'              => [ 'slug' => 'industries' ],
-			'show_in_rest'         => true,
-			'show_in_graphql'      => true,
-			'graphql_single_name'  => 'craneIndustry',
-			'graphql_plural_name'  => 'craneIndustries',
-		]
-	);
-
-	// ---------------------------------------------------------------
 	// CPT: datasheet — معادل DATASHEETS در src/data/content.ts
 	// ---------------------------------------------------------------
 	register_post_type(
@@ -224,3 +197,116 @@ function cyh_auto_calculate_datasheet_size( $post_id ) {
 	update_field( 'file_size_computed', $size_mb, $post_id );
 }
 add_action( 'acf/save_post', 'cyh_auto_calculate_datasheet_size', 20 );
+
+/**
+ * اجبار اسلاگ انگلیسی برای محصول، برند، صنعت و سند فنی.
+ *
+ * ⚠️ باگی که این تابع رفع می‌کند: مدیر محتوا عنوان فارسی می‌نویسد
+ * («کمربند جرثقیل پودم MT318») و وردپرس همان را به اسلاگ تبدیل می‌کند.
+ * نتیجه در فرانت‌اند:
+ *   /products/کمربند-جرثقیل-پودم-mt318
+ * که هنگام کپی‌شدن به این تبدیل می‌شود:
+ *   /products/%DA%A9%D9%85%D8%B1%D8%A8%D9%86%D8%AF-...
+ *
+ * چرا مهم است: خریدار صنعتی ایرانی لینک قطعه را در واتساپ و تلگرام برای
+ * مدیر خرید می‌فرستد. لینکی که به‌شکل رشته‌ی درهم‌ریخته‌ی درصددار دیده شود،
+ * ناسالم به نظر می‌رسد و کلیک نمی‌شود — دقیقاً روی حساس‌ترین مسیر تبدیل.
+ *
+ * تصمیم طراحی: به‌جای «ترانویسی» فارسی به لاتین (که نتیجه‌اش اسلاگ‌های
+ * زشت و غیرقابل‌پیش‌بینی است)، اسلاگ از داده‌ی ساختاریافته ساخته می‌شود:
+ *   محصول → «برند + کد فنی»  → podem-mt318
+ *   برند  → نام لاتین برند   → podem
+ * این هم خواناست، هم پایدار، هم برای جستجوی کد فنی معنا دارد.
+ *
+ * اسلاگ فقط یک‌بار هنگام ایجاد ساخته می‌شود. اگر مدیر محتوا بعداً آن را
+ * دستی تغییر دهد، دست‌نخورده می‌ماند — چون تغییر اسلاگِ منتشرشده یعنی از
+ * دست رفتن رتبه، و کد نباید این تصمیم را به‌جای انسان بگیرد.
+ */
+function cyh_force_latin_slug( $slug, $post_ID, $post_status, $post_type ) {
+	$targets = [ 'product', 'brand', 'industry', 'datasheet' ];
+	if ( ! in_array( $post_type, $targets, true ) ) {
+		return $slug;
+	}
+
+	// اسلاگ فعلی اگر کاراکتر غیر ASCII ندارد، یعنی یا دستی تنظیم شده یا
+	// از قبل درست است — دست نمی‌زنیم.
+	if ( $slug && ! preg_match( '/[^\x20-\x7E]/', urldecode( $slug ) ) ) {
+		return $slug;
+	}
+
+	$parts = [];
+
+	if ( 'product' === $post_type && function_exists( 'get_field' ) ) {
+		$brand = get_field( 'brand', $post_ID );
+		if ( is_array( $brand ) && ! empty( $brand[0] ) ) {
+			$brand_id = is_object( $brand[0] ) ? $brand[0]->ID : (int) $brand[0];
+			$brand_en = get_field( 'name_en', $brand_id );
+			if ( $brand_en ) {
+				$parts[] = $brand_en;
+			}
+		}
+
+		$sku = get_field( 'sku', $post_ID );
+		if ( $sku ) {
+			$parts[] = $sku;
+		}
+	}
+
+	if ( 'brand' === $post_type && function_exists( 'get_field' ) ) {
+		$name_en = get_field( 'name_en', $post_ID );
+		if ( $name_en ) {
+			$parts[] = $name_en;
+		}
+	}
+
+	$candidate = sanitize_title( implode( '-', $parts ) );
+
+	// اگر هیچ داده‌ی لاتینی نبود (مثلاً محصول هنوز کد فنی ندارد)، به یک
+	// شناسه‌ی پایدار برمی‌گردیم — بهتر از اسلاگ فارسی درصددار.
+	if ( '' === $candidate ) {
+		$candidate = $post_type . '-' . $post_ID;
+	}
+
+	return $candidate;
+}
+add_filter( 'wp_unique_post_slug', 'cyh_force_latin_slug', 10, 4 );
+
+/**
+ * همین قاعده برای ترم‌های دسته‌بندی: اسلاگ باید با اسلاگ انگلیسی داخل
+ * `src/data/taxonomy.ts` مو به مو یکی باشد، وگرنه محصول در هیچ صفحه‌ی
+ * دسته‌ای دیده نمی‌شود. اگر مدیر محتوا اسلاگ را خالی بگذارد، وردپرس نام
+ * فارسی را می‌گذارد و این تطابق بی‌سروصدا می‌شکند.
+ */
+function cyh_warn_on_non_latin_term_slug( $term_id, $tt_id, $taxonomy ) {
+	if ( 'crane_category' !== $taxonomy ) {
+		return;
+	}
+
+	$term = get_term( $term_id, $taxonomy );
+	if ( ! $term || is_wp_error( $term ) ) {
+		return;
+	}
+
+	if ( preg_match( '/[^\x20-\x7E]/', urldecode( $term->slug ) ) ) {
+		set_transient(
+			'cyh_slug_warning',
+			sprintf(
+				'اسلاگ دسته‌ی «%s» فارسی است. اسلاگ باید انگلیسی و دقیقاً برابر مقدار تعریف‌شده در فرانت‌اند باشد (مثلاً rope-guide)، وگرنه محصولات این دسته در سایت نمایش داده نمی‌شوند.',
+				$term->name
+			),
+			120
+		);
+	}
+}
+add_action( 'created_term', 'cyh_warn_on_non_latin_term_slug', 10, 3 );
+add_action( 'edited_term', 'cyh_warn_on_non_latin_term_slug', 10, 3 );
+
+function cyh_slug_warning_notice() {
+	$msg = get_transient( 'cyh_slug_warning' );
+	if ( ! $msg ) {
+		return;
+	}
+	delete_transient( 'cyh_slug_warning' );
+	printf( '<div class="notice notice-warning is-dismissible"><p><strong>هشدار اسلاگ:</strong> %s</p></div>', esc_html( $msg ) );
+}
+add_action( 'admin_notices', 'cyh_slug_warning_notice' );

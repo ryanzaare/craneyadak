@@ -47,6 +47,8 @@ const legacyCategoryRedirects = {
   // می‌شود و صفحه‌ی اختصاصی خودش را نگه می‌دارد (زیر سیلوی برق‌رسانی).
   // اسلاگ یکسان مانده و فقط یک سطح تودرتو شده است.
   '/categories/current-collector': '/categories/power-supply/current-collector',
+  // بخش صنایع حذف شد — آدرس‌های قدیمی نباید ۴۰۴ بدهند.
+  '/industries': '/categories',
 };
 
 // https://astro.build/config

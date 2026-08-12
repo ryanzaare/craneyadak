@@ -15,7 +15,7 @@
 //
 // هر عدد اینجا از داده‌ی واقعی تاکسونومی می‌آید، نه از یک ادعای دستی.
 // ---------------------------------------------------------------------------
-import { ALL_CATEGORIES, BRANDS, INDUSTRIES } from '../data/taxonomy';
+import { ALL_CATEGORIES, BRANDS, SILOS } from '../data/taxonomy';
 
 const facts = [
   {
@@ -31,10 +31,10 @@ const facts = [
     icon: 'M4 6h16M4 12h16M4 18h10',
   },
   {
-    value: `${INDUSTRIES.length}`,
-    label: 'صنعت هدف',
-    detail: 'هر کدام با الزام فنی مخصوص خودش',
-    icon: 'M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6',
+    value: `${SILOS.length}`,
+    label: 'گروه فنی',
+    detail: 'کاتالوگ بر اساس مکانیزم، نه حروف الفبا',
+    icon: 'M4 6h16M4 12h16M4 18h10',
   },
 ];
 
