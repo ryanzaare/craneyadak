@@ -102,6 +102,13 @@ export interface CraneProduct {
 
   /** تاریخ آخرین به‌روزرسانی محتوا در وردپرس (ISO). */
   modified: string | null;
+
+  /**
+   * داده‌ی نمایشی برای کار طراحی — محصول واقعی نیست.
+   * این رکوردها روی صفحه نشان‌دار می‌شوند، `noindex` می‌گیرند و از نقشه‌ی
+   * سایت حذف می‌شوند تا هرگز به‌عنوان موجودی واقعی ایندکس نشوند.
+   */
+  isDemo: boolean;
 }
 
 /** نتیجه‌ی محاسبه‌ی قیمت — تنها منبع مجاز برای نمایش قیمت و ساخت اسکیما. */
@@ -356,6 +363,7 @@ interface RawProductNode {
   excerpt: string | null;
   content: string | null;
   modified: string | null;
+  isDemo?: unknown;
   craneCategories?: { nodes?: { slug: string | null }[] } | null;
   productFields?: {
     sku: unknown;
@@ -444,6 +452,7 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
       .map((r) => ({ label: r.specLabel.trim(), value: r.specValue.trim() })),
 
     modified: cleanText(node.modified),
+    isDemo: node.isDemo === true || node.isDemo === 1 || node.isDemo === '1',
   };
 }
 
@@ -457,6 +466,7 @@ const ALL_PRODUCTS_QUERY = `
         excerpt
         content
         modified
+        isDemo
         craneCategories { nodes { slug } }
         productFields {
           sku
@@ -606,6 +616,15 @@ function reportCatalogHealth(products: CraneProduct[]): void {
   const cartWithoutPrice = products.filter((p) => p.buyMode === 'cart' && p.price === null);
 
   console.info(`[wp] ${products.length} محصول منتشرشده واکشی شد.`);
+
+  const demo = products.filter((p) => p.isDemo);
+  if (demo.length > 0) {
+    console.warn(
+      `[wp] ⚠ ${demo.length} محصول «نمایشی» در کاتالوگ هست (کد فنی با پیشوند DEMO-).\n` +
+        `      این‌ها فقط برای کار طراحی‌اند: روی صفحه نشان‌دار، noindex و خارج از sitemap.\n` +
+        `      پیش از انتشار نهایی سایت، از پنل وردپرس «حذف کامل داده‌ی نمایشی» را بزنید.`
+    );
+  }
   if (noCategory) console.warn(`[wp] ⚠ ${noCategory} محصول بدون دسته‌بندی — در هیچ صفحه‌ی دسته دیده نمی‌شوند.`);
   if (noSku) console.warn(`[wp] ⚠ ${noSku} محصول بدون کد فنی — جستجوی Part Number آن‌ها را پیدا نمی‌کند.`);
   if (noImage) console.warn(`[wp] ⚠ ${noImage} محصول بدون تصویر.`);

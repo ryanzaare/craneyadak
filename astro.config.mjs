@@ -101,7 +101,11 @@ export default defineConfig({
       // آن‌ها از sitemap جلوی هشدار Search Console («Submitted URL marked
       // noindex») را می‌گیرد. صفحه‌ی /datasheets هم تا انتشار اولین PDF
       // واقعی noindex است و به همین دلیل موقتاً از sitemap حذف می‌شود.
+      // صفحات محصولِ نمایشی هرگز نباید در نقشه‌ی سایت بیایند. نام فایل
+      // آن‌ها از اسلاگ ساخته می‌شود و اسلاگ فیکسچرها با `demo-` شروع
+      // می‌شود (کد فنی DEMO- → اسلاگ demo-...).
       filter: (page) =>
+        !page.includes('/products/demo-') &&
         !page.includes('/search') &&
         !page.includes('/thank-you') &&
         (hasPublishedDatasheets || !page.replace(/\/$/, '').endsWith('/datasheets')),

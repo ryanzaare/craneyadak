@@ -38,7 +38,13 @@ const image = product.images[0] ?? null;
       class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
     />
 
-    {price.onSale && price.discountPercent !== null && (
+    {product.isDemo && (
+      <span class="absolute top-3 left-3 z-10 bg-amber-400 text-amber-950 text-[11px] font-black px-2 py-1 rounded">
+        نمونه‌ی نمایشی
+      </span>
+    )}
+
+    {!product.isDemo && price.onSale && price.discountPercent !== null && (
       <span class="absolute top-3 left-3 bg-rose-600 text-white text-xs font-black px-2.5 py-1.5 rounded-lg shadow-sm tabular-nums">
         ٪{price.discountPercent} تخفیف
       </span>
