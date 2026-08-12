@@ -109,22 +109,28 @@ const footerSilos = SILOS.slice(0, 6);
         حذف شد: تبلیغ روش ساخت سایت به خریدار قطعه، هم بی‌ربط است و هم
         آماتوری به نظر می‌رسد. هیچ تأمین‌کننده‌ی جدی‌ای این را نمی‌نویسد.
 
-        نشان اینماد عمداً در گوشه‌ی چپ-پایین است: در صفحات RTL این گوشه
-        همان جایی است که کاربر ایرانی برای نشان‌های اعتماد نگاه می‌کند. */}
-    <div class="border-t border-white/10 mt-10 pt-6 flex flex-col-reverse md:flex-row justify-between items-center gap-5 text-xs text-gray-400">
-      <div class="flex items-center gap-3">
+        ⚠️ ترتیب DOM اینجا عمدی و خلاف شهود است.
+        نشان اینماد باید در گوشه‌ی *چپ*-پایین باشد. در یک ظرف flex با
+        `dir="rtl"` و `justify-between`، اولین فرزند سمت *راست* می‌نشیند و
+        آخرین فرزند سمت چپ. نسخه‌ی اول این بلوک، اینماد را اول گذاشته بود
+        و در نتیجه دقیقاً در گوشه‌ی مخالف خواسته رندر می‌شد.
+        پس: کپی‌رایت اول (راست) و اینماد آخر (چپ). */}
+    <div class="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center gap-5 text-xs text-gray-400">
+      <p class="text-center md:text-right order-2 md:order-none">
+        کپی‌رایت © {year} {SITE.name}. تمامی حقوق محفوظ است.
+      </p>
+
+      <div class="flex items-center gap-3 order-1 md:order-none">
         <div
           class="w-[68px] h-[82px] shrink-0 rounded border-2 border-dashed border-white/20 flex items-center justify-center text-center p-1"
           aria-hidden="true"
         >
           <span class="text-[9px] leading-3 text-gray-400 font-bold">محل درج<br />کد اینماد</span>
         </div>
-        <p class="leading-6 max-w-[16rem]">
+        <p class="leading-6 max-w-[16rem] text-right">
           نماد اعتماد الکترونیکی پس از تایید دامنه در همین محل درج می‌شود.
         </p>
       </div>
-
-      <p class="text-center md:text-left">کپی‌رایت © {year} {SITE.name}. تمامی حقوق محفوظ است.</p>
     </div>
   </div>
 </footer>

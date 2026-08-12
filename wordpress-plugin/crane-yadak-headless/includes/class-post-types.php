@@ -310,3 +310,159 @@ function cyh_slug_warning_notice() {
 	printf( '<div class="notice notice-warning is-dismissible"><p><strong>هشدار اسلاگ:</strong> %s</p></div>', esc_html( $msg ) );
 }
 add_action( 'admin_notices', 'cyh_slug_warning_notice' );
+
+/**
+ * ---------------------------------------------------------------------------
+ * ترمیم اسلاگ *بعد از* ذخیره‌ی فیلدهای ACF.
+ *
+ * باگی که این تابع رفع می‌کند (نیمه‌ی گمشده‌ی cyh_force_latin_slug):
+ *
+ * فیلتر `wp_unique_post_slug` هنگام `wp_insert_post` اجرا می‌شود. اما ACF
+ * فیلدها را روی `acf/save_post` ذخیره می‌کند که *بعد از* آن اجرا می‌شود.
+ * یعنی در همان لحظه‌ای که وردپرس اسلاگ را می‌سازد، هنوز هیچ کد فنی و
+ * برندی در دیتابیس نیست؛ فیلتر چیزی پیدا نمی‌کند و وردپرس به عنوان فارسی
+ * برمی‌گردد:
+ *     /products/کمربند-جرثقیل-پودم-mt318
+ *
+ * این دقیقاً همان باگ ترتیب اجرا بود که در سیدر هم دیده شد. آن‌جا با
+ * نوشتن صریح `post_name` حل شد، اما محصولی که مدیر سایت دستی از پنل
+ * وردپرس می‌سازد از مسیر سیدر عبور نمی‌کند و همچنان اسلاگ فارسی می‌گرفت.
+ *
+ * راه‌حل: بعد از این‌که ACF کارش تمام شد، اگر اسلاگ هنوز غیرلاتین است،
+ * همین‌جا اصلاحش می‌کنیم — جایی که کد فنی و برند قطعاً در دسترس‌اند.
+ *
+ * ⚠️ چرا `$wpdb->update` به‌جای `wp_update_post`: فراخوانی
+ * `wp_update_post` داخل هوک ذخیره، دوباره `save_post` را شلیک می‌کند و
+ * حلقه‌ی بی‌نهایت می‌سازد. نوشتن مستقیم + پاک‌کردن کش، امن و قطعی است.
+ * ---------------------------------------------------------------------------
+ */
+function cyh_repair_latin_slug_after_acf( $post_id ) {
+	// ACF برای فرم‌های غیرپستی (مثل صفحه‌ی تنظیمات) رشته می‌فرستد.
+	if ( ! is_numeric( $post_id ) ) {
+		return;
+	}
+
+	$post_id = (int) $post_id;
+	$post    = get_post( $post_id );
+	if ( ! $post ) {
+		return;
+	}
+
+	$targets = [ 'product', 'brand', 'industry', 'datasheet' ];
+	if ( ! in_array( $post->post_type, $targets, true ) ) {
+		return;
+	}
+
+	// اسلاگ اگر از قبل کاملاً ASCII است، دست نمی‌زنیم — ممکن است مدیر
+	// سایت عمداً آن را دستی تنظیم کرده باشد.
+	$current = urldecode( (string) $post->post_name );
+	if ( '' !== $current && ! preg_match( '/[^\x20-\x7E]/', $current ) ) {
+		return;
+	}
+
+	// همان منطق تولید اسلاگ که فیلتر استفاده می‌کند — حالا با داده‌ی موجود.
+	$candidate = cyh_force_latin_slug( '', $post_id, $post->post_status, $post->post_type );
+	if ( '' === $candidate ) {
+		return;
+	}
+
+	// یکتاسازی نسبت به بقیه‌ی پست‌ها.
+	$unique = wp_unique_post_slug( $candidate, $post_id, $post->post_status, $post->post_type, $post->post_parent );
+	if ( $unique === $post->post_name ) {
+		return;
+	}
+
+	global $wpdb;
+	$wpdb->update( $wpdb->posts, [ 'post_name' => $unique ], [ 'ID' => $post_id ] );
+	clean_post_cache( $post_id );
+}
+add_action( 'acf/save_post', 'cyh_repair_latin_slug_after_acf', 20 );
+
+/**
+ * ترمیم گروهی — برای محصولاتی که *پیش از* این اصلاح ساخته شده‌اند.
+ *
+ * بدون این، مدیر سایت باید تک‌تک محصولات موجود را باز کند و دوباره ذخیره
+ * کند تا اسلاگشان درست شود. برای کاتالوگی که قرار است ده‌ها قلم داشته
+ * باشد، این یعنی خطای انسانی حتمی.
+ */
+function cyh_repair_all_latin_slugs() {
+	$posts = get_posts(
+		[
+			'post_type'      => [ 'product', 'brand', 'industry', 'datasheet' ],
+			'post_status'    => [ 'publish', 'draft', 'pending', 'private' ],
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		]
+	);
+
+	$fixed = 0;
+	foreach ( $posts as $id ) {
+		$before = get_post_field( 'post_name', $id );
+		cyh_repair_latin_slug_after_acf( $id );
+		if ( get_post_field( 'post_name', $id ) !== $before ) {
+			$fixed++;
+		}
+	}
+
+	return $fixed;
+}
+
+/** دکمه‌ی «اصلاح آدرس‌های فارسی» روی فهرست محصولات. */
+function cyh_handle_repair_slugs() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'دسترسی مجاز نیست.' );
+	}
+	check_admin_referer( 'cyh_repair_slugs' );
+
+	$fixed = cyh_repair_all_latin_slugs();
+
+	wp_safe_redirect(
+		add_query_arg(
+			[ 'post_type' => 'product', 'cyh_slugs_fixed' => $fixed ],
+			admin_url( 'edit.php' )
+		)
+	);
+	exit;
+}
+add_action( 'admin_post_cyh_repair_slugs', 'cyh_handle_repair_slugs' );
+
+/** اعلان + دکمه‌ی ترمیم اسلاگ. */
+function cyh_slug_repair_notice() {
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	if ( ! $screen || 'edit-product' !== $screen->id ) {
+		return;
+	}
+
+	if ( isset( $_GET['cyh_slugs_fixed'] ) ) {
+		printf(
+			'<div class="notice notice-success is-dismissible"><p><strong>%d آدرس اصلاح شد.</strong> آدرس‌ها اکنون لاتین و بر اساس برند و کد فنی هستند.</p></div>',
+			(int) $_GET['cyh_slugs_fixed']
+		);
+		return;
+	}
+
+	// فقط وقتی واقعاً آدرس فارسی وجود دارد هشدار می‌دهیم.
+	global $wpdb;
+	$bad = (int) $wpdb->get_var(
+		"SELECT COUNT(*) FROM {$wpdb->posts}
+		 WHERE post_type IN ('product','brand','industry','datasheet')
+		   AND post_status NOT IN ('trash','auto-draft')
+		   AND post_name REGEXP '[^ -~]'"
+	);
+
+	if ( $bad < 1 ) {
+		return;
+	}
+
+	$url = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_repair_slugs' ), 'cyh_repair_slugs' );
+
+	printf(
+		'<div class="notice notice-warning"><p><strong>⚠️ %d آدرس (URL) فارسی پیدا شد.</strong> '
+		. 'آدرس فارسی در اشتراک‌گذاری به کدهای درصددار تبدیل می‌شود (مثلاً %%DA%%A9...) و برای سئو و ارسال لینک به مشتری مناسب نیست. '
+		. 'با یک کلیک همه بر اساس برند و کد فنی به آدرس لاتین تبدیل می‌شوند.</p>'
+		. '<p><a class="button button-primary" href="%s">اصلاح آدرس‌ها</a></p></div>',
+		$bad,
+		esc_url( $url )
+	);
+}
+add_action( 'admin_notices', 'cyh_slug_repair_notice' );

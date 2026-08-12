@@ -1,0 +1,65 @@
+---
+// src/components/AuthorityBlock.astro
+// ---------------------------------------------------------------------------
+// بلوک اقتدار دامنه — پاسخ به «آیا اصلاً به چنین متنی نیاز داریم؟»
+//
+// پاسخ کوتاه: بله، اما نه به شکل رایج آن.
+//
+// دلیل سئویی: صفحه‌ی اصلی ما تقریباً تماماً ناوبری است — عنوان، جستجو و
+// فهرست لینک. از دید گوگل این «محتوای نازک» است: هیچ متن معناداری وجود
+// ندارد که نشان دهد این دامنه در چه حوزه‌ای تخصص دارد. صفحه‌ی اصلی
+// معمولاً قوی‌ترین صفحه‌ی هر دامنه است و بدون متن، آن قدرت به هیچ موضوع
+// مشخصی گره نمی‌خورد. رقیبی که کامل بررسی شد (gholizadehcranes.com) دقیقاً
+// از همین راه رتبه گرفته: متن فنی طولانی.
+//
+// اما ریسک تجربه‌ی کاربری هم واقعی است — مهندس نگهداری از «ما بهترین
+// هستیم» متنفر است و کل بخش را رد می‌کند. سه قید این تضاد را حل می‌کند:
+//
+//   ۱) جای‌گذاری: پایین صفحه، بعد از محصولات و دسته‌ها. کسی که آمده قطعه
+//      بخرد هرگز به آن نمی‌رسد؛ خزنده حتماً می‌رسد.
+//   ۲) لحن: فنی و قابل راستی‌آزمایی. هیچ صفت تبلیغاتی و هیچ عدد
+//      اثبات‌نشده‌ای اینجا نیست — ادعاهای عددی جای‌گذارند و در
+//      src/data/trust.ts زندگی می‌کنند، جدا و برچسب‌دار.
+//   ۳) چگالی: دو ستون، پاراگراف کوتاه، به‌علاوه فهرست قابل اسکن — نه یک
+//      دیوار متن.
+// ---------------------------------------------------------------------------
+import { AUTHORITY_BLOCK } from '../data/discovery';
+
+interface Props {
+  class?: string;
+}
+
+const { class: className = '' } = Astro.props;
+const { heading, paragraphs, highlights } = AUTHORITY_BLOCK;
+---
+
+<section class={`bg-steel-50 border-t border-steel-300 px-4 py-10 ${className}`} aria-labelledby="authority-heading">
+  <div class="max-w-7xl mx-auto">
+    <h2 id="authority-heading" class="text-xl md:text-2xl font-black text-steel-900 leading-9 mb-6 pb-4 border-b border-steel-300">
+      {heading}
+    </h2>
+
+    <div class="grid lg:grid-cols-[minmax(0,1fr)_18rem] gap-8 lg:gap-12 items-start">
+      {/* متن در دو ستون روی دسکتاپ: طول خط کوتاه‌تر = خواناتر. یک
+          پاراگراف تمام‌عرض در ۱۲۸۰ پیکسل عملاً خوانده نمی‌شود. */}
+      <div class="min-w-0 md:columns-2 md:gap-8 text-steel-700 leading-8 text-right">
+        {
+          paragraphs.map((text) => (
+            <p class="mb-4 break-inside-avoid text-[15px]">{text}</p>
+          ))
+        }
+      </div>
+
+      <dl class="bg-white border border-steel-300 rounded-lg divide-y divide-steel-100 shrink-0">
+        {
+          highlights.map((item) => (
+            <div class="px-4 py-3">
+              <dt class="text-xs font-bold text-steel-600 mb-1">{item.label}</dt>
+              <dd class="text-sm font-black text-steel-900 leading-6">{item.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </div>
+  </div>
+</section>

@@ -41,7 +41,13 @@ const navLinks = [
 >
   <div class="w-full max-w-7xl mx-auto flex justify-between items-center px-4 md:px-8">
     <a href="/" class="flex items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label={`صفحه اصلی ${SITE.name}`}>
-      <span class="flex flex-col items-end leading-tight">
+      {/* چینش راست‌به‌چپ: `items-start` به‌جای `items-end`.
+          در ظرف flex عمودی، محور متقاطع همان محور افقی است و با dir="rtl"
+          مقدار `start` یعنی سمت راست. نسخه‌ی قبل `items-end` بود که در
+          RTL به لبه‌ی چپ نگاشت می‌شود — یعنی نام برند و شعار زیر آن روی
+          لبه‌ی اشتباه تراز می‌شدند. `text-right` هم صریح اضافه شد تا اگر
+          روزی شعار در نمایشگر باریک به دو خط شکست، خط دوم هم درست بماند. */}
+      <span class="flex flex-col items-start text-right leading-tight">
         <span class="text-2xl md:text-3xl font-black text-crane-navy tracking-tight">{SITE.name}</span>
         <span class="text-[10px] md:text-xs font-bold text-gray-600">{SITE.tagline}</span>
       </span>

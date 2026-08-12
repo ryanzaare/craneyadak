@@ -28,6 +28,9 @@ import PartFinder from '../components/PartFinder.astro';
 import SearchBox from '../components/SearchBox.astro';
 import AuthorityStrip from '../components/AuthorityStrip.astro';
 import MetricsStrip from '../components/MetricsStrip.astro';
+import QuickOrder from '../components/QuickOrder.astro';
+import HighWearParts from '../components/HighWearParts.astro';
+import AuthorityBlock from '../components/AuthorityBlock.astro';
 import ProductCard from '../components/ProductCard.astro';
 import { SITE } from '../data/site';
 import { ADVANTAGES as advantages, FAQS as faqs } from '../data/content';
@@ -228,6 +231,11 @@ const jsonLd = {
       می‌گیرد، هرگز آن را نمی‌بیند. */}
   <MetricsStrip />
 
+  {/* سفارش سریع + توقف اضطراری — بالای صفحه.
+      این دو حالتِ خریدار صنعتی‌اند که بیشترین ارزش و کمترین تحمل اصطکاک
+      را دارند: خرید برنامه‌ریزی‌شده با فهرست کد، و خرابی اضطراری. */}
+  <QuickOrder />
+
   {/* ============================ PART FINDER ============================ */}
   <PartFinder />
 
@@ -282,6 +290,8 @@ const jsonLd = {
   )}
 
   {/* ========================= گروه‌های قطعات (سیلو) ========================= */}
+  <HighWearParts />
+
   {/* ====================== فهرست کامل دسته‌ها ======================
       قبلاً این بخش همان هفت گروه فنی را تکرار می‌کرد که حالا بالای صفحه
       هستند. تکرار هفت لینک یکسان در یک صفحه، هم برای کاربر بی‌فایده است و
@@ -484,6 +494,8 @@ const jsonLd = {
   </section>
 
   {/* ================================ FAQ ================================ */}
+  <AuthorityBlock />
+
   <section class="bg-white px-4 py-10" aria-labelledby="faq-heading">
     <div class="max-w-4xl mx-auto">
       <h2 id="faq-heading" class="text-2xl md:text-3xl font-black text-crane-navy mb-10 text-center">پرسش‌های متداول فنی</h2>

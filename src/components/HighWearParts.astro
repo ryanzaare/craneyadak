@@ -1,0 +1,101 @@
+---
+// src/components/HighWearParts.astro
+// ---------------------------------------------------------------------------
+// «قطعات مصرفی و پرتعویض» — جایگزین صادقانه‌ی بخش «پرفروش‌ترین‌ها».
+//
+// دلیل کامل این تصمیم در src/data/discovery.ts نوشته شده. خلاصه: هیچ
+// داده‌ی فروشی وجود ندارد، پس «پرفروش‌ترین» یک ادعای آماری بی‌پشتوانه
+// می‌شد. اما «قطعه‌ای که ذاتاً ساییده می‌شود» یک واقعیت مهندسی است، روی
+// هر کارت دلیلش نوشته شده، و برای مدیر نگهداری مفیدتر هم هست: این دقیقاً
+// فهرست چیزهایی است که باید در انبار داشته باشد.
+//
+// اگر اسلاگی در تاکسونومی پیدا نشود، بی‌سروصدا حذف نمی‌شود — در زمان
+// build هشدار می‌دهد. کارت شکسته بدتر از کارت غایب است.
+// ---------------------------------------------------------------------------
+import { HIGH_WEAR_PARTS } from '../data/discovery';
+import { findCategory, categoryPath } from '../data/taxonomy';
+
+interface Props {
+  class?: string;
+}
+
+const { class: className = '' } = Astro.props;
+
+const missing: string[] = [];
+const items = HIGH_WEAR_PARTS.map((entry) => {
+  const category = findCategory(entry.categorySlug);
+  if (!category) {
+    missing.push(entry.categorySlug);
+    return null;
+  }
+  return { category, reason: entry.reason };
+}).filter((x): x is { category: NonNullable<ReturnType<typeof findCategory>>; reason: string } =>
+  Boolean(x)
+);
+
+if (missing.length > 0) {
+  console.warn(
+    `\n⚠️  [HighWearParts] ${missing.length} اسلاگ دسته در تاکسونومی پیدا نشد و از صفحه‌ی اصلی حذف شد:\n` +
+      missing.map((s) => `    • ${s}`).join('\n') +
+      `\n  اسلاگ‌ها را در src/data/discovery.ts با src/data/taxonomy.ts هم‌خوان کنید.\n`
+  );
+}
+---
+
+{
+  items.length > 0 && (
+    <section class={`bg-white px-4 py-10 border-b border-steel-100 ${className}`} aria-labelledby="wear-heading">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-6 border-b border-steel-300 pb-4">
+          <div class="min-w-0">
+            <h2 id="wear-heading" class="text-2xl md:text-3xl font-black text-steel-900 mb-2">
+              قطعات مصرفی و پرتعویض
+            </h2>
+            <p class="text-steel-600 leading-7 max-w-3xl">
+              قطعاتی که بر اساس سایش، حرارت یا خستگی مکانیکی عمر محدود دارند و در برنامه‌ی
+              نگهداری پیشگیرانه دوره‌ای تعویض می‌شوند — همان اقلامی که بهتر است همیشه در انبار
+              موجود باشند.
+            </p>
+          </div>
+          <a
+            href="/categories"
+            class="text-sm font-bold text-accent-ink hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded shrink-0"
+          >
+            همه‌ی دسته‌ها ←
+          </a>
+        </div>
+
+        <ul role="list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {items.map(({ category, reason }) => (
+            <li>
+              <a
+                href={categoryPath(category)}
+                class="group h-full flex flex-col bg-steel-50 border border-steel-300 rounded-lg p-4 hover:border-accent hover:bg-white transition-colors focus:outline-none focus:ring-4 focus:ring-accent/30"
+              >
+                <span class="flex items-start gap-3 mb-2">
+                  <span
+                    class="w-9 h-9 shrink-0 rounded-md bg-white border border-steel-300 text-accent-ink group-hover:bg-accent group-hover:text-white group-hover:border-accent transition-colors flex items-center justify-center"
+                    aria-hidden="true"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d={category.icon} />
+                    </svg>
+                  </span>
+                  <span class="font-black text-steel-900 text-sm leading-6 group-hover:text-accent-ink transition-colors">
+                    {category.name}
+                  </span>
+                </span>
+
+                {/* دلیل فنی — همان چیزی که این ادعا را قابل ارزیابی می‌کند
+                    و از یک برچسب تبلیغاتی جدا. */}
+                <span class="text-xs text-steel-600 leading-6 mt-auto pt-2 border-t border-steel-300 group-hover:border-accent/30 transition-colors">
+                  {reason}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )
+}

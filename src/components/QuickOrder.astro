@@ -1,0 +1,130 @@
+---
+// src/components/QuickOrder.astro
+// ---------------------------------------------------------------------------
+// سفارش سریع با فهرست کد فنی.
+//
+// چرا این مهم‌ترین بخش گم‌شده‌ی صفحه‌ی اصلی است:
+//
+// مک‌مستر-کار و گرینجر هر دو یک «Quick Order» برجسته دارند و دلیلش رفتار
+// واقعی خریدار صنعتی است. مدیر نگهداری با یک قطعه سراغ تأمین‌کننده
+// نمی‌آید؛ با فهرستی از برنامه‌ی تعمیرات اساسی یا گزارش بازرسی می‌آید —
+// مثلاً هشت قلم برای توقف برنامه‌ریزی‌شده‌ی هفته‌ی بعد. اگر مجبور باشد
+// هشت بار جستجو کند، هشت صفحه باز کند و هشت بار فرم پر کند، یا نیمه‌کاره
+// رها می‌کند یا کل فهرست را در واتساپ برای رقیب می‌فرستد.
+//
+// این بخش همان فهرست را در یک مرحله می‌پذیرد. سایت استاتیک است و سبد
+// خرید سمت سرور ندارد، اما نیازی هم نیست: خروجی یک استعلام ساختاریافته
+// است — که در فروش B2B صنعتی به‌هرحال شکل واقعی معامله است، نه پرداخت
+// آنلاین.
+//
+// بدون جاوااسکریپت هم کار می‌کند: فرم مستقیم به صفحه‌ی تماس ارسال می‌شود.
+// ---------------------------------------------------------------------------
+import { SITE } from '../data/site';
+
+interface Props {
+  class?: string;
+}
+
+const { class: className = '' } = Astro.props;
+const waDigits = SITE.whatsapp.replace(/[^0-9]/g, '');
+---
+
+<section
+  class={`bg-steel-900 border-y-4 border-accent ${className}`}
+  aria-labelledby="quick-order-heading"
+>
+  <div class="max-w-7xl mx-auto px-4 py-10 grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-8 lg:gap-12 items-start">
+    <div class="min-w-0">
+      <p class="text-xs font-black tracking-wider text-accent mb-2">سفارش سریع</p>
+      <h2 id="quick-order-heading" class="text-2xl md:text-3xl font-black text-white leading-10 mb-3">
+        فهرست کدهای فنی را یک‌جا بفرستید
+      </h2>
+      <p class="text-steel-300 leading-8 mb-6 max-w-2xl">
+        اگر فهرست قطعات توقف برنامه‌ریزی‌شده یا گزارش بازرسی دارید، همه‌ی کدها را در یک کادر
+        وارد کنید. سازگاری هر قلم بررسی و یک پیش‌فاکتور واحد صادر می‌شود — نیازی به جستجوی
+        جداگانه‌ی هر قطعه نیست.
+      </p>
+
+      <form action="/contact" method="GET" class="space-y-3">
+        <div>
+          <label for="quick-order-list" class="block text-sm font-bold text-white mb-2">
+            کدهای فنی — هر کد در یک خط
+          </label>
+          <textarea
+            id="quick-order-list"
+            name="parts"
+            rows="5"
+            dir="ltr"
+            placeholder={'MT318\nDEMAG-1234\n...'}
+            class="w-full bg-white text-steel-900 rounded-lg p-3 text-sm font-mono leading-7 placeholder-steel-600 focus:outline-none focus:ring-4 focus:ring-accent/60 resize-y"
+          ></textarea>
+          <p class="text-xs text-steel-300 mt-2 leading-6">
+            کد را نمی‌دانید؟ عکس پلاک دستگاه یا خودِ قطعه‌ی فرسوده هم کافی است.
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            type="submit"
+            class="bg-accent text-white px-7 py-3.5 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]"
+          >
+            ارسال فهرست برای استعلام
+          </button>
+          <a
+            href={`https://wa.me/${waDigits}`}
+            rel="noopener noreferrer"
+            target="_blank"
+            class="inline-flex items-center justify-center gap-2 bg-white/[0.07] border border-white/20 text-white px-6 py-3.5 rounded-md font-bold hover:bg-white/15 transition-colors focus:outline-none focus:ring-4 focus:ring-white/30 min-h-[48px]"
+          >
+            <svg class="w-5 h-5 shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.4"
+              ></path>
+            </svg>
+            ارسال عکس قطعه در واتساپ
+          </a>
+        </div>
+      </form>
+    </div>
+
+    {/* ---------------------------------------------------------------
+        بلوک «توقف اضطراری».
+        در جرثقیل سقفی، هزینه‌ی واقعی خرابی، قیمت قطعه نیست — توقف خط
+        تولید است. این تنها موقعیتی است که خریدار صنعتی حاضر است بدون
+        مقایسه‌ی قیمت و فوراً تصمیم بگیرد. نداشتن یک مسیر مستقیم برای
+        این حالت، گران‌ترین فرصت ازدست‌رفته‌ی صفحه‌ی اصلی بود.
+    --------------------------------------------------------------- */}
+    <aside class="bg-accent rounded-lg p-5 lg:p-6" aria-labelledby="downtime-heading">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-9 h-9 shrink-0 rounded-md bg-white/20 text-white flex items-center justify-center" aria-hidden="true">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+            ></path>
+          </svg>
+        </span>
+        <h2 id="downtime-heading" class="text-lg font-black text-white leading-7">
+          جرثقیل از کار افتاده؟
+        </h2>
+      </div>
+
+      <p class="text-white/90 text-sm leading-7 mb-5">
+        در توقف اضطراری، هزینه‌ی اصلی قیمت قطعه نیست — توقف خط تولید است. کد فنی یا عکس قطعه
+        را بفرستید تا موجودی و نزدیک‌ترین معادل قابل ارسال بررسی شود.
+      </p>
+
+      <a
+        href={`tel:${SITE.phone}`}
+        class="block text-center bg-white text-accent-ink px-5 py-3 rounded-md font-black hover:bg-steel-50 transition-colors focus:outline-none focus:ring-4 focus:ring-white/50 min-h-[48px] leading-6"
+      >
+        تماس فوری: {SITE.phoneDisplay}
+      </a>
+
+      <p class="text-white/80 text-xs leading-6 mt-3">
+        ساعات کاری: شنبه تا چهارشنبه ۸:۳۰ تا ۱۷ — پنجشنبه ۸:۳۰ تا ۱۳
+      </p>
+    </aside>
+  </div>
+</section>
