@@ -363,7 +363,6 @@ interface RawProductNode {
   excerpt: string | null;
   content: string | null;
   modified: string | null;
-  isDemo?: unknown;
   craneCategories?: { nodes?: { slug: string | null }[] } | null;
   productFields?: {
     sku: unknown;
@@ -452,9 +451,38 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
       .map((r) => ({ label: r.specLabel.trim(), value: r.specValue.trim() })),
 
     modified: cleanText(node.modified),
-    isDemo: node.isDemo === true || node.isDemo === 1 || node.isDemo === '1',
+
+    // -----------------------------------------------------------------------
+    // وضعیت «نمایشی» از پیشوند کد فنی استنتاج می‌شود — نه از یک فیلد گراف‌کیوال.
+    //
+    // چرا این تغییر ضروری بود (این یک باگ واقعی بود که سایت را از کار انداخت):
+    // نسخه‌ی قبل فیلد `isDemo` را مستقیم از گراف‌کیوال می‌خواست. آن فیلد را
+    // پلاگین ما ثبت می‌کند. یعنی فرانت‌اند فقط زمانی بیلد می‌شد که *دقیقاً*
+    // همان نسخه‌ی پلاگین روی وردپرس فعال باشد. لحظه‌ای که نسخه‌ی مخزن جلوتر
+    // از نسخه‌ی نصب‌شده افتاد، کل سایت با این خطا از کار افتاد:
+    //     Cannot query field "isDemo" on type "CraneProduct"
+    // این یک خطای کوچک در یک فیلد نبود؛ یک اتصال سخت بین دو سیستمی بود که
+    // جداگانه نسخه‌گذاری می‌شوند — یعنی یک کلاس کامل از خرابی.
+    //
+    // پیشوند `DEMO-` روی کد فنی، همان داده را بدون هیچ اتصالی می‌دهد:
+    //   • کد فنی از قبل در همین کوئری خوانده می‌شود (هزینه‌ی اضافه: صفر)
+    //   • همان چیزی است که کاربر و مدیر سایت با چشم می‌بینند
+    //   • با هر نسخه‌ای از پلاگین کار می‌کند، حتی بدون پلاگین
+    //   • اگر کسی دستی محصولی با کد DEMO-… بسازد، باز هم درست علامت می‌خورد
+    //
+    // متای `_cyh_demo` سمت وردپرس حذف نشده — همچنان مرجع دکمه‌ی «حذف
+    // نمونه‌ها» در پنل است. فقط دیگر فرانت‌اند به آن وابسته نیست.
+    // -----------------------------------------------------------------------
+    isDemo: DEMO_SKU_PREFIX.test(cleanText(f?.sku) ?? ''),
   };
 }
+
+/**
+ * الگوی کد فنیِ رکورد نمایشی. حساس به بزرگی/کوچکی حروف نیست و فقط ابتدای
+ * رشته را می‌گیرد تا یک قطعه‌ی واقعی که تصادفاً «demo» در وسط کدش دارد
+ * اشتباهاً نمایشی علامت نخورد.
+ */
+const DEMO_SKU_PREFIX = /^demo-/i;
 
 const ALL_PRODUCTS_QUERY = `
   query AllCraneProducts($first: Int!, $after: String) {
@@ -466,7 +494,6 @@ const ALL_PRODUCTS_QUERY = `
         excerpt
         content
         modified
-        isDemo
         craneCategories { nodes { slug } }
         productFields {
           sku

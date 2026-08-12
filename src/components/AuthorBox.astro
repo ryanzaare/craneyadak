@@ -1,0 +1,110 @@
+---
+// src/components/AuthorBox.astro
+// ---------------------------------------------------------------------------
+// جعبه‌ی نویسنده — سیگنال E-E-A-T روی صفحات محتوایی (دسته‌بندی و راهنماها).
+//
+// چرا این کامپوننت وجود دارد: تنها رقیبی که توانستم به‌طور کامل بررسی کنم
+// (gholizadehcranes.com) روی هر مقاله نام نویسنده، تاریخ انتشار و تاریخ
+// به‌روزرسانی دارد. قطعه‌ی جرثقیلی که بار چندتنی را نگه می‌دارد بدون تردید
+// در دسته‌ی «Your Money or Your Life» گوگل می‌گنجد؛ در این دسته، صفحه‌ی
+// بدون نویسنده‌ی قابل‌شناسایی در شرایط مساوی بازنده است.
+//
+// دو تصمیم که عمداً «کمتر تاثیرگذار اما صادقانه» هستند:
+//
+// ۱) اگر عکس واقعی نویسنده نداشته باشیم، حروف اول نام رندر می‌شود — نه یک
+//    عکس آدم تصادفی از بانک تصاویر. عکس آدم دیگری زیر نام یک کارشناس فنی،
+//    جعل هویت است، نه طراحی.
+//
+// ۲) اسکیمای Person فقط برای نویسنده‌ی تاییدشده تولید می‌شود (منطق در
+//    `authorJsonLd`). این کامپوننت هرگز خودش اسکیما تزریق نمی‌کند؛ صفحه‌ی
+//    میزبان آن را در گراف اصلی خودش قرار می‌دهد تا دو گراف موازی و متناقض
+//    روی یک صفحه ساخته نشود.
+// ---------------------------------------------------------------------------
+import type { Author } from '../data/trust';
+
+interface Props {
+  author: Author;
+  /** تاریخ آخرین بازبینی محتوا (ISO). سیگنال تازگی برای کاربر و گوگل. */
+  reviewedAt?: string | null;
+  class?: string;
+}
+
+const { author, reviewedAt = null, class: className = '' } = Astro.props;
+
+/** حروف اول نام — جایگزین امن وقتی عکس واقعی نداریم. */
+const initials = author.name
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((part) => part[0])
+  .join('');
+
+const reviewedLabel = reviewedAt
+  ? new Intl.DateTimeFormat('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' }).format(
+      new Date(reviewedAt)
+    )
+  : null;
+---
+
+<aside class={`bg-steel-50 border border-steel-300 rounded-lg p-5 ${className}`} aria-labelledby={`author-${author.slug}`}>
+  <div class="flex items-start gap-4">
+    {
+      author.image ? (
+        <img
+          src={author.image}
+          alt={`عکس ${author.name}`}
+          width="64"
+          height="64"
+          loading="lazy"
+          decoding="async"
+          class="w-16 h-16 rounded-full object-cover shrink-0 border-2 border-white shadow-sm"
+        />
+      ) : (
+        <span
+          class="w-16 h-16 rounded-full shrink-0 bg-steel-900 text-white flex items-center justify-center text-xl font-black"
+          aria-hidden="true"
+        >
+          {initials}
+        </span>
+      )
+    }
+
+    <div class="min-w-0">
+      <p class="text-xs font-bold text-steel-600 mb-0.5">بازبینی فنی توسط</p>
+
+      <p id={`author-${author.slug}`} class="font-black text-steel-900 leading-7 flex items-center gap-2 flex-wrap">
+        {author.name}
+        {
+          !author.verified && (
+            <span class="text-[10px] font-bold text-steel-900 bg-amber-400 px-1.5 py-0.5 rounded">
+              نام جای‌گذار
+            </span>
+          )
+        }
+      </p>
+
+      <p class="text-sm text-accent-ink font-bold leading-6">{author.jobTitle}</p>
+      <p class="text-sm text-steel-700 leading-7 mt-2">{author.bio}</p>
+
+      {
+        author.expertise.length > 0 && (
+          <ul role="list" class="flex flex-wrap gap-1.5 mt-3">
+            {author.expertise.map((item) => (
+              <li class="text-[11px] font-bold text-steel-700 bg-white border border-steel-300 rounded px-2 py-0.5">
+                {item}
+              </li>
+            ))}
+          </ul>
+        )
+      }
+
+      {
+        reviewedLabel && (
+          <p class="text-xs text-steel-600 mt-3">
+            آخرین بازبینی: <time datetime={reviewedAt!}>{reviewedLabel}</time>
+          </p>
+        )
+      }
+    </div>
+  </div>
+</aside>

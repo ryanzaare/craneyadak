@@ -1,3 +1,4 @@
+import { unverifiedTrustItems } from '../data/trust';
 // src/lib/storefront.ts
 // ---------------------------------------------------------------------------
 // انتخاب محصولات برای ویترین صفحه‌ی اصلی.
@@ -33,6 +34,7 @@ function byModifiedDesc(a: CraneProduct, b: CraneProduct): number {
  * مصرف‌کننده آن را رندر نمی‌کند.
  */
 export async function getStorefront(): Promise<StorefrontSections> {
+  warnAboutUnverifiedTrust();
   const all = await getAllProducts();
 
   const onSale = all.filter((p) => computePrice(p).onSale).sort(byModifiedDesc).slice(0, LIMIT);
@@ -52,4 +54,40 @@ export async function getStorefront(): Promise<StorefrontSections> {
     latest,
     hasAny: all.length > 0,
   };
+}
+
+// ---------------------------------------------------------------------------
+// هشدار جای‌گذارهای تاییدنشده — در هر build چاپ می‌شود.
+//
+// چرا این لازم است: ادعاهای اعتماد («۳۰ سال سابقه»، نام نویسنده، نشان
+// اینماد) عمداً به‌صورت جای‌گذار رندر می‌شوند تا چیدمان ارزیابی شود. خطر
+// واقعی این است که کسی فراموش کند آن‌ها را عوض کند و سایت با ادعای
+// اثبات‌نشده منتشر شود. این هشدار آن فراموشی را غیرممکن می‌کند.
+// عمداً هشدار است نه خطا: در فاز طراحی، بیلد باید کار کند.
+// ---------------------------------------------------------------------------
+let trustWarningShown = false;
+
+export function warnAboutUnverifiedTrust(): void {
+  if (trustWarningShown) return;
+  trustWarningShown = true;
+
+  const items = unverifiedTrustItems();
+  if (items.length === 0) return;
+
+  const byGroup = new Map<string, string[]>();
+  for (const item of items) {
+    const list = byGroup.get(item.group) ?? [];
+    list.push(`${item.id} — ${item.detail}`);
+    byGroup.set(item.group, list);
+  }
+
+  const lines = [...byGroup.entries()]
+    .map(([group, entries]) => `  ${group}:\n${entries.map((e) => `    • ${e}`).join('\n')}`)
+    .join('\n');
+
+  console.warn(
+    `\n⚠️  ${items.length} ادعای اعتمادِ تاییدنشده روی سایت رندر می‌شود:\n${lines}\n` +
+      `  این‌ها روی صفحه برچسب «جای‌گذار» دارند و وارد JSON-LD نمی‌شوند.\n` +
+      `  پیش از انتشار نهایی: مقادیر را در src/data/trust.ts واقعی کنید و verified: true بگذارید.\n`
+  );
 }

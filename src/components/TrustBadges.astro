@@ -1,0 +1,114 @@
+---
+// src/components/TrustBadges.astro
+// ---------------------------------------------------------------------------
+// نشان‌های اعتماد — دو حالت نمایشی از یک منبع داده.
+//
+//   variant="footer"  → چهار ستون، کامل، پایین همه‌ی صفحات
+//   variant="compact" → نوار فشرده، کنار دکمه‌ی خرید در صفحه‌ی محصول
+//
+// چرا یک کامپوننت با دو حالت به‌جای دو کامپوننت: نشان‌های اعتماد دقیقاً همان
+// جایی هستند که واگرایی محتوا فاجعه می‌سازد. اگر فوتر «گارانتی تعویض» بگوید
+// و صفحه‌ی محصول چیز دیگری، خریدار صنعتی اولین چیزی که از دست می‌دهد اعتماد
+// است. یک منبع داده = ناممکن بودن واگرایی.
+//
+// نکته‌ی مهم درباره‌ی اینماد: هیچ تصویر جعلی اینماد اینجا نیست. کد واقعی
+// نشان فقط پس از تایید دامنه از enamad.ir صادر می‌شود. ظرف با ابعاد نهایی
+// رزرو شده تا هنگام جای‌گذاری کد واقعی، چیدمان جابه‌جا نشود (CLS = 0).
+// ---------------------------------------------------------------------------
+import { TRUST_BADGES } from '../data/trust';
+
+interface Props {
+  variant?: 'footer' | 'compact';
+  class?: string;
+}
+
+const { variant = 'footer', class: className = '' } = Astro.props;
+---
+
+{
+  variant === 'footer' ? (
+    <section class={`bg-steel-950 border-t border-white/10 px-4 py-10 ${className}`} aria-labelledby="trust-heading">
+      <div class="max-w-7xl mx-auto">
+        <h2 id="trust-heading" class="sr-only">
+          تضمین‌ها و نشان‌های اعتماد
+        </h2>
+
+        <ul role="list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {TRUST_BADGES.map((badge) => (
+            <li class="flex items-start gap-3">
+              <span
+                class="w-11 h-11 shrink-0 rounded-md bg-white/[0.06] border border-white/10 text-accent flex items-center justify-center"
+                aria-hidden="true"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d={badge.icon} />
+                </svg>
+              </span>
+
+              <div class="min-w-0">
+                <p class="font-black text-white text-sm leading-6 flex items-center gap-2 flex-wrap">
+                  {badge.title}
+                  {/* برچسب صادقانه به‌جای نشان جعلی. حذف این برچسب بدون
+                      دریافت تاییدیه‌ی واقعی، دقیقاً همان ادعای اثبات‌نشده‌ای
+                      است که کل پروژه از آن پرهیز کرده. */}
+                  {!badge.verified && (
+                    <span class="text-[10px] font-bold text-steel-900 bg-amber-400 px-1.5 py-0.5 rounded">
+                      در دست اقدام
+                    </span>
+                  )}
+                </p>
+                <p class="text-steel-300 text-xs leading-6 mt-1">{badge.description}</p>
+
+                {badge.verified && badge.href && (
+                  <a
+                    href={badge.href}
+                    rel="noopener"
+                    target="_blank"
+                    class="inline-block mt-1.5 text-xs font-bold text-accent hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded"
+                  >
+                    مشاهده‌ی تاییدیه ←
+                  </a>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {/* ظرف رزروشده‌ی نشان اینماد — ابعاد نهایی از همین حالا اشغال شده
+            تا با جای‌گذاری کد واقعی، هیچ جابه‌جایی چیدمانی رخ ندهد. */}
+        <div class="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center gap-4">
+          <div
+            class="w-[100px] h-[120px] rounded-md border-2 border-dashed border-white/20 flex items-center justify-center text-center p-2"
+            aria-hidden="true"
+          >
+            <span class="text-[10px] leading-4 text-steel-300 font-bold">
+              محل درج
+              <br />
+              کد اینماد
+            </span>
+          </div>
+          <p class="text-xs text-steel-300 leading-6 max-w-md">
+            کد نشان اعتماد الکترونیکی پس از تایید دامنه از سامانه‌ی اینماد دریافت و در
+            همین محل درج می‌شود. ابعاد این محل از پیش رزرو شده تا افزودن آن باعث
+            جابه‌جایی صفحه نشود.
+          </p>
+        </div>
+      </div>
+    </section>
+  ) : (
+    <ul role="list" class={`grid grid-cols-2 gap-x-4 gap-y-3 ${className}`}>
+      {TRUST_BADGES.map((badge) => (
+        <li class="flex items-center gap-2 min-w-0">
+          <span class="w-5 h-5 shrink-0 text-accent-ink" aria-hidden="true">
+            <svg class="w-full h-full" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d={badge.icon} />
+            </svg>
+          </span>
+          <span class="text-xs font-bold text-steel-700 leading-5 truncate" title={badge.description}>
+            {badge.title}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}

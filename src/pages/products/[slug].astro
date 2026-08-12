@@ -22,6 +22,7 @@ import PriceTag from '../../components/PriceTag.astro';
 import ProductCard from '../../components/ProductCard.astro';
 import ProductGallery from '../../components/ProductGallery.astro';
 import PartNumber from '../../components/PartNumber.astro';
+import TrustBadges from '../../components/TrustBadges.astro';
 import { SITE } from '../../data/site';
 import { findCategory, categoryPath, siloPath, findBrand } from '../../data/taxonomy';
 import {
@@ -135,8 +136,8 @@ const modifiedDate = product.modified
   </section>
 
   {/* ============================ بخش اصلی ============================ */}
-  <section class="bg-white px-4 py-10 md:py-14 border-b-[8px] border-crane-orange print:border-0 print:py-0">
-    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10">
+  <section class="bg-white px-4 py-8 md:py-10 border-b-[8px] border-crane-orange print:border-0 print:py-0">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
       <div class="lg:col-span-5">
         <ProductGallery images={product.images} productName={product.name} />
       </div>
@@ -175,10 +176,37 @@ const modifiedDate = product.modified
           </div>
         )}
 
-        {product.summary && <p class="text-gray-700 leading-8 mb-8">{product.summary}</p>}
+        {product.summary && <p class="text-steel-700 leading-7 mb-5">{product.summary}</p>}
+
+        {/* ------------------- مشخصات کلیدی، بالای خط تا -------------------
+            شش مشخصه‌ی اول به‌صورت جدول فشرده، دقیقاً زیر کد فنی. جدول کامل
+            پایین صفحه باقی می‌ماند؛ این نسخه فقط سوال اول خریدار را جواب
+            می‌دهد: «آیا این همان قطعه‌ای است که لازم دارم؟» */}
+        {product.technicalSpecs.length > 0 && (
+          <table class="w-full text-sm mb-5 border border-steel-300 rounded-md overflow-hidden">
+            <caption class="sr-only">مشخصات فنی کلیدی {product.name}</caption>
+            <tbody>
+              {product.technicalSpecs.slice(0, 6).map((spec, i) => (
+                <tr class={i % 2 === 1 ? 'bg-steel-50' : 'bg-white'}>
+                  <th scope="row" class="text-right font-bold text-steel-600 px-3 py-1.5 w-2/5 border-b border-steel-100 align-top">
+                    {spec.label}
+                  </th>
+                  <td class="px-3 py-1.5 text-steel-900 font-bold border-b border-steel-100">{spec.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {product.technicalSpecs.length > 6 && (
+          <p class="text-xs mb-5 -mt-3">
+            <a href="#specs-heading" class="font-bold text-accent-ink hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded">
+              مشاهده‌ی هر {product.technicalSpecs.length} مشخصه ↓
+            </a>
+          </p>
+        )}
 
         {/* ------------------------- جعبه‌ی خرید ------------------------- */}
-        <div id="buy-box" class="bg-gradient-to-b from-gray-50 to-white border border-gray-200 rounded-3xl p-6 md:p-8 mb-6 print:hidden shadow-sm">
+        <div id="buy-box" class="bg-steel-50 border-2 border-steel-900 rounded-lg p-5 md:p-6 mb-6 print:hidden">
           {/* برچسب مسیر خرید — کاربر باید پیش از دیدن دکمه بداند با چه
               فرایندی روبه‌روست. ابهام بین «خرید» و «استعلام» مکث ایجاد
               می‌کند، و مکث در خرید صنعتی یعنی رفتن سراغ تامین‌کننده‌ی بعدی. */}
@@ -237,7 +265,11 @@ const modifiedDate = product.modified
           </div>
 
           {/* بلوک اطمینان — دقیقاً کنار دکمه، جایی که تردید خرید رخ می‌دهد. */}
-          <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 pt-6 border-t border-gray-200" role="list">
+          <div class="mt-5 pt-4 border-t border-steel-300">
+            <TrustBadges variant="compact" />
+          </div>
+
+          <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 pt-5 border-t border-steel-300" role="list">
             {[
               { t: 'بررسی سازگاری', d: 'پیش از صدور پیش‌فاکتور تایید می‌شود', p: 'M9 12l2 2 4-4' },
               { t: 'فاکتور رسمی', d: 'قابل ارائه به واحد مالی', p: 'M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z' },
@@ -301,16 +333,16 @@ const modifiedDate = product.modified
 
   {/* =================== کدهای معادل و سازگاری (Fitment) =================== */}
   {hasFitment && (
-    <section class="bg-gray-50 px-4 py-14 border-b border-gray-100 print:bg-white print:py-4" aria-labelledby="fitment-heading">
+    <section class="bg-gray-50 px-4 py-9 border-b border-gray-100 print:bg-white print:py-4" aria-labelledby="fitment-heading">
       <div class="max-w-7xl mx-auto">
-        <h2 id="fitment-heading" class="text-2xl font-black text-crane-navy mb-3">کدهای معادل و سازگاری</h2>
+        <h2 id="fitment-heading" class="text-xl font-black text-steel-900 mb-2">کدهای معادل و سازگاری</h2>
         <p class="text-gray-700 leading-8 mb-8 max-w-3xl print:hidden">
           اگر کد روی قطعه‌ی فرسوده‌ی شما با کد بالا یکی نیست، جدول زیر را بررسی کنید؛ یک قطعه اغلب با چند کد مختلف سازنده عرضه می‌شود.
         </p>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {product.oemCrossReference.length > 0 && (
-            <div class="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+            <div class="bg-white rounded-lg border border-gray-100 overflow-hidden">
               <h3 class="font-black text-crane-navy px-6 py-4 border-b border-gray-100 bg-gray-50">کدهای معادل سازنده (OEM)</h3>
               <table class="w-full text-sm">
                 <caption class="sr-only">فهرست کدهای فنی معادل این قطعه نزد سازندگان مختلف</caption>
@@ -324,7 +356,7 @@ const modifiedDate = product.modified
                   {product.oemCrossReference.map((ref) => (
                     <tr class="border-t border-gray-50">
                       <td class="px-6 py-3 text-gray-700">{ref.oemBrand}</td>
-                      <td class="px-6 py-3 font-mono text-crane-navy font-bold select-all" dir="ltr">{ref.oemPartNumber}</td>
+                      <td class="px-4 py-2 font-mono text-crane-navy font-bold select-all" dir="ltr">{ref.oemPartNumber}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -333,7 +365,7 @@ const modifiedDate = product.modified
           )}
 
           {product.compatibleModels.length > 0 && (
-            <div class="bg-white rounded-3xl border border-gray-100 overflow-hidden">
+            <div class="bg-white rounded-lg border border-gray-100 overflow-hidden">
               <h3 class="font-black text-crane-navy px-6 py-4 border-b border-gray-100 bg-gray-50">مدل‌های سازگار</h3>
               <table class="w-full text-sm">
                 <caption class="sr-only">مدل‌های جرثقیل که این قطعه با آن‌ها سازگار است</caption>
@@ -347,7 +379,7 @@ const modifiedDate = product.modified
                   {product.compatibleModels.map((model) => (
                     <tr class="border-t border-gray-50">
                       <td class="px-6 py-3 text-gray-700">{model.craneBrand}</td>
-                      <td class="px-6 py-3 font-mono text-crane-navy font-bold select-all" dir="ltr">{model.modelName}</td>
+                      <td class="px-4 py-2 font-mono text-crane-navy font-bold select-all" dir="ltr">{model.modelName}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -366,9 +398,9 @@ const modifiedDate = product.modified
 
   {/* ============================ مشخصات فنی ============================ */}
   {product.technicalSpecs.length > 0 && (
-    <section class="bg-white px-4 py-14 border-b border-gray-100 print:py-4" aria-labelledby="specs-heading">
+    <section class="bg-white px-4 py-9 border-b border-gray-100 print:py-4" aria-labelledby="specs-heading">
       <div class="max-w-4xl mx-auto">
-        <h2 id="specs-heading" class="text-2xl font-black text-crane-navy mb-8">مشخصات فنی</h2>
+        <h2 id="specs-heading" class="text-2xl font-black text-crane-navy mb-5">مشخصات فنی</h2>
         <table class="w-full text-sm border border-gray-100 rounded-2xl overflow-hidden">
           <caption class="sr-only">جدول مشخصات فنی {product.name}</caption>
           <tbody>
@@ -386,9 +418,9 @@ const modifiedDate = product.modified
 
   {/* ============================ توضیحات ============================ */}
   {product.bodyHtml && (
-    <section class="bg-gray-50 px-4 py-14 border-b border-gray-100 print:hidden" aria-labelledby="description-heading">
+    <section class="bg-gray-50 px-4 py-9 border-b border-gray-100 print:hidden" aria-labelledby="description-heading">
       <div class="max-w-4xl mx-auto">
-        <h2 id="description-heading" class="text-2xl font-black text-crane-navy mb-6">توضیحات فنی محصول</h2>
+        <h2 id="description-heading" class="text-xl font-black text-steel-900 mb-4">توضیحات فنی محصول</h2>
         <div class="prose-crane text-gray-700 leading-8" set:html={product.bodyHtml} />
       </div>
     </section>
@@ -396,10 +428,10 @@ const modifiedDate = product.modified
 
   {/* ========================= محصولات مرتبط ========================= */}
   {related.length > 0 && (
-    <section class="bg-white px-4 py-14 print:hidden" aria-labelledby="related-heading">
+    <section class="bg-white px-4 py-9 print:hidden" aria-labelledby="related-heading">
       <div class="max-w-7xl mx-auto">
-        <h2 id="related-heading" class="text-xl md:text-2xl font-black text-crane-navy mb-8">قطعات مرتبط</h2>
-        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" role="list">
+        <h2 id="related-heading" class="text-xl md:text-xl font-black text-steel-900 mb-5">قطعات مرتبط</h2>
+        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" role="list">
           {related.map((item) => (
             <li><ProductCard product={item} /></li>
           ))}

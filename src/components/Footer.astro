@@ -2,6 +2,7 @@
 // src/components/Footer.astro
 import { SITE } from '../data/site';
 import { SILOS, siloPath } from '../data/taxonomy';
+import TrustBadges from './TrustBadges.astro';
 
 const year = new Date().getFullYear();
 // فوتر گروه‌های سیلو را نشان می‌دهد، نه ۳۰ دسته را — لینک داخلی متمرکز
@@ -10,6 +11,10 @@ const footerSilos = SILOS.slice(0, 6);
 ---
 
 <footer class="bg-crane-navy text-gray-300 mt-auto" role="contentinfo">
+  {/* نشان‌های اعتماد پیش از لینک‌ها — خریدار صنعتی پیش از آن‌که دنبال
+      لینک بگردد، دنبال دلیلی برای اعتماد می‌گردد. */}
+  <TrustBadges variant="footer" />
+
   <div class="max-w-7xl mx-auto px-4 md:px-8 py-16">
     <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
       

@@ -1,4 +1,6 @@
 ---
+import AuthorBox from './AuthorBox.astro';
+import { DEFAULT_AUTHOR } from '../data/trust';
 // src/components/CategoryGuide.astro
 // ---------------------------------------------------------------------------
 // رندر محتوای تخصصی دسته — لایه‌ی «راهنما» در برابر لایه‌ی «فروشگاه».
@@ -94,9 +96,11 @@ const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
         <section id="guide-intro" class="px-4 pt-16 pb-12 scroll-mt-32" aria-labelledby="guide-intro-heading">
           <div class="max-w-7xl mx-auto">
             <p class="text-sm font-black text-crane-orange tracking-widest mb-3">راهنمای فنی</p>
-            <h2 id="guide-intro-heading" class="text-3xl md:text-4xl font-black text-crane-navy leading-relaxed mb-8 max-w-3xl">
+            <h2 id="guide-intro-heading" class="text-3xl md:text-4xl font-black text-crane-navy leading-relaxed mb-6 max-w-3xl">
               {categoryName} چیست و چه می‌کند؟
             </h2>
+
+            <AuthorBox author={DEFAULT_AUTHOR} class="mb-8 max-w-3xl" />
             {/* عرض محدود عمدی: متن فارسی در خط بلند خوانده نمی‌شود. */}
             <div class="prose-crane max-w-[70ch] text-lg text-gray-700 leading-9" set:html={content.introHtml} />
           </div>
