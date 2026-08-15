@@ -402,7 +402,6 @@ interface RawImageNode {
 
 interface RawProductNode {
   databaseId?: number | null;
-  community?: unknown;
   title: string | null;
   slug: string | null;
   excerpt: string | null;
@@ -422,7 +421,6 @@ interface RawProductNode {
     oemCrossReference: ({ oemBrand: string | null; oemPartNumber: string | null } | null)[] | null;
     compatibleModels: ({ craneBrand: string | null; modelName: string | null } | null)[] | null;
     technicalSpecs: ({ specLabel: string | null; specValue: string | null } | null)[] | null;
-    priceHistory: ({ logDate: string | null; logPrice: unknown } | null)[] | null;
   } | null;
 }
 
@@ -501,17 +499,10 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
       )
       .map((r) => ({ label: r.specLabel.trim(), value: r.specValue.trim() })),
 
-    priceHistory: (f?.priceHistory ?? [])
-      .map((row) => {
-        const date = cleanText(row?.logDate);
-        const value = parsePrice(row?.logPrice);
-        return date && value !== null ? { date, price: value } : null;
-      })
-      .filter((row): row is PricePoint => row !== null)
-      .sort((a, b) => a.date.localeCompare(b.date)),
-
+    // `priceHistory` و `community` در لایه‌ی اختیاری پر می‌شوند — پایین.
+    priceHistory: [],
     wpId: typeof node.databaseId === 'number' ? node.databaseId : null,
-    community: normalizeCommunity(node.community),
+    community: [],
 
     modified: cleanText(node.modified),
 
@@ -583,11 +574,6 @@ const ALL_PRODUCTS_QUERY = `
           oemCrossReference { oemBrand oemPartNumber }
           compatibleModels { craneBrand modelName }
           technicalSpecs { specLabel specValue }
-          priceHistory { logDate logPrice }
-        }
-        community {
-          id type author content date craneModel serviceMonths rating
-          answer answerAuthor answerDate
         }
       }
     }
@@ -760,9 +746,123 @@ function reportCatalogHealth(products: CraneProduct[]): void {
   }
 }
 
-export function getAllProducts(): Promise<CraneProduct[]> {
+// ═══════════════════════════════════════════════════════════════════════════
+// لایه‌ی «غنی‌سازی اختیاری» — و درسی که دوبار به‌سختی گرفته شد.
+//
+// دو بار پشت سر هم، افزودن یک فیلد تازه به کوئری اصلی کل سایت را از کار
+// انداخت:
+//     Cannot query field "isDemo" on type "CraneProduct"
+//     Cannot query field "priceHistory" on type "ProductFields"
+//
+// علت هر دو یکی بود: مخزن کد و افزونه‌ی وردپرس *جداگانه* نسخه می‌خورند،
+// اما کوئری اصلی طوری نوشته شده بود که هر فیلد تازه را واجب می‌کرد. یعنی
+// هر قابلیت جدید بک‌اند، تا لحظه‌ی نصب افزونه، سایت را کاملاً می‌خواباند.
+//
+// بار اول با حذف وابستگی (استنتاج از پیشوند کد فنی) رفع شد. اما آن راه
+// فقط برای همان یک فیلد جواب می‌داد؛ `priceHistory` و `community` واقعاً
+// داده‌ی سمت سرور لازم دارند و از هیچ چیزِ موجود قابل استنتاج نیستند.
+//
+// راه‌حل ساختاری: کوئری *دو تکه* می‌شود.
+//   • کوئری پایه — فقط فیلدهایی که همیشه وجود دارند. شکستش یعنی خرابی
+//     واقعی و بیلد باید متوقف شود.
+//   • کوئری اختیاری — فیلدهای وابسته به نسخه‌ی افزونه. اگر اسکیما آن‌ها را
+//     نشناسد، *به‌جای خطا* خالی برمی‌گردد و سایت بدون آن بخش ساخته می‌شود.
+//
+// نتیجه: از این پس هیچ قابلیت جدید بک‌اندی نمی‌تواند بیلد را بخواباند.
+// بدترین حالت ممکن این است که آن بخش تا نصب افزونه نمایش داده نشود.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const OPTIONAL_QUERY = `
+  query CraneProductExtras($first: Int!, $after: String) {
+    craneProducts(first: $first, after: $after, where: { status: PUBLISH }) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        databaseId
+        slug
+        productFields { priceHistory { logDate logPrice } }
+        community {
+          id type author content date craneModel serviceMonths rating
+          answer answerAuthor answerDate
+        }
+      }
+    }
+  }
+`;
+
+interface RawExtras {
+  databaseId?: number | null;
+  slug?: string | null;
+  productFields?: { priceHistory?: ({ logDate: string | null; logPrice: unknown } | null)[] | null } | null;
+  community?: unknown;
+}
+
+/**
+ * تلاش برای واکشی فیلدهای اختیاری. **هرگز throw نمی‌کند.**
+ * شکست = افزونه هنوز به‌روز نشده، که یک حالت کاملاً عادی است.
+ */
+async function fetchOptionalExtras(): Promise<Map<string, { history: PricePoint[]; community: CommunityEntry[]; wpId: number | null }>> {
+  const map = new Map<string, { history: PricePoint[]; community: CommunityEntry[]; wpId: number | null }>();
+  if (!isWpConfigured()) return map;
+
+  try {
+    let after: string | null = null;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const data: any = await wpQuery(OPTIONAL_QUERY, { first: PAGE_SIZE, after });
+      const conn = data?.craneProducts;
+      if (!conn) break;
+
+      for (const node of (conn.nodes ?? []) as RawExtras[]) {
+        const slug = cleanText(node?.slug);
+        if (!slug) continue;
+
+        const history = (node?.productFields?.priceHistory ?? [])
+          .map((row) => {
+            const date = cleanText(row?.logDate);
+            const value = parsePrice(row?.logPrice);
+            return date && value !== null ? { date, price: value } : null;
+          })
+          .filter((row): row is PricePoint => row !== null)
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        map.set(slug, {
+          history,
+          community: normalizeCommunity(node?.community),
+          wpId: typeof node?.databaseId === 'number' ? node.databaseId : null,
+        });
+      }
+
+      if (!conn.pageInfo?.hasNextPage) break;
+      after = conn.pageInfo.endCursor ?? null;
+    }
+  } catch (error) {
+    // عمداً بلعیده می‌شود. یک پیام روشن چاپ می‌شود تا سکوت هم نباشد.
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `\n📋 قابلیت‌های اختیاری بک‌اند در دسترس نیستند — سایت بدون آن‌ها ساخته می‌شود.\n` +
+        `   (تاریخچه‌ی قیمت، پرسش‌وپاسخ، گزارش نصب و نظرها نمایش داده نمی‌شوند.)\n` +
+        `   برای فعال‌شدن، آخرین نسخه‌ی افزونه‌ی «کرین یدک» را روی وردپرس نصب کنید.\n` +
+        `   جزئیات: ${message.slice(0, 200)}\n`
+    );
+  }
+
+  return map;
+}
+
+let extrasPromise: Promise<Awaited<ReturnType<typeof fetchOptionalExtras>>> | null = null;
+
+export async function getAllProducts(): Promise<CraneProduct[]> {
   catalogPromise ??= fetchAllProducts();
-  return catalogPromise;
+  extrasPromise ??= fetchOptionalExtras();
+
+  const [products, extras] = await Promise.all([catalogPromise, extrasPromise]);
+  if (extras.size === 0) return products;
+
+  // ادغام — بدون تغییر آرایه‌ی اصلی.
+  return products.map((product) => {
+    const extra = extras.get(product.slug);
+    if (!extra) return product;
+    return { ...product, priceHistory: extra.history, community: extra.community, wpId: extra.wpId };
+  });
 }
 
 export async function getProductsByCategory(categorySlug: string): Promise<CraneProduct[]> {
