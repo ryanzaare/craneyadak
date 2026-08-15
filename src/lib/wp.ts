@@ -27,6 +27,8 @@ const nodeEnv = (globalThis as { process?: { env?: Record<string, string | undef
 const WP_BASE_URL: string | null =
   nodeEnv?.WP_GRAPHQL_URL || (import.meta.env.WP_GRAPHQL_URL as string | undefined) || null;
 
+import { normalizeCommunity, type CommunityEntry } from './community';
+
 const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 3;
 const PAGE_SIZE = 100;
@@ -35,12 +37,44 @@ const MAX_PAGES = 100;
 /** واحد پول — تمام قیمت‌ها به ریال ذخیره و نمایش داده می‌شوند. */
 export const CURRENCY = 'IRR' as const;
 
+// نرمال‌سازی محتوای کاربر در ماژول جدا نگه داشته شده تا منطق اسکیمای
+// QAPage/AggregateRating قابل تست مستقل باشد.
+export type { CommunityEntry } from './community';
+
 export interface CraneImage {
   url: string;
   altText: string;
   width: number | null;
   height: number | null;
+  /**
+   * عکس رسمی سازنده یا عکس نصب در محل.
+   *
+   * قرارداد تشخیص: متن جایگزین (alt) عکس اگر با «نصب» یا «field:» شروع
+   * شود، عکس میدانی است. عمداً از روی alt خوانده می‌شود نه یک فیلد ACF
+   * جدید: مدیر محتوا در همان کتابخانه‌ی رسانه‌ی وردپرس و بدون یادگیری
+   * هیچ فیلد تازه‌ای می‌تواند علامت بزند، و alt به‌هرحال باید پر شود.
+   */
+  source: ImageSource;
 }
+
+/** یک نقطه‌ی تاریخی قیمت. */
+export interface PricePoint {
+  /** ISO date (YYYY-MM-DD). */
+  date: string;
+  /** قیمت به ریال. */
+  price: number;
+}
+
+/**
+ * منبع تصویر — تفکیک عکس رسمی سازنده از عکس نصب واقعی.
+ *
+ * چرا این تفکیک مهم است: عکس کاتالوگ سازنده تمیز و استودیویی است و به
+ * خریدار می‌گوید «قطعه چه شکلی است». عکس نصب واقعی چیز دیگری می‌گوید:
+ * «این قطعه واقعاً روی یک دستگاه مثل مال تو کار می‌کند». دومی برای
+ * خریدار صنعتی به‌مراتب متقاعدکننده‌تر است — اما فقط اگر بداند کدام
+ * کدام است. مخلوط‌کردنشان هر دو را بی‌اثر می‌کند.
+ */
+export type ImageSource = 'manufacturer' | 'field';
 
 export interface SpecRow {
   label: string;
@@ -102,6 +136,15 @@ export interface CraneProduct {
 
   /** تاریخ آخرین به‌روزرسانی محتوا در وردپرس (ISO). */
   modified: string | null;
+
+  /** تاریخچه‌ی قیمت از ACF — ممکن است خالی باشد و آن کاملاً عادی است. */
+  priceHistory: PricePoint[];
+
+  /** شناسه‌ی عددی وردپرس — برای ارسال پرسش/گزارش به REST لازم است. */
+  wpId: number | null;
+
+  /** پرسش‌ها، گزارش‌های نصب و نظرهای تاییدشده. */
+  community: CommunityEntry[];
 
   /**
    * داده‌ی نمایشی برای کار طراحی — محصول واقعی نیست.
@@ -358,6 +401,8 @@ interface RawImageNode {
 }
 
 interface RawProductNode {
+  databaseId?: number | null;
+  community?: unknown;
   title: string | null;
   slug: string | null;
   excerpt: string | null;
@@ -377,6 +422,7 @@ interface RawProductNode {
     oemCrossReference: ({ oemBrand: string | null; oemPartNumber: string | null } | null)[] | null;
     compatibleModels: ({ craneBrand: string | null; modelName: string | null } | null)[] | null;
     technicalSpecs: ({ specLabel: string | null; specValue: string | null } | null)[] | null;
+    priceHistory: ({ logDate: string | null; logPrice: unknown } | null)[] | null;
   } | null;
 }
 
@@ -424,13 +470,18 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
 
     images: toArray<RawImageNode>(f?.gallery)
       .filter((img) => Boolean(img?.sourceUrl))
-      .map((img) => ({
-        url: img.sourceUrl!,
-        // alt جعلی ممنوع؛ اما نام واقعی محصول یک alt توصیفی و درست است.
-        altText: cleanText(img.altText) ?? name,
-        width: img.mediaDetails?.width ?? null,
-        height: img.mediaDetails?.height ?? null,
-      })),
+      .map((img) => {
+        const alt = cleanText(img.altText) ?? '';
+        return {
+          url: img.sourceUrl!,
+          // alt جعلی ممنوع؛ اما نام واقعی محصول یک alt توصیفی و درست است.
+          // پیشوند علامت‌گذاری از خودِ alt نمایش‌داده‌شده حذف می‌شود.
+          altText: (alt.replace(FIELD_IMAGE_PREFIX, '').trim() || name),
+          width: img.mediaDetails?.width ?? null,
+          height: img.mediaDetails?.height ?? null,
+          source: FIELD_IMAGE_PREFIX.test(alt) ? ('field' as const) : ('manufacturer' as const),
+        };
+      }),
 
     oemCrossReference: (f?.oemCrossReference ?? [])
       .filter((r): r is { oemBrand: string; oemPartNumber: string } =>
@@ -449,6 +500,18 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
         Boolean(cleanText(r?.specLabel) && cleanText(r?.specValue))
       )
       .map((r) => ({ label: r.specLabel.trim(), value: r.specValue.trim() })),
+
+    priceHistory: (f?.priceHistory ?? [])
+      .map((row) => {
+        const date = cleanText(row?.logDate);
+        const value = parsePrice(row?.logPrice);
+        return date && value !== null ? { date, price: value } : null;
+      })
+      .filter((row): row is PricePoint => row !== null)
+      .sort((a, b) => a.date.localeCompare(b.date)),
+
+    wpId: typeof node.databaseId === 'number' ? node.databaseId : null,
+    community: normalizeCommunity(node.community),
 
     modified: cleanText(node.modified),
 
@@ -484,11 +547,23 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
  */
 const DEMO_SKU_PREFIX = /^demo-/i;
 
+/**
+ * علامت عکس «نصب در محل».
+ *
+ * چرا از روی alt و نه یک فیلد ACF تازه: مدیر محتوا به‌هرحال باید alt را
+ * پر کند (الزام دسترس‌پذیری و سئو). افزودن یک فیلد جدا یعنی یک مرحله‌ی
+ * اضافه که فراموش می‌شود و در عمل هیچ عکسی علامت نمی‌خورد. با این
+ * قرارداد، نوشتن «نصب: روی دماگ ۵ تن» هم عکس را دسته‌بندی می‌کند و هم
+ * یک alt توصیفی واقعی می‌سازد.
+ */
+const FIELD_IMAGE_PREFIX = /^\s*(نصب|field)\s*[:：]\s*/i;
+
 const ALL_PRODUCTS_QUERY = `
   query AllCraneProducts($first: Int!, $after: String) {
     craneProducts(first: $first, after: $after, where: { status: PUBLISH }) {
       pageInfo { hasNextPage endCursor }
       nodes {
+        databaseId
         title
         slug
         excerpt
@@ -508,6 +583,11 @@ const ALL_PRODUCTS_QUERY = `
           oemCrossReference { oemBrand oemPartNumber }
           compatibleModels { craneBrand modelName }
           technicalSpecs { specLabel specValue }
+          priceHistory { logDate logPrice }
+        }
+        community {
+          id type author content date craneModel serviceMonths rating
+          answer answerAuthor answerDate
         }
       }
     }

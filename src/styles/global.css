@@ -285,3 +285,172 @@
   overflow: hidden;
   pointer-events: none;
 }
+/* ---------------------------------------------------------------------------
+   ساختارهای محتوای فنی — پرومیتیوهای CSS برای متن محصول.
+
+   چرا CSS خام و نه کامپوننت Astro: این بلوک‌ها باید از داخل *ویرایشگر
+   وردپرس* هم قابل استفاده باشند. مدیر محتوا یک <div class="cy-pros"> در
+   بلوک HTML می‌گذارد و همان ظاهر را می‌گیرد. اگر فقط کامپوننت Astro
+   بودند، محتوای تولیدشده در وردپرس هرگز نمی‌توانست از آن‌ها استفاده کند —
+   و کل خط لوله‌ی «هوش مصنوعی → پیش‌نویس» بی‌فایده می‌شد.
+
+   همه‌ی این‌ها با `dir="rtl"` سازگارند و از خصوصیات منطقی
+   (border-inline-start و…) استفاده می‌کنند تا در RTL درست بنشینند.
+--------------------------------------------------------------------------- */
+
+/* ---- جعبه‌ی مزایا / معایب ---- */
+.cy-proscons {
+  display: grid;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+@media (min-width: 640px) {
+  .cy-proscons { grid-template-columns: 1fr 1fr; }
+}
+
+.cy-pros,
+.cy-cons {
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid;
+}
+.cy-pros { background: #F0FDF4; border-color: #BBF7D0; }
+.cy-cons { background: #FEF2F2; border-color: #FECACA; }
+
+.cy-pros > strong,
+.cy-cons > strong {
+  display: block;
+  font-weight: 900;
+  margin-bottom: 0.5rem;
+  font-size: 0.9375rem;
+}
+.cy-pros > strong { color: #166534; }
+.cy-cons > strong { color: #991B1B; }
+
+.cy-pros ul,
+.cy-cons ul { list-style: none; padding: 0; margin: 0; }
+.cy-pros li,
+.cy-cons li {
+  position: relative;
+  padding-inline-start: 1.5rem;
+  margin-bottom: 0.375rem;
+  font-size: 0.9375rem;
+  line-height: 1.9;
+}
+.cy-pros li::before,
+.cy-cons li::before {
+  position: absolute;
+  inset-inline-start: 0;
+  font-weight: 900;
+}
+.cy-pros li::before { content: "✓"; color: #16A34A; }
+.cy-cons li::before { content: "−"; color: #DC2626; }
+
+/* ---- هشدارهای مهندسی ----
+   چهار سطح، با معنای عملیاتی متفاوت. رنگ تنها تمایز نیست (نقض WCAG 1.4.1
+   می‌شد): هر کدام برچسب متنی خودش را هم دارد. */
+.cy-callout {
+  border-inline-start: 4px solid;
+  border-radius: 0.375rem;
+  padding: 0.875rem 1rem;
+  margin: 1.25rem 0;
+  font-size: 0.9375rem;
+  line-height: 1.9;
+}
+.cy-callout > strong { display: block; font-weight: 900; margin-bottom: 0.25rem; }
+
+.cy-callout--danger  { background: #FEF2F2; border-color: #DC2626; color: #7F1D1D; }
+.cy-callout--warning { background: #FFFBEB; border-color: #D97706; color: #78350F; }
+.cy-callout--info    { background: #EFF6FF; border-color: #2563EB; color: #1E3A8A; }
+.cy-callout--tip     { background: #F0FDF4; border-color: #16A34A; color: #14532D; }
+
+/* ---- شبکه‌ی مقایسه‌ی قطعات (فقط CSS، بدون جاوااسکریپت) ----
+   روی موبایل به کارت‌های پشته‌ای تبدیل می‌شود: جدول ۴ ستونی روی نمایشگر
+   ۳۶۰ پیکسلی غیرقابل‌خواندن است و اسکرول افقی در RTL گیج‌کننده. */
+.cy-compare {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-steel-300);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.cy-compare th,
+.cy-compare td {
+  padding: 0.625rem 0.875rem;
+  text-align: right;
+  border-bottom: 1px solid var(--color-steel-100);
+}
+.cy-compare thead th {
+  background: var(--color-steel-900);
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.8125rem;
+}
+.cy-compare tbody th {
+  background: var(--color-steel-50);
+  font-weight: 700;
+  color: var(--color-steel-700);
+  width: 30%;
+}
+.cy-compare tbody tr:last-child th,
+.cy-compare tbody tr:last-child td { border-bottom: 0; }
+
+/* ستون «پیشنهاد ما» برجسته می‌شود. */
+.cy-compare .cy-compare--best {
+  background: var(--color-accent-soft);
+  font-weight: 700;
+  color: var(--color-accent-ink);
+}
+
+@media (max-width: 639px) {
+  .cy-compare, .cy-compare tbody, .cy-compare tr, .cy-compare td, .cy-compare th { display: block; }
+  .cy-compare thead { display: none; }
+  .cy-compare tbody tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--color-steel-300);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  .cy-compare tbody th { width: auto; }
+  .cy-compare td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 900;
+    color: var(--color-steel-600);
+    margin-bottom: 0.125rem;
+  }
+}
+
+/* ---- نوار داده‌ی درون‌متنی (نمودار میله‌ای فقط با CSS) ----
+   عرض از متغیر --cy-bar می‌آید که در HTML ست می‌شود. */
+.cy-bar {
+  display: grid;
+  grid-template-columns: 9rem 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.375rem 0;
+  font-size: 0.875rem;
+}
+.cy-bar__track {
+  height: 0.625rem;
+  background: var(--color-steel-100);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.cy-bar__fill {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 999px;
+  width: var(--cy-bar, 0%);
+}
+.cy-bar__value { font-weight: 900; color: var(--color-steel-900); font-variant-numeric: tabular-nums; }
+
+/* پرومیتیوها داخل .prose-crane هم باید درست بنشینند. */
+.prose-crane .cy-proscons ul,
+.prose-crane .cy-pros ul,
+.prose-crane .cy-cons ul { list-style: none; padding-inline-start: 0; }
+.prose-crane .cy-callout > * + * { margin-top: 0.5rem; }

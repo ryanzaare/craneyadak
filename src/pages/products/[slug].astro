@@ -23,6 +23,9 @@ import ProductCard from '../../components/ProductCard.astro';
 import ProductGallery from '../../components/ProductGallery.astro';
 import PartNumber from '../../components/PartNumber.astro';
 import TrustBadges from '../../components/TrustBadges.astro';
+import PriceHistory from '../../components/PriceHistory.astro';
+import Community from '../../components/Community.astro';
+import { qaPageJsonLd, aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
 import { SITE } from '../../data/site';
 import { findCategory, categoryPath, siloPath, findBrand } from '../../data/taxonomy';
 import {
@@ -85,6 +88,14 @@ const breadcrumbItems = [
 
 const canonical = `${SITE.url}${productPath(product)}`;
 
+// محتوای کاربر → اسکیما. هر سه تابع اگر داده‌ی واقعی نباشد `undefined`
+// برمی‌گردانند؛ هیچ امتیاز یا پرسشی اختراع نمی‌شود.
+const wpBase = (import.meta.env.WP_GRAPHQL_URL as string | undefined)?.replace(/\/+$/, '') ?? null;
+const pageUrl = `${SITE.url}/products/${product.slug}`;
+const qaSchema = qaPageJsonLd(product.community, pageUrl);
+const ratingSchema = aggregateRatingJsonLd(product.community);
+const reviewSchema = reviewsJsonLd(product.community);
+
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -98,7 +109,15 @@ const jsonLd = {
         ...(item.href ? { item: `${SITE.url}${item.href}` } : {}),
       })),
     },
-    productJsonLd(product, SITE.url, price),
+    // اسکیمای محصول با امتیاز و نظر *واقعی* غنی می‌شود. اگر نظری نباشد،
+    // هیچ کلیدی اضافه نمی‌شود — نه یک شیء خالی، نه صفر.
+    {
+      ...productJsonLd(product, SITE.url, price),
+      ...(ratingSchema ? { aggregateRating: ratingSchema } : {}),
+      ...(reviewSchema ? { review: reviewSchema } : {}),
+    },
+    // QAPage فقط با پرسش پاسخ‌داده‌شده.
+    ...(qaSchema ? [qaSchema] : []),
   ],
 };
 
@@ -439,6 +458,14 @@ const modifiedDate = product.modified
   )}
 
   {/* ============================ توضیحات ============================ */}
+  {/* روند قیمت — بعد از مشخصات، پیش از توضیحات.
+      در اقتصاد تورمی، «الان بخرم یا صبر کنم؟» یک سوال واقعی خرید است. */}
+  <section class="bg-steel-50 px-4 py-9 border-b border-steel-100 print:hidden" aria-label="روند قیمت">
+    <div class="max-w-7xl mx-auto max-w-3xl">
+      <PriceHistory history={product.priceHistory} currentPrice={price.effective} />
+    </div>
+  </section>
+
   {product.bodyHtml && (
     <section class="bg-gray-50 px-4 py-9 border-b border-gray-100 print:hidden" aria-labelledby="description-heading">
       <div class="max-w-4xl mx-auto">
@@ -450,6 +477,14 @@ const modifiedDate = product.modified
 
   {/* ========================= محصولات مرتبط ========================= */}
   {related.length > 0 && (
+    <Community
+      entries={product.community}
+      productId={product.wpId}
+      productName={product.name}
+      wpBase={wpBase}
+      class="print:hidden"
+    />
+
     <section class="bg-white px-4 py-9 print:hidden" aria-labelledby="related-heading">
       <div class="max-w-7xl mx-auto">
         <h2 id="related-heading" class="text-xl md:text-xl font-black text-steel-900 mb-5">قطعات مرتبط</h2>

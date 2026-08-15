@@ -1,0 +1,300 @@
+---
+// src/components/Community.astro
+// ---------------------------------------------------------------------------
+// محتوای کاربر: پرسش فنی، گزارش نصب، نظر خریدار.
+//
+// ═══ چرا ترتیب این‌گونه است ═══
+// در فروش B2B صنعتی، «امتیاز ۵ ستاره» تقریباً بی‌معناست — کسی درباره‌ی
+// لنت ترمز نظر احساسی نمی‌نویسد. سوال واقعی خریدار همیشه یکی است: «آیا
+// روی دستگاه من می‌خورد؟» بنابراین:
+//   ۱) پرسش‌وپاسخ فنی — اصلی
+//   ۲) گزارش نصب — اثبات میدانی سازگاری
+//   ۳) نظر و امتیاز — فرعی
+//
+// ═══ ارزش سئویی ═══
+// هر پرسش کاربر یک عبارت جستجوی طولانی واقعی است، با کلماتی که هیچ
+// نویسنده‌ای حدس نمی‌زند. این غنی‌ترین منبع long-tail برای این صنعت است.
+// اسکیمای QAPage آن را برای گوگل قابل فهم می‌کند.
+//
+// ⚠️ خط قرمز اسکیما — اجرا شده در کد، نه در نیت:
+// `AggregateRating` فقط با حداقل یک نظر *واقعیِ تاییدشده* تولید می‌شود.
+// انتشار امتیاز میانگین بدون نظر واقعی، نقض مستقیم سیاست داده‌ی
+// ساختاریافته‌ی گوگل و دارای جریمه‌ی دستی است.
+// ---------------------------------------------------------------------------
+import type { CommunityEntry } from '../lib/community';
+
+interface Props {
+  entries: CommunityEntry[];
+  productId: number | null;
+  productName: string;
+  wpBase: string | null;
+  class?: string;
+}
+
+const { entries, productId, productName, wpBase, class: className = '' } = Astro.props;
+
+const questions = entries.filter((e) => e.type === 'question');
+const fitments = entries.filter((e) => e.type === 'fitment');
+const reviews = entries.filter((e) => e.type === 'review');
+
+const answered = questions.filter((q) => q.answer);
+const canSubmit = Boolean(wpBase && productId);
+
+const faDate = (iso: string | null) => {
+  if (!iso) return '';
+  try {
+    return new Intl.DateTimeFormat('fa-IR', { year: 'numeric', month: 'long' }).format(new Date(iso));
+  } catch {
+    return '';
+  }
+};
+---
+
+<section class={`bg-white border-t border-steel-300 ${className}`} aria-labelledby="community-heading">
+  <div class="max-w-7xl mx-auto px-4 py-10">
+    <h2 id="community-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-1">
+      پرسش‌ها و تجربه‌ی کاربران
+    </h2>
+    <p class="text-steel-600 leading-7 mb-6 pb-4 border-b border-steel-300">
+      پرسش فنی درباره‌ی سازگاری این قطعه بپرسید، یا اگر آن را نصب کرده‌اید تجربه‌تان را ثبت کنید.
+    </p>
+
+    <div class="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-8 lg:gap-10 items-start">
+      <div class="min-w-0 space-y-8">
+        {/* ───────────────── پرسش و پاسخ فنی ───────────────── */}
+        <div>
+          <h3 class="text-lg font-black text-steel-900 mb-3 flex items-center gap-2">
+            پرسش فنی
+            {questions.length > 0 && (
+              <span class="text-xs font-bold text-steel-600 bg-steel-100 rounded px-2 py-0.5 tabular-nums">
+                {questions.length}
+              </span>
+            )}
+          </h3>
+
+          {questions.length === 0 ? (
+            <p class="text-sm text-steel-600 leading-7 bg-steel-50 border border-steel-300 rounded-lg p-4">
+              هنوز پرسشی ثبت نشده. اگر درباره‌ی سازگاری این قطعه با دستگاه خود تردید دارید،
+              اولین پرسش را شما بپرسید — کارشناس فنی پاسخ می‌دهد.
+            </p>
+          ) : (
+            <ul role="list" class="space-y-3">
+              {questions.map((q) => (
+                <li class="border border-steel-300 rounded-lg overflow-hidden">
+                  <div class="p-4 bg-white">
+                    <div class="flex items-baseline justify-between gap-3 mb-1.5">
+                      <span class="font-black text-steel-900 text-sm">{q.author}</span>
+                      <span class="text-xs text-steel-600 shrink-0">{faDate(q.date)}</span>
+                    </div>
+                    {q.craneModel && (
+                      <p class="text-xs text-accent-ink font-bold mb-1.5">دستگاه: {q.craneModel}</p>
+                    )}
+                    <p class="text-steel-700 leading-7 text-sm">{q.content}</p>
+                  </div>
+
+                  {q.answer ? (
+                    <div class="p-4 bg-accent-soft border-t border-accent/25">
+                      <p class="text-xs font-black text-accent-ink mb-1.5 flex items-center gap-1.5">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        پاسخ کارشناس فنی{q.answerAuthor ? ` — ${q.answerAuthor}` : ''}
+                      </p>
+                      <p class="text-steel-800 leading-7 text-sm">{q.answer}</p>
+                    </div>
+                  ) : (
+                    <p class="px-4 py-2 bg-steel-50 border-t border-steel-100 text-xs text-steel-600">
+                      در انتظار پاسخ کارشناس فنی
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* ───────────────── گزارش نصب ─────────────────
+            این بخش در خواسته‌ی اولیه نبود. اضافه شد چون در خرید قطعه‌ی
+            صنعتی، «روی دماگ ۵ تن نصب شد و ۱۴ ماه است کار می‌کند» از هر
+            امتیاز ستاره‌ای متقاعدکننده‌تر است و دقیقاً همان سوال
+            سازگاری را جواب می‌دهد. */}
+        <div>
+          <h3 class="text-lg font-black text-steel-900 mb-3 flex items-center gap-2">
+            گزارش نصب واقعی
+            {fitments.length > 0 && (
+              <span class="text-xs font-bold text-white bg-accent rounded px-2 py-0.5 tabular-nums">
+                {fitments.length}
+              </span>
+            )}
+          </h3>
+
+          {fitments.length === 0 ? (
+            <p class="text-sm text-steel-600 leading-7 bg-steel-50 border border-steel-300 rounded-lg p-4">
+              هنوز گزارشی ثبت نشده. اگر این قطعه را نصب کرده‌اید، ثبت مدل دستگاه و مدت کارکرد
+              برای خریدار بعدی ارزش زیادی دارد.
+            </p>
+          ) : (
+            <ul role="list" class="grid sm:grid-cols-2 gap-3">
+              {fitments.map((f) => (
+                <li class="border-2 border-accent/25 bg-accent-soft rounded-lg p-4">
+                  <p class="font-black text-steel-900 text-sm mb-1">{f.craneModel}</p>
+                  {f.serviceMonths > 0 && (
+                    <p class="text-xs font-bold text-accent-ink mb-2 tabular-nums">
+                      {f.serviceMonths} ماه کارکرد بدون مشکل
+                    </p>
+                  )}
+                  <p class="text-steel-700 leading-7 text-sm">{f.content}</p>
+                  <p class="text-xs text-steel-600 mt-2">{f.author} — {faDate(f.date)}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* ───────────────── نظر خریداران ───────────────── */}
+        {reviews.length > 0 && (
+          <div>
+            <h3 class="text-lg font-black text-steel-900 mb-3">نظر خریداران</h3>
+            <ul role="list" class="space-y-3">
+              {reviews.map((r) => (
+                <li class="border border-steel-300 rounded-lg p-4">
+                  <div class="flex items-baseline justify-between gap-3 mb-1.5">
+                    <span class="font-black text-steel-900 text-sm">{r.author}</span>
+                    <span class="text-xs text-steel-600 shrink-0">{faDate(r.date)}</span>
+                  </div>
+                  {r.rating > 0 && (
+                    <p class="text-sm text-accent mb-1.5" aria-label={`امتیاز ${r.rating} از ۵`}>
+                      {'★'.repeat(r.rating)}<span class="text-steel-300">{'★'.repeat(5 - r.rating)}</span>
+                    </p>
+                  )}
+                  <p class="text-steel-700 leading-7 text-sm">{r.content}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* ───────────────── فرم‌های ارسال ───────────────── */}
+      <aside class="lg:sticky lg:top-24 space-y-4">
+        {canSubmit ? (
+          <>
+            <form
+              class="cy-community-form bg-steel-50 border border-steel-300 rounded-lg p-4"
+              data-endpoint={`${wpBase}/wp-json/crane-yadak/v1/question`}
+              data-post-id={productId}
+            >
+              <h3 class="font-black text-steel-900 mb-1">پرسش فنی بپرسید</h3>
+              <p class="text-xs text-steel-600 leading-6 mb-3">
+                کارشناس فنی پاسخ می‌دهد و پرسش و پاسخ روی همین صفحه منتشر می‌شود.
+              </p>
+
+              <label class="cyh-honeypot" aria-hidden="true">
+                وب‌سایت <input type="text" name="website" tabindex="-1" autocomplete="off" />
+              </label>
+
+              <div class="space-y-2">
+                <input type="text" name="name" required placeholder="نام شما" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+                <input type="text" name="crane_model" placeholder="مدل جرثقیل (اختیاری)" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+                <textarea name="body" required rows="3" placeholder="پرسش فنی خود را بنویسید…" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40 resize-y"></textarea>
+              </div>
+
+              <button type="submit" class="w-full mt-3 bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+                ارسال پرسش
+              </button>
+              <p class="cy-form-msg text-xs leading-6 mt-2" role="status" aria-live="polite"></p>
+            </form>
+
+            <form
+              class="cy-community-form bg-white border-2 border-accent/30 rounded-lg p-4"
+              data-endpoint={`${wpBase}/wp-json/crane-yadak/v1/fitment`}
+              data-post-id={productId}
+            >
+              <h3 class="font-black text-steel-900 mb-1">این قطعه را نصب کرده‌اید؟</h3>
+              <p class="text-xs text-steel-600 leading-6 mb-3">
+                ثبت مدل دستگاه و مدت کارکرد، برای خریدار بعدی از هر توضیحی مفیدتر است.
+              </p>
+
+              <label class="cyh-honeypot" aria-hidden="true">
+                وب‌سایت <input type="text" name="website" tabindex="-1" autocomplete="off" />
+              </label>
+
+              <div class="space-y-2">
+                <input type="text" name="name" required placeholder="نام شما" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+                <input type="text" name="crane_model" required placeholder="مدل و برند جرثقیل" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+                <input type="number" name="service_months" min="0" placeholder="چند ماه کار کرده؟" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+                <textarea name="body" required rows="3" placeholder="تجربه‌ی نصب و کارکرد…" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40 resize-y"></textarea>
+              </div>
+
+              <button type="submit" class="w-full mt-3 bg-steel-900 text-white py-3 rounded-md font-black hover:bg-steel-800 transition-colors focus:outline-none focus:ring-4 focus:ring-steel-600/40 min-h-[48px]">
+                ثبت گزارش نصب
+              </button>
+              <p class="cy-form-msg text-xs leading-6 mt-2" role="status" aria-live="polite"></p>
+            </form>
+          </>
+        ) : (
+          /* بدون آدرس وردپرس، فرم رندر نمی‌شود — فرمی که به هیچ‌جا ارسال
+             نمی‌کند، بدتر از نبودن فرم است چون کاربر فکر می‌کند پیامش
+             رسیده. */
+          <div class="bg-steel-50 border border-steel-300 rounded-lg p-4">
+            <p class="text-sm text-steel-700 leading-7">
+              برای پرسش فنی درباره‌ی این قطعه با ما تماس بگیرید.
+            </p>
+            <a href="/contact" class="inline-block mt-3 bg-accent text-white px-5 py-2.5 rounded-md font-bold text-sm hover:bg-accent-ink transition-colors">
+              تماس و استعلام
+            </a>
+          </div>
+        )}
+      </aside>
+    </div>
+  </div>
+</section>
+
+<script>
+  // ارسال با fetch — سایت استاتیک است، پس مقصد مستقیماً وردپرس است.
+  document.querySelectorAll<HTMLFormElement>('.cy-community-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const msg = form.querySelector<HTMLElement>('.cy-form-msg');
+      const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      const endpoint = form.dataset.endpoint;
+      if (!endpoint || !msg || !button) return;
+
+      const payload: Record<string, string> = { post_id: form.dataset.postId ?? '' };
+      for (const [key, value] of new FormData(form).entries()) {
+        payload[key] = String(value);
+      }
+
+      button.disabled = true;
+      const original = button.textContent;
+      button.textContent = 'در حال ارسال…';
+      msg.className = 'cy-form-msg text-xs leading-6 mt-2 text-steel-600';
+      msg.textContent = '';
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.ok) {
+          msg.className = 'cy-form-msg text-xs leading-6 mt-2 text-green-700 font-bold';
+          msg.textContent = data.message ?? 'ثبت شد.';
+          form.reset();
+        } else {
+          msg.className = 'cy-form-msg text-xs leading-6 mt-2 text-red-700 font-bold';
+          msg.textContent = data.message ?? 'ثبت نشد. لطفاً دوباره تلاش کنید.';
+        }
+      } catch {
+        msg.className = 'cy-form-msg text-xs leading-6 mt-2 text-red-700 font-bold';
+        msg.textContent = 'ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.';
+      } finally {
+        button.disabled = false;
+        button.textContent = original;
+      }
+    });
+  });
+</script>

@@ -154,6 +154,7 @@ require_once CYH_PLUGIN_DIR . 'includes/class-deploy-webhook.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-content-seeder.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-demo-seeder.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-ai-draft.php';
+require_once CYH_PLUGIN_DIR . 'includes/class-community.php';
 
 /**
  * فلاش‌کردن Rewrite Rules هنگام فعال/غیرفعال‌سازی — بدون این، اسلاگ‌های
@@ -163,6 +164,9 @@ require_once CYH_PLUGIN_DIR . 'includes/class-ai-draft.php';
 function cyh_activate() {
 	cyh_register_post_types();
 	cyh_register_taxonomies();
+	// نقش‌های سازمانی (کارشناس فنی، سردبیر، فروش) — فقط یک‌بار هنگام
+	// فعال‌سازی ثبت می‌شوند؛ add_role در اجراهای بعدی بی‌اثر است.
+	cyh_register_roles();
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'cyh_activate' );

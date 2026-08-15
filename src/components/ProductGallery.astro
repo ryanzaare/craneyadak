@@ -26,8 +26,23 @@ export interface Props {
 }
 
 const { images, productName } = Astro.props;
-const gallery = images.slice(0, 6);
+
+// ---------------------------------------------------------------------------
+// تفکیک «عکس رسمی سازنده» از «عکس نصب در محل».
+//
+// چرا این تفکیک ارزش دارد: عکس کاتالوگ به خریدار می‌گوید قطعه چه شکلی
+// است. عکس نصب واقعی چیز دیگری می‌گوید — «این قطعه روی دستگاهی مثل مال
+// تو کار می‌کند». دومی برای خریدار صنعتی به‌مراتب متقاعدکننده‌تر است،
+// اما فقط اگر بداند کدام کدام است؛ مخلوط‌کردنشان هر دو را بی‌اثر می‌کند.
+//
+// ترتیب عمدی: عکس رسمی اول می‌آید (تشخیص قطعه)، عکس میدانی بعد (اثبات).
+// ---------------------------------------------------------------------------
+const manufacturerShots = images.filter((img) => img.source !== 'field');
+const fieldShots = images.filter((img) => img.source === 'field');
+const gallery = [...manufacturerShots, ...fieldShots].slice(0, 8);
 const hasImages = gallery.length > 0;
+const hasFieldShots = gallery.some((img) => img.source === 'field');
+const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
 ---
 
 <div class="product-gallery">
@@ -50,6 +65,18 @@ const hasImages = gallery.length > 0;
       <RemoteImage src={null} alt={productName} width={900} height={900} class="w-full h-full" />
     )}
 
+    {/* نشان منبع روی تصویر فعال. با تعویض اسلاید، جاوااسکریپت پایین
+        متن آن را به‌روز می‌کند. */}
+    {hasImages && hasFieldShots && (
+      <span
+        id="gallery-source-badge"
+        class="absolute top-4 right-4 z-10 text-[11px] font-black px-2.5 py-1 rounded print:hidden bg-steel-900 text-white"
+        data-first-field={firstFieldIndex}
+      >
+        عکس رسمی سازنده
+      </span>
+    )}
+
     {hasImages && (
       <button
         type="button"
@@ -65,21 +92,58 @@ const hasImages = gallery.length > 0;
   </figure>
 
   {gallery.length > 1 && (
-    <ul class="grid grid-cols-6 gap-2.5 mt-4 print:hidden" role="list">
-      {gallery.map((image, index) => (
-        <li>
-          <button
-            type="button"
-            class="gallery-thumb aspect-square w-full bg-gray-50 rounded-xl border-2 overflow-hidden transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/30 aria-[current=true]:border-crane-orange border-gray-100 hover:border-gray-300"
-            data-index={index}
-            aria-current={index === 0 ? 'true' : 'false'}
-            aria-label={`نمایش تصویر ${index + 1} از ${gallery.length} — ${productName}`}
-          >
-            <RemoteImage src={image.url} alt="" width={200} height={200} sizes="90px" class="w-full h-full object-cover" />
-          </button>
-        </li>
-      ))}
-    </ul>
+    <div class="mt-4 print:hidden">
+      {/* برچسب گروه فقط وقتی هر دو نوع عکس وجود دارد — در غیر این صورت
+          یک عنوان بی‌فایده روی یک گروه تنها می‌نشیند. */}
+      {hasFieldShots && (
+        <p class="text-xs font-black text-steel-600 mb-2">عکس رسمی سازنده</p>
+      )}
+      <ul class="grid grid-cols-6 gap-2.5" role="list">
+        {gallery.map((image, index) =>
+          image.source !== 'field' ? (
+            <li>
+              <button
+                type="button"
+                class="gallery-thumb aspect-square w-full bg-steel-50 rounded-lg border-2 overflow-hidden transition-colors focus:outline-none focus:ring-4 focus:ring-accent/30 aria-[current=true]:border-accent border-steel-100 hover:border-steel-300"
+                data-index={index}
+                data-source={image.source}
+                aria-current={index === 0 ? 'true' : 'false'}
+              >
+                <RemoteImage src={image.url} alt={image.altText} width={120} height={120} class="w-full h-full object-cover" />
+              </button>
+            </li>
+          ) : null
+        )}
+      </ul>
+
+      {hasFieldShots && (
+        <>
+          <p class="text-xs font-black text-accent-ink mt-4 mb-2 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            نصب واقعی روی دستگاه مشتری
+          </p>
+          <ul class="grid grid-cols-6 gap-2.5" role="list">
+            {gallery.map((image, index) =>
+              image.source === 'field' ? (
+                <li>
+                  <button
+                    type="button"
+                    class="gallery-thumb aspect-square w-full bg-steel-50 rounded-lg border-2 overflow-hidden transition-colors focus:outline-none focus:ring-4 focus:ring-accent/30 aria-[current=true]:border-accent border-accent/30 hover:border-accent"
+                    data-index={index}
+                    data-source={image.source}
+                    aria-current="false"
+                  >
+                    <RemoteImage src={image.url} alt={image.altText} width={120} height={120} class="w-full h-full object-cover" />
+                  </button>
+                </li>
+              ) : null
+            )}
+          </ul>
+        </>
+      )}
+    </div>
   )}
 </div>
 
@@ -121,6 +185,15 @@ const hasImages = gallery.length > 0;
     document.querySelectorAll<HTMLElement>('.gallery-slide, .gallery-zoom-slide').forEach((slide) => {
       slide.hidden = slide.dataset.index !== String(index);
     });
+    // نشان منبع را با اسلاید فعال هم‌گام کن.
+    const badge = document.getElementById('gallery-source-badge');
+    if (badge) {
+      const active = document.querySelector<HTMLElement>(`.gallery-thumb[data-index="${index}"]`);
+      const isField = active?.dataset.source === 'field';
+      badge.textContent = isField ? 'نصب واقعی روی دستگاه مشتری' : 'عکس رسمی سازنده';
+      badge.className = badge.className.replace(/bg-\S+/, isField ? 'bg-accent' : 'bg-steel-900');
+    }
+
     document.querySelectorAll<HTMLButtonElement>('.gallery-thumb').forEach((thumb) => {
       thumb.setAttribute('aria-current', String(thumb.dataset.index === String(index)));
     });
