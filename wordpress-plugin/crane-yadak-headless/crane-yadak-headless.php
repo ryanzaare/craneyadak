@@ -153,6 +153,7 @@ require_once CYH_PLUGIN_DIR . 'includes/class-options-page.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-deploy-webhook.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-content-seeder.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-demo-seeder.php';
+require_once CYH_PLUGIN_DIR . 'includes/class-ai-draft.php';
 
 /**
  * فلاش‌کردن Rewrite Rules هنگام فعال/غیرفعال‌سازی — بدون این، اسلاگ‌های

@@ -16,6 +16,7 @@
 // کیبورد و اسکرین‌ریدر عملاً وجود ندارد.
 // ---------------------------------------------------------------------------
 import { buildSuggestIndex } from '../lib/search-index';
+import { getAllProducts } from '../lib/wp';
 
 interface Props {
   id?: string;
@@ -35,7 +36,15 @@ const {
 } = Astro.props;
 
 // در زمان build سریال می‌شود و به‌صورت JSON داخل صفحه می‌نشیند.
-const index = buildSuggestIndex();
+//
+// محصولات هم وارد فهرست می‌شوند — بدون این، تایپ‌کردن یک کد فنی مثل
+// «MT318» هیچ نتیجه‌ای نمی‌داد، که بدترین حالت ممکن بود: کاربری که کد
+// فنی در دست دارد، آماده‌ترین خریدار است.
+//
+// getAllProducts در زمان build کش می‌شود، پس چند بار صدا زدن آن در
+// صفحات مختلف هزینه‌ی شبکه‌ی اضافه ندارد.
+const products = await getAllProducts();
+const index = buildSuggestIndex(products);
 const listId = `${id}-listbox`;
 ---
 
@@ -183,12 +192,19 @@ const listId = `${id}-listbox`;
         return index
           .map((e) => ({ e, s: score(e, n) }))
           .filter((x) => x.s > 0)
-          .sort((a, b) => b.s - a.s || a.e.label.length - b.e.label.length)
+          // باید دقیقاً با مرتب‌سازی سمت سرور در search-index.ts یکی باشد،
+          // وگرنه تست‌های سرور چیزی را تایید می‌کنند که کاربر نمی‌بیند.
+          .sort(
+            (a, b) =>
+              b.s - a.s ||
+              Number(b.e.kind === 'product') - Number(a.e.kind === 'product') ||
+              a.e.label.length - b.e.label.length
+          )
           .slice(0, limit)
           .map((x) => x.e);
       }
 
-      const KIND_LABEL = { category: 'دسته', brand: 'برند', silo: 'گروه' };
+      const KIND_LABEL = { category: 'دسته', brand: 'برند', silo: 'گروه', product: 'محصول' };
       let active = -1;
       let current = [];
 
@@ -232,7 +248,9 @@ const listId = `${id}-listbox`;
             '<a href="' + e.href + '" tabindex="-1" class="flex items-baseline justify-between gap-3 px-4 py-2.5 hover:bg-accent-soft focus:bg-accent-soft">' +
             '<span class="min-w-0"><span class="block font-bold text-steel-900 text-sm truncate">' + e.label + '</span>' +
             '<span class="block text-xs text-steel-600 truncate">' + e.context + '</span></span>' +
-            '<span class="text-[10px] font-black text-steel-600 bg-steel-100 rounded px-1.5 py-0.5 shrink-0">' + (KIND_LABEL[e.kind] || '') + '</span>' +
+            '<span class="text-[10px] font-black rounded px-1.5 py-0.5 shrink-0 ' +
+              (e.kind === 'product' ? 'text-white bg-accent' : 'text-steel-600 bg-steel-100') + '">' +
+              (KIND_LABEL[e.kind] || '') + '</span>' +
             '</a></li>'
           )
           .join('');

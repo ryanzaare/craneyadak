@@ -25,12 +25,13 @@
 // ---------------------------------------------------------------------------
 
 import { SILOS, BRANDS, ALL_CATEGORIES, categoryPath, siloPath } from '../data/taxonomy';
+import type { CraneProduct } from './wp';
 
 export interface SuggestEntry {
   /** متنی که به کاربر نشان داده می‌شود. */
   label: string;
   /** دسته‌بندی پیشنهاد — برای گروه‌بندی بصری در فهرست. */
-  kind: 'category' | 'brand' | 'silo';
+  kind: 'category' | 'brand' | 'silo' | 'product';
   href: string;
   /** زمینه‌ی کوتاه زیر عنوان (نام سیلو، کشور برند و…). */
   context: string;
@@ -65,9 +66,40 @@ export function normalizeFa(input: string): string {
     .trim();
 }
 
-/** ساخت فهرست پیشنهادها. در زمان build یک‌بار اجرا می‌شود. */
-export function buildSuggestIndex(): SuggestEntry[] {
+/**
+ * ساخت فهرست پیشنهادها. در زمان build یک‌بار اجرا می‌شود.
+ *
+ * ⚠️ باگ بحرانی که با افزودن `products` رفع شد:
+ * نسخه‌ی قبل فقط سیلوها، دسته‌ها و برندها را ایندکس می‌کرد. یعنی تایپ‌کردن
+ * «MT318» — یعنی دقیقاً همان کد فنی که کل معماری سایت حول آن ساخته شده —
+ * هیچ نتیجه‌ای نمی‌داد. کاربری که کد فنی دارد، آماده‌ترین خریدار ممکن است
+ * و جستجو برای او خالی برمی‌گشت.
+ *
+ * حالا خودِ محصولات هم ایندکس می‌شوند: نام، کد فنی، برند و کدهای معادل
+ * OEM. کد فنی بالاترین وزن را می‌گیرد چون بدون‌ابهام‌ترین ورودی ممکن است.
+ */
+export function buildSuggestIndex(products: CraneProduct[] = []): SuggestEntry[] {
   const entries: SuggestEntry[] = [];
+
+  // محصولات اول می‌آیند: در تساوی امتیاز، یک قطعه‌ی واقعیِ قابل سفارش
+  // بر یک صفحه‌ی دسته اولویت دارد.
+  for (const product of products) {
+    // رکوردهای نمایشی نباید در جستجوی کاربر ظاهر شوند.
+    if (product.isDemo) continue;
+
+    const haystack = [product.name, product.sku ?? '', product.brandNameFa ?? '', product.brandNameEn ?? ''];
+    // کدهای معادل OEM هم قابل جستجو می‌شوند: خریدار اغلب کد سازنده‌ی
+    // اصلی را در دست دارد، نه کد ما.
+    for (const ref of product.oemCrossReference) haystack.push(ref.oemPartNumber);
+
+    entries.push({
+      label: product.name,
+      kind: 'product',
+      href: `/products/${product.slug}`,
+      context: product.sku ? `کد فنی: ${product.sku}` : (product.brandNameFa ?? 'محصول'),
+      haystack: haystack.filter(Boolean).map(normalizeFa),
+    });
+  }
 
   for (const silo of SILOS) {
     entries.push({
@@ -244,7 +276,13 @@ export function suggest(index: SuggestEntry[], query: string, limit = 7): Sugges
   return index
     .map((entry) => ({ entry, score: scoreEntry(entry, q) }))
     .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score || a.entry.label.length - b.entry.label.length)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        // در امتیاز مساوی، محصول واقعی مقدم بر صفحه‌ی دسته است.
+        Number(b.entry.kind === 'product') - Number(a.entry.kind === 'product') ||
+        a.entry.label.length - b.entry.label.length
+    )
     .slice(0, limit)
     .map((x) => x.entry);
 }

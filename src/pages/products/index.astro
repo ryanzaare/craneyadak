@@ -1,0 +1,402 @@
+---
+// src/pages/products/index.astro
+// ---------------------------------------------------------------------------
+// آرشیو محصولات با فیلتر وجهی (faceted) — جایگزین PartFinder.
+//
+// چرا PartFinder حذف شد: یک فرم سه‌مرحله‌ای بود که کاربر باید *پیش از*
+// دیدن هر محصولی پر می‌کرد. الگوی «اول فرم، بعد نتیجه» متعلق به دوران
+// پیش از فیلتر زنده است. رفتار امروزی — دیجی‌کالا، آمازون، گرینجر —
+// برعکس است: همه‌ی محصولات را نشان بده، بگذار کاربر با فیلتر باریکشان کند
+// و تعداد نتایج را لحظه‌ای ببیند. کاربر هرگز به بن‌بست «هیچ نتیجه‌ای
+// یافت نشد» بعد از پرکردن فرم نمی‌خورد، چون همیشه می‌بیند چه چیزی هست.
+//
+// معماری: سایت استاتیک است، پس همه‌ی محصولات یک‌بار در زمان build رندر
+// می‌شوند و فیلتر کاملاً سمت کلاینت روی همان DOM اجرا می‌شود — بدون
+// درخواست شبکه و بدون بارگذاری مجدد صفحه.
+//
+// وضعیت فیلترها در URL نوشته می‌شود (history.replaceState). سه دلیل:
+//   ۱) کاربر می‌تواند نتیجه‌ی فیلترشده را برای همکارش بفرستد.
+//   ۲) دکمه‌ی بازگشت مرورگر رفتار منطقی دارد.
+//   ۳) رفرش صفحه فیلترها را از دست نمی‌دهد.
+//
+// سئو: این صفحه عمداً `noindex` نیست — صفحه‌ی پایه ارزش دارد. اما هر
+// ترکیب فیلتر canonical را به همین آدرس پایه برمی‌گرداند تا میلیون‌ها
+// آدرس پارامتردار محتوای تکراری نسازند.
+// ---------------------------------------------------------------------------
+import Layout from '../../layouts/Layout.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import { getAllProducts, computePrice } from '../../lib/wp';
+import { SILOS, BRANDS, ALL_CATEGORIES } from '../../data/taxonomy';
+import { SITE } from '../../data/site';
+
+const all = await getAllProducts();
+
+// رکوردهای نمایشی هرگز وارد آرشیو عمومی نمی‌شوند.
+const products = all.filter((p) => !p.isDemo);
+
+// فقط برندها و دسته‌هایی که واقعاً محصول دارند به‌عنوان فیلتر نمایش داده
+// می‌شوند. یک فیلتر که همیشه صفر نتیجه می‌دهد، بدتر از نبودنش است.
+const brandCounts = new Map<string, number>();
+const categoryCounts = new Map<string, number>();
+for (const p of products) {
+  if (p.brandSlug) brandCounts.set(p.brandSlug, (brandCounts.get(p.brandSlug) ?? 0) + 1);
+  for (const c of p.categorySlugs) categoryCounts.set(c, (categoryCounts.get(c) ?? 0) + 1);
+}
+
+const activeBrands = BRANDS.filter((b) => brandCounts.has(b.slug));
+const activeSilos = SILOS.map((silo) => ({
+  silo,
+  categories: silo.categories.filter((c) => categoryCounts.has(c.slug)),
+})).filter((g) => g.categories.length > 0);
+
+const inStockCount = products.filter((p) => p.stockStatus === 'in_stock').length;
+const withPriceCount = products.filter((p) => computePrice(p).hasPrice).length;
+
+const title = `همه‌ی قطعات جرثقیل سقفی | ${products.length} قطعه — کرین یدک`;
+const description = `فهرست کامل قطعات جرثقیل سقفی با فیلتر برند، دسته‌بندی و موجودی. جستجو با کد فنی، بررسی سازگاری و صدور فاکتور رسمی.`;
+
+const crumbs = [
+  { name: 'صفحه اصلی', href: '/' },
+  { name: 'همه‌ی محصولات', href: '/products' },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      '@id': `${SITE.url}/products#webpage`,
+      url: `${SITE.url}/products`,
+      name: title,
+      description,
+      isPartOf: { '@id': `${SITE.url}/#website` },
+      inLanguage: SITE.locale,
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: crumbs.map((c, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: c.name,
+        item: `${SITE.url}${c.href}`,
+      })),
+    },
+  ],
+};
+
+/** داده‌ی فیلتر روی هر کارت — سمت کلاینت خوانده می‌شود. */
+function facetAttrs(p: (typeof products)[number]) {
+  const price = computePrice(p);
+  return {
+    'data-brand': p.brandSlug ?? '',
+    'data-categories': p.categorySlugs.join(' '),
+    'data-stock': p.stockStatus,
+    'data-price': price.effective !== null ? String(price.effective) : '',
+    'data-name': p.name,
+    'data-modified': p.modified ?? '',
+  };
+}
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd}>
+  <Breadcrumb items={crumbs} />
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <header class="mb-6 pb-4 border-b border-steel-300">
+      <h1 class="text-2xl md:text-3xl font-black text-steel-900 mb-2">همه‌ی قطعات جرثقیل سقفی</h1>
+      <p class="text-steel-600 leading-7">
+        {products.length} قطعه در {ALL_CATEGORIES.length} دسته و {activeBrands.length} برند. با فیلترهای
+        کناری نتایج را باریک کنید — بدون بارگذاری مجدد صفحه.
+      </p>
+    </header>
+
+    {
+      products.length === 0 ? (
+        /* حالت خالی صادقانه: کاتالوگ هنوز پر نشده. کارت ساختگی ساخته
+           نمی‌شود تا صفحه «پر» به نظر برسد. */
+        <div class="bg-steel-50 border border-steel-300 rounded-lg p-8 text-center">
+          <p class="text-steel-900 font-black text-lg mb-2">هنوز محصولی منتشر نشده است.</p>
+          <p class="text-steel-600 leading-7 mb-5">
+            کاتالوگ در حال تکمیل است. تا آن زمان می‌توانید کد فنی قطعه را مستقیم استعلام کنید.
+          </p>
+          <a
+            href="/contact"
+            class="inline-block bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-accent-ink transition-colors"
+          >
+            استعلام با کد فنی
+          </a>
+        </div>
+      ) : (
+        <div class="grid lg:grid-cols-[16rem_minmax(0,1fr)] gap-6 lg:gap-8 items-start">
+          {/* ───────────────── نوار کناری فیلترها (چسبان) ───────────────── */}
+          <aside
+            class="lg:sticky lg:top-24 bg-white border border-steel-300 rounded-lg overflow-hidden"
+            aria-labelledby="filters-heading"
+          >
+            <div class="flex items-center justify-between gap-2 px-4 py-3 bg-steel-900">
+              <h2 id="filters-heading" class="text-sm font-black text-white">فیلترها</h2>
+              <button
+                type="button"
+                data-clear-filters
+                class="text-xs font-bold text-steel-300 hover:text-white underline focus:outline-none focus:ring-2 focus:ring-white/60 rounded"
+              >
+                حذف همه
+              </button>
+            </div>
+
+            <div class="max-h-[70vh] overflow-y-auto divide-y divide-steel-100">
+              {/* موجودی */}
+              <fieldset class="p-4">
+                <legend class="text-xs font-black text-steel-900 mb-2">وضعیت</legend>
+                <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+                  <input type="checkbox" data-filter-stock class="w-4 h-4 accent-accent" />
+                  <span class="text-sm text-steel-700">فقط موجود در انبار</span>
+                  <span class="text-xs text-steel-600 tabular-nums mr-auto">{inStockCount}</span>
+                </label>
+                <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+                  <input type="checkbox" data-filter-hasprice class="w-4 h-4 accent-accent" />
+                  <span class="text-sm text-steel-700">فقط دارای قیمت</span>
+                  <span class="text-xs text-steel-600 tabular-nums mr-auto">{withPriceCount}</span>
+                </label>
+              </fieldset>
+
+              {/* برند */}
+              <fieldset class="p-4">
+                <legend class="text-xs font-black text-steel-900 mb-2">برند</legend>
+                {activeBrands.map((brand) => (
+                  <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+                    <input type="checkbox" data-filter-brand value={brand.slug} class="w-4 h-4 accent-accent" />
+                    <span class="text-sm text-steel-700 truncate">{brand.nameFa}</span>
+                    <span class="text-xs text-steel-600 tabular-nums mr-auto shrink-0">
+                      {brandCounts.get(brand.slug)}
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+
+              {/* دسته‌بندی — گروه‌بندی‌شده زیر سیلو */}
+              <fieldset class="p-4">
+                <legend class="text-xs font-black text-steel-900 mb-2">دسته‌بندی</legend>
+                {activeSilos.map(({ silo, categories }) => (
+                  <details class="mb-1.5" open>
+                    <summary class="text-xs font-bold text-steel-900 cursor-pointer py-1 list-none flex items-center justify-between gap-2">
+                      {silo.name}
+                      <span class="text-steel-600" aria-hidden="true">▾</span>
+                    </summary>
+                    <div class="pr-2 pt-1">
+                      {categories.map((category) => (
+                        <label class="flex items-center gap-2 py-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            data-filter-category
+                            value={category.slug}
+                            class="w-4 h-4 accent-accent"
+                          />
+                          <span class="text-sm text-steel-700 truncate">{category.name}</span>
+                          <span class="text-xs text-steel-600 tabular-nums mr-auto shrink-0">
+                            {categoryCounts.get(category.slug)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </fieldset>
+            </div>
+          </aside>
+
+          {/* ───────────────────────── شبکه‌ی محصولات ───────────────────────── */}
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-steel-300">
+              <p class="text-sm text-steel-700">
+                <strong data-result-count class="text-steel-900 font-black tabular-nums">
+                  {products.length}
+                </strong>
+                {' '}قطعه نمایش داده می‌شود
+              </p>
+
+              <div class="flex items-center gap-2">
+                <label for="sort" class="text-sm font-bold text-steel-700 shrink-0">مرتب‌سازی:</label>
+                <select
+                  id="sort"
+                  data-sort
+                  class="text-sm font-bold text-steel-900 bg-white border-2 border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40 focus:border-accent"
+                >
+                  <option value="relevant">مرتبط‌ترین</option>
+                  <option value="newest">جدیدترین</option>
+                  <option value="cheapest">ارزان‌ترین</option>
+                  <option value="expensive">گران‌ترین</option>
+                </select>
+              </div>
+            </div>
+
+            <ul data-product-grid role="list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {products.map((product, i) => (
+                <li data-product-item {...facetAttrs(product)}>
+                  <ProductCard product={product} eager={i < 3} />
+                </li>
+              ))}
+            </ul>
+
+            {/* حالت «فیلتر نتیجه‌ای نداشت» — بن‌بست نیست، راه بازگشت دارد. */}
+            <div data-empty-state hidden class="bg-steel-50 border border-steel-300 rounded-lg p-8 text-center mt-4">
+              <p class="text-steel-900 font-black text-lg mb-2">هیچ قطعه‌ای با این فیلترها پیدا نشد.</p>
+              <p class="text-steel-600 leading-7 mb-5">
+                فیلترها را کمتر کنید، یا کد فنی قطعه را مستقیم برای ما بفرستید.
+              </p>
+              <div class="flex flex-wrap gap-3 justify-center">
+                <button
+                  type="button"
+                  data-clear-filters
+                  class="bg-steel-900 text-white px-5 py-2.5 rounded-md font-bold hover:bg-steel-800 transition-colors"
+                >
+                  حذف همه‌ی فیلترها
+                </button>
+                <a
+                  href="/contact"
+                  class="bg-accent text-white px-5 py-2.5 rounded-md font-bold hover:bg-accent-ink transition-colors"
+                >
+                  استعلام با کد فنی
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  </div>
+</Layout>
+
+<script>
+  // -------------------------------------------------------------------------
+  // فیلتر و مرتب‌سازی کاملاً سمت کلاینت.
+  //
+  // چون سایت استاتیک است و همه‌ی کارت‌ها از قبل در DOM هستند، فیلترکردن
+  // فقط تغییر `hidden` است — بدون درخواست شبکه، بدون بارگذاری مجدد. برای
+  // کاتالوگی در حد چند صد قطعه این سریع‌ترین راه ممکن است.
+  // -------------------------------------------------------------------------
+  (function () {
+    const grid = document.querySelector<HTMLElement>('[data-product-grid]');
+    if (!grid) return;
+
+    const items = Array.from(grid.querySelectorAll<HTMLElement>('[data-product-item]'));
+    const countEl = document.querySelector<HTMLElement>('[data-result-count]');
+    const emptyEl = document.querySelector<HTMLElement>('[data-empty-state]');
+    const sortEl = document.querySelector<HTMLSelectElement>('[data-sort]');
+
+    const brandBoxes = Array.from(document.querySelectorAll<HTMLInputElement>('[data-filter-brand]'));
+    const catBoxes = Array.from(document.querySelectorAll<HTMLInputElement>('[data-filter-category]'));
+    const stockBox = document.querySelector<HTMLInputElement>('[data-filter-stock]');
+    const priceBox = document.querySelector<HTMLInputElement>('[data-filter-hasprice]');
+
+    const checkedValues = (boxes: HTMLInputElement[]) =>
+      boxes.filter((b) => b.checked).map((b) => b.value);
+
+    function apply() {
+      const brands = checkedValues(brandBoxes);
+      const cats = checkedValues(catBoxes);
+      const onlyStock = Boolean(stockBox?.checked);
+      const onlyPrice = Boolean(priceBox?.checked);
+
+      let visible = 0;
+      for (const item of items) {
+        const brand = item.dataset.brand ?? '';
+        const itemCats = (item.dataset.categories ?? '').split(' ').filter(Boolean);
+        const stock = item.dataset.stock ?? '';
+        const hasPrice = (item.dataset.price ?? '') !== '';
+
+        // در یک وجه، گزینه‌ها OR می‌شوند؛ بین وجه‌ها AND.
+        // این همان رفتاری است که کاربر از فیلتر فروشگاهی انتظار دارد:
+        // «دماگ یا اشتال» و در عین حال «فقط موجود».
+        const okBrand = brands.length === 0 || brands.includes(brand);
+        const okCat = cats.length === 0 || itemCats.some((c) => cats.includes(c));
+        const okStock = !onlyStock || stock === 'in_stock';
+        const okPrice = !onlyPrice || hasPrice;
+
+        const show = okBrand && okCat && okStock && okPrice;
+        item.hidden = !show;
+        if (show) visible++;
+      }
+
+      if (countEl) countEl.textContent = String(visible);
+      if (emptyEl) emptyEl.hidden = visible !== 0;
+      grid.hidden = visible === 0;
+
+      writeUrl(brands, cats, onlyStock, onlyPrice);
+    }
+
+    function sortItems() {
+      const mode = sortEl?.value ?? 'relevant';
+      const num = (el: HTMLElement) => {
+        const raw = el.dataset.price ?? '';
+        return raw === '' ? null : Number(raw);
+      };
+
+      const sorted = [...items].sort((a, b) => {
+        if (mode === 'newest') {
+          return (b.dataset.modified ?? '').localeCompare(a.dataset.modified ?? '');
+        }
+        if (mode === 'cheapest' || mode === 'expensive') {
+          const pa = num(a);
+          const pb = num(b);
+          // قطعات بدون قیمت (استعلامی) همیشه آخر می‌آیند — چه صعودی چه
+          // نزولی. اگر با صفر جایگزین می‌شدند، در «ارزان‌ترین» کل صفحه‌ی
+          // اول را می‌گرفتند و مرتب‌سازی عملاً بی‌معنا می‌شد.
+          if (pa === null && pb === null) return 0;
+          if (pa === null) return 1;
+          if (pb === null) return -1;
+          return mode === 'cheapest' ? pa - pb : pb - pa;
+        }
+        return 0;
+      });
+
+      for (const el of sorted) grid.appendChild(el);
+    }
+
+    function writeUrl(brands: string[], cats: string[], stock: boolean, price: boolean) {
+      const p = new URLSearchParams();
+      if (brands.length) p.set('brand', brands.join(','));
+      if (cats.length) p.set('cat', cats.join(','));
+      if (stock) p.set('stock', '1');
+      if (price) p.set('priced', '1');
+      if (sortEl && sortEl.value !== 'relevant') p.set('sort', sortEl.value);
+      const qs = p.toString();
+      history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+    }
+
+    function readUrl() {
+      const p = new URLSearchParams(window.location.search);
+      const brands = (p.get('brand') ?? '').split(',').filter(Boolean);
+      const cats = (p.get('cat') ?? '').split(',').filter(Boolean);
+      for (const b of brandBoxes) b.checked = brands.includes(b.value);
+      for (const c of catBoxes) c.checked = cats.includes(c.value);
+      if (stockBox) stockBox.checked = p.get('stock') === '1';
+      if (priceBox) priceBox.checked = p.get('priced') === '1';
+      if (sortEl && p.get('sort')) sortEl.value = p.get('sort')!;
+    }
+
+    for (const box of [...brandBoxes, ...catBoxes, stockBox, priceBox]) {
+      box?.addEventListener('change', apply);
+    }
+    sortEl?.addEventListener('change', () => {
+      sortItems();
+      apply();
+    });
+
+    for (const btn of document.querySelectorAll<HTMLElement>('[data-clear-filters]')) {
+      btn.addEventListener('click', () => {
+        for (const b of [...brandBoxes, ...catBoxes]) b.checked = false;
+        if (stockBox) stockBox.checked = false;
+        if (priceBox) priceBox.checked = false;
+        if (sortEl) sortEl.value = 'relevant';
+        sortItems();
+        apply();
+      });
+    }
+
+    readUrl();
+    sortItems();
+    apply();
+  })();
+</script>

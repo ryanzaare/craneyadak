@@ -53,28 +53,38 @@ const waDigits = SITE.whatsapp.replace(/[^0-9]/g, '');
           <textarea
             id="quick-order-list"
             name="parts"
-            rows="5"
+            rows="3"
             dir="ltr"
             placeholder={'MT318\nDEMAG-1234\n...'}
-            class="w-full bg-white text-steel-900 rounded-lg p-3 text-sm font-mono leading-7 placeholder-steel-600 focus:outline-none focus:ring-4 focus:ring-accent/60 resize-y"
+            class="w-full bg-white text-steel-900 rounded-lg p-3 text-sm font-mono leading-6 placeholder-steel-600 focus:outline-none focus:ring-4 focus:ring-accent/60 resize-y max-h-40"
           ></textarea>
           <p class="text-xs text-steel-300 mt-2 leading-6">
             کد را نمی‌دانید؟ عکس پلاک دستگاه یا خودِ قطعه‌ی فرسوده هم کافی است.
           </p>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-3">
+        {/* دکمه‌ی ارسال عمداً تمام‌عرض و بزرگ است.
+            گزارش شد که «دکمه‌ی ارسالی دیده نمی‌شود». دکمه وجود داشت، اما
+            هم‌اندازه‌ی دکمه‌ی ثانویه‌ی کنارش بود و زیر یک textarea با
+            ارتفاع ۵ خط قرار می‌گرفت — یعنی از نظر بصری با پس‌زمینه‌ی تیره
+            ادغام می‌شد و پایین ناحیه‌ی دید می‌افتاد. حالا: textarea کوتاه‌تر
+            (۳ خط، کافی برای چند کد فنی)، و دکمه‌ی اصلی تمام‌عرض، بلندتر و
+            با کنتراست بالاتر از هر عنصر دیگر این بخش. */}
+        <div class="flex flex-col gap-2.5">
           <button
             type="submit"
-            class="bg-accent text-white px-7 py-3.5 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]"
+            class="w-full bg-accent text-white px-7 py-4 rounded-md font-black text-lg hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-white/50 min-h-[56px] flex items-center justify-center gap-2 shadow-lg shadow-black/30"
           >
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
             ارسال فهرست برای استعلام
           </button>
           <a
             href={`https://wa.me/${waDigits}`}
             rel="noopener noreferrer"
             target="_blank"
-            class="inline-flex items-center justify-center gap-2 bg-white/[0.07] border border-white/20 text-white px-6 py-3.5 rounded-md font-bold hover:bg-white/15 transition-colors focus:outline-none focus:ring-4 focus:ring-white/30 min-h-[48px]"
+            class="inline-flex items-center justify-center gap-2 bg-transparent border border-white/25 text-steel-300 px-6 py-2.5 rounded-md text-sm font-bold hover:bg-white/10 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-white/30"
           >
             <svg class="w-5 h-5 shrink-0" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24">
               <path

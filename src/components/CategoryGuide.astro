@@ -1,7 +1,10 @@
 ---
 import AuthorBox from './AuthorBox.astro';
-import { DEFAULT_AUTHOR } from '../data/trust';
+import { getPrimaryAuthor } from '../lib/authors';
 import { autolinkHtml } from '../lib/autolink';
+
+// نویسنده از وردپرس؛ اگر نبود، جای‌گذارِ برچسب‌دار.
+const author = await getPrimaryAuthor();
 // src/components/CategoryGuide.astro
 // ---------------------------------------------------------------------------
 // رندر محتوای تخصصی دسته — لایه‌ی «راهنما» در برابر لایه‌ی «فروشگاه».
@@ -101,7 +104,7 @@ const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
               {categoryName} چیست و چه می‌کند؟
             </h2>
 
-            <AuthorBox author={DEFAULT_AUTHOR} class="mb-8 max-w-3xl" />
+            <AuthorBox author={author} class="mb-8 max-w-3xl" />
             {/* عرض محدود عمدی: متن فارسی در خط بلند خوانده نمی‌شود. */}
             {/* لینک‌دهی داخلی خودکار. متن از ویرایشگر وردپرس می‌آید و مدیر
                 محتوا لینک داخلی نمی‌گذارد؛ بدون این، بلندترین متن سایت هیچ

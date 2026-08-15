@@ -1,0 +1,46 @@
+---
+// src/components/CoverageStrip.astro
+// ---------------------------------------------------------------------------
+// «دامنه‌ی پوشش» — نیمه‌ی اولِ AuthorityStrip قدیمی.
+//
+// چرا آن کامپوننت شکسته شد: سه عدد در سمت راست و سه تعهد در سمت چپ، همه
+// در یک ردیف افقی. این چیدمان دو *نوع* اطلاعات کاملاً متفاوت را کنار هم
+// می‌گذاشت — «چقدر جنس داریم» و «چرا به ما اعتماد کنید» — بدون هیچ مرز
+// بصری. چشم نمی‌فهمید کجا یکی تمام و دیگری شروع می‌شود، و در نتیجه هیچ‌کدام
+// خوانده نمی‌شد. تعهدات هم آن‌قدر کوچک بودند که عملاً دیده نمی‌شدند.
+//
+// حالا دو کامپوننت مجزا با ریتم بصری و اندازه‌ی مستقل.
+// همه‌ی اعداد از تاکسونومی می‌آیند — هیچ ادعای دستی‌ای اینجا نیست.
+// ---------------------------------------------------------------------------
+import { ALL_CATEGORIES, BRANDS, SILOS } from '../data/taxonomy';
+
+const facts = [
+  { value: String(BRANDS.length), label: 'برند تحت پوشش', detail: 'از سازنده‌ی جرثقیل تا ریموت و تجهیزات برقی' },
+  { value: String(ALL_CATEGORIES.length), label: 'دسته قطعه', detail: 'قابل جستجو با کد فنی یا نام قطعه' },
+  { value: String(SILOS.length), label: 'گروه فنی', detail: 'کاتالوگ بر اساس مکانیزم، نه حروف الفبا' },
+];
+---
+
+<section class="bg-white border-b border-steel-100" aria-labelledby="coverage-heading">
+  <div class="max-w-7xl mx-auto px-4 py-9">
+    <h2 id="coverage-heading" class="sr-only">دامنه‌ی پوشش کاتالوگ</h2>
+
+    <ul role="list" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {
+        facts.map((fact) => (
+          <li class="flex items-baseline gap-4 p-4 bg-steel-50 border border-steel-300 rounded-lg">
+            {/* عدد عمداً بسیار بزرگ است: این تنها بخشی از صفحه است که
+                باید از فاصله‌ی دو متری هم خوانده شود. */}
+            <span class="text-4xl md:text-5xl font-black text-accent-ink tabular-nums leading-none shrink-0">
+              {fact.value}
+            </span>
+            <span class="min-w-0">
+              <span class="block font-black text-steel-900 leading-7">{fact.label}</span>
+              <span class="block text-xs text-steel-600 leading-6 mt-0.5">{fact.detail}</span>
+            </span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>

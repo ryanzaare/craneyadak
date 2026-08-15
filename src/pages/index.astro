@@ -24,9 +24,9 @@
 // نمی‌گیرد و نیت «مرور کاتالوگ» را می‌گیرد.
 // ---------------------------------------------------------------------------
 import Layout from '../layouts/Layout.astro';
-import PartFinder from '../components/PartFinder.astro';
 import SearchBox from '../components/SearchBox.astro';
-import AuthorityStrip from '../components/AuthorityStrip.astro';
+import CoverageStrip from '../components/CoverageStrip.astro';
+import AssuranceStrip from '../components/AssuranceStrip.astro';
 import MetricsStrip from '../components/MetricsStrip.astro';
 import QuickOrder from '../components/QuickOrder.astro';
 import HighWearParts from '../components/HighWearParts.astro';
@@ -160,7 +160,7 @@ const jsonLd = {
       <div class="min-w-0">
         <h1 id="hero-heading" class="text-3xl md:text-4xl lg:text-[2.6rem] font-black text-white tracking-tight leading-[1.4] mb-4 text-right">
           مرجع تخصصی تأمین قطعات یدکی
-          <span class="text-accent">جرثقیل سقفی</span>
+          <span class="text-accent"> جرثقیل سقفی</span>
           {/* اعداد این خط از خودِ تاکسونومی می‌آیند، نه از حدس. یک لحظه
               «بیش از ۳۰۰ قلم قطعه» اینجا نوشتم و پاکش کردم: هیچ مبنایی
               برایش نداشتم و دقیقاً همان داده‌ی ساختگی‌ای بود که کل پروژه
@@ -236,10 +236,16 @@ const jsonLd = {
       را دارند: خرید برنامه‌ریزی‌شده با فهرست کد، و خرابی اضطراری. */}
   <QuickOrder />
 
-  {/* ============================ PART FINDER ============================ */}
-  <PartFinder />
+  {/* PartFinder حذف شد. یک فرم سه‌مرحله‌ای بود که کاربر باید *پیش از*
+      دیدن هر محصولی پر می‌کرد — الگوی «اول فرم، بعد نتیجه» متعلق به دوران
+      پیش از فیلتر زنده است. جایگزینش /products است: همه‌ی محصولات دیده
+      می‌شوند و کاربر با فیلتر وجهی باریکشان می‌کند. */}
 
-  <AuthorityStrip />
+  {/* AuthorityStrip به دو کامپوننت شکسته شد: سه عدد و سه تعهد در یک ردیف
+      افقی، دو نوع اطلاعات کاملاً متفاوت را بدون مرز بصری کنار هم
+      می‌گذاشت و هیچ‌کدام خوانده نمی‌شد. */}
+  <CoverageStrip />
+  <AssuranceStrip />
 
   {/* ====================== ویترین: محصولات واقعی ====================== */}
   {storefront.onSale.length > 0 && (
