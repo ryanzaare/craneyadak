@@ -152,8 +152,8 @@ require_once CYH_PLUGIN_DIR . 'includes/class-admin-settings.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-options-page.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-deploy-webhook.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-content-seeder.php';
-require_once CYH_PLUGIN_DIR . 'includes/class-demo-seeder.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-ai-draft.php';
+require_once CYH_PLUGIN_DIR . 'includes/class-ai-bulk.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-community.php';
 
 /**
@@ -174,6 +174,7 @@ register_activation_hook( __FILE__, 'cyh_activate' );
 function cyh_deactivate() {
 	flush_rewrite_rules();
 	cyh_clear_deploy_cron(); // تعریف در includes/class-deploy-webhook.php
+	cyh_ai_clear_queue_cron(); // صف تولید محتوا
 }
 register_deactivation_hook( __FILE__, 'cyh_deactivate' );
 

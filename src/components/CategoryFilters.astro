@@ -1,0 +1,271 @@
+---
+// src/components/CategoryFilters.astro
+// ---------------------------------------------------------------------------
+// نوار فیلتر صفحه‌ی دسته = فیلترهای عمومی + فیلترهای تخصصی همان دسته.
+//
+// این کامپوننت همان «قاعده‌ی دولایه» را عملاً اجرا می‌کند:
+//     نمای دسته = همه‌ی فیلترهای عمومی + فیلترهای فنی مخصوص آن دسته
+//
+// فیلترهای تخصصی از `src/data/filters.ts` می‌آیند و مقادیرشان در زمان
+// build از خودِ محصولات همان دسته استخراج می‌شود. اگر مشخصه‌ای در هیچ
+// محصولی ثبت نشده باشد، آن فیلتر اصلاً رندر نمی‌شود — نوار کناری فقط
+// چیزی را نشان می‌دهد که واقعاً قابل فیلتر کردن است.
+// ---------------------------------------------------------------------------
+import { facetsForCategory, resolveFacets, specValue } from '../data/filters';
+import { BRANDS } from '../data/taxonomy';
+import { computePrice, type CraneProduct } from '../lib/wp';
+
+interface Props {
+  products: CraneProduct[];
+  categorySlug: string;
+  class?: string;
+}
+
+const { products, categorySlug, class: className = '' } = Astro.props;
+
+const specFacets = resolveFacets(products, facetsForCategory(categorySlug));
+
+const brandCounts = new Map<string, number>();
+for (const p of products) {
+  if (p.brandSlug) brandCounts.set(p.brandSlug, (brandCounts.get(p.brandSlug) ?? 0) + 1);
+}
+const activeBrands = BRANDS.filter((b) => brandCounts.has(b.slug));
+
+const inStockCount = products.filter((p) => p.stockStatus === 'in_stock').length;
+const rfqCount = products.filter((p) => p.buyMode === 'rfq').length;
+
+// یک فیلتر با کمتر از دو گزینه بی‌فایده است — هیچ چیزی را باریک نمی‌کند.
+const usefulBrands = activeBrands.length >= 2 ? activeBrands : [];
+const usefulSpecs = specFacets.filter((f) => (f.kind === 'range' ? f.min !== f.max : f.values.length >= 2));
+
+const hasAnyFilter = usefulBrands.length > 0 || usefulSpecs.length > 0 || inStockCount > 0;
+
+/** صفت‌های داده روی هر کارت — سمت کلاینت خوانده می‌شود. */
+export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
+  const attrs: Record<string, string> = {};
+  for (const f of facets) {
+    const raw = specValue(product, f.specLabel);
+    if (raw) attrs[`data-spec-${f.id}`] = raw;
+  }
+  return attrs;
+}
+---
+
+{
+  hasAnyFilter && (
+    <aside
+      class={`bg-white border border-steel-300 rounded-lg overflow-hidden ${className}`}
+      aria-labelledby="cat-filters-heading"
+      data-category-filters
+    >
+      <div class="flex items-center justify-between gap-2 px-4 py-3 bg-steel-900">
+        <h2 id="cat-filters-heading" class="text-sm font-black text-white">
+          فیلتر تخصصی
+        </h2>
+        <button
+          type="button"
+          data-cat-clear
+          class="text-xs font-bold text-steel-300 hover:text-white underline focus:outline-none focus:ring-2 focus:ring-white/60 rounded"
+        >
+          حذف همه
+        </button>
+      </div>
+
+      <div class="divide-y divide-steel-100">
+        {/* ── لایه ۱: عمومی ── */}
+        <fieldset class="p-4">
+          <legend class="text-xs font-black text-steel-900 mb-2">وضعیت</legend>
+          {inStockCount > 0 && (
+            <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+              <input type="checkbox" data-cat-stock class="w-4 h-4 accent-accent" />
+              <span class="text-sm text-steel-700">فقط موجود در انبار</span>
+              <span class="text-xs text-steel-600 tabular-nums mr-auto">{inStockCount}</span>
+            </label>
+          )}
+          {rfqCount > 0 && rfqCount < products.length && (
+            <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+              <input type="checkbox" data-cat-cart class="w-4 h-4 accent-accent" />
+              <span class="text-sm text-steel-700">فقط قابل خرید آنلاین</span>
+              <span class="text-xs text-steel-600 tabular-nums mr-auto">
+                {products.length - rfqCount}
+              </span>
+            </label>
+          )}
+        </fieldset>
+
+        {usefulBrands.length > 0 && (
+          <fieldset class="p-4">
+            <legend class="text-xs font-black text-steel-900 mb-2">برند</legend>
+            {usefulBrands.map((brand) => (
+              <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+                <input type="checkbox" data-cat-brand value={brand.slug} class="w-4 h-4 accent-accent" />
+                <span class="text-sm text-steel-700 truncate">{brand.nameFa}</span>
+                <span class="text-xs text-steel-600 tabular-nums mr-auto shrink-0">
+                  {brandCounts.get(brand.slug)}
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+
+        {/* ── لایه ۲: تخصصی — همان چیزی که واقعاً انتخاب قطعه را تعیین می‌کند ── */}
+        {usefulSpecs.map((facet) => (
+          <fieldset class="p-4">
+            <legend class="text-xs font-black text-steel-900 mb-1">
+              {facet.label}
+              {facet.unit && <span class="font-normal text-steel-600"> ({facet.unit})</span>}
+            </legend>
+
+            {/* توضیح مهندسی: چرا این مشخصه در انتخاب اهمیت دارد.
+                این همان چیزی است که یک فروشگاه عمومی ندارد و مرجع تخصصی
+                باید داشته باشد. */}
+            {facet.hint && <p class="text-[11px] text-steel-600 leading-5 mb-2">{facet.hint}</p>}
+
+            {facet.kind === 'checkbox' ? (
+              facet.values.map((value) => (
+                <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    data-cat-spec={facet.id}
+                    value={value}
+                    class="w-4 h-4 accent-accent"
+                  />
+                  <span class="text-sm text-steel-700 truncate">{value}</span>
+                </label>
+              ))
+            ) : (
+              <div class="pt-1">
+                <label class="sr-only" for={`range-${facet.id}`}>
+                  حداکثر {facet.label}
+                </label>
+                <input
+                  id={`range-${facet.id}`}
+                  type="range"
+                  data-cat-range={facet.id}
+                  min={facet.min ?? 0}
+                  max={facet.max ?? 100}
+                  value={facet.max ?? 100}
+                  step="any"
+                  class="w-full accent-accent"
+                />
+                <p class="flex justify-between text-[11px] text-steel-600 tabular-nums mt-1">
+                  <span>{facet.min}</span>
+                  <span>
+                    تا <strong data-range-out={facet.id} class="text-steel-900">{facet.max}</strong>
+                  </span>
+                </p>
+              </div>
+            )}
+          </fieldset>
+        ))}
+      </div>
+    </aside>
+  )
+}
+
+<script>
+  // فیلتر سمت کلاینت روی کارت‌های همان صفحه — بدون درخواست شبکه.
+  (function () {
+    const root = document.querySelector<HTMLElement>('[data-category-filters]');
+    const grid = document.querySelector<HTMLElement>('[data-cat-grid]');
+    if (!root || !grid) return;
+
+    const items = Array.from(grid.querySelectorAll<HTMLElement>('[data-cat-item]'));
+    const countEl = document.querySelector<HTMLElement>('[data-cat-count]');
+    const emptyEl = document.querySelector<HTMLElement>('[data-cat-empty]');
+
+    const brandBoxes = Array.from(root.querySelectorAll<HTMLInputElement>('[data-cat-brand]'));
+    const specBoxes = Array.from(root.querySelectorAll<HTMLInputElement>('[data-cat-spec]'));
+    const ranges = Array.from(root.querySelectorAll<HTMLInputElement>('[data-cat-range]'));
+    const stockBox = root.querySelector<HTMLInputElement>('[data-cat-stock]');
+    const cartBox = root.querySelector<HTMLInputElement>('[data-cat-cart]');
+
+    /** اولین عدد داخل یک مقدار مشخصات — «۱۶ mm» → 16 */
+    function num(raw: string): number | null {
+      const n = raw
+        .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+        .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+        .replace(/,/g, '')
+        .match(/-?\d+(\.\d+)?/);
+      return n ? Number(n[0]) : null;
+    }
+
+    function apply() {
+      const brands = brandBoxes.filter((b) => b.checked).map((b) => b.value);
+
+      // گزینه‌های هر مشخصه گروه می‌شوند: داخل گروه OR، بین گروه‌ها AND.
+      const specGroups = new Map<string, string[]>();
+      for (const box of specBoxes) {
+        if (!box.checked) continue;
+        const key = box.dataset.catSpec!;
+        specGroups.set(key, [...(specGroups.get(key) ?? []), box.value]);
+      }
+
+      let visible = 0;
+      for (const item of items) {
+        let show = true;
+
+        if (brands.length && !brands.includes(item.dataset.brand ?? '')) show = false;
+        if (show && stockBox?.checked && item.dataset.stock !== 'in_stock') show = false;
+        if (show && cartBox?.checked && item.dataset.buymode !== 'cart') show = false;
+
+        if (show) {
+          for (const [id, values] of specGroups) {
+            const actual = item.dataset[`spec${id.replace(/-([a-z])/g, (_, c) => c.toUpperCase())}`];
+            if (!actual || !values.includes(actual)) {
+              show = false;
+              break;
+            }
+          }
+        }
+
+        if (show) {
+          for (const range of ranges) {
+            const id = range.dataset.catRange!;
+            const key = `spec${id.replace(/-([a-z])/g, (_, c) => c.toUpperCase())}`;
+            const raw = item.dataset[key];
+            // قطعه‌ای که این مشخصه را ندارد با اسلایدر حذف نمی‌شود —
+            // نبودِ داده دلیل ناسازگاری نیست.
+            if (!raw) continue;
+            const value = num(raw);
+            if (value !== null && value > Number(range.value)) {
+              show = false;
+              break;
+            }
+          }
+        }
+
+        item.hidden = !show;
+        if (show) visible++;
+      }
+
+      if (countEl) countEl.textContent = String(visible);
+      if (emptyEl) emptyEl.hidden = visible !== 0;
+    }
+
+    for (const el of [...brandBoxes, ...specBoxes, stockBox, cartBox]) {
+      el?.addEventListener('change', apply);
+    }
+    for (const range of ranges) {
+      range.addEventListener('input', () => {
+        const out = root.querySelector<HTMLElement>(`[data-range-out="${range.dataset.catRange}"]`);
+        if (out) out.textContent = range.value;
+        apply();
+      });
+    }
+
+    root.querySelector<HTMLElement>('[data-cat-clear]')?.addEventListener('click', () => {
+      for (const b of [...brandBoxes, ...specBoxes]) b.checked = false;
+      if (stockBox) stockBox.checked = false;
+      if (cartBox) cartBox.checked = false;
+      for (const r of ranges) {
+        r.value = r.max;
+        const out = root.querySelector<HTMLElement>(`[data-range-out="${r.dataset.catRange}"]`);
+        if (out) out.textContent = r.max;
+      }
+      apply();
+    });
+
+    apply();
+  })();
+</script>

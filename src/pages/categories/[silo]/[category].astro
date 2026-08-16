@@ -13,6 +13,8 @@
 import Layout from '../../../layouts/Layout.astro';
 import Breadcrumb from '../../../components/Breadcrumb.astro';
 import ProductCard from '../../../components/ProductCard.astro';
+import CategoryFilters from '../../../components/CategoryFilters.astro';
+import { facetsForCategory, resolveFacets, specValue } from '../../../data/filters';
 import { SITE } from '../../../data/site';
 import {
   SILOS,
@@ -127,6 +129,23 @@ const jsonLd = {
     ...(faqNode ? [faqNode] : []),
   ],
 };
+
+// فیلترهای تخصصی همین دسته — مقادیر از خودِ محصولات استخراج می‌شوند.
+const catFacets = resolveFacets(products, facetsForCategory(category.slug));
+
+/** صفت‌های داده روی هر کارت تا فیلتر سمت کلاینت بتواند بخواندشان. */
+function catAttrs(product: typeof products[number]) {
+  const attrs: Record<string, string> = {
+    'data-brand': product.brandSlug ?? '',
+    'data-stock': product.stockStatus,
+    'data-buymode': product.buyMode,
+  };
+  for (const f of catFacets) {
+    const raw = specValue(product, f.specLabel);
+    if (raw) attrs[`data-spec-${f.id}`] = raw;
+  }
+  return attrs;
+}
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
@@ -166,11 +185,34 @@ const jsonLd = {
       </div>
 
       {products.length > 0 ? (
-        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" role="list">
-          {products.map((product, index) => (
-            <li><ProductCard product={product} eager={index < 4} /></li>
-          ))}
-        </ul>
+        /* دو ستون: فیلتر تخصصی + شبکه‌ی محصولات.
+           این همان «لایه‌ی دوم» معماری فیلتر است — فیلترهای عمومی به‌علاوه
+           مشخصه‌هایی که واقعاً انتخاب این قطعه‌ی خاص را تعیین می‌کنند. */
+        <div class="grid lg:grid-cols-[15rem_minmax(0,1fr)] gap-6 items-start">
+          <CategoryFilters products={products} categorySlug={category.slug} class="lg:sticky lg:top-24" />
+
+          <div class="min-w-0">
+            <p class="text-sm text-steel-700 mb-3">
+              <strong data-cat-count class="text-steel-900 font-black tabular-nums">{products.length}</strong>
+              {' '}قطعه نمایش داده می‌شود
+            </p>
+
+            <ul data-cat-grid class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" role="list">
+              {products.map((product, index) => (
+                <li data-cat-item {...catAttrs(product)}>
+                  <ProductCard product={product} eager={index < 4} />
+                </li>
+              ))}
+            </ul>
+
+            <div data-cat-empty hidden class="bg-white border border-steel-300 rounded-lg p-6 text-center mt-4">
+              <p class="text-steel-900 font-black mb-1">هیچ قطعه‌ای با این مشخصات پیدا نشد.</p>
+              <p class="text-sm text-steel-600 leading-7">
+                فیلترها را کمتر کنید یا مشخصات دستگاه خود را برای ما بفرستید تا معادل مناسب را پیدا کنیم.
+              </p>
+            </div>
+          </div>
+        </div>
       ) : (
         /* حالت خالیِ صادقانه — هیچ محصول ساختگی ساخته نمی‌شود. */
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 md:p-12 max-w-3xl">
