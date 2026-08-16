@@ -70,6 +70,54 @@ function cyh_render_settings_page() {
 			<?php settings_fields( 'cyh_settings_group' ); ?>
 			<table class="form-table" role="presentation">
 				<tr>
+					<th scope="row"><label for="cyh_ai_api_key">کلید Google Gemini API</label></th>
+					<td>
+						<input type="password" id="cyh_ai_api_key" name="cyh_ai_api_key"
+							value="<?php echo esc_attr( get_option( 'cyh_ai_api_key', '' ) ); ?>"
+							class="regular-text" autocomplete="off" dir="ltr" />
+						<p class="description">
+							کلید را از <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> بگیرید.
+							این کلید فقط برای تولید پیش‌نویس محتوا استفاده می‌شود و هرگز در فرانت‌اند منتشر نمی‌شود.
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="cyh_ai_model">مدل Gemini</label></th>
+					<td>
+						<input type="text" id="cyh_ai_model" name="cyh_ai_model"
+							value="<?php echo esc_attr( get_option( 'cyh_ai_model', '' ) ); ?>"
+							class="regular-text" placeholder="<?php echo esc_attr( CYH_AI_DEFAULT_MODEL ); ?>" dir="ltr" />
+						<p class="description">
+							خالی بگذارید تا مقدار پیش‌فرض («<code><?php echo esc_html( CYH_AI_DEFAULT_MODEL ); ?></code>») استفاده شود.
+							<br>
+							<strong>توجه:</strong> مدل‌های <code>gemini-1.5-*</code> بازنشسته شده‌اند و خطای ۴۰۴ می‌دهند.
+							اگر روزی خطای ۴۰۴ دیدید، یعنی گوگل مدل فعلی را هم بازنشسته کرده؛ فقط کافی است نام مدل جدید را
+							اینجا وارد کنید — نیازی به تغییر کد نیست.
+						</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">وضعیت تولید محتوا</th>
+					<td>
+						<?php
+						$queue   = get_option( 'cyh_ai_queue', [] );
+						$pending = is_array( $queue ) ? count( $queue ) : 0;
+						$has_key = '' !== trim( (string) get_option( 'cyh_ai_api_key', '' ) );
+						printf(
+							'<p><strong>%s</strong></p>',
+							$has_key ? '✅ کلید ثبت شده است.' : '⚠️ کلید ثبت نشده — تولید محتوا غیرفعال است.'
+						);
+						if ( $pending > 0 ) {
+							printf( '<p>%d محصول در صف پردازش است.</p>', (int) $pending );
+						}
+						?>
+						<p class="description">
+							تولید انبوه از منوی <strong>محصولات ← تولید انبوه محتوا</strong> انجام می‌شود.
+							خروجی همیشه <strong>پیش‌نویس</strong> است و هرگز خودکار منتشر نمی‌شود.
+						</p>
+					</td>
+				</tr>
+				<tr>
 					<th scope="row"><label for="cyh_notification_email">ایمیل دریافت درخواست‌های استعلام</label></th>
 					<td>
 						<input type="email" id="cyh_notification_email" name="cyh_notification_email"

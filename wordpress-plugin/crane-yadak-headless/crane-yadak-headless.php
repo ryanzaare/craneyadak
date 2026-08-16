@@ -152,6 +152,7 @@ require_once CYH_PLUGIN_DIR . 'includes/class-admin-settings.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-options-page.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-deploy-webhook.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-content-seeder.php';
+require_once CYH_PLUGIN_DIR . 'includes/class-ai-prompt.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-ai-draft.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-ai-bulk.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-community.php';

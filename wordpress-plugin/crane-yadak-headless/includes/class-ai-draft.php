@@ -28,9 +28,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** نام گزینه‌هایی که کلید و ارائه‌دهنده در آن ذخیره می‌شوند. */
-const CYH_AI_PROVIDER_OPTION = 'cyh_ai_provider';
-const CYH_AI_KEY_OPTION      = 'cyh_ai_api_key';
-const CYH_AI_MODEL_OPTION    = 'cyh_ai_model';
+const CYH_AI_KEY_OPTION   = 'cyh_ai_api_key';
+const CYH_AI_MODEL_OPTION = 'cyh_ai_model';
+
+/**
+ * مدل پیش‌فرض.
+ *
+ * ⚠️ نکته‌ای که باید بدانید: مدل درخواستی اولیه `gemini-1.5-pro` بود، اما
+ * تمام مدل‌های Gemini 1.5 بازنشسته شده‌اند و درخواست به آن‌ها خطای ۴۰۴
+ * برمی‌گرداند. یعنی آن اندپوینت از همان اولین فراخوانی شکست می‌خورد.
+ * به همین دلیل مدل به‌صورت یک گزینه‌ی قابل ویرایش درآمده تا با
+ * بازنشستگی‌های بعدی گوگل، نیازی به تغییر کد نباشد.
+ */
+const CYH_AI_DEFAULT_MODEL = 'gemini-3.6-flash';
+
+/** ریشه‌ی API — نسخه‌ی v1beta همان چیزی است که مستندات گوگل می‌گوید. */
+const CYH_AI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
 /** متای ثبت آخرین تولید — برای نمایش در پنل. */
 const CYH_AI_LAST_RUN_META = '_cyh_ai_last_run';
@@ -64,94 +77,70 @@ add_filter( 'wp_insert_post_data', 'cyh_ai_guard_never_publish', 999, 2 );
  * معادلی *اختراع* نکند و هرجا داده ندارد، جای خالی علامت‌دار بگذارد.
  * این تنها راه استفاده‌ی مسئولانه از مدل زبانی برای محتوای فنی است.
  */
-function cyh_ai_build_prompt( $post_id ) {
-	$title = get_the_title( $post_id );
-	$sku   = function_exists( 'get_field' ) ? (string) get_field( 'sku', $post_id ) : '';
-
-	$categories = wp_get_post_terms( $post_id, 'crane_category', [ 'fields' => 'names' ] );
-	$category   = ( ! is_wp_error( $categories ) && ! empty( $categories ) ) ? $categories[0] : '';
-
-	$specs_text = '';
-	if ( function_exists( 'get_field' ) ) {
-		$specs = get_field( 'technical_specs', $post_id );
-		if ( is_array( $specs ) ) {
-			foreach ( $specs as $row ) {
-				$label = isset( $row['spec_label'] ) ? $row['spec_label'] : '';
-				$value = isset( $row['spec_value'] ) ? $row['spec_value'] : '';
-				if ( $label && $value ) {
-					$specs_text .= "- {$label}: {$value}\n";
-				}
-			}
-		}
-	}
-
-	return "شما یک نویسنده‌ی فنی ارشد در حوزه‌ی جرثقیل سقفی هستید و برای یک فروشگاه B2B ایرانی می‌نویسید.\n\n"
-		. "محصول: {$title}\n"
-		. ( $sku ? "کد فنی: {$sku}\n" : '' )
-		. ( $category ? "دسته: {$category}\n" : '' )
-		. ( $specs_text ? "مشخصات ثبت‌شده:\n{$specs_text}" : '' )
-		. "\nیک توضیح فنی کامل به زبان فارسی بنویس با این ساختار HTML:\n"
-		. "- یک پاراگراف کوتاه و صریح (حداکثر ۳ جمله) در ابتدا\n"
-		. "- <h2>نقش این قطعه در مکانیزم</h2>\n"
-		. "- <h2>نشانه‌های فرسودگی و زمان تعویض</h2>\n"
-		. "- <h2>معیارهای انتخاب صحیح</h2>\n"
-		. "- <h2>نکات نصب و راه‌اندازی</h2>\n"
-		. "- <h2>پرسش‌های متداول</h2> با چند پرسش و پاسخ\n\n"
-		. "قوانین سخت‌گیرانه:\n"
-		. "۱) هیچ عدد، تلورانس، ابعاد یا کد معادل OEM را از خودت نساز. اگر داده نداری، "
-		. "دقیقاً بنویس: [[نیازمند تایید فنی]]\n"
-		. "۲) هیچ ادعای تجاری اثبات‌نشده (سابقه، درصد رضایت، رتبه) ننویس.\n"
-		. "۳) فقط HTML خالص برگردان، بدون ```html و بدون توضیح اضافه.\n";
-}
-
 /**
- * فراخوانی ارائه‌دهنده. بویلرپلیت برای Anthropic و OpenAI.
+ * فراخوانی Google Gemini.
  *
- * هر دو مسیر پیاده شده‌اند اما تا وارد نشدن کلید API غیرفعال‌اند.
- * هیچ کلیدی در کد نوشته نشده و نباید نوشته شود — از گزینه‌ی وردپرس
- * خوانده می‌شود.
+ * سه تصمیم که ارزش توضیح دارند:
+ *
+ * ۱) `system_instruction` جدا از `contents`.
+ *    جمنای دستورالعمل سیستمی را با وزن بیشتری اعمال می‌کند و مدل کمتر از
+ *    آن منحرف می‌شود. ریختن همه‌چیز در یک پیام کاربر، همان قواعد را به
+ *    یک «پیشنهاد» تنزل می‌دهد.
+ *
+ * ۲) ابزار `google_search` فعال است — و این حیاتی است.
+ *    خواسته شده بود مدل «در سایت‌های داخلی و بین‌المللی تحقیق عمیق کند».
+ *    یک فراخوانی ساده‌ی generateContent هیچ دسترسی‌ای به وب ندارد؛ چنین
+ *    دستوری بدون ابزار جستجو، عملاً *دعوت به ساختن منبع* است — دقیقاً
+ *    خطرناک‌ترین حالت ممکن برای محتوای فنی. با فعال‌کردن grounding، مدل
+ *    واقعاً جستجو می‌کند و پاسخ به نتایج واقعی مقید می‌شود.
+ *
+ * ۳) دمای پایین (۰.۴).
+ *    برای متن فنی، خلاقیت زبانی ارزش دارد اما «خلاقیت عددی» فاجعه است.
+ *    دمای پایین احتمال ساختن عدد و کد را کم می‌کند.
  */
 function cyh_ai_call_provider( $prompt ) {
-	$provider = get_option( CYH_AI_PROVIDER_OPTION, 'anthropic' );
-	$api_key  = trim( (string) get_option( CYH_AI_KEY_OPTION, '' ) );
-
+	$api_key = trim( (string) get_option( CYH_AI_KEY_OPTION, '' ) );
 	if ( '' === $api_key ) {
-		return new WP_Error( 'cyh_ai_no_key', 'کلید API وارد نشده است. آن را در تنظیمات افزونه ثبت کنید.' );
+		return new WP_Error( 'cyh_ai_no_key', 'کلید Google Gemini API وارد نشده است. آن را در تنظیمات افزونه ثبت کنید.' );
 	}
 
-	if ( 'openai' === $provider ) {
-		$model    = get_option( CYH_AI_MODEL_OPTION, 'gpt-4o' );
-		$endpoint = 'https://api.openai.com/v1/chat/completions';
-		$headers  = [
-			'Content-Type'  => 'application/json',
-			'Authorization' => 'Bearer ' . $api_key,
-		];
-		$body = [
-			'model'    => $model,
-			'messages' => [ [ 'role' => 'user', 'content' => $prompt ] ],
-			'max_tokens' => 4000,
-		];
-	} else {
-		$model    = get_option( CYH_AI_MODEL_OPTION, 'claude-sonnet-5' );
-		$endpoint = 'https://api.anthropic.com/v1/messages';
-		$headers  = [
-			'Content-Type'      => 'application/json',
-			'x-api-key'         => $api_key,
-			'anthropic-version' => '2023-06-01',
-		];
-		$body = [
-			'model'      => $model,
-			'max_tokens' => 4000,
-			'messages'   => [ [ 'role' => 'user', 'content' => $prompt ] ],
-		];
+	$model = trim( (string) get_option( CYH_AI_MODEL_OPTION, '' ) );
+	if ( '' === $model ) {
+		$model = CYH_AI_DEFAULT_MODEL;
 	}
+
+	$endpoint = CYH_AI_API_BASE . rawurlencode( $model ) . ':generateContent';
+
+	$body = [
+		'system_instruction' => [
+			'parts' => [ [ 'text' => cyh_ai_system_prompt() ] ],
+		],
+		'contents' => [
+			[
+				'role'  => 'user',
+				'parts' => [ [ 'text' => $prompt ] ],
+			],
+		],
+		// اتصال به جستجوی گوگل — بدون این، «تحقیق» یعنی توهم.
+		'tools' => [ [ 'google_search' => new stdClass() ] ],
+		'generationConfig' => [
+			'temperature'     => 0.4,
+			'maxOutputTokens' => 8192,
+		],
+		// ایمنی: محتوای فنی درباره‌ی خطر مکانیکی نباید سهواً فیلتر شود،
+		// اما آستانه‌ها روی مقدار پیش‌فرض گوگل رها می‌شوند تا رفتار
+		// قابل‌پیش‌بینی بماند.
+	];
 
 	$response = wp_remote_post(
 		$endpoint,
 		[
-			'headers' => $headers,
+			'headers' => [
+				'Content-Type'   => 'application/json',
+				'x-goog-api-key' => $api_key,
+			],
 			'body'    => wp_json_encode( $body ),
-			'timeout' => 120,
+			'timeout' => 180, // grounding + متن بلند: تا سه دقیقه طبیعی است
 		]
 	);
 
@@ -164,20 +153,40 @@ function cyh_ai_call_provider( $prompt ) {
 
 	if ( 200 !== $code ) {
 		$message = isset( $json['error']['message'] ) ? $json['error']['message'] : "خطای HTTP {$code}";
+
+		// راهنمایی مشخص برای رایج‌ترین خطا.
+		if ( 404 === $code ) {
+			$message .= ' — به احتمال زیاد نام مدل («' . $model . '») منسوخ شده است.'
+				. ' مدل‌های Gemini 1.5 بازنشسته شده‌اند. نام مدل را در تنظیمات افزونه به‌روز کنید.';
+		} elseif ( 403 === $code ) {
+			$message .= ' — کلید API معتبر نیست یا Generative Language API روی پروژه فعال نشده است.';
+		} elseif ( 429 === $code ) {
+			$message .= ' — سقف نرخ درخواست پر شده است. صف خودکار ادامه می‌دهد؛ کمی صبر کنید.';
+		}
+
 		return new WP_Error( 'cyh_ai_http', $message );
 	}
 
-	// استخراج متن — شکل پاسخ دو ارائه‌دهنده متفاوت است.
-	if ( 'openai' === $provider ) {
-		$text = isset( $json['choices'][0]['message']['content'] ) ? $json['choices'][0]['message']['content'] : '';
-	} else {
-		$text = isset( $json['content'][0]['text'] ) ? $json['content'][0]['text'] : '';
+	// استخراج متن — ممکن است در چند part تقسیم شده باشد.
+	$parts = $json['candidates'][0]['content']['parts'] ?? [];
+	$text  = '';
+	foreach ( (array) $parts as $part ) {
+		if ( isset( $part['text'] ) ) {
+			$text .= $part['text'];
+		}
+	}
+	$text = trim( $text );
+
+	if ( '' === $text ) {
+		$reason = $json['candidates'][0]['finishReason'] ?? 'نامشخص';
+		return new WP_Error(
+			'cyh_ai_empty',
+			"پاسخ خالی از جمنای دریافت شد (دلیل پایان: {$reason})."
+		);
 	}
 
-	$text = trim( (string) $text );
-	if ( '' === $text ) {
-		return new WP_Error( 'cyh_ai_empty', 'پاسخ خالی از سرویس دریافت شد.' );
-	}
+	// اگر مدل بلوک کد زده باشد، پوسته‌اش را برمی‌داریم.
+	$text = preg_replace( '/^```(?:html)?\s*|\s*```$/u', '', $text );
 
 	return $text;
 }
@@ -189,18 +198,55 @@ function cyh_ai_generate_for_post( $post_id ) {
 		return new WP_Error( 'cyh_ai_bad_post', 'این شناسه یک محصول معتبر نیست.' );
 	}
 
-	$content = cyh_ai_call_provider( cyh_ai_build_prompt( $post_id ) );
+	$content = cyh_ai_call_provider( cyh_ai_user_prompt( $post_id ) );
 	if ( is_wp_error( $content ) ) {
 		return $content;
 	}
 
-	// پاک‌سازی: فقط تگ‌های مجاز محتوایی باقی می‌مانند.
+	// ------------------------------------------------------------------
+	// پاک‌سازی — با اجازه‌ی صریح به `class`.
+	//
+	// ⚠️ باگی که اینجا رفع شد: فهرست مجاز قبلی نه `div` داشت، نه `span`،
+	// و نه صفت `class`. یعنی پرامپت از مدل می‌خواست بلوک‌های
+	// `cy-callout` و `cy-proscons` بسازد و بعد همین فیلتر، *تمام* آن
+	// کلاس‌ها و ظرف‌هایشان را حذف می‌کرد. کل قابلیت «محتوای غنی» بی‌صدا
+	// از بین می‌رفت و کسی هم متوجه نمی‌شد، چون متن سالم به نظر می‌رسید.
+	//
+	// `style` فقط روی span و فقط برای متغیر --cy-bar مجاز است (نوار
+	// داده). هر style دیگری پایین‌تر حذف می‌شود.
+	// ------------------------------------------------------------------
 	$allowed = [
-		'p'  => [], 'h2' => [], 'h3' => [], 'ul' => [], 'ol' => [], 'li' => [],
-		'strong' => [], 'em' => [], 'br' => [], 'table' => [], 'thead' => [],
-		'tbody' => [], 'tr' => [], 'th' => [], 'td' => [],
+		'p'      => [ 'class' => [] ],
+		'h2'     => [ 'class' => [], 'id' => [] ],
+		'h3'     => [ 'class' => [], 'id' => [] ],
+		'h4'     => [ 'class' => [] ],
+		'ul'     => [ 'class' => [] ],
+		'ol'     => [ 'class' => [] ],
+		'li'     => [ 'class' => [] ],
+		'strong' => [ 'class' => [] ],
+		'em'     => [ 'class' => [] ],
+		'br'     => [],
+		'div'    => [ 'class' => [] ],
+		'span'   => [ 'class' => [], 'style' => [] ],
+		'table'  => [ 'class' => [] ],
+		'thead'  => [ 'class' => [] ],
+		'tbody'  => [ 'class' => [] ],
+		'tr'     => [ 'class' => [] ],
+		'th'     => [ 'class' => [], 'scope' => [] ],
+		'td'     => [ 'class' => [], 'data-label' => [] ],
+		'a'      => [ 'href' => [], 'class' => [], 'title' => [] ],
 	];
 	$content = wp_kses( $content, $allowed );
+
+	// هر style به‌جز متغیر --cy-bar حذف می‌شود. اجازه‌ی style عمومی به
+	// خروجی یک مدل، یک بردار تزریق CSS است.
+	$content = preg_replace_callback(
+		'/\sstyle=(["\'])(.*?)\1/u',
+		function ( $m ) {
+			return preg_match( '/^\s*--cy-bar:\s*\d{1,3}%\s*;?\s*$/u', $m[2] ) ? $m[0] : '';
+		},
+		$content
+	);
 
 	// ⚠️ قفل ایمنی روشن می‌شود پیش از هر نوشتنی.
 	if ( ! defined( 'CYH_AI_GENERATING' ) ) {
@@ -294,10 +340,10 @@ function cyh_ai_meta_box_render( $post ) {
 	if ( $has_key ) {
 		printf( '<a href="%s" class="button button-primary" style="width:100%%;text-align:center">تولید پیش‌نویس فنی</a>', esc_url( $url ) );
 	} else {
-		echo '<p style="color:#b32d2e">کلید API ثبت نشده است. ابتدا آن را در تنظیمات افزونه وارد کنید.</p>';
+		echo '<p style="color:#b32d2e">کلید Google Gemini API ثبت نشده است. ابتدا آن را در تنظیمات افزونه وارد کنید.</p>';
 	}
 
-	echo '<p style="color:#666;margin-bottom:0;font-size:11px">خروجی مدل باید پیش از انتشار توسط کارشناس فنی بازبینی شود. هر جای علامت‌خورده با <code>[[نیازمند تایید فنی]]</code> باید با داده‌ی واقعی جایگزین شود.</p>';
+	echo '<p style="color:#666;margin-bottom:0;font-size:11px">خروجی مدل باید پیش از انتشار توسط کارشناس فنی بازبینی شود. هر جای علامت‌خورده با <code>[نیازمند بررسی فنی]</code> باید با داده‌ی واقعی جایگزین شود.</p>';
 }
 
 /** نمایش نتیجه پس از بازگشت. */
@@ -320,10 +366,17 @@ function cyh_ai_admin_notice() {
 }
 add_action( 'admin_notices', 'cyh_ai_admin_notice' );
 
-/** ثبت تنظیمات کلید API. */
+/**
+ * ثبت تنظیمات کلید API.
+ *
+ * ⚠️ نام گروه باید *دقیقاً* با `settings_fields()` در فرم یکی باشد.
+ * نسخه‌ی اول این تابع در گروه «cyh_settings» ثبت می‌کرد در حالی که فرم
+ * «cyh_settings_group» می‌فرستد. نتیجه: وردپرس این دو گزینه را متعلق به
+ * آن فرم نمی‌دانست و بی‌صدا دور می‌ریخت — یعنی کلید API هرگز ذخیره
+ * نمی‌شد و کاربر هیچ پیام خطایی هم نمی‌دید.
+ */
 function cyh_ai_register_settings() {
-	register_setting( 'cyh_settings', CYH_AI_PROVIDER_OPTION, [ 'sanitize_callback' => 'sanitize_text_field' ] );
-	register_setting( 'cyh_settings', CYH_AI_KEY_OPTION, [ 'sanitize_callback' => 'sanitize_text_field' ] );
-	register_setting( 'cyh_settings', CYH_AI_MODEL_OPTION, [ 'sanitize_callback' => 'sanitize_text_field' ] );
+	register_setting( 'cyh_settings_group', CYH_AI_KEY_OPTION, [ 'sanitize_callback' => 'sanitize_text_field' ] );
+	register_setting( 'cyh_settings_group', CYH_AI_MODEL_OPTION, [ 'sanitize_callback' => 'sanitize_text_field' ] );
 }
 add_action( 'admin_init', 'cyh_ai_register_settings' );
