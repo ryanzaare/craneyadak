@@ -191,6 +191,34 @@ function cyh_ai_call_provider( $prompt ) {
 	return $text;
 }
 
+/**
+ * جداکردن «توضیح کوتاه» از «متن کامل».
+ *
+ * چرا جداکننده‌ی متنی و نه JSON: خروجی شامل HTML طولانی با کوتیشن و
+ * کاراکتر خاص است. وادارکردن مدل به تولید JSON معتبر برای چنین متنی،
+ * نرخ خطای بالایی دارد (یک کوتیشن فرار = کل پاسخ غیرقابل‌پارس).
+ * دو جداکننده‌ی ساده عملاً خطاناپذیرند.
+ *
+ * اگر مدل جداکننده را رعایت نکرده باشد، به حالت امن برمی‌گردیم: کل متن
+ * محتوا می‌شود و توضیح کوتاه خالی می‌ماند — که اعتبارسنج آن را به‌عنوان
+ * ایراد بحرانی گزارش می‌کند. سکوت نمی‌کنیم.
+ *
+ * @return array{excerpt:string,content:string}
+ */
+function cyh_ai_split_output( $raw ) {
+	$raw = trim( (string) $raw );
+
+	if ( preg_match( '/===EXCERPT===(.*?)===CONTENT===(.*)$/su', $raw, $m ) ) {
+		return [
+			'excerpt' => trim( wp_strip_all_tags( $m[1] ) ),
+			'content' => trim( $m[2] ),
+		];
+	}
+
+	// جداکننده رعایت نشده — همه‌چیز محتوا در نظر گرفته می‌شود.
+	return [ 'excerpt' => '', 'content' => $raw ];
+}
+
 /** اجرای تولید برای یک محصول. */
 function cyh_ai_generate_for_post( $post_id ) {
 	$post = get_post( $post_id );
@@ -198,10 +226,14 @@ function cyh_ai_generate_for_post( $post_id ) {
 		return new WP_Error( 'cyh_ai_bad_post', 'این شناسه یک محصول معتبر نیست.' );
 	}
 
-	$content = cyh_ai_call_provider( cyh_ai_user_prompt( $post_id ) );
-	if ( is_wp_error( $content ) ) {
-		return $content;
+	$raw = cyh_ai_call_provider( cyh_ai_user_prompt( $post_id ) );
+	if ( is_wp_error( $raw ) ) {
+		return $raw;
 	}
+
+	$split   = cyh_ai_split_output( $raw );
+	$excerpt = $split['excerpt'];
+	$content = $split['content'];
 
 	// ------------------------------------------------------------------
 	// پاک‌سازی — با اجازه‌ی صریح به `class`.
@@ -253,6 +285,9 @@ function cyh_ai_generate_for_post( $post_id ) {
 		define( 'CYH_AI_GENERATING', true );
 	}
 
+	// اعتبارسنجی پیش از ذخیره — نتیجه روی محصول ثبت می‌شود.
+	cyh_ai_store_issues( $post_id, cyh_ai_validate_output( $excerpt, $content, $post->post_title ) );
+
 	if ( 'publish' === $post->post_status ) {
 		// محصول منتشرشده: محتوای زنده *دست نمی‌خورد*. خروجی فقط به‌عنوان
 		// یک بازبینی ذخیره می‌شود تا مدیر آن را در «تاریخچه‌ی نسخه‌ها»
@@ -262,7 +297,9 @@ function cyh_ai_generate_for_post( $post_id ) {
 				'ID'           => $post_id,
 				'post_content' => $content,
 				'post_title'   => $post->post_title,
-				'post_excerpt' => $post->post_excerpt,
+				// توضیح کوتاه تولیدشده هم وارد بازبینی می‌شود تا مدیر
+				// بتواند آن را با نسخه‌ی فعلی مقایسه کند.
+				'post_excerpt' => $excerpt ?: $post->post_excerpt,
 			]
 		);
 		$mode = 'revision';
@@ -272,6 +309,10 @@ function cyh_ai_generate_for_post( $post_id ) {
 			[
 				'ID'           => $post_id,
 				'post_content' => $content,
+				// ⚠️ این خط یک حفره‌ی سئو را می‌بندد: توضیحات متای صفحه‌ی
+				// محصول از `excerpt` می‌آید. بدون آن، هر ۲۲ محصول با
+				// meta description خالی منتشر می‌شدند.
+				'post_excerpt' => $excerpt,
 				'post_status'  => 'draft',
 			]
 		);

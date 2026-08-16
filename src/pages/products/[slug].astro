@@ -26,6 +26,7 @@ import TrustBadges from '../../components/TrustBadges.astro';
 import PriceHistory from '../../components/PriceHistory.astro';
 import Community from '../../components/Community.astro';
 import { qaPageJsonLd, aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
+import { autolinkHtml } from '../../lib/autolink';
 import { SITE } from '../../data/site';
 import { findCategory, categoryPath, siloPath, findBrand } from '../../data/taxonomy';
 import {
@@ -470,7 +471,17 @@ const modifiedDate = product.modified
     <section class="bg-gray-50 px-4 py-9 border-b border-gray-100 print:hidden" aria-labelledby="description-heading">
       <div class="max-w-4xl mx-auto">
         <h2 id="description-heading" class="text-xl font-black text-steel-900 mb-4">توضیحات فنی محصول</h2>
-        <div class="prose-crane text-gray-700 leading-8" set:html={product.bodyHtml} />
+        {/* لینک‌دهی داخلی خودکار روی متن محصول.
+            حفره‌ای که این خط می‌بندد: متن محصول بلندترین محتوای سایت
+            است (۱۲۰۰+ کلمه) و تا این لحظه *هیچ* لینک داخلی نداشت. یعنی
+            ۲۲ مقاله‌ی عمیق، ۲۲ بن‌بست بودند و هیچ ارزش پیوندی به صفحات
+            دسته منتقل نمی‌کردند.
+            پرامپت به جمنای می‌گوید نام دسته‌های مرتبط را طبیعی در متن
+            بیاورد؛ این تابع همان نام‌ها را به آدرس درست وصل می‌کند. */}
+        <div
+          class="prose-crane text-steel-700 leading-8"
+          set:html={autolinkHtml(product.bodyHtml, { currentPath: Astro.url.pathname, max: 6 })}
+        />
       </div>
     </section>
   )}
