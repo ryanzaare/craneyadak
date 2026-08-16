@@ -306,6 +306,74 @@ function cyh_ai_bulk_page() {
 		);
 	}
 
+	/* ---------------- بازیابی از شکست ----------------
+	   بدون این بخش، رکورد ناموفق یک بن‌بست است: محافظ تکراری‌نویسی اجازه‌ی
+	   وارد کردن دوباره‌ی همان نام را نمی‌دهد. */
+	$failed = cyh_ai_failed_ids();
+	if ( ! empty( $failed ) ) {
+		$retry_url  = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_ai_failed_actions&cyh_do=retry' ), 'cyh_ai_failed_retry' );
+		$delete_url = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_ai_failed_actions&cyh_do=delete' ), 'cyh_ai_failed_delete' );
+
+		echo '<div class="notice notice-error" style="padding:12px">';
+		printf( '<p style="margin-top:0"><strong>%d محصول ناموفق است.</strong> تا وقتی این رکوردها هستند، وارد کردن دوباره‌ی همان نام‌ها رد می‌شود.</p>', count( $failed ) );
+		echo '<p style="margin-bottom:0">';
+		printf( '<a class="button button-primary" href="%s">تلاش مجدد برای همه</a> ', esc_url( $retry_url ) );
+		printf(
+			'<a class="button" href="%s" onclick="return confirm(\'%d پیش‌نویس ناموفق به سطل زباله منتقل شود؟\')">حذف ناموفق‌ها</a>',
+			esc_url( $delete_url ),
+			count( $failed )
+		);
+		echo '</p>';
+		echo '<p style="margin-bottom:0;color:#646970;font-size:12px">«تلاش مجدد» بهتر است: پیش‌نویس، دسته‌بندی و حدس برند حفظ می‌شوند. حذف فقط وقتی لازم است که خودِ عنوان اشتباه باشد.</p>';
+		echo '</div>';
+	}
+
+	/* ---------------- کشف مدل‌های واقعی ----------------
+	   خطای ۴۰۴ گوگل خودش می‌گوید «ListModels را صدا بزن». این دکمه دقیقاً
+	   همان کار را می‌کند تا کاربر مجبور به حدس‌زدن نام مدل نباشد. */
+	$models_url = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_ai_failed_actions&cyh_do=models' ), 'cyh_ai_failed_models' );
+	$models     = get_transient( 'cyh_ai_models' );
+
+	echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;padding:12px 16px;margin:16px 0;max-width:820px">';
+	echo '<p style="margin-top:0"><strong>نام مدل را حدس نزنید.</strong> اگر خطای ۴۰۴ گرفتید، یعنی مدل تنظیم‌شده برای کلید شما وجود ندارد. این دکمه فهرست دقیق مدل‌های در دسترسِ همین کلید را می‌گیرد:</p>';
+	printf( '<p><a class="button" href="%s">دریافت فهرست مدل‌های در دسترس</a></p>', esc_url( $models_url ) );
+
+	if ( isset( $_GET['cyh_models_error'] ) ) {
+		printf(
+			'<p style="color:#d63638"><strong>دریافت فهرست ناموفق:</strong> %s</p>',
+			esc_html( rawurldecode( wp_unslash( $_GET['cyh_models_error'] ) ) )
+		);
+	}
+
+	if ( is_array( $models ) && $models ) {
+		$current = trim( (string) get_option( CYH_AI_MODEL_OPTION, '' ) );
+		if ( '' === $current ) {
+			$current = CYH_AI_DEFAULT_MODEL;
+		}
+
+		printf( '<p style="margin-bottom:4px"><strong>%d مدل در دسترس این کلید:</strong>', count( $models ) );
+		if ( ! in_array( $current, $models, true ) ) {
+			printf(
+				' <span style="color:#d63638">— مدل فعلی شما («%s») در این فهرست نیست و به همین دلیل ۴۰۴ می‌گیرید.</span>',
+				esc_html( $current )
+			);
+		}
+		echo '</p>';
+
+		echo '<ul style="columns:2;margin:0;font-family:monospace;font-size:12px">';
+		foreach ( $models as $m ) {
+			printf(
+				'<li%s>%s%s</li>',
+				$m === $current ? ' style="font-weight:700;color:#00a32a"' : '',
+				esc_html( $m ),
+				$m === $current ? ' ← فعلی' : ''
+			);
+		}
+		echo '</ul>';
+		echo '<p style="margin-bottom:0;font-size:12px;color:#646970">یکی از این نام‌ها را در <strong>تنظیمات کرین یدک ← مدل Gemini</strong> وارد کنید، سپس «تلاش مجدد» را بزنید.</p>';
+	}
+	echo '</div>';
+
 	$nonce = wp_nonce_field( 'cyh_ai_bulk', '_wpnonce', true, false );
 	echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="max-width:820px">';
 	echo '<input type="hidden" name="action" value="cyh_ai_bulk_submit">';
@@ -378,6 +446,20 @@ add_action( 'admin_post_cyh_ai_bulk_submit', 'cyh_ai_bulk_submit' );
 
 /** اعلان نتیجه. */
 function cyh_ai_bulk_notice() {
+	if ( isset( $_GET['cyh_retried'] ) ) {
+		printf(
+			'<div class="notice notice-success is-dismissible"><p><strong>%d محصول ناموفق دوباره به صف اضافه شد.</strong> پردازش تا یک دقیقه‌ی دیگر شروع می‌شود.</p></div>',
+			(int) $_GET['cyh_retried']
+		);
+	}
+
+	if ( isset( $_GET['cyh_deleted'] ) ) {
+		printf(
+			'<div class="notice notice-success is-dismissible"><p><strong>%d پیش‌نویس ناموفق به سطل زباله منتقل شد.</strong> حالا می‌توانید همان نام‌ها را دوباره وارد کنید.</p></div>',
+			(int) $_GET['cyh_deleted']
+		);
+	}
+
 	if ( ! isset( $_GET['cyh_created'] ) ) {
 		return;
 	}
@@ -395,3 +477,163 @@ add_action( 'admin_notices', 'cyh_ai_bulk_notice' );
 function cyh_ai_clear_queue_cron() {
 	wp_clear_scheduled_hook( CYH_AI_CRON_HOOK );
 }
+
+/* =========================================================================
+   بازیابی از شکست — تلاش مجدد، حذف، و کشف مدل‌های واقعی
+   =========================================================================
+   مشکلی که این بخش حل می‌کند: وقتی تولید محتوا شکست می‌خورد، پیش‌نویس با
+   وضعیت «ناموفق» باقی می‌ماند. چون محافظِ تکراری‌نویسی بر اساس *عنوان*
+   کار می‌کند، وارد کردن دوباره‌ی همان نام رد می‌شود و کاربر در بن‌بست
+   می‌افتد: نه می‌تواند دوباره تلاش کند، نه می‌تواند ادامه دهد.
+
+   ⚠️ «تلاش مجدد» بر «حذف» ترجیح دارد و به همین دلیل دکمه‌ی اصلی است:
+   پیش‌نویس، دسته‌بندی تشخیص‌داده‌شده و حدس برند را در خود دارد. حذف
+   یعنی دور ریختن آن کار و ساختن دوباره‌اش. حذف فقط وقتی درست است که
+   خودِ عنوان اشتباه باشد.
+   ========================================================================= */
+
+/** فهرست شناسه‌ی محصولات ناموفق. */
+function cyh_ai_failed_ids() {
+	return get_posts( [
+		'post_type'      => 'product',
+		'post_status'    => [ 'draft', 'pending' ],
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+		'meta_query'     => [
+			[
+				'key'     => CYH_AI_STATUS_META,
+				'value'   => 'failed',
+				'compare' => '=',
+			],
+		],
+	] );
+}
+
+/** تلاش مجدد: وضعیت پاک و دوباره به صف. */
+function cyh_ai_retry_failed() {
+	$ids = cyh_ai_failed_ids();
+	if ( empty( $ids ) ) {
+		return 0;
+	}
+
+	foreach ( $ids as $id ) {
+		update_post_meta( $id, CYH_AI_STATUS_META, 'queued' );
+		delete_post_meta( $id, '_cyh_ai_error' );
+	}
+
+	$queue = get_option( CYH_AI_QUEUE_OPTION, [] );
+	$queue = array_values( array_unique( array_merge( is_array( $queue ) ? $queue : [], $ids ) ) );
+	update_option( CYH_AI_QUEUE_OPTION, $queue, false );
+	cyh_ai_schedule_queue();
+
+	return count( $ids );
+}
+
+/**
+ * حذف پیش‌نویس‌های ناموفق.
+ *
+ * عمداً `wp_trash_post` و نه حذف کامل: کار انسانی (عنوان، دسته) قابل
+ * برگشت می‌ماند. اگر کاربر واقعاً بخواهد برای همیشه پاک شود، از سطل
+ * زباله‌ی وردپرس این کار را می‌کند — یک تصمیم آگاهانه‌ی دوم.
+ */
+function cyh_ai_delete_failed() {
+	$ids = cyh_ai_failed_ids();
+	$n   = 0;
+
+	foreach ( $ids as $id ) {
+		if ( wp_trash_post( $id ) ) {
+			$n++;
+		}
+	}
+
+	// از صف هم بیرونشان بیاور تا کرون سراغ پست حذف‌شده نرود.
+	$queue = get_option( CYH_AI_QUEUE_OPTION, [] );
+	if ( is_array( $queue ) ) {
+		update_option( CYH_AI_QUEUE_OPTION, array_values( array_diff( $queue, $ids ) ), false );
+	}
+
+	return $n;
+}
+
+/**
+ * پرس‌وجوی مدل‌های واقعاً در دسترس.
+ *
+ * چرا این وجود دارد: خطای ۴۰۴ گوگل خودش می‌گوید
+ * «Call ModelService.ListModels». به‌جای این‌که کاربر نام مدل‌ها را حدس
+ * بزند و هر بار ۲۲ رکورد ناموفق تولید کند، همان فراخوانی را می‌زنیم و
+ * فهرست دقیقِ مدل‌های آن کلید را نشان می‌دهیم.
+ *
+ * فقط مدل‌هایی که `generateContent` را پشتیبانی می‌کنند برگردانده
+ * می‌شوند — بقیه (embedding و…) برای ما بی‌فایده‌اند.
+ */
+function cyh_ai_list_models() {
+	$api_key = trim( (string) get_option( CYH_AI_KEY_OPTION, '' ) );
+	if ( '' === $api_key ) {
+		return new WP_Error( 'cyh_ai_no_key', 'ابتدا کلید Google Gemini API را ثبت کنید.' );
+	}
+
+	$response = wp_remote_get(
+		'https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',
+		[
+			'headers' => [ 'x-goog-api-key' => $api_key ],
+			'timeout' => 30,
+		]
+	);
+
+	if ( is_wp_error( $response ) ) {
+		return $response;
+	}
+
+	$code = wp_remote_retrieve_response_code( $response );
+	$json = json_decode( wp_remote_retrieve_body( $response ), true );
+
+	if ( 200 !== $code ) {
+		$message = isset( $json['error']['message'] ) ? $json['error']['message'] : "خطای HTTP {$code}";
+		return new WP_Error( 'cyh_ai_list_http', $message );
+	}
+
+	$out = [];
+	foreach ( (array) ( $json['models'] ?? [] ) as $model ) {
+		$methods = (array) ( $model['supportedGenerationMethods'] ?? [] );
+		if ( ! in_array( 'generateContent', $methods, true ) ) {
+			continue;
+		}
+		// نام کامل «models/gemini-x» است؛ برای تنظیمات فقط بخش دوم لازم است.
+		$name = (string) ( $model['name'] ?? '' );
+		$out[] = str_replace( 'models/', '', $name );
+	}
+
+	sort( $out );
+	return $out;
+}
+
+/** هندلر دکمه‌ها. */
+function cyh_ai_failed_actions() {
+	if ( ! current_user_can( 'edit_posts' ) ) {
+		wp_die( 'دسترسی مجاز نیست.' );
+	}
+
+	$action = isset( $_GET['cyh_do'] ) ? sanitize_text_field( wp_unslash( $_GET['cyh_do'] ) ) : '';
+	check_admin_referer( 'cyh_ai_failed_' . $action );
+
+	$args = [ 'post_type' => 'product', 'page' => 'cyh-ai-bulk' ];
+
+	if ( 'retry' === $action ) {
+		$args['cyh_retried'] = cyh_ai_retry_failed();
+	} elseif ( 'delete' === $action ) {
+		$args['cyh_deleted'] = cyh_ai_delete_failed();
+	} elseif ( 'models' === $action ) {
+		$models = cyh_ai_list_models();
+		if ( is_wp_error( $models ) ) {
+			$args['cyh_models_error'] = rawurlencode( $models->get_error_message() );
+		} else {
+			// در یک ترنزینت نگه می‌داریم تا از محدودیت طول URL رد نشویم.
+			set_transient( 'cyh_ai_models', $models, 10 * MINUTE_IN_SECONDS );
+			$args['cyh_models'] = count( $models );
+		}
+	}
+
+	wp_safe_redirect( add_query_arg( $args, admin_url( 'edit.php' ) ) );
+	exit;
+}
+add_action( 'admin_post_cyh_ai_failed_actions', 'cyh_ai_failed_actions' );
