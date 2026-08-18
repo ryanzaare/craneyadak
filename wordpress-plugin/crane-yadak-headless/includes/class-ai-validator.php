@@ -1,6 +1,6 @@
 <?php
 /**
- * اعتبارسنجی خروجی مدل — «هر قاعده‌ای که بررسی نشود، اجرا نمی‌شود».
+ * اعتبارسنجی محتوای واردشده — «هر قاعده‌ای که بررسی نشود، اجرا نمی‌شود».
  *
  * ---------------------------------------------------------------------------
  * چرا این فایل ضروری است
@@ -227,7 +227,7 @@ function cyh_ai_error_count( $post_id ) {
 function cyh_ai_issues_meta_box() {
 	add_meta_box(
 		'cyh_ai_issues',
-		'بازبینی خروجی هوش مصنوعی',
+		'بازبینی محتوای واردشده',
 		'cyh_ai_issues_render',
 		'product',
 		'normal',
@@ -240,10 +240,14 @@ function cyh_ai_issues_render( $post ) {
 	$issues = cyh_ai_get_issues( $post->ID );
 
 	if ( empty( $issues ) ) {
-		$status = get_post_meta( $post->ID, CYH_AI_STATUS_META, true );
-		echo 'done' === $status
-			? '<p style="color:#00a32a;font-weight:700;margin:0">✅ خروجی بررسی شد و ایرادی پیدا نشد. همچنان بازبینی انسانی لازم است.</p>'
-			: '<p style="color:#646970;margin:0">هنوز محتوایی برای این محصول تولید نشده است.</p>';
+		// وضعیت از «آیا این محصول اصلاً وارد شده؟» خوانده می‌شود.
+		// نسخه‌ی قبل به CYH_AI_STATUS_META تکیه می‌کرد که متعلق به صف
+		// تولید خودکار بود؛ با حذف آن سیستم، این ثابت دیگر وجود ندارد و
+		// ارجاع به آن یک خطای مرگبار در هر صفحه‌ی ویرایش محصول می‌ساخت.
+		$imported = get_post_meta( $post->ID, CYH_IMPORT_SOURCE_META, true );
+		echo $imported
+			? '<p style="color:#00a32a;font-weight:700;margin:0">✅ محتوا بررسی شد و ایراد خودکاری پیدا نشد. بازبینی کارشناس فنی همچنان لازم است.</p>'
+			: '<p style="color:#646970;margin:0">هنوز محتوایی برای این محصول وارد نشده است.</p>';
 		return;
 	}
 
