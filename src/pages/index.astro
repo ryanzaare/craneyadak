@@ -34,12 +34,17 @@ import AuthorityBlock from '../components/AuthorityBlock.astro';
 import ProductCard from '../components/ProductCard.astro';
 import { SITE } from '../data/site';
 import { ADVANTAGES as advantages, FAQS as faqs } from '../data/content';
-import { SILOS, BRANDS, BRAND_CLASSES, brandsByClass, siloPath, categoryPath, ALL_CATEGORIES } from '../data/taxonomy';
+import { SILOS, BRAND_CLASSES, siloPath, categoryPath, ALL_CATEGORIES } from '../data/taxonomy';
+import { getBrands } from '../lib/brands';
 import { getQuickSuggestions, QUICK_LINKS_LABEL } from '../data/popular-searches';
 import { getStorefront } from '../lib/storefront';
 import { getAvailableDatasheets } from '../lib/datasheets';
 
 const storefront = await getStorefront();
+
+// برندها از وردپرس — رنگ اختصاصی هر برند روی پلاک لوگو اعمال می‌شود.
+const BRANDS = await getBrands();
+const brandsByClass = (c: 'oem' | 'control' | 'electrical') => BRANDS.filter((b) => b.brandClass === c);
 const quickSuggestions = getQuickSuggestions();
 const datasheets = getAvailableDatasheets();
 const featuredDatasheets = datasheets.slice(0, 2);
@@ -416,22 +421,25 @@ const jsonLd = {
             <ul class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" role="list">
               {brandsByClass(brandClass).map((brand) => (
                 <li>
+                  {/* رنگ پلاک از فیلد ACF برند در وردپرس می‌آید. */}
                   <a
                     href={`/brands/${brand.slug}`}
-                    class="group h-full bg-steel-900 rounded-lg overflow-hidden border-2 border-steel-900 hover:border-accent transition-colors flex flex-col focus:outline-none focus:ring-4 focus:ring-accent/40"
+                    class="cy-brand-card group h-full bg-steel-900 rounded-lg overflow-hidden border-2 border-steel-900 transition-colors flex flex-col focus:outline-none focus:ring-4 focus:ring-accent/40"
+                    style={brand.color ? `--brand:${brand.color}` : undefined}
+                    title={brand.seoAnchor ?? undefined}
                   >
                     {/* پلاک لوگو — نسبت ثابت تا با آمدن تصویر واقعی
                         چیدمان جابه‌جا نشود (CLS = 0). */}
-                    <span class="flex items-center justify-center h-14 px-2 bg-steel-800 group-hover:bg-steel-700 transition-colors">
+                    <span class="cy-brand-bar flex items-center justify-center h-14 px-2 transition-colors">
                       <span
-                        class="text-[13px] font-black tracking-[0.2em] text-white uppercase truncate"
+                        class="text-[13px] font-black tracking-[0.2em] text-white uppercase truncate drop-shadow"
                         dir="ltr"
                       >
-                        {brand.nameEn}
+                        {brand.logoText}
                       </span>
                     </span>
                     <span class="flex items-center justify-between gap-2 px-3 py-2 bg-white grow">
-                      <span class="text-sm font-bold text-steel-900 group-hover:text-accent-ink transition-colors truncate">
+                      <span class="cy-brand-name text-sm font-bold text-steel-900 transition-colors truncate">
                         {brand.nameFa}
                       </span>
                       <span class="text-[10px] text-steel-600 shrink-0">{brand.country}</span>

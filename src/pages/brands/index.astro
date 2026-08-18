@@ -15,7 +15,12 @@
 import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { SITE } from '../../data/site';
-import { BRANDS, BRAND_CLASSES, brandsByClass, type BrandClass } from '../../data/taxonomy';
+import { BRAND_CLASSES, type BrandClass } from '../../data/taxonomy';
+import { getBrands } from '../../lib/brands';
+
+// برندها از وردپرس — رنگ، متن لوگو، انکرتکست و توضیح سئو از پنل می‌آیند.
+const BRANDS = await getBrands();
+const brandsByClass = (c: BrandClass) => BRANDS.filter((b) => b.brandClass === c);
 
 const title = `برندهای تحت پوشش | تامین قطعات اصلی | ${SITE.name}`;
 const description = `تامین قطعات ${BRANDS.length} برند تجهیزات بالابر صنعتی — از سازندگان جرثقیل مانند دماگ و اشتال تا سیستم‌های کنترل تله‌کرین و HBC.`;
@@ -92,15 +97,24 @@ const jsonLd = {
             <ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" role="list">
               {items.map((brand) => (
                 <li>
+                  {/* رنگ اختصاصی برند از ACF وردپرس.
+                      `--brand` یک متغیر CSS است؛ اگر برند رنگی ثبت نکرده
+                      باشد اصلاً ست نمی‌شود و کارت به رنگ پیش‌فرض سایت
+                      برمی‌گردد — نه یک رنگ اشتباه. */}
                   <a
                     href={`/brands/${brand.slug}`}
-                    class="group h-full bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-orange-100 transition-all flex flex-col items-center text-center gap-1 focus:outline-none focus:ring-4 focus:ring-crane-orange/30"
+                    class="cy-brand-card group h-full bg-white p-6 rounded-lg border-2 border-steel-100 hover:shadow-lg transition-all flex flex-col items-center text-center gap-1 focus:outline-none focus:ring-4 focus:ring-accent/30"
+                    style={brand.color ? `--brand:${brand.color}` : undefined}
+                    title={brand.seoAnchor ?? undefined}
                   >
-                    <span class="text-sm font-black tracking-wider text-crane-navy group-hover:text-crane-orange transition-colors uppercase" dir="ltr">
+                    <span class="cy-brand-name text-sm font-black tracking-wider text-steel-900 transition-colors uppercase" dir="ltr">
                       {brand.nameEn}
                     </span>
-                    <span class="text-sm font-bold text-gray-700">{brand.nameFa}</span>
-                    <span class="text-xs text-gray-500 mt-1">{brand.country}</span>
+                    <span class="text-sm font-bold text-steel-700">{brand.nameFa}</span>
+                    <span class="text-xs text-steel-600 mt-1">{brand.country}</span>
+                    {brand.seoDesc && (
+                      <span class="text-xs text-steel-600 leading-6 mt-2 line-clamp-2">{brand.seoDesc}</span>
+                    )}
                   </a>
                 </li>
               ))}

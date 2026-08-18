@@ -454,3 +454,43 @@
 .prose-crane .cy-pros ul,
 .prose-crane .cy-cons ul { list-style: none; padding-inline-start: 0; }
 .prose-crane .cy-callout > * + * { margin-top: 0.5rem; }
+
+/* ---------------------------------------------------------------------------
+   کارت برند — رنگ اختصاصی از ACF وردپرس.
+
+   متغیر `--brand` روی خودِ کارت با صفت style ست می‌شود (مقدارش پیش از
+   رندر اعتبارسنجی شده و فقط HEX معتبر است). اگر برندی رنگ ثبت نکرده
+   باشد، متغیر اصلاً وجود ندارد و `var(--brand, …)` به رنگ پیش‌فرض سایت
+   برمی‌گردد.
+
+   چرا متغیر CSS و نه کلاس Tailwind: رنگ‌ها در زمان اجرا از دیتابیس
+   می‌آیند و Tailwind فقط کلاس‌هایی را می‌سازد که در زمان build در کد
+   دیده باشد. یک کلاس ساخته‌شده به‌صورت پویا هرگز کامپایل نمی‌شود.
+--------------------------------------------------------------------------- */
+.cy-brand-card:hover,
+.cy-brand-card:focus-visible {
+  border-color: var(--brand, var(--color-accent));
+}
+
+.cy-brand-card:hover .cy-brand-name,
+.cy-brand-card:focus-visible .cy-brand-name {
+  color: var(--brand, var(--color-accent-ink));
+}
+
+/* نوار رنگی بالای صفحه‌ی تک‌برند */
+.cy-brand-bar {
+  background: var(--brand, var(--color-accent));
+}
+
+.cy-brand-chip {
+  border-color: var(--brand, var(--color-accent));
+  color: var(--brand, var(--color-accent-ink));
+}
+
+/* بریدن متن به دو خط، بدون افزونه */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

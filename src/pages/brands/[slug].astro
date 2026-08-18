@@ -16,19 +16,17 @@ import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import ProductCard from '../../components/ProductCard.astro';
 import { SITE } from '../../data/site';
-import {
-  BRANDS,
-  BRAND_CLASSES,
-  brandsByClass,
-  categoryPath,
-  findCategory,
-  type Brand,
-} from '../../data/taxonomy';
+import { BRAND_CLASSES, categoryPath, findCategory } from '../../data/taxonomy';
+import { getBrands, type EnrichedBrand } from '../../lib/brands';
 import { getProductsByBrand, computePrice, productJsonLd, type CraneProduct } from '../../lib/wp';
 
 export async function getStaticPaths() {
+  // برندها از وردپرس غنی می‌شوند: رنگ، متن لوگو، انکرتکست و توضیح سئو
+  // همگی از ACF می‌آیند. ساختار (اسلاگ و کلاس) از تاکسونومی است تا یک
+  // قطعی وردپرس مسیرها را از بین نبرد.
+  const brands = await getBrands();
   return Promise.all(
-    BRANDS.map(async (brand) => ({
+    brands.map(async (brand) => ({
       params: { slug: brand.slug },
       props: { brand, products: await getProductsByBrand(brand.slug) },
     }))
@@ -36,7 +34,7 @@ export async function getStaticPaths() {
 }
 
 interface Props {
-  brand: Brand;
+  brand: EnrichedBrand;
   products: CraneProduct[];
 }
 
@@ -46,6 +44,10 @@ const classMeta = BRAND_CLASSES[brand.brandClass];
 const title = `قطعات ${brand.nameFa} (${brand.nameEn}) | تامین و استعلام قیمت | ${SITE.name}`;
 const description = `تامین ${brand.seoDesc}، ساخت ${brand.country}. استعلام قیمت با کد فنی، بررسی سازگاری و صدور فاکتور رسمی.`;
 const canonical = `${SITE.url}/brands/${brand.slug}`;
+
+// همه‌ی برندها برای لینک‌سازی داخلی هم‌کلاس.
+const allBrands = await getBrands();
+const brandsByClass = (c: EnrichedBrand['brandClass']) => allBrands.filter((b) => b.brandClass === c);
 
 // برندهای هم‌کلاس — لینک‌سازی داخلی بین موجودیت‌های هم‌نوع، نه همه‌ی ۱۸ برند.
 const siblings = brandsByClass(brand.brandClass).filter((b) => b.slug !== brand.slug);
@@ -115,7 +117,13 @@ const jsonLd = {
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
-  <section class="bg-crane-navy text-white pt-10 pb-16 px-4 border-b-[8px] border-crane-orange relative overflow-hidden">
+  {/* نوار پایین هدر با رنگ اختصاصی برند. اگر برند رنگی ثبت نکرده باشد،
+      `var(--brand, …)` به رنگ پیش‌فرض سایت برمی‌گردد. */}
+  <section
+    class="bg-steel-900 text-white pt-10 pb-16 px-4 relative overflow-hidden"
+    style={brand.color ? `--brand:${brand.color}` : undefined}
+  >
+    <span class="cy-brand-bar absolute bottom-0 inset-x-0 h-2" aria-hidden="true"></span>
     <div class="absolute -left-16 -top-16 opacity-[0.06] pointer-events-none select-none" aria-hidden="true">
       <svg class="w-[28rem] h-[28rem] text-white" viewBox="0 0 200 60" fill="currentColor">
         <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="46" font-weight="900">{brand.logoText}</text>
@@ -132,15 +140,19 @@ const jsonLd = {
         </div>
         <div>
           <div class="flex flex-wrap items-center gap-2 mb-3">
-            <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-gray-200 text-xs font-bold border border-white/20">{classMeta.name}</span>
-            <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-gray-200 text-xs font-bold border border-white/20">ساخت {brand.country}</span>
+            <span class="inline-block px-3 py-1 rounded bg-white/10 text-steel-100 text-xs font-bold border border-white/20">{classMeta.name}</span>
+            <span class="inline-block px-3 py-1 rounded bg-white/10 text-steel-100 text-xs font-bold border border-white/20">ساخت {brand.country}</span>
           </div>
           <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md leading-relaxed">
             قطعات {brand.nameFa}
             <span class="text-gray-400 font-bold text-2xl md:text-3xl" dir="ltr">({brand.nameEn})</span>
           </h1>
-          <p class="text-lg text-gray-300 max-w-2xl leading-8">
-            تامین {brand.seoDesc} با بررسی سازگاری فنی، تضمین اصالت کالا و صدور فاکتور رسمی.
+          {/* توضیح دقیقاً همان چیزی است که مدیر سایت در وردپرس نوشته.
+              نسخه‌ی قبل آن را داخل یک جمله‌ی ثابت می‌پیچید، یعنی متن سئوی
+              نوشته‌شده هرگز به‌شکل خودش دیده نمی‌شد. */}
+          <p class="text-lg text-steel-300 max-w-2xl leading-8">{brand.seoDesc}</p>
+          <p class="text-sm text-steel-300 max-w-2xl leading-7 mt-3">
+            تامین با بررسی سازگاری فنی، تضمین اصالت کالا و صدور فاکتور رسمی.
           </p>
         </div>
       </div>
