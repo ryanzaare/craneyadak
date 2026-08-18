@@ -37,9 +37,15 @@ const CYH_ISSUE_WARN  = 'warn';
  *
  * @return array<int,array{level:string,message:string}>
  */
-function cyh_ai_validate_output( $excerpt, $content, $product_title ) {
+function cyh_ai_validate_output( $excerpt, $content, $product_title, $has_sources = false ) {
 	$issues = [];
 	$text   = wp_strip_all_tags( $content );
+
+	// اگر محصول منبع رسمی ثبت‌شده دارد (کاتالوگ سازنده)، اعداد مهندسی
+	// دیگر «ساختگی» فرض نمی‌شوند. این تفاوت مهمی است: قاعده هرگز «عدد
+	// ننویس» نبود، بلکه «عددِ تاییدنشده ننویس» بود. وقتی منبع رسمی وجود
+	// دارد، عدد دقیق دقیقاً همان چیزی است که خریدار صنعتی لازم دارد.
+	$number_level = $has_sources ? CYH_ISSUE_WARN : CYH_ISSUE_ERROR;
 
 	/* ---------------------------------------------------------------
 	   ۱) عددِ بدون پشتوانه — مهم‌ترین بررسی
@@ -53,10 +59,16 @@ function cyh_ai_validate_output( $excerpt, $content, $product_title ) {
 	   است: یک هشدار اضافه چند ثانیه وقت کارشناس می‌گیرد، اما یک عدد
 	   ساختگیِ ازقلم‌افتاده می‌تواند به سفارش قطعه‌ی اشتباه منجر شود.
 	--------------------------------------------------------------- */
-	$unit_pattern = '(?:میلی[\s‌]?متر|سانتی[\s‌]?متر|متر|میلی|mm|cm|kg|کیلوگرم|تن|ton|'
-		. 'ولت|volt|v|آمپر|amp|a|وات|kw|w|نیوتن|n·m|nm|دور|rpm|بار|bar|درجه|°)';
+	// ⚠️ پایان الگو `(?![\p{L}\p{N}])` است و نه `\b`.
+	//
+	// در PCRE، `\b` بدون گزینه‌ی UCP فقط ASCII را کلمه می‌داند. بعد از
+	// «متر» مرز کلمه‌ی ASCII وجود ندارد، پس این بررسی هرگز چیزی پیدا
+	// نمی‌کرد و همیشه «سالم» گزارش می‌داد — یعنی مهم‌ترین محافظ این
+	// پروژه بی‌صدا خاموش بود.
+	$unit_pattern = '(?:میلی[\s‌]?متر|سانتی[\s‌]?متر|متر|میلی|mm|cm|kg|کیلوگرم|گرم|تن|ton|'
+		. 'ولت|volt|آمپر|amp|وات|kw|نیوتن|n·m|nm|دور|rpm|بار|bar|درجه|°)';
 
-	if ( preg_match_all( '/([۰-۹0-9]+(?:[.,][۰-۹0-9]+)?)\s*' . $unit_pattern . '\b/ui', $text, $m, PREG_SET_ORDER ) ) {
+	if ( preg_match_all( '/([۰-۹0-9]+(?:[.,][۰-۹0-9]+)?)\s*' . $unit_pattern . '(?![\p{L}\p{N}])/ui', $text, $m, PREG_SET_ORDER ) ) {
 		$samples = [];
 		foreach ( $m as $hit ) {
 			$samples[] = trim( $hit[0] );
@@ -83,6 +95,19 @@ function cyh_ai_validate_output( $excerpt, $content, $product_title ) {
 		preg_match_all( '/\b[A-Z]{2,}[-\s]?\d{2,}[A-Z0-9-]*\b/u', $product_title, $title_codes );
 		$known   = array_map( 'strtoupper', $title_codes[0] ?? [] );
 		$unknown = array_values( array_diff( array_unique( array_map( 'strtoupper', $codes[0] ) ), $known ) );
+
+		// استانداردهای صنعتی کد قطعه نیستند. IP65 یک درجه‌ی حفاظت است،
+		// AC-4 یک کلاس کاری کنتاکتور. بدون این فیلتر، هر متن فنیِ *درست*
+		// هم به‌عنوان «کد ساختگی» علامت می‌خورد و اعتبار خودِ اعتبارسنج
+		// از بین می‌رفت — هشداری که همیشه اشتباه باشد، نادیده گرفته می‌شود.
+		$unknown = array_values(
+			array_filter(
+				$unknown,
+				function ( $code ) {
+					return ! preg_match( '/^(IP\d{2}|IK\d{2}|AC-?\d|DC-?\d|FEM\d?|ISO\d+|DIN\d+|EN\d+|M\d{1,3}|AA|AAA|NI-MH|LED|USB|PC|VAC|VDC)$/i', $code );
+				}
+			)
+		);
 
 		if ( ! empty( $unknown ) ) {
 			$issues[] = [

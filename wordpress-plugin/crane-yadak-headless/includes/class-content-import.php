@@ -227,9 +227,25 @@ function cyh_import_one( array $item, $update_existing = true ) {
 
 	update_post_meta( $post_id, CYH_IMPORT_SOURCE_META, current_time( 'mysql' ) );
 
+	// منابع رسمی — کاتالوگ سازنده یا صفحه‌ی مرجع. ثبت آن‌ها دو کار می‌کند:
+	// (۱) کارشناس می‌داند اعداد از کجا آمده‌اند و می‌تواند راستی‌آزمایی کند،
+	// (۲) اعتبارسنج اعداد را «تاییدنشده» فرض نمی‌کند.
+	$sources = [];
+	if ( ! empty( $item['sources'] ) && is_array( $item['sources'] ) ) {
+		foreach ( $item['sources'] as $url ) {
+			$clean = esc_url_raw( (string) $url );
+			if ( $clean ) {
+				$sources[] = $clean;
+			}
+		}
+	}
+	if ( $sources ) {
+		update_post_meta( $post_id, '_cyh_sources', wp_json_encode( $sources, JSON_UNESCAPED_SLASHES ) );
+	}
+
 	// همان اعتبارسنج قبلی — حالا روی محتوای واردشده.
 	if ( function_exists( 'cyh_ai_validate_output' ) ) {
-		cyh_ai_store_issues( $post_id, cyh_ai_validate_output( $excerpt, $content, $title ) );
+		cyh_ai_store_issues( $post_id, cyh_ai_validate_output( $excerpt, $content, $title, ! empty( $sources ) ) );
 	}
 
 	$errors = function_exists( 'cyh_ai_error_count' ) ? cyh_ai_error_count( $post_id ) : 0;

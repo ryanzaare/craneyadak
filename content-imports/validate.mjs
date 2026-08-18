@@ -37,8 +37,28 @@ const categoryBlock = tax.slice(0, tax.indexOf('export const BRANDS'));
 const categorySlugs = new Set([...categoryBlock.matchAll(/slug:\s*'([a-z0-9-]+)'/g)].map((m) => m[1]));
 
 /* ---------- بررسی‌ها ---------- */
-const UNIT = /([۰-۹0-9]+(?:[.,][۰-۹0-9]+)?)\s*(?:میلی[\s‌]?متر|سانتی[\s‌]?متر|متر|mm|cm|kg|کیلوگرم|تن|ton|ولت|volt|آمپر|amp|وات|kw|نیوتن|nm|دور|rpm|بار|bar|درجه)\b/giu;
+// ⚠️ پایان الگو عمداً `(?![\p{L}\p{N}])` است و نه `\b`.
+//
+// این یک باگ واقعی و خطرناک بود: در جاوااسکریپت `\b` فقط با کاراکترهای
+// ASCII تعریف می‌شود. بعد از یک حرف فارسی مثل «متر» هیچ مرز کلمه‌ی
+// ASCII وجود ندارد، پس `متر\b` هرگز تطبیق نمی‌یافت — یعنی مهم‌ترین
+// بررسی ایمنی این پروژه (کشف عدد مهندسیِ تاییدنشده) کاملاً بی‌اثر بود
+// و هر بار «هیچ ایرادی پیدا نشد» گزارش می‌کرد.
+//
+// بدتر: نسخه‌ی پایتونی همین منطق کار می‌کرد، چون `\b` در پایتون
+// یونیکد-آگاه است. یعنی تست در زبانی انجام شده بود که مشکل را نشان
+// نمی‌داد. هشداری که همیشه ساکت باشد، از نبودِ هشدار بدتر است.
+const WORD_END = String.raw`(?![\p{L}\p{N}])`;
+const UNIT = new RegExp(
+  String.raw`([۰-۹0-9]+(?:[.,][۰-۹0-9]+)?)\s*(?:میلی[\s‌]?متر|سانتی[\s‌]?متر|متر|میلی|mm|cm|kg|کیلوگرم|گرم|تن|ton|ولت|volt|آمپر|amp|وات|kw|نیوتن|nm|دور|rpm|بار|bar|درجه)` + WORD_END,
+  'giu'
+);
 const CODE = /\b[A-Z]{2,}[-\s]?\d{2,}[A-Z0-9-]*\b/g;
+
+// استانداردهای صنعتی — این‌ها کد قطعه نیستند و نباید علامت بخورند.
+// IP65 یک درجه‌ی حفاظت است، AC-4 یک کلاس کاری، FEM/ISO استاندارد طبقه‌بندی.
+// بدون این فهرست، هر متن فنی درستی هم «کد ساختگی» تشخیص داده می‌شد.
+const STANDARDS = /^(IP\d{2}|IK\d{2}|AC-?\d|DC-?\d|FEM\d?|ISO\d+|DIN\d+|EN\d+|M\d{1,3}|AA|AAA|NI-MH|LED|USB|PC|VAC|VDC)$/i;
 const BANNED = ['در دنیای امروز', 'شایان ذکر است', 'لازم به ذکر است', 'بی‌نظیر', 'فوق‌العاده', 'بدون شک', 'قطعاً'];
 const REQUIRED_SECTIONS = ['نمای کلی', 'بررسی تخصصی', 'نشانه', 'انتخاب', 'نصب', 'پرسش'];
 
@@ -68,16 +88,28 @@ function validate(item, index) {
   const text = strip(item.content);
   const words = text.split(/\s+/).filter(Boolean).length;
 
-  // اعداد مهندسی — همان بررسی سخت‌گیرانه‌ی افزونه.
+  // منبع رسمی ثبت شده؟ قاعده هرگز «عدد ننویس» نبود، بلکه «عددِ
+  // تاییدنشده ننویس» بود. وقتی کاتالوگ سازنده در `sources` آمده، عدد
+  // دقیق دقیقاً همان چیزی است که خریدار صنعتی لازم دارد — پس هشدار
+  // می‌شود، نه خطا.
+  const hasSources = Array.isArray(item.sources) && item.sources.length > 0;
+
   const nums = [...text.matchAll(UNIT)].map((m) => m[0].trim());
   if (nums.length) {
-    errors.push(`${nums.length} عدد با واحد مهندسی: ${[...new Set(nums)].slice(0, 5).join('، ')}`);
+    const msg = `${nums.length} عدد با واحد مهندسی: ${[...new Set(nums)].slice(0, 5).join('، ')}`;
+    if (hasSources) warns.push(`${msg} — منبع رسمی ثبت شده، اما باید با کاتالوگ تطبیق داده شود`);
+    else errors.push(`${msg} — بدون منبع رسمی`);
   }
 
   // کد قطعه‌ای که در عنوان نیست
   const known = new Set((item.title.match(CODE) ?? []).map((c) => c.toUpperCase()));
-  const unknown = [...new Set((text.match(CODE) ?? []).map((c) => c.toUpperCase()))].filter((c) => !known.has(c));
-  if (unknown.length) errors.push(`کد ناشناخته در متن: ${unknown.slice(0, 5).join('، ')}`);
+  const unknown = [...new Set((text.match(CODE) ?? []).map((c) => c.toUpperCase()))]
+    .filter((c) => !known.has(c) && !STANDARDS.test(c));
+  if (unknown.length) {
+    const msg = `کد ناشناخته در متن: ${unknown.slice(0, 5).join('، ')}`;
+    if (hasSources) warns.push(msg);
+    else errors.push(msg);
+  }
 
   for (const s of REQUIRED_SECTIONS) {
     if (!item.content.includes(s)) errors.push(`بخش «${s}» نوشته نشده`);
@@ -134,7 +166,8 @@ for (const [i, item] of items.entries()) {
   totalErrors += errors.length;
 
   const mark = errors.length ? '✗' : warns.length ? '⚠' : '✓';
-  console.log(`${mark} ${label}${words ? `  (${words} کلمه)` : ''}`);
+  const src = Array.isArray(item.sources) && item.sources.length ? `  [${item.sources.length} منبع]` : '  [بدون منبع]';
+  console.log(`${mark} ${label}${words ? `  (${words} کلمه)` : ''}${src}`);
   for (const e of errors) console.log(`    ✗ ${e}`);
   for (const w of warns) console.log(`    ⚠ ${w}`);
 }
