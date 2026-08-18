@@ -429,9 +429,11 @@ function cyh_handle_repair_slugs() {
 
 	$fixed = cyh_repair_all_latin_slugs();
 
+	// بازگشت به *همان صفحه‌ی ابزار*، نه فهرست محصولات. نسخه‌ی قبل به
+	// edit.php برمی‌گشت و نتیجه‌ی عملیات جایی نمایش داده نمی‌شد.
 	wp_safe_redirect(
 		add_query_arg(
-			[ 'post_type' => 'product', 'cyh_slugs_fixed' => $fixed ],
+			[ 'post_type' => 'product', 'page' => 'cyh-fix-slugs', 'cyh_slugs_fixed' => $fixed ],
 			admin_url( 'edit.php' )
 		)
 	);
@@ -439,43 +441,129 @@ function cyh_handle_repair_slugs() {
 }
 add_action( 'admin_post_cyh_repair_slugs', 'cyh_handle_repair_slugs' );
 
-/** اعلان + دکمه‌ی ترمیم اسلاگ. */
-function cyh_slug_repair_notice() {
-	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-	if ( ! $screen || 'edit-product' !== $screen->id ) {
-		return;
+/* =========================================================================
+   صفحه‌ی «ابزار اصلاح آدرس‌ها»
+   =========================================================================
+   ⚠️ چرا این از یک اعلان (admin notice) به یک صفحه‌ی واقعی تبدیل شد:
+
+   نسخه‌ی قبل یک بنر بود، نه یک زیرمنو — و به سه دلیل *هرگز* دیده نشد:
+
+     ۱) فقط روی صفحه‌ی `edit-product` رندر می‌شد. برندها نوع پست دیگری
+        دارند (`edit-brand`)، پس حتی اگر شرط‌های دیگر برقرار بودند هم در
+        فهرست برندها نمایان نمی‌شد.
+     ۲) شرط نمایش این بود که اسلاگِ غیر-ASCII وجود داشته باشد. اسلاگ‌های
+        واقعی `brand-59` تا `brand-75` کاملاً ASCII هستند، پس شمارش صفر
+        می‌شد و بنر اصلاً چاپ نمی‌شد.
+     ۳) بنر بود و نه منو؛ یعنی حتی اگر کاربر دنبالش می‌گشت، جایی برای
+        پیدا کردنش وجود نداشت.
+
+   یک ابزار تعمیراتی نباید شرطی باشد. حالا همیشه در منوی افزونه هست، و
+   *پیش از اجرا* نشان می‌دهد دقیقاً چه چیزی قرار است تغییر کند.
+   ========================================================================= */
+
+/** اسلاگ‌هایی که نیاز به ترمیم دارند. */
+function cyh_find_broken_slugs() {
+	$posts = get_posts( [
+		'post_type'      => [ 'product', 'brand', 'industry', 'datasheet' ],
+		'post_status'    => [ 'publish', 'draft', 'pending', 'private' ],
+		'posts_per_page' => -1,
+	] );
+
+	$rows = [];
+	foreach ( $posts as $post ) {
+		$current = urldecode( (string) $post->post_name );
+
+		$is_placeholder = (bool) preg_match( '/^' . preg_quote( $post->post_type, '/' ) . '-\d+$/', $current );
+		$is_non_ascii   = '' !== $current && (bool) preg_match( '/[^\x20-\x7E]/', $current );
+
+		if ( ! $is_placeholder && ! $is_non_ascii ) {
+			continue;
+		}
+
+		$proposed = cyh_force_latin_slug( '', $post->ID, $post->post_status, $post->post_type );
+
+		$rows[] = [
+			'id'       => $post->ID,
+			'type'     => $post->post_type,
+			'title'    => $post->post_title,
+			'current'  => $current,
+			'proposed' => $proposed,
+			'reason'   => $is_placeholder ? 'اسلاگ جای‌گذار' : 'اسلاگ غیرلاتین',
+		];
 	}
+
+	return $rows;
+}
+
+/** ثبت صفحه در منوی افزونه. */
+function cyh_slug_tool_menu() {
+	add_submenu_page(
+		'edit.php?post_type=product',
+		'اصلاح آدرس‌ها',
+		'اصلاح آدرس‌ها',
+		'manage_options',
+		'cyh-fix-slugs',
+		'cyh_slug_tool_page'
+	);
+}
+add_action( 'admin_menu', 'cyh_slug_tool_menu' );
+
+function cyh_slug_tool_page() {
+	$rows = cyh_find_broken_slugs();
+	$url  = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_repair_slugs' ), 'cyh_repair_slugs' );
+
+	echo '<div class="wrap">';
+	echo '<h1>اصلاح آدرس‌ها (Slug)</h1>';
 
 	if ( isset( $_GET['cyh_slugs_fixed'] ) ) {
 		printf(
-			'<div class="notice notice-success is-dismissible"><p><strong>%d آدرس اصلاح شد.</strong> آدرس‌ها اکنون لاتین و بر اساس برند و کد فنی هستند.</p></div>',
+			'<div class="notice notice-success is-dismissible"><p><strong>%d آدرس اصلاح شد.</strong></p></div>',
 			(int) $_GET['cyh_slugs_fixed']
 		);
+	}
+
+	echo '<p style="max-width:820px">آدرس هر محصول و برند باید لاتین و معنادار باشد. دو حالت اینجا اصلاح می‌شوند:</p>';
+	echo '<ul style="max-width:820px;list-style:disc;padding-right:20px">';
+	echo '<li><strong>اسلاگ جای‌گذار</strong> مثل <code>brand-59</code> — وقتی ساخته می‌شود که فیلدهای ACF در لحظه‌ی ساخت پست هنوز ذخیره نشده باشند.</li>';
+	echo '<li><strong>اسلاگ غیرلاتین</strong> — عنوان فارسی، اسلاگ فارسی می‌سازد که در اشتراک‌گذاری به کدهای درصددار تبدیل می‌شود.</li>';
+	echo '</ul>';
+
+	if ( empty( $rows ) ) {
+		echo '<div class="notice notice-success" style="margin-top:16px"><p><strong>✓ همه‌ی آدرس‌ها سالم‌اند.</strong> کاری برای انجام نیست.</p></div>';
+		echo '</div>';
 		return;
 	}
 
-	// فقط وقتی واقعاً آدرس فارسی وجود دارد هشدار می‌دهیم.
-	global $wpdb;
-	$bad = (int) $wpdb->get_var(
-		"SELECT COUNT(*) FROM {$wpdb->posts}
-		 WHERE post_type IN ('product','brand','industry','datasheet')
-		   AND post_status NOT IN ('trash','auto-draft')
-		   AND post_name REGEXP '[^ -~]'"
-	);
+	printf( '<h2 style="margin-top:28px">%d آدرس نیاز به اصلاح دارد</h2>', count( $rows ) );
+	echo '<p class="description">پیش از اجرا، تغییرات پیشنهادی را ببینید:</p>';
 
-	if ( $bad < 1 ) {
-		return;
+	echo '<table class="wp-list-table widefat fixed striped" style="max-width:980px"><thead><tr>';
+	echo '<th style="width:90px">نوع</th><th>عنوان</th><th style="width:170px">اسلاگ فعلی</th>';
+	echo '<th style="width:170px">اسلاگ جدید</th><th style="width:120px">دلیل</th>';
+	echo '</tr></thead><tbody>';
+
+	$labels = [ 'product' => 'محصول', 'brand' => 'برند', 'industry' => 'صنعت', 'datasheet' => 'سند فنی' ];
+
+	foreach ( $rows as $r ) {
+		printf(
+			'<tr><td>%s</td><td><a href="%s">%s</a></td><td><code>%s</code></td>'
+			. '<td><code style="color:#00a32a;font-weight:700">%s</code></td><td>%s</td></tr>',
+			esc_html( $labels[ $r['type'] ] ?? $r['type'] ),
+			esc_url( (string) get_edit_post_link( $r['id'] ) ),
+			esc_html( $r['title'] ),
+			esc_html( $r['current'] ),
+			esc_html( $r['proposed'] ),
+			esc_html( $r['reason'] )
+		);
 	}
-
-	$url = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_repair_slugs' ), 'cyh_repair_slugs' );
+	echo '</tbody></table>';
 
 	printf(
-		'<div class="notice notice-warning"><p><strong>⚠️ %d آدرس (URL) فارسی پیدا شد.</strong> '
-		. 'آدرس فارسی در اشتراک‌گذاری به کدهای درصددار تبدیل می‌شود (مثلاً %%DA%%A9...) و برای سئو و ارسال لینک به مشتری مناسب نیست. '
-		. 'با یک کلیک همه بر اساس برند و کد فنی به آدرس لاتین تبدیل می‌شوند.</p>'
-		. '<p><a class="button button-primary" href="%s">اصلاح آدرس‌ها</a></p></div>',
-		$bad,
-		esc_url( $url )
+		'<p style="margin-top:20px"><a class="button button-primary button-hero" href="%s">اصلاح هر %d آدرس</a></p>',
+		esc_url( $url ),
+		count( $rows )
 	);
+
+	echo '<p class="description" style="max-width:820px">آدرس قدیمی پس از تغییر کار نمی‌کند. چون این صفحات هنوز منتشر نشده‌اند و در گوگل ایندکس نشده‌اند، اکنون بهترین زمان برای این کار است.</p>';
+	echo '</div>';
 }
-add_action( 'admin_notices', 'cyh_slug_repair_notice' );
