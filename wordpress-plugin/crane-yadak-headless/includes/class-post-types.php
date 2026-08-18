@@ -353,10 +353,23 @@ function cyh_repair_latin_slug_after_acf( $post_id ) {
 		return;
 	}
 
-	// اسلاگ اگر از قبل کاملاً ASCII است، دست نمی‌زنیم — ممکن است مدیر
-	// سایت عمداً آن را دستی تنظیم کرده باشد.
 	$current = urldecode( (string) $post->post_name );
-	if ( '' !== $current && ! preg_match( '/[^\x20-\x7E]/', $current ) ) {
+
+	// ⚠️ دو حالت باید ترمیم شوند، نه یکی.
+	//
+	// نسخه‌ی قبل فقط اسلاگ‌های غیر-ASCII را ترمیم می‌کرد و هر اسلاگ
+	// انگلیسی را «دستی و عمدی» فرض می‌گرفت. اما خودِ فیلتر
+	// cyh_force_latin_slug وقتی فیلدهای ACF هنوز ذخیره نشده‌اند، به
+	// `{post_type}-{ID}` برمی‌گردد — یعنی `brand-59`. آن اسلاگ کاملاً
+	// ASCII است، پس این تابع از کنارش رد می‌شد و هرگز ترمیمش نمی‌کرد.
+	//
+	// نتیجه‌ی واقعی روی سایت: هر ۱۷ برند با اسلاگ brand-59 تا brand-75
+	// ماندند. آدرس‌ها بی‌معنا شدند و جست‌وجوی برند با اسلاگ لاتین
+	// (که سایر بخش‌های کد انجام می‌دهند) شکست خورد.
+	$is_placeholder = (bool) preg_match( '/^' . preg_quote( $post->post_type, '/' ) . '-\d+$/', $current );
+	$is_ascii       = '' !== $current && ! preg_match( '/[^\x20-\x7E]/', $current );
+
+	if ( $is_ascii && ! $is_placeholder ) {
 		return;
 	}
 

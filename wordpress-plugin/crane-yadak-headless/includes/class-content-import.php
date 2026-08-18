@@ -170,12 +170,47 @@ function cyh_import_one( array $item, $update_existing = true ) {
 			update_field( 'price', (float) $item['price'], $post_id );
 		}
 
-		// برند — یک رابطه‌ی post object؛ با اسلاگ پیدا می‌شود.
-		$brand_slug = sanitize_title( (string) ( $item['brand'] ?? '' ) );
-		if ( $brand_slug ) {
-			$brand_post = get_page_by_path( $brand_slug, OBJECT, 'brand' );
+		// ---------------------------------------------------------------
+		// برند — با اسلاگ *یا* نام انگلیسی پیدا می‌شود.
+		//
+		// ⚠️ چرا فقط اسلاگ کافی نیست: اسلاگ واقعی برندها روی این نصب
+		// `brand-59` تا `brand-75` است، نه `demag` و `saga`. جست‌وجوی
+		// get_page_by_path('saga') هیچ‌وقت چیزی پیدا نمی‌کرد و برند به
+		// محصول وصل نمی‌شد — بی‌صدا. و چون انتشار محصول بدون برند مجاز
+		// نیست، هر محصول واردشده در همان لحظه‌ی انتشار گیر می‌کرد.
+		// ---------------------------------------------------------------
+		$brand_key = trim( (string) ( $item['brand'] ?? '' ) );
+		if ( '' !== $brand_key ) {
+			$brand_post = get_page_by_path( sanitize_title( $brand_key ), OBJECT, 'brand' );
+
+			// اگر با اسلاگ پیدا نشد، با فیلد name_en بگرد.
+			if ( ! $brand_post ) {
+				$found = get_posts( [
+					'post_type'      => 'brand',
+					'post_status'    => [ 'publish', 'draft', 'pending', 'private' ],
+					'posts_per_page' => 1,
+					'meta_query'     => [
+						[
+							'key'     => 'name_en',
+							'value'   => $brand_key,
+							'compare' => '=',
+						],
+					],
+				] );
+				if ( ! empty( $found ) ) {
+					$brand_post = $found[0];
+				}
+			}
+
 			if ( $brand_post ) {
 				update_field( 'brand', [ (int) $brand_post->ID ], $post_id );
+			} else {
+				// بی‌صدا رد نمی‌شود: محصول بدون برند قابل انتشار نیست.
+				update_post_meta(
+					$post_id,
+					'_cyh_import_warning',
+					"برند «{$brand_key}» در وردپرس پیدا نشد. محصول تا اتصال برند قابل انتشار نیست."
+				);
 			}
 		}
 
