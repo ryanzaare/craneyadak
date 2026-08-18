@@ -413,7 +413,10 @@ const jsonLd = {
       </div>
 
       <div class="space-y-7">
-        {(['oem', 'control'] as const).map((brandClass) => (
+        {/* هر سه کلاس. نسخه‌ی قبل عمداً فقط دو کلاس اول را نشان می‌داد و
+            همین باعث می‌شد ۱۶ برند از ۱۸ دیده شود — اشنایدر و سامسونگ
+            (کلاس تجهیزات برقی) هرگز روی صفحه‌ی اصلی نمی‌آمدند. */}
+        {(['oem', 'control', 'electrical'] as const).map((brandClass) => (
           <div>
             <h3 class="text-xs font-black text-steel-600 tracking-wide mb-3 pb-2 border-b border-steel-100">
               {BRAND_CLASSES[brandClass].name}
@@ -430,9 +433,14 @@ const jsonLd = {
                   >
                     {/* پلاک لوگو — نسبت ثابت تا با آمدن تصویر واقعی
                         چیدمان جابه‌جا نشود (CLS = 0). */}
-                    <span class="cy-brand-bar flex items-center justify-center h-14 px-2 transition-colors">
+                    {/* پلاک تیره می‌ماند. رنگ برند فقط یک نوار باریک بالای
+                        آن است و اگر ثبت نشده باشد اصلاً رندر نمی‌شود. */}
+                    <span class="relative flex items-center justify-center h-14 px-2 bg-steel-800 group-hover:bg-steel-700 transition-colors">
+                      {brand.color && (
+                        <span class="cy-brand-bar absolute top-0 inset-x-0 h-1" aria-hidden="true"></span>
+                      )}
                       <span
-                        class="text-[13px] font-black tracking-[0.2em] text-white uppercase truncate drop-shadow"
+                        class="text-[13px] font-black tracking-[0.2em] text-white uppercase truncate"
                         dir="ltr"
                       >
                         {brand.logoText}

@@ -46,10 +46,18 @@ export interface EnrichedBrand extends Brand {
   fromWordPress: boolean;
 }
 
+// ⚠️ آرگومان `where` عمداً حذف شد.
+//
+// نسخه‌ی قبل `where: { status: PUBLISH }` داشت. اگر آن آرگومان روی این
+// CPT پشتیبانی نشود، *کل کوئری* خطای اسکیما می‌دهد، catch پایین آن را
+// می‌بلعد، و همه‌ی برندها بی‌صدا به داده‌ی محلی برمی‌گردند — دقیقاً همان
+// چیزی که روی سایت دیده شد. کوئری بدون آرگومان به‌طور پیش‌فرض فقط
+// محتوای منتشرشده‌ی عمومی را برمی‌گرداند، پس آن آرگومان لازم هم نبود.
 const BRANDS_QUERY = `
   query CraneBrands($first: Int!) {
-    craneBrands(first: $first, where: { status: PUBLISH }) {
+    craneBrands(first: $first) {
       nodes {
+        databaseId
         title
         slug
         brandFields {
@@ -65,6 +73,7 @@ const BRANDS_QUERY = `
 `;
 
 interface RawBrand {
+  databaseId?: number | null;
   title?: string | null;
   slug?: string | null;
   brandFields?: {
@@ -99,16 +108,43 @@ function cleanHex(value: unknown): string | null {
 
 let brandsPromise: Promise<EnrichedBrand[]> | null = null;
 
+/**
+ * کلیدهای تطبیق یک رکورد وردپرس.
+ *
+ * ⚠️ چرا فقط اسلاگ کافی نیست — این علت اصلی خرابی بود:
+ * وقتی مدیر سایت یک برند را با عنوان فارسی («دماگ») در وردپرس می‌سازد،
+ * وردپرس اسلاگ را از همان عنوان فارسی می‌سازد. یعنی اسلاگ واقعی
+ * `%D8%AF%D9%85%D8%A7%DA%AF` می‌شود، نه `demag`. تطبیق بر اساس اسلاگ
+ * هیچ‌وقت جواب نمی‌داد و همه‌ی ۱۸ برند بی‌صدا به داده‌ی محلی برمی‌گشتند.
+ *
+ * حالا با سه کلید تطبیق داده می‌شود: اسلاگ، نام انگلیسی ACF، و عنوان
+ * پست. هر کدام که بخورد کافی است.
+ */
+function matchKeys(node: RawBrand): string[] {
+  const keys = [
+    clean(node?.slug),
+    clean(node?.brandFields?.nameEn),
+    clean(node?.title),
+    clean(node?.brandFields?.logoText),
+  ];
+  return keys.filter((k): k is string => Boolean(k)).map((k) => k.toLowerCase().trim());
+}
+
 async function fetchBrands(): Promise<EnrichedBrand[]> {
   let byslug = new Map<string, RawBrand>();
+  let raw: RawBrand[] = [];
 
   try {
     const data = await wpQueryPublic<{ craneBrands?: { nodes?: RawBrand[] } }>(BRANDS_QUERY, {
       first: 100,
     });
-    for (const node of data?.craneBrands?.nodes ?? []) {
-      const slug = clean(node?.slug);
-      if (slug) byslug.set(slug, node);
+    raw = data?.craneBrands?.nodes ?? [];
+
+    for (const node of raw) {
+      for (const key of matchKeys(node)) {
+        // اولین تطبیق برنده است تا یک برند، برند دیگری را بازنویسی نکند.
+        if (!byslug.has(key)) byslug.set(key, node);
+      }
     }
   } catch (error) {
     // همان الگوی «غنی‌سازی اختیاری» بقیه‌ی پروژه: نبود فیلدهای برند
@@ -123,7 +159,12 @@ async function fetchBrands(): Promise<EnrichedBrand[]> {
   }
 
   const enriched: EnrichedBrand[] = BRANDS.map((base) => {
-    const wp = byslug.get(base.slug);
+    // به ترتیب: اسلاگ، نام انگلیسی، نام فارسی، متن لوگو.
+    const wp =
+      byslug.get(base.slug) ??
+      byslug.get(base.nameEn.toLowerCase()) ??
+      byslug.get(base.nameFa.toLowerCase()) ??
+      byslug.get(base.logoText.toLowerCase());
     const f = wp?.brandFields;
 
     return {
@@ -145,10 +186,20 @@ async function fetchBrands(): Promise<EnrichedBrand[]> {
   const noColor = enriched.filter((b) => b.fromWordPress && !b.color);
 
   if (missing.length > 0) {
+    // تشخیص دقیق: چه چیزی *واقعاً* از وردپرس آمد. بدون این، تنها چیزی
+    // که می‌دیدیم «داده نیامد» بود و علتش قابل حدس نبود.
+    const wpKeys = raw.map((n) => `${clean(n?.slug) ?? '?'}  ←  «${clean(n?.title) ?? '?'}»`);
     console.warn(
-      `\n⚠️  ${missing.length} برند در وردپرس پیدا نشد و از داده‌ی محلی استفاده کرد:\n` +
-        missing.map((b) => `    • ${b.nameFa} (${b.slug})`).join('\n') +
-        `\n  برای نمایش رنگ و متن سئوی اختصاصی، این برندها را در وردپرس بسازید.\n`
+      `\n⚠️  ${missing.length} از ${BRANDS.length} برند با رکورد وردپرس تطبیق نخورد:\n` +
+        missing.map((b) => `    • ${b.nameFa} (انتظار: ${b.slug})`).join('\n') +
+        `\n\n  وردپرس این ${raw.length} رکورد را برگرداند:\n` +
+        (raw.length === 0
+          ? `    (هیچ‌کدام — یا برندها منتشر نشده‌اند، یا کوئری خطا داده است)\n`
+          : wpKeys.map((k) => `    ${k}`).join('\n') + '\n') +
+        `\n  رایج‌ترین علت: اسلاگ برند در وردپرس فارسی است. عنوان فارسی\n` +
+        `  اسلاگ فارسی می‌سازد و با اسلاگ لاتین تاکسونومی تطبیق نمی‌خورد.\n` +
+        `  راه‌حل: در فهرست برندها دکمه‌ی «اصلاح آدرس‌ها» را بزنید، یا اسلاگ\n` +
+        `  هر برند را دستی به معادل لاتین تغییر دهید.\n`
     );
   }
   if (noColor.length > 0) {

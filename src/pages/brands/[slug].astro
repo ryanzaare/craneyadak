@@ -147,13 +147,10 @@ const jsonLd = {
             قطعات {brand.nameFa}
             <span class="text-gray-400 font-bold text-2xl md:text-3xl" dir="ltr">({brand.nameEn})</span>
           </h1>
-          {/* توضیح دقیقاً همان چیزی است که مدیر سایت در وردپرس نوشته.
-              نسخه‌ی قبل آن را داخل یک جمله‌ی ثابت می‌پیچید، یعنی متن سئوی
-              نوشته‌شده هرگز به‌شکل خودش دیده نمی‌شد. */}
-          <p class="text-lg text-steel-300 max-w-2xl leading-8">{brand.seoDesc}</p>
-          <p class="text-sm text-steel-300 max-w-2xl leading-7 mt-3">
-            تامین با بررسی سازگاری فنی، تضمین اصالت کالا و صدور فاکتور رسمی.
-          </p>
+          {/* فقط و فقط متن وردپرس. جمله‌ی ثابت «تامین با بررسی سازگاری…»
+              که اینجا بود حذف شد: متن سئوی نوشته‌شده باید تنها چیزی باشد
+              که خوانده می‌شود، نه یک شعار تکراری کنارش. */}
+          <p class="text-lg text-steel-300 max-w-3xl leading-9 whitespace-pre-line">{brand.seoDesc}</p>
         </div>
       </div>
     </div>
