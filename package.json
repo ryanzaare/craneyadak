@@ -6,11 +6,16 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "dev": "node scripts/generate-taxonomy.mjs --allow-stale && astro dev",
+    "build": "npm run taxonomy && npm run check && astro build",
     "postbuild": "pagefind --site dist",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check": "node scripts/check-imports.mjs && node scripts/check-wp-hooks.mjs && node scripts/check-brand-shapes.mjs && node scripts/check-braces.mjs src/lib/*.ts src/data/*.ts && node scripts/check-astro-tags.mjs src/components/*.astro src/pages/**/*.astro",
+    "taxonomy": "node scripts/generate-taxonomy.mjs",
+    "test:taxonomy": "node scripts/generate-taxonomy.test.mjs",
+    "check:hooks": "node scripts/check-wp-hooks.mjs",
+    "check:plugin": "php wordpress-plugin/check-stub-names.php && php wordpress-plugin/check-stub-coverage.php && php wordpress-plugin/wp-stub-harness.php"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.2.1",
