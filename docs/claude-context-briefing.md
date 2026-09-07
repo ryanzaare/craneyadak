@@ -1,48 +1,119 @@
 # Claude Context Briefing — Crane Yadak
 
-This file exists so any Claude session (this chat, the Cowork Project, or a future one) can catch up instantly without re-deriving everything from scratch. Read this first. Last updated: **2026-08-07, after the first implementation pass** — update it as facts change.
+This file exists so any Claude session can catch up instantly without re-deriving
+everything. **Read this first.** Last updated: **2026-09-02**, plugin v1.4.0.
 
-Related, always-loaded context: the `craneyadak-project-state`, `seo-audit-checklist`, and `principal-review-loop` skills (saved to the user's account, available in every session/project automatically). This file has more narrative detail and history than those skills carry; the skills are the enforced standards, this file is the "how we got here."
+Always-loaded context: the `craneyadak-project-state`, `seo-audit-checklist`,
+`principal-review-loop`, and `working-agreement` skills. Those are the enforced
+standards; this file is the narrative — *how we got here and what hurts.*
+
+> ⚠️ Update this file whenever facts change. Stale documentation in this project
+> has caused real time loss. If something here disagrees with the code, **the
+> code is right and this file is a bug.**
 
 ## Goal
-#1 Google ranking for crane spare parts search terms (B2B, Persian/RTL, Iran market), maximum site speed. User has full authority to change/rebuild anything needed to hit that goal — but the recommendation on record is to evolve the existing Astro + headless WordPress foundation, not rewrite from scratch (see "Decisions" below).
 
-## Two local folders — what each one is
-- **`crane yadak`** (173MB, includes `node_modules`) — the version currently live on GitHub (`github.com/ryanzaare/craneyadak`). Astro frontend only, no backend. Still has the original bugs: missing `public/` assets (fonts/OG image/logo/manifest → real 404s) and hardcoded `mockProducts` fake data in JSON-LD. **Not being worked on** — it is superseded by `craneyadak 5` and should be archived once the new build is verified.
-- **`craneyadak 5`** — the source of truth. Astro frontend + a complete headless WordPress plugin at `wordpress-plugin/crane-yadak-headless/`. As of 2026-08-07 this folder has had its first real commit (`23ad6e0`) on top of the upstream `0a84ed4`.
+#1 Google ranking for crane spare-part search terms (B2B, Persian/RTL, Iran).
+Maximum site speed. The user has full authority to rebuild anything.
 
-## Git state — RESOLVED
-The stale `.git/index.lock` (+ `.old`/`.old2`/`.old3` leftovers) that blocked every write command were removed. `git status` runs clean, `git add`/`commit` work, and the first real commit exists locally. It was never a GitHub auth problem. **`git push origin main` still needs to be run by the user from their own machine** (the assistant's sandbox has no outbound network).
+## Architecture
 
-## What was fixed in the 2026-08-07 implementation pass
-1. **All fabricated data removed** (`mockProducts` in both dynamic templates, the invalid price-less `Offer`, the unfounded `availability: InStock`, `priceRange: '$$$'`, a false FAQ answer about published prices, six datasheet entries with hand-typed sizes pointing at non-existent PDFs, and an unconfirmed "max 2 working hours" SLA).
-2. **`src/lib/wp.ts`** — build-time WPGraphQL data layer. Fetches the whole published catalog once per build with pagination, caches it in module scope, filters by category/brand in memory. Deliberately avoids `taxQuery`/`metaQuery` so it needs only WPGraphQL + WPGraphQL for ACF. `WP_GRAPHQL_URL` unset → empty catalog + honest empty state; set but unreachable → the build throws on purpose (no silent empty-catalog deploys).
-3. **`src/lib/datasheets.ts`** — a document renders only if its file really exists in `public/`; size/extension read from disk. `/datasheets` is `noindex` and excluded from the sitemap until the first real PDF appears, then both flip back automatically.
-4. **`src/components/ProductGrid.astro`** — shared real-product grid + honest empty state (RFQ CTA, phone/WhatsApp/Telegram).
-5. **Contact form** — `src/pages/api/contact.ts` deleted (it never existed in a static build, so the no-JS path 404'd and lost leads silently). The form's `action` now points straight at the WP REST endpoint; the script is pure progressive enhancement. With `PUBLIC_WP_API_URL` unset the form is not rendered at all and direct contact channels are shown instead.
-6. **robots.txt** rewritten to avoid the Disallow-vs-noindex contradiction; blocks only `/pagefind/`.
-7. Footer copyright contrast raised to WCAG AA; category/brand pages gained real internal-linking silos.
+Astro static frontend + headless WordPress (ACF Pro + WPGraphQL).
+All data fetched at **build time only** — visitors never touch WordPress.
+Details: `docs/backend-integration.md`. Taxonomy: `docs/taxonomy-ssot.md`.
 
-## Backend decision (unchanged)
-Keep headless WordPress (ACF Pro + WPGraphQL). Astro fetches from WPGraphQL only at *build* time (`getStaticPaths()`), so there is zero runtime backend dependency for visitors — full CMS convenience with no runtime performance cost. Content will be managed by the user **plus other non-technical people**, which is why a real CMS admin UI is required (this ruled out a git-based/no-CMS approach).
+**WordPress is the source of truth for the category structure.** `crane_category`
+is hierarchical and two-level: no parent = silo, one parent = category. Adding a
+category requires zero code. `src/data/taxonomy.generated.ts` is a build artifact
+regenerated from WordPress on every build — never edit it by hand.
+
+## Current state
+
+- Frontend builds clean. Lighthouse on production preview: **Perf 99,
+  A11y 97, Best Practices 100, SEO 100** (dev-server scores are meaningless).
+- Backend plugin v1.4.0 — 4 CPTs (`product`, `brand`, `inquiry`, `cyh_quote`),
+  1 taxonomy, 5 ACF groups, 6 REST endpoints.
+- **WooCommerce bridge landed.** `product` is shared with Woo: when Woo is
+  active we skip our registration and inject GraphQL args onto its. No data
+  migration, no frontend rewrite. Price/stock come from `craneCommerce`,
+  single-source. Verified in both modes by the stub harness.
+- **Catalog is nearly empty**: the user deleted every product except
+  `saga1-l12`. This is deliberate — the others were not written to L12 standard.
+- Category SEO content written for `crane-coupling` and `rope-guide`, staged in
+  `content-imports/category-content-batch-01.md`, not yet entered in WordPress.
 
 ## Non-negotiable rules
-- Never inject fake/placeholder product data, prices, ratings, reviews, file sizes, or SLAs into structured data or visible content. Missing real data is always better than fake data.
-- Preserve Astro's static output and zero-JS-by-default posture — no server adapter or client-heavy framework without a specific justification.
-- Every page/template goes through `principal-review-loop`, scored against `seo-audit-checklist`.
 
-## Blocked on real-world input from the user
-- **Real NAP data**: phone (`021-12345678` is a placeholder), street address, postal code, and `geo` lat/lng in `src/data/site.ts`. Currently the only remaining placeholders in the codebase.
-- **WordPress endpoint URLs** for `.env` (`WP_GRAPHQL_URL`, `PUBLIC_WP_API_URL`).
-- **Real product data** in WordPress (CPT `product` + `crane_category` terms matching the existing slugs, so no 301 map is needed).
-- **Real PDFs** in `public/pdfs/` if the datasheet hub is to be published.
-- **eNamad** trust badge, once genuinely issued.
-- **Confirmed response-time SLA**, if the business wants to state one.
-- **`npm install && npm run build`** on a machine with npm access — the assistant's sandbox has no registry access, so the full Astro build has not been executed yet.
+- **Never fabricate** OEM part numbers, specs, dimensions, tolerances, prices,
+  ratings, stock status, delivery times, or business capabilities. Missing real
+  data always beats invented data. Anything unverifiable gets flagged 🔶 for CEO
+  confirmation, not guessed.
+- No `Offer` without a real numeric price. `availability` is never assumed.
+- No silent failure on the critical path — a quietly empty catalog deindexes
+  real pages and nobody notices.
+- Preserve `output: 'static'` and the zero-JS-by-default posture.
+- No two ACF groups may share a `graphql_field_name`.
 
-## Still open (not started)
-- Real keyword research and competitor analysis — needed before finalizing page titles/copy.
+## Mistakes this project has actually made — do not repeat
+
+These are documented because each one cost real time and at least one took the
+site down.
+
+1. **Validating where the bug cannot appear.** A Persian regex was tested in
+   Python (where `\b` is Unicode-aware, unlike JS). Brand grouping was tested
+   with pre-populated values, hiding a default that collapsed all 19 brands.
+   *Test in the environment where the failure would occur.*
+2. **A checker that reports false results.** An import checker anchored `export`
+   to column 0, missed an indented one, and gave a false pass. Later a hook
+   linter emitted 25 false positives, burying one real error.
+   *A broken verification tool is worse than none.*
+3. **Shipping unverifiable code.** Plugin v1.3.0 registered `pre_term_slug` with
+   3 required params; WordPress passes 2 → `ArgumentCountError` → **white screen
+   on the whole site**. It shipped because there was no PHP binary in the
+   sandbox and it was shipped anyway.
+   *If it cannot be executed, say so before shipping — not after.*
+4. **A test harness that silently tested nothing.** `wp-stub-harness.php` had a
+   hardcoded list of 6 files while the plugin had grown to 14, and discarded
+   `accepted_args` entirely. It would have passed a plugin it never loaded.
+   Now it globs, stubs 103 functions, and checks hook signatures via Reflection.
+5. **Bulk edits across many files.** Appending to 9 files' frontmatter created
+   TDZ errors; a careless slice truncated `site-options.ts` and destroyed
+   `getContact`, breaking 10 files. This is why the taxonomy refactor used a
+   build-time generator instead of converting 18 files to async.
+6. **Zip built from inside the plugin folder** → no root directory → WordPress
+   created a second copy → `Cannot redeclare cyh_activate()`.
+   *Always `zip -r file.zip crane-yadak-headless` from the parent.*
+
+## Safety nets that now exist
+
+| Command | Catches |
+|---|---|
+| `npm run check` | broken/missing imports, duplicate exports, bad WP hook signatures |
+| `npm run test:taxonomy` | 24 tests on the taxonomy generator |
+| `php wordpress-plugin/wp-stub-harness.php` | real PHP execution of the plugin |
+| build-time URL diff | any category URL that changed or disappeared |
+
+## Blocked on real-world input
+
+- **Real NAP**: phone, address, postal code, geo lat/lng.
+- **Payment gateway**: needs eNamad + bank merchant account + SMS provider.
+- **eNamad badge**, once genuinely issued.
+- **Real product photos and specs** for the remaining catalog.
+- **Commerce stack decided**: WooCommerce for the `cart` half, Astro stays
+  static for catalog and guides. Checkout leaves the static site.
+
+## Open / not started
+
+- Real keyword research and competitor analysis.
 - Deploy pipeline / rebuild webhook (WP publish → static rebuild).
-- Search Console verification + monitoring.
-- Host-level items the code cannot control: security headers (CSP, X-Content-Type-Options), 404 status code for `/404.html`, HTTP/2-3, cache headers.
-- Retire/archive the old `crane yadak` folder once `craneyadak 5` is verified live.
+- Search Console verification.
+- Host-level items code cannot control: security headers, real 404 status,
+  HTTP/2-3, cache headers.
+- Lighthouse re-measure once the catalog is repopulated with real photos.
+
+## Known unresolved
+
+- ~~Ghost menu «قطعات جرثقیل»~~ — identified as post type `crane-part`,
+  registered outside our plugin. Now unregistered by
+  `includes/class-legacy-cleanup.php` (hides, never deletes; warns if it holds
+  records). Re-enable with `define( 'CYH_KEEP_LEGACY_CRANE_PART', true );`.
