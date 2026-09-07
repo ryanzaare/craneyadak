@@ -1,0 +1,737 @@
+<?php
+/**
+ * ساخت سلسله‌مراتب واقعی تاکسونومی — مهاجرت یک‌باره.
+ *
+ * ---------------------------------------------------------------------------
+ * مسئله
+ *
+ * تاکسونومی `crane_category` با `hierarchical => true` ثبت شده بود، اما هیچ
+ * ترم والدی هرگز ساخته نشد. «گروه فنی» فقط یک رشته‌ی متن داخل فیلد توضیح بود
+ * («گروه فنی: ترمز و متعلقات»). نتیجه:
+ *
+ *   • کشوی «دستهٔ مادر» ۳۱ دسته‌ی برگ را به‌عنوان والد پیشنهاد می‌داد.
+ *   • ساختار واقعی سایت (۷ سیلو) در وردپرس اصلاً وجود نداشت.
+ *   • مدیر سایت نمی‌توانست دسته‌ی جدید را به گروهی نسبت دهد.
+ *
+ * این ابزار همان ۷ سیلو را به‌عنوان ترم والد واقعی می‌سازد و ۳۱ دسته‌ی
+ * موجود را زیر والد درستشان می‌برد. یک‌بار اجرا می‌شود و تمام.
+ *
+ * پس از آن، افزودن دسته‌ی جدید کاملاً از پنل انجام می‌شود:
+ *   دسته‌بندی قطعات ← نام + نامک لاتین + انتخاب «دستهٔ مادر» ← افزودن
+ * و `npm run build` بعدی، صفحه و مسیر آن را می‌سازد. بدون یک خط کد.
+ *
+ * ⚠️ چرا توضیح ترم بازنویسی نمی‌شود مگر خالی باشد: متن سیلوها محتوای
+ * تحریریه‌ای است. اگر مدیر آن را ویرایش کرده باشد، این ابزار حق ندارد
+ * کارش را دور بریزد.
+ *
+ * @package CraneYadakHeadless
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * هفت سیلو — ساختار سطح بالای سایت.
+ *
+ * این آرایه فقط برای *بذرکاری اولیه* است. پس از اجرا، وردپرس مرجع است و
+ * تغییر این آرایه هیچ اثری روی ترم‌های موجود ندارد.
+ */
+function cyh_silo_blueprint() {
+	return [
+		'hoist-accessories' => [
+			'name'    => 'بالابر و متعلقات',
+			'keyword' => 'بالابر جرثقیل سقفی و متعلقات',
+			'intro'   => 'مجموعه‌ی بالابر، مکانیزمی است که بار را بالا و پایین می‌برد و بیشترین سایش را در کل جرثقیل تجربه می‌کند. قطعات این گروه — از درام و کمربند تا مجموعه‌ی کامل جرثقیل بکسلی و زنجیری — مستقیماً روی ایمنی بار اثر می‌گذارند؛ به همین دلیل بازرسی دوره‌ای آن‌ها مهم‌ترین بخش برنامه‌ی نگهداری پیشگیرانه است.',
+			'icon'    => 'M12 3v6 M9 9h6v4H9z M12 13v3 M8 16h8l-1 5H9z M5 3h14',
+		],
+		'power-supply' => [
+			'name'    => 'سیستم برق رسانی',
+			'keyword' => 'سیستم برق رسانی جرثقیل سقفی',
+			'intro'   => 'برق باید از یک منبع ثابت به یک مصرف‌کننده‌ی متحرک برسد؛ این هسته‌ی کار سیستم برق‌رسانی جرثقیل است. انتخاب بین شین، سی‌ریل و سیم‌بکسل به آمپراژ مورد نیاز، طول دهانه و شرایط محیطی (گردوغبار، رطوبت، گازهای خورنده) بستگی دارد، نه صرفاً به قیمت. خطای انتخاب در این بخش خود را به‌شکل افت ولتاژ، جرقه‌زنی و توقف خط تولید نشان می‌دهد.',
+			'icon'    => 'M13 2L3 14h7l-1 8 10-12h-7l1-8z',
+		],
+		'control-safety' => [
+			'name'    => 'کنترل، فرمان و ایمنی',
+			'keyword' => 'سیستم کنترل و ایمنی جرثقیل سقفی',
+			'intro'   => 'این گروه تعیین می‌کند اپراتور چقدر دقیق و چقدر ایمن بار را جابه‌جا می‌کند. تجهیزات کنترل و ایمنی تنها بخشی از جرثقیل هستند که مستقیماً با جان پرسنل سروکار دارند؛ استفاده از قطعات غیراصل یا فاقد گواهی در این بخش ریسکی است که هیچ صرفه‌جویی‌ای آن را توجیه نمی‌کند.',
+			'icon'    => 'M12 2l8 4v6c0 5-3 8-8 10-5-2-8-5-8-10V6l8-4z M9 12l2 2 4-4',
+		],
+		'brake' => [
+			'name'    => 'ترمز و متعلقات',
+			'keyword' => 'ترمز جرثقیل سقفی و متعلقات',
+			'intro'   => 'ترمز تنها قطعه‌ای است که در لحظه‌ی قطع برق یا خرابی موتور، مانع سقوط بار می‌شود. عملکرد آن به سه چیز وابسته است: سلامت فلکه و دیسک، قدرت مگنت، و پایداری رکتیفایری که مدار را تغذیه می‌کند. خرابی هرکدام، فاصله‌ی توقف بار را به‌طور خطرناکی افزایش می‌دهد؛ به همین دلیل اندازه‌گیری دوره‌ای فاصله‌ی هوایی ترمز بحرانی‌ترین آیتم چک‌لیست نت است.',
+			'icon'    => 'M12 22a10 10 0 100-20 10 10 0 000 20z M12 18a6 6 0 100-12 6 6 0 000 12z M9 12h6 M12 9v6',
+		],
+		'drive-units' => [
+			'name'    => 'محرکه ها',
+			'keyword' => 'سیستم محرکه جرثقیل سقفی',
+			'intro'   => 'سیستم محرکه، گشتاور موتور را به حرکت طولی، عرضی و بالابری تبدیل می‌کند. قطعات این گروه زیر بار دینامیکی مداوم و شوک‌های راه‌اندازی کار می‌کنند؛ انتخاب نامناسب اینجا معمولاً نه بلافاصله، بلکه چند ماه بعد به‌شکل سایش نامتقارن چرخ، داغ‌کردن گیربکس یا شکست بیرینگ خود را نشان می‌دهد.',
+			'icon'    => 'M5 6h14v6H5z M9 12v6 M15 12v6 M10 18h4 M12 18v3',
+		],
+		'lifting-rigging' => [
+			'name'    => 'باربرداری و اتصالات',
+			'keyword' => 'تجهیزات باربرداری و اتصالات جرثقیل',
+			'intro'   => 'اتصال بار به قلاب، جایی است که بیشترین حوادث جابه‌جایی رخ می‌دهد. تجهیزات باربرداری باید متناسب با شکل، وزن و مرکز ثقل بار انتخاب شوند و گواهی بار کاری ایمن (WLL) داشته باشند؛ استفاده از تسمه یا بست بدون گواهی، حتی اگر ظاهراً سالم باشد، ریسکی پذیرفته‌نشدنی است.',
+			'icon'    => 'M12 3v6 M8 9h8l-2 4h-4z M12 13v3 M6 16h12v5H6z',
+		],
+		'rail-structure' => [
+			'name'    => 'ریل و سازه',
+			'keyword' => 'ریل و سازه جرثقیل سقفی',
+			'intro'   => 'ریل و اجزای سازه‌ای، مسیر حرکت و مرزهای ایمن کار جرثقیل را تعریف می‌کنند. ناهم‌ترازی ریل یا ضربه‌گیر فرسوده، بار اضافی به چرخ‌ها و کلگی وارد می‌کند و عمر کل مکانیزم حرکت را کوتاه می‌کند — عیبی که معمولاً به‌اشتباه به چرخ نسبت داده می‌شود در حالی که ریشه‌اش در مسیر است.',
+			'icon'    => 'M4 18h16 M4 14h16 M8 4v10 M16 4v10 M6 18v3 M18 18v3',
+		],
+	];
+}
+
+
+/**
+ * فهرست ۳۱ دسته‌ی اولیه — فقط برای بذرکاری یک‌باره.
+ *
+ * ⚠️ این تابع قبلاً در `class-taxonomy-sync.php` بود؛ آن فایل حذف شد چون
+ * ابزارش («همگام‌سازی دسته‌بندی‌ها») با معماری جدید در تضاد بود: هر بار
+ * اجرا، دسته‌های این فهرست را در وردپرس *دوباره می‌ساخت*. یعنی اگر مدیر
+ * سایت دسته‌ای را عمداً حذف می‌کرد، آن ابزار آن را زنده می‌کرد — دقیقاً
+ * برعکسِ «وردپرس مرجع است».
+ *
+ * اینجا فقط برای مهاجرت اولیه استفاده می‌شود: بردن دسته‌های *موجود* زیر
+ * والد درست. هیچ دسته‌ای بر اساس این فهرست ساخته نمی‌شود.
+ *
+ * قالب: اسلاگ => [نام فارسی, اسلاگ سیلو, نام سیلو]
+ */
+function cyh_taxonomy_blueprint() {
+	return [
+		// بالابر و متعلقات
+		'crane-coupling'       => [ 'کوپلینگ جرثقیل سقفی', 'hoist-accessories', 'بالابر و متعلقات' ],
+		'rope-guide'           => [ 'کمربند جرثقیل سقفی', 'hoist-accessories', 'بالابر و متعلقات' ],
+		'crane-drum'           => [ 'درام', 'hoist-accessories', 'بالابر و متعلقات' ],
+		'wire-rope-hoist'      => [ 'جرثقیل بکسلی', 'hoist-accessories', 'بالابر و متعلقات' ],
+		'electric-chain-hoist' => [ 'جرثقیل زنجیری برقی', 'hoist-accessories', 'بالابر و متعلقات' ],
+		'manual-chain-hoist'   => [ 'جرثقیل زنجیری دستی', 'hoist-accessories', 'بالابر و متعلقات' ],
+
+		// سیستم برق رسانی
+		'c-rail-power-line'    => [ 'خط برق رسان سی ریل', 'power-supply', 'سیستم برق رسانی' ],
+		'wire-rope-power-line' => [ 'خط برق رسان سیم بکسل', 'power-supply', 'سیستم برق رسانی' ],
+		'busbar-power-line'    => [ 'خط برق رسان شین', 'power-supply', 'سیستم برق رسانی' ],
+		'current-collector'    => [ 'جاروبک جرثقیل سقفی', 'power-supply', 'سیستم برق رسانی' ],
+		'wire-and-cable'       => [ 'سیم و کابل جرثقیل سقفی', 'power-supply', 'سیستم برق رسانی' ],
+
+		// کنترل، فرمان و ایمنی
+		'remote-control'       => [ 'ریموت کنترل جرثقیل سقفی', 'control-safety', 'کنترل، فرمان و ایمنی' ],
+		'control-switch'       => [ 'کلید فرمان جرثقیل سقفی', 'control-safety', 'کنترل، فرمان و ایمنی' ],
+		'microswitch'          => [ 'میکروسوئیچ جرثقیل سقفی', 'control-safety', 'کنترل، فرمان و ایمنی' ],
+		'inverter'             => [ 'اینورتر جرثقیل سقفی', 'control-safety', 'کنترل، فرمان و ایمنی' ],
+		'panel-equipment'      => [ 'تجهیزات تابلو برق جرثقیل سقفی', 'control-safety', 'کنترل، فرمان و ایمنی' ],
+		'load-cell'            => [ 'لودسل جرثقیل سقفی', 'control-safety', 'کنترل، فرمان و ایمنی' ],
+		'contactor'            => [ 'کنتاکتور', 'control-safety', 'کنترل، فرمان و ایمنی' ],
+		'anti-collision'       => [ 'سیستم ضد تصادم', 'control-safety', 'کنترل، فرمان و ایمنی' ],
+
+		// ترمز و متعلقات
+		'brake-wheel-disc'     => [ 'فلکه و دیسک ترمز جرثقیل سقفی', 'brake', 'ترمز و متعلقات' ],
+		'brake-magnet'         => [ 'مگنت ترمز جرثقیل سقفی', 'brake', 'ترمز و متعلقات' ],
+		'rectifier'            => [ 'رکتیفایر', 'brake', 'ترمز و متعلقات' ],
+
+		// محرکه ها
+		'gearbox-motor'        => [ 'موتور گیربکس جرثقیل سقفی', 'drive-units', 'محرکه ها' ],
+		'crane-wheel'          => [ 'چرخ جرثقیل سقفی', 'drive-units', 'محرکه ها' ],
+		'bearing'              => [ 'بیرینگ جرثقیل سقفی', 'drive-units', 'محرکه ها' ],
+
+		// باربرداری و اتصالات
+		'loading-equipment'    => [ 'تجهیزات باربرداری', 'lifting-rigging', 'باربرداری و اتصالات' ],
+		'wire-rope'            => [ 'سیم بکسل جرثقیل سقفی', 'lifting-rigging', 'باربرداری و اتصالات' ],
+		'crane-hook'           => [ 'قلاب جرثقیل سقفی', 'lifting-rigging', 'باربرداری و اتصالات' ],
+
+		// ریل و سازه
+		'end-carriage'         => [ 'کلگی جرثقیل سقفی', 'rail-structure', 'ریل و سازه' ],
+		'crane-rail'           => [ 'ریل جرثقیل سقفی', 'rail-structure', 'ریل و سازه' ],
+		'shock-absorber'       => [ 'ضربه گیر جرثقیل سقفی', 'rail-structure', 'ریل و سازه' ],
+	];
+}
+
+/**
+ * ساخت سیلوها و انتقال دسته‌ها زیر والد.
+ *
+ * @return array{silos_created:int,silos_existing:int,moved:int,already:int,orphans:array,failed:array}
+ */
+function cyh_build_taxonomy_hierarchy() {
+	$silos_created  = 0;
+	$silos_existing = 0;
+	$moved          = 0;
+	$already        = 0;
+	$orphans        = [];
+	$failed         = [];
+
+	// ── ۱. ساخت یا یافتن هر سیلو ──────────────────────────────────────────
+	$silo_ids = [];
+
+	foreach ( cyh_silo_blueprint() as $slug => $info ) {
+		$term = get_term_by( 'slug', $slug, 'crane_category' );
+
+		if ( $term && ! is_wp_error( $term ) ) {
+			$silo_ids[ $slug ] = (int) $term->term_id;
+			$silos_existing++;
+
+			// توضیح خالی را پر می‌کنیم، ولی نوشته‌ی موجود را دست نمی‌زنیم.
+			if ( '' === trim( (string) $term->description ) ) {
+				wp_update_term( $term->term_id, 'crane_category', [ 'description' => $info['intro'] ] );
+			}
+		} else {
+			$result = wp_insert_term(
+				$info['name'],
+				'crane_category',
+				[
+					'slug'        => $slug,
+					'description' => $info['intro'],
+					'parent'      => 0,
+				]
+			);
+
+			if ( is_wp_error( $result ) ) {
+				$failed[] = sprintf( 'ساخت سیلوی «%s»: %s', $info['name'], $result->get_error_message() );
+				continue;
+			}
+
+			$silo_ids[ $slug ] = (int) $result['term_id'];
+			$silos_created++;
+		}
+
+		// عبارت کلیدی و آیکون سیلو روی همان ترم.
+		if ( isset( $silo_ids[ $slug ] ) && function_exists( 'update_field' ) ) {
+			$tag = 'crane_category_' . $silo_ids[ $slug ];
+			if ( ! get_field( 'keyword', $tag ) ) {
+				update_field( 'keyword', $info['keyword'], $tag );
+			}
+			if ( ! get_field( 'icon_path', $tag ) ) {
+				update_field( 'icon_path', $info['icon'], $tag );
+			}
+		}
+	}
+
+	// ── ۲. بردن هر دسته‌ی برگ زیر سیلوی خودش ──────────────────────────────
+	foreach ( cyh_taxonomy_blueprint() as $slug => $info ) {
+		$silo_slug = $info[1];
+
+		if ( ! isset( $silo_ids[ $silo_slug ] ) ) {
+			$failed[] = sprintf( 'سیلوی «%s» برای دسته‌ی «%s» ساخته نشد.', $silo_slug, $info[0] );
+			continue;
+		}
+
+		$term = get_term_by( 'slug', $slug, 'crane_category' );
+		if ( ! $term || is_wp_error( $term ) ) {
+			$orphans[] = $info[0];
+			continue;
+		}
+
+		if ( (int) $term->parent === $silo_ids[ $silo_slug ] ) {
+			$already++;
+			continue;
+		}
+
+		$result = wp_update_term(
+			$term->term_id,
+			'crane_category',
+			[ 'parent' => $silo_ids[ $silo_slug ] ]
+		);
+
+		if ( is_wp_error( $result ) ) {
+			$failed[] = sprintf( 'انتقال «%s»: %s', $info[0], $result->get_error_message() );
+		} else {
+			$moved++;
+
+			// توضیحِ ساختگیِ «گروه فنی: …» دیگر معنا ندارد — والد واقعی جایش
+			// را گرفته. پاکش می‌کنیم تا با blurb واقعی اشتباه گرفته نشود.
+			if ( preg_match( '/^گروه فنی:/u', trim( (string) $term->description ) ) ) {
+				wp_update_term( $term->term_id, 'crane_category', [ 'description' => '' ] );
+			}
+		}
+	}
+
+	return [
+		'silos_created'  => $silos_created,
+		'silos_existing' => $silos_existing,
+		'moved'          => $moved,
+		'already'        => $already,
+		'orphans'        => $orphans,
+		'failed'         => $failed,
+	];
+}
+
+
+/** صفحه‌ی ابزار. */
+function cyh_hierarchy_menu() {
+	add_submenu_page(
+		'edit.php?post_type=product',
+		'ساختار دسته‌بندی',
+		'ساختار دسته‌بندی',
+		'manage_options',
+		'cyh-hierarchy',
+		'cyh_hierarchy_page'
+	);
+}
+add_action( 'admin_menu', 'cyh_hierarchy_menu' );
+
+function cyh_hierarchy_page() {
+	$silos = cyh_silo_blueprint();
+	$url   = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_build_hierarchy' ), 'cyh_build_hierarchy' );
+
+	// وضعیت فعلی.
+	$missing_silos = 0;
+	$rooted        = 0;
+	foreach ( $silos as $slug => $info ) {
+		$t = get_term_by( 'slug', $slug, 'crane_category' );
+		if ( ! $t || is_wp_error( $t ) ) {
+			$missing_silos++;
+		}
+	}
+	$all = get_terms( [ 'taxonomy' => 'crane_category', 'hide_empty' => false ] );
+	if ( ! is_wp_error( $all ) ) {
+		foreach ( $all as $t ) {
+			if ( 0 === (int) $t->parent && ! isset( $silos[ $t->slug ] ) ) {
+				$rooted++;
+			}
+		}
+	}
+
+	echo '<div class="wrap">';
+	echo '<h1>ساختار دسته‌بندی قطعات</h1>';
+
+	if ( isset( $_GET['cyh_h_done'] ) ) {
+		printf(
+			'<div class="notice notice-success is-dismissible"><p><strong>%d سیلو ساخته شد</strong> (%d از قبل بود) و <strong>%d دسته زیر والد خود منتقل شد</strong> (%d از قبل درست بود).<br>' .
+			'<strong>%d دسته</strong> عبارت کلیدی، توضیح و آیکون خود را از ساختار قبلی دریافت کرد.</p></div>',
+			(int) ( $_GET['cyh_h_created'] ?? 0 ),
+			(int) ( $_GET['cyh_h_existing'] ?? 0 ),
+			(int) ( $_GET['cyh_h_moved'] ?? 0 ),
+			(int) ( $_GET['cyh_h_already'] ?? 0 ),
+			(int) ( $_GET['cyh_h_meta'] ?? 0 )
+		);
+	}
+
+	echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;padding:12px 16px;margin:16px 0;max-width:880px">';
+	echo '<p style="margin:0 0 8px"><strong>این ابزار یک‌بار اجرا می‌شود.</strong> هفت «گروه فنی» را به‌عنوان دستهٔ مادرِ واقعی می‌سازد و ۳۱ دستهٔ موجود را زیر والد درستشان می‌برد.</p>';
+	echo '<p style="margin:0">پس از اجرا، افزودن دستهٔ جدید کاملاً از همین پنل انجام می‌شود: <strong>نام + نامک لاتین + انتخاب دستهٔ مادر</strong>. سایت در build بعدی خودش صفحه و آدرس آن را می‌سازد. دیگر هیچ کدی لازم نیست.</p>';
+	echo '</div>';
+
+	if ( $missing_silos > 0 || $rooted > 0 ) {
+		printf(
+			'<p><a class="button button-primary button-hero" href="%s">ساخت %d سیلو و مرتب‌سازی %d دسته</a></p>',
+			esc_url( $url ),
+			$missing_silos,
+			$rooted
+		);
+	} else {
+		echo '<div class="notice notice-success"><p><strong>✓ ساختار درست است.</strong> هر ۷ سیلو موجودند و هیچ دسته‌ای بدون والد نمانده.</p></div>';
+		printf( '<p><a class="button" href="%s">اجرای دوباره (بی‌خطر)</a></p>', esc_url( $url ) );
+	}
+
+	// درخت فعلی.
+	echo '<h2 style="margin-top:28px">ساختار فعلی در وردپرس</h2>';
+	echo '<table class="wp-list-table widefat fixed striped" style="max-width:880px"><thead><tr>';
+	echo '<th style="width:44%">دسته</th><th style="width:210px">نامک</th><th style="width:120px">محصول</th><th>وضعیت</th>';
+	echo '</tr></thead><tbody>';
+
+	if ( ! is_wp_error( $all ) ) {
+		$children = [];
+		$roots    = [];
+		foreach ( $all as $t ) {
+			if ( 0 === (int) $t->parent ) {
+				$roots[] = $t;
+			} else {
+				$children[ (int) $t->parent ][] = $t;
+			}
+		}
+
+		foreach ( $roots as $root ) {
+			$is_silo = isset( $silos[ $root->slug ] );
+			printf(
+				'<tr><td><strong>%s</strong></td><td><code>%s</code></td><td style="text-align:center">%d</td><td>%s</td></tr>',
+				esc_html( $root->name ),
+				esc_html( $root->slug ),
+				(int) $root->count,
+				$is_silo
+					? '<span style="color:#00a32a;font-weight:700">سیلو</span>'
+					: '<span style="color:#d63638;font-weight:700">⚠ بدون والد</span>'
+			);
+
+			foreach ( $children[ (int) $root->term_id ] ?? [] as $child ) {
+				printf(
+					'<tr><td style="padding-inline-start:34px">↳ %s</td><td><code>%s</code></td><td style="text-align:center">%d</td><td>%s</td></tr>',
+					esc_html( $child->name ),
+					esc_html( $child->slug ),
+					(int) $child->count,
+					preg_match( '/^[a-z0-9-]+$/', $child->slug )
+						? '<span style="color:#00a32a">✓</span>'
+						: '<span style="color:#d63638;font-weight:700">⚠ نامک لاتین نیست</span>'
+				);
+			}
+		}
+	}
+	echo '</tbody></table>';
+
+	echo '<p class="description" style="max-width:880px;margin-top:16px"><strong>دستهٔ «بدون والد»</strong> روی سایت ساخته نمی‌شود، چون آدرسش <code>/categories/[سیلو]/[دسته]</code> است و بدون سیلو آدرسی ندارد. build با پیام روشن هشدار می‌دهد.</p>';
+	echo '</div>';
+}
+
+/** هندلر. */
+function cyh_handle_build_hierarchy() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'دسترسی مجاز نیست.' );
+	}
+	check_admin_referer( 'cyh_build_hierarchy' );
+
+	$r = cyh_build_taxonomy_hierarchy();
+
+	// ⚠️ ترتیب مهم است: اول ساختار، بعد متادیتا. بذر متادیتا ترم‌ها را با
+	// نامک پیدا می‌کند، پس ترم‌ها باید از قبل وجود داشته باشند.
+	$m = cyh_seed_category_meta();
+
+	wp_safe_redirect(
+		add_query_arg(
+			[
+				'post_type'      => 'product',
+				'page'           => 'cyh-hierarchy',
+				'cyh_h_done'     => 1,
+				'cyh_h_created'  => $r['silos_created'],
+				'cyh_h_existing' => $r['silos_existing'],
+				'cyh_h_moved'    => $r['moved'],
+				'cyh_h_already'  => $r['already'],
+				'cyh_h_meta'     => $m['filled'],
+			],
+			admin_url( 'edit.php' )
+		)
+	);
+	exit;
+}
+add_action( 'admin_post_cyh_build_hierarchy', 'cyh_handle_build_hierarchy' );
+
+
+/**
+ * متادیتای اولیه‌ی ۳۱ دسته — بذرکاری یک‌باره.
+ *
+ * ⚠️ چرا این آرایه لازم است (و چرا «هاردکد» نیست):
+ * پیش از این مهاجرت، عبارت کلیدی، توضیح، آیکون و مترادف‌های هر دسته فقط
+ * در `src/data/taxonomy.ts` وجود داشتند. اگر وردپرس را مرجع کنیم و این
+ * داده‌ها را منتقل نکنیم، هر ۳۱ دسته عبارت کلیدی و آیکون خود را از دست
+ * می‌دهند — یعنی <title> و <h1> همه‌ی صفحات دسته خراب می‌شود. این یک
+ * افت سئوی شدید و بی‌سروصداست.
+ *
+ * پس این آرایه یک‌بار همان داده‌ها را به وردپرس منتقل می‌کند و بعد از آن
+ * بی‌مصرف است. مقداری که مدیر سایت وارد کرده باشد هرگز بازنویسی نمی‌شود.
+ */
+function cyh_category_meta_seed() {
+	return [
+		'crane-coupling' => [
+			'keyword' => 'کوپلینگ جرثقیل سقفی',
+			'blurb'   => 'کوپلینگ‌های انتقال گشتاور بین موتور و گیربکس با قابلیت جذب ناهم‌محوری و ضربه‌ی راه‌اندازی.',
+			'icon'    => 'M4 12h4 M16 12h4 M8 8h3v8H8z M13 8h3v8h-3z M11 10h2 M11 14h2',
+			'aka'     => 'کوبلینگ',
+		],
+		'rope-guide' => [
+			'keyword' => 'کمربند جرثقیل سقفی',
+			'blurb'   => 'کمربند، سیم‌بکسل را در شیار درام هدایت می‌کند و از هم‌پوشانی رشته‌ها، سایش نامتقارن و پارگی زودرس جلوگیری می‌کند.',
+			'icon'    => 'M4 6h16v12H4z M2 10h20v4H2z M8 6v12 M16 6v12 M12 6v12',
+			'aka'     => 'روپ‌گاید
+راهنمای سیم‌بکسل',
+		],
+		'crane-drum' => [
+			'keyword' => 'درام (طبلک) جرثقیل سقفی',
+			'blurb'   => 'درام‌های شیاردار فولادی برای جمع‌شدن یکنواخت سیم‌بکسل بدون هم‌پوشانی رشته‌ها.',
+			'icon'    => 'M5 7h14v10H5z M5 9h14 M5 12h14 M5 15h14 M3 7v10 M21 7v10',
+			'aka'     => 'طبلک',
+		],
+		'wire-rope-hoist' => [
+			'keyword' => 'جرثقیل بکسلی سقفی',
+			'blurb'   => 'جرثقیل‌ها و بالابرهای سیم‌بکسلی برای ظرفیت‌های بالا و ارتفاع بالابری زیاد.',
+			'icon'    => 'M6 4h12v6H6z M12 10v3 M9 13h6l-1 4h-4z M12 17v3 M4 4h16',
+			'aka'     => 'بالابر سیم بکسلی
+وینچ بکسلی',
+		],
+		'electric-chain-hoist' => [
+			'keyword' => 'جرثقیل زنجیری برقی سقفی',
+			'blurb'   => 'بالابرهای زنجیری موتوردار با کنترل دقیق سرعت، مناسب کار مداوم در ظرفیت‌های سبک تا متوسط.',
+			'icon'    => 'M6 4h12v6H6z M12 10v3 M10 13h4v3h-4z M12 16v4 M9 20h6',
+			'aka'     => 'بالابر زنجیری برقی
+هویست زنجیری',
+		],
+		'manual-chain-hoist' => [
+			'keyword' => 'جرثقیل زنجیری دستی سقفی',
+			'blurb'   => 'بالابرهای زنجیری بدون نیاز به برق، مناسب نقاط فاقد تغذیه یا کاربری موردی و تعمیراتی.',
+			'icon'    => 'M12 3v4 M10 7h4v3h-4z M12 10v4 M10 14h4v3h-4z M12 17v4',
+			'aka'     => 'بالابر زنجیری دستی
+قرقره زنجیری دستی',
+		],
+		'c-rail-power-line' => [
+			'keyword' => 'خط برق رسان سی ریل جرثقیل',
+			'blurb'   => 'سیستم فستون روی ریل C با ارابه‌های متحرک، مناسب دهانه‌های متوسط و محیط‌های نسبتاً تمیز.',
+			'icon'    => 'M4 6h16 M6 6v4 M10 6v4 M14 6v4 M18 6v4 M4 10h16 M8 14h8v4H8z',
+			'aka'     => 'فستون سی ریل
+کابل‌کشی ریل C',
+		],
+		'wire-rope-power-line' => [
+			'keyword' => 'خط برق رسان سیم بکسل جرثقیل',
+			'blurb'   => 'سیستم فستون آویز روی سیم‌بکسل، اقتصادی برای دهانه‌های بلند و نصب سریع.',
+			'icon'    => 'M3 6h18 M6 6v3 M10 6v3 M14 6v3 M18 6v3 M5 9h4v3H5z M11 9h4v3h-4z',
+			'aka'     => 'فستون سیم بکسلی',
+		],
+		'busbar-power-line' => [
+			'keyword' => 'خط برق رسان شین جرثقیل سقفی',
+			'blurb'   => 'شین‌های باز و بسته برای انتقال جریان با کمترین افت ولتاژ و ایمنی بالاتر پرسنل.',
+			'icon'    => 'M4 8h16v4H4z M10 12l-2 6h8l-2-6 M12 18v4 M8 22h8 M4 4h16',
+			'aka'     => 'شین برق‌رسان
+باس بار',
+		],
+		'current-collector' => [
+			'keyword' => 'جاروبک جرثقیل سقفی',
+			'blurb'   => 'جاروبک و زغال‌های انتقال جریان از شین به کالسکه، با کمترین افت ولتاژ و مقاومت سایشی بالا.',
+			'icon'    => 'M8 3h8 M12 3v6 M7 9h10l-1.5 5h-7z M12 14v5 M9 19h6v2H9z',
+			'aka'     => 'زغال جاروبک
+کلکتور جریان',
+		],
+		'wire-and-cable' => [
+			'keyword' => 'سیم و کابل جرثقیل سقفی',
+			'blurb'   => 'کابل‌های تخت و گرد مقاوم در برابر خمش مکرر، حرارت و روغن صنعتی.',
+			'icon'    => 'M4 12h4 M16 12h4 M8 9h8v6H8z M10 9v6 M12 9v6 M14 9v6',
+			'aka'     => 'کابل تخت
+کابل فستون',
+		],
+		'remote-control' => [
+			'keyword' => 'ریموت کنترل جرثقیل سقفی',
+			'blurb'   => 'ریموت‌های رادیویی صنعتی با فرکانس پایدار و کدینگ ایمن برای کنترل از فاصله‌ی امن.',
+			'icon'    => 'M7 4a2 2 0 012-2h6a2 2 0 012 2v16a2 2 0 01-2 2H9a2 2 0 01-2-2V4z M10 8h4 M10 12h4 M10 16h4 M12 2v2',
+			'aka'     => 'ریموت رادیویی
+کنترل از راه دور جرثقیل',
+		],
+		'control-switch' => [
+			'keyword' => 'کلید فرمان جرثقیل سقفی',
+			'blurb'   => 'کلیدهای فرمان و شستی‌های آویز با درجه‌ی حفاظت مناسب محیط صنعتی.',
+			'icon'    => 'M9 3h6v18H9z M11 6h2 M11 10h2 M11 14h2 M12 3V1',
+			'aka'     => 'کلید آویز
+پاندانت',
+		],
+		'microswitch' => [
+			'keyword' => 'میکروسوئیچ جرثقیل سقفی',
+			'blurb'   => 'سوئیچ‌های حد نهایی برای توقف خودکار حرکت در انتهای مسیر و جلوگیری از برخورد.',
+			'icon'    => 'M4 12h5 M15 12h5 M9 8h6v8H9z M12 8V6 M12 18v-2',
+			'aka'     => 'لیمیت سوئیچ
+کلید حد',
+		],
+		'inverter' => [
+			'keyword' => 'اینورتر جرثقیل سقفی',
+			'blurb'   => 'درایوهای کنترل دور برای شتاب و توقف نرم، کاهش نوسان بار و افزایش عمر مکانیزم.',
+			'icon'    => 'M4 5h16v14H4z M8 9v6 M12 9v6 M16 9v6 M4 12h16',
+			'aka'     => 'درایو
+کنترل دور موتور',
+		],
+		'panel-equipment' => [
+			'keyword' => 'تجهیزات تابلو برق جرثقیل سقفی',
+			'blurb'   => 'اجزای داخلی تابلو فرمان: رله، فیوز، ترمینال، بی‌متال و متعلقات مدار قدرت.',
+			'icon'    => 'M4 3h16v18H4z M8 7h8 M8 11h8 M8 15h4 M17 15h1',
+			'aka'     => '',
+		],
+		'load-cell' => [
+			'keyword' => 'لودسل جرثقیل سقفی',
+			'blurb'   => 'سنسورهای وزن و سیستم حفاظت اضافه‌بار برای جلوگیری از بارگذاری فراتر از ظرفیت مجاز.',
+			'icon'    => 'M12 3v4 M8 7h8v4H8z M12 11v3 M6 14h12l-1 7H7z',
+			'aka'     => 'سنسور اضافه‌بار
+اورلود',
+		],
+		'contactor' => [
+			'keyword' => 'کنتاکتور جرثقیل سقفی',
+			'blurb'   => 'کنتاکتورهای قدرت با کلاس کاری متناسب با بارهای پرتکرار و جریان راه‌اندازی بالا.',
+			'icon'    => 'M6 4h12v16H6z M9 8h6 M9 12h6 M12 4V2 M12 22v-2',
+			'aka'     => '',
+		],
+		'anti-collision' => [
+			'keyword' => 'سیستم ضد تصادم جرثقیل سقفی',
+			'blurb'   => 'سنسورهای لیزری و مادون‌قرمز برای حفظ فاصله‌ی ایمن بین دو جرثقیل روی یک مسیر.',
+			'icon'    => 'M3 12h4 M17 12h4 M7 9h3v6H7z M14 9h3v6h-3z M11 12h2',
+			'aka'     => 'آنتی کالیژن
+سنسور فاصله',
+		],
+		'brake-wheel-disc' => [
+			'keyword' => 'فلکه و دیسک ترمز جرثقیل سقفی',
+			'blurb'   => 'فلکه، دیسک و لنت ترمز با ضریب اصطکاک پایدار در دمای کاری بالا.',
+			'icon'    => 'M12 22a10 10 0 100-20 10 10 0 000 20z M12 16a4 4 0 100-8 4 4 0 000 8z M4.9 4.9l14.2 14.2',
+			'aka'     => 'لنت ترمز
+دیسک ترمز',
+		],
+		'brake-magnet' => [
+			'keyword' => 'مگنت ترمز جرثقیل سقفی',
+			'blurb'   => 'بوبین‌های مغناطیسی بازکننده‌ی ترمز، در ولتاژهای DC و AC استاندارد سازندگان.',
+			'icon'    => 'M6 4v8a6 6 0 0012 0V4h-4v8a2 2 0 01-4 0V4z M6 4h4 M14 4h4',
+			'aka'     => 'بوبین ترمز',
+		],
+		'rectifier' => [
+			'keyword' => 'رکتیفایر ترمز جرثقیل سقفی',
+			'blurb'   => 'یکسوکننده‌های تغذیه‌ی مگنت ترمز با قابلیت قطع سریع برای کاهش زمان توقف.',
+			'icon'    => 'M4 8h16v8H4z M8 12h8 M12 4v4 M12 16v4 M9 10l3 2-3 2',
+			'aka'     => 'یکسوکننده ترمز',
+		],
+		'gearbox-motor' => [
+			'keyword' => 'موتور گیربکس جرثقیل سقفی',
+			'blurb'   => 'موتور گیربکس‌های بالابر و حرکت، با کلاس کاری متناسب با سیکل کاری واقعی دستگاه.',
+			'icon'    => 'M5 6h14v6H5z M9 12v6 M15 12v6 M10 18h4 M3 9h2 M19 9h2',
+			'aka'     => 'الکتروموتور
+گیربکس جرثقیل',
+		],
+		'crane-wheel' => [
+			'keyword' => 'چرخ جرثقیل سقفی',
+			'blurb'   => 'چرخ‌های فولادی آلیاژی عملیات‌حرارتی‌شده، مقاوم در برابر سایش لبه و ضربه.',
+			'icon'    => 'M12 22a10 10 0 100-20 10 10 0 000 20z M12 16a4 4 0 100-8 4 4 0 000 8z M12 14a2 2 0 100-4 2 2 0 000 4z',
+			'aka'     => 'چرخ راهبر',
+		],
+		'bearing' => [
+			'keyword' => 'بیرینگ جرثقیل سقفی',
+			'blurb'   => 'بلبرینگ و رولربرینگ‌های صنعتی با تحمل بار شعاعی و محوری بالا.',
+			'icon'    => 'M12 22a10 10 0 100-20 10 10 0 000 20z M12 17a5 5 0 100-10 5 5 0 000 10z M12 4v3 M12 17v3 M4 12h3 M17 12h3',
+			'aka'     => 'بلبرینگ
+یاتاقان',
+		],
+		'loading-equipment' => [
+			'keyword' => 'تجهیزات باربرداری جرثقیل سقفی',
+			'blurb'   => 'بست، شکل، آهنربای باربری، گرب و سایر ابزار اتصال بار همراه با گواهی بار کاری ایمن.',
+			'icon'    => 'M12 3v4 M9 7h6v3H9z M12 10v3 M5 13h14l-2 8H7z',
+			'aka'     => 'لوازم باربرداری
+ریگینگ',
+		],
+		'wire-rope' => [
+			'keyword' => 'سیم بکسل جرثقیل سقفی',
+			'blurb'   => 'سیم‌بکسل‌های فولادی با گواهی مطابقت استاندارد، در گریدها و قطرهای مختلف.',
+			'icon'    => 'M4 8c4 0 4 8 8 8s4-8 8-8 M4 12c4 0 4 8 8 8 M12 4c4 0 4 8 8 8',
+			'aka'     => '',
+		],
+		'crane-hook' => [
+			'keyword' => 'قلاب جرثقیل سقفی',
+			'blurb'   => 'قلاب‌های فورج‌شده‌ی استاندارد همراه با زبانه‌ی ایمنی و یاتاقان چرخشی.',
+			'icon'    => 'M12 3v3 M9 6h6v3H9z M12 9v5 M12 14c-3 0-5 2-5 5s2 4 4 4c1.5 0 2.5-.5 2.5-.5v-2.5s-1 .5-2 .5c-1.5 0-2-1-2-2.5s1.5-4 3-4h.5v-4.5z',
+			'aka'     => 'بلاک قلاب',
+		],
+		'end-carriage' => [
+			'keyword' => 'کلگی جرثقیل سقفی',
+			'blurb'   => 'مجموعه‌ی کامل کلگی شامل شاسی، چرخ و مکانیزم محرکه برای حرکت طولی پل.',
+			'icon'    => 'M3 10h18v5H3z M6 15v2 M18 15v2 M7 19a2 2 0 100-4 2 2 0 000 4 M17 19a2 2 0 100-4 2 2 0 000 4',
+			'aka'     => 'باگی',
+		],
+		'crane-rail' => [
+			'keyword' => 'ریل جرثقیل سقفی',
+			'blurb'   => 'ریل‌های فولادی استاندارد و متعلقات مهار برای مسیر حرکت طولی و عرضی.',
+			'icon'    => 'M6 3v18 M18 3v18 M6 8h12 M6 14h12 M2 21h20',
+			'aka'     => '',
+		],
+		'shock-absorber' => [
+			'keyword' => 'ضربه گیر جرثقیل سقفی',
+			'blurb'   => 'ضربه‌گیرهای لاستیکی، فنری و هیدرولیکی برای جذب انرژی برخورد در انتهای مسیر.',
+			'icon'    => 'M4 8v8 M8 6v12 M10 9h6v6h-6z M18 9v6 M20 10v4',
+			'aka'     => 'بافر
+استاپر',
+		],
+	];
+}
+
+/**
+ * پر کردن فیلدهای خالی «هویت دسته» از روی بذر.
+ *
+ * فقط فیلدهای *خالی* پر می‌شوند. هر چیزی که مدیر سایت نوشته باشد دست‌نخورده
+ * می‌ماند — این ابزار حق ندارد کار انسان را دور بریزد.
+ *
+ * @return array{filled:int,skipped:int,missing:array}
+ */
+function cyh_seed_category_meta() {
+	$filled  = 0;
+	$skipped = 0;
+	$missing = [];
+
+	if ( ! function_exists( 'update_field' ) ) {
+		return [ 'filled' => 0, 'skipped' => 0, 'missing' => [ 'ACF فعال نیست.' ] ];
+	}
+
+	foreach ( cyh_category_meta_seed() as $slug => $meta ) {
+		$term = get_term_by( 'slug', $slug, 'crane_category' );
+		if ( ! $term || is_wp_error( $term ) ) {
+			$missing[] = $slug;
+			continue;
+		}
+
+		$tag  = 'crane_category_' . $term->term_id;
+		$did  = false;
+
+		foreach ( [ 'keyword' => 'keyword', 'icon_path' => 'icon', 'aka' => 'aka' ] as $field => $key ) {
+			if ( '' === (string) $meta[ $key ] ) {
+				continue;
+			}
+			$current = get_field( $field, $tag );
+			if ( '' === trim( (string) $current ) ) {
+				update_field( $field, $meta[ $key ], $tag );
+				$did = true;
+			}
+		}
+
+		// توضیح ترم = blurb. فقط اگر خالی باشد یا هنوز متن ساختگیِ
+		// «گروه فنی: …» باشد که ابزار قبلی نوشته بود.
+		$desc = trim( (string) $term->description );
+		if ( ( '' === $desc || preg_match( '/^گروه فنی:/u', $desc ) ) && '' !== $meta['blurb'] ) {
+			wp_update_term( $term->term_id, 'crane_category', [ 'description' => $meta['blurb'] ] );
+			$did = true;
+		}
+
+		if ( $did ) {
+			$filled++;
+		} else {
+			$skipped++;
+		}
+	}
+
+	return [ 'filled' => $filled, 'skipped' => $skipped, 'missing' => $missing ];
+}
+
+
+/**
+ * منوی مستقل «دسته‌بندی قطعات».
+ *
+ * چرا: دسته‌بندی زیرمجموعه‌ی «محصول» نیست. سایت ۳۱ دسته دارد و فقط یک
+ * محصول؛ دفن کردن آن زیر منوی محصولات، پرکاربردترین صفحه‌ی پنل را
+ * سخت‌یاب می‌کند. تاکسونومی با `show_in_menu => false` ثبت شده و اینجا
+ * منوی خودش را می‌گیرد.
+ */
+function cyh_category_menu() {
+	add_menu_page(
+		'دسته‌بندی قطعات',
+		'دسته‌بندی قطعات',
+		'manage_options',
+		'edit-tags.php?taxonomy=crane_category&post_type=product',
+		'',
+		'dashicons-category',
+		26
+	);
+
+	add_submenu_page(
+		'edit-tags.php?taxonomy=crane_category&post_type=product',
+		'همه‌ی دسته‌ها',
+		'همه‌ی دسته‌ها',
+		'manage_options',
+		'edit-tags.php?taxonomy=crane_category&post_type=product'
+	);
+
+	add_submenu_page(
+		'edit-tags.php?taxonomy=crane_category&post_type=product',
+		'ساختار دسته‌بندی',
+		'ساختار دسته‌بندی',
+		'manage_options',
+		'cyh-hierarchy',
+		'cyh_hierarchy_page'
+	);
+}
+add_action( 'admin_menu', 'cyh_category_menu' );
+
+/**
+ * ⚠️ بدون این، وقتی روی صفحه‌ی ترم هستیم وردپرس منوی «محصولات» را
+ * برجسته می‌کند، نه منوی خودمان — چون تاکسونومی به CPT محصول وصل است.
+ */
+function cyh_category_menu_highlight( $parent = '' ) {
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	if ( $screen && 'edit-crane_category' === $screen->id ) {
+		return 'edit-tags.php?taxonomy=crane_category&post_type=product';
+	}
+	return $parent;
+}
+add_filter( 'parent_file', 'cyh_category_menu_highlight' );

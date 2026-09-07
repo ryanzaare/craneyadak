@@ -14,7 +14,7 @@ import Layout from '../../../layouts/Layout.astro';
 import Breadcrumb from '../../../components/Breadcrumb.astro';
 import ProductCard from '../../../components/ProductCard.astro';
 import CategoryFilters from '../../../components/CategoryFilters.astro';
-import { facetsForCategory, resolveFacets, specValue } from '../../../data/filters';
+import { facetsForCategory, resolveFacets, specValue, hasUsefulFilters } from '../../../data/filters';
 import { SITE } from '../../../data/site';
 import {
   SILOS,
@@ -26,6 +26,7 @@ import {
 import CategoryGuide from '../../../components/CategoryGuide.astro';
 import { getProductsByCategory, computePrice, productJsonLd, type CraneProduct } from '../../../lib/wp';
 import { getCategoryContent, isReviewMode, type CategoryContent } from '../../../lib/category-content';
+import { resolveCategoryTerm, type CategoryTerm } from '../../../lib/categories';
 
 export async function getStaticPaths() {
   return Promise.all(
@@ -37,6 +38,8 @@ export async function getStaticPaths() {
           category,
           products: await getProductsByCategory(category.slug),
           content: await getCategoryContent(category.slug),
+          // نام و توضیح از وردپرس؛ تاکسونومی فقط تور ایمنی است.
+          term: await resolveCategoryTerm(category.slug, category.name, category.blurb),
         },
       }))
     )
@@ -48,9 +51,16 @@ interface Props {
   category: Category;
   products: CraneProduct[];
   content: CategoryContent;
+  term: CategoryTerm;
 }
 
-const { silo, category, products, content } = Astro.props as Props;
+const { silo, category, products, content, term } = Astro.props as Props;
+
+/* نام نمایشی و توضیح از وردپرس می‌آیند. `category.keyword` عمداً از کد
+   می‌آید — عبارت هدف سئو یک تصمیم استراتژیک است، نه متنی که هر روز در
+   پنل ویرایش شود. تفکیک: عنوان H1 = عبارت هدف، نام دسته = محتوای وردپرس. */
+const displayName = term.name;
+const displayBlurb = term.blurb;
 const reviewMode = isReviewMode();
 
 const title = `${category.keyword} | خرید و استعلام قیمت | ${SITE.name}`;
@@ -67,7 +77,7 @@ const breadcrumbItems = [
   { label: 'صفحه اصلی', href: '/' },
   { label: 'دسته‌بندی‌ها', href: '/categories' },
   { label: silo.name, href: siloPath(silo) },
-  { label: category.name },
+  { label: displayName },
 ];
 
 const itemList =
@@ -121,6 +131,14 @@ const jsonLd = {
       '@id': `${canonical}#webpage`,
       url: canonical,
       name: title,
+      /* نام‌های رایج بازار به‌صورت `alternateName`.
+         این خاصیت استاندارد Schema.org است و راه *مجاز* اعلام مترادف به
+         موتور جستجوست — برخلاف ریختن همان کلمات در یک عنصر پنهان، که
+         «متن مخفی» است و در دستورالعمل اسپم گوگل صراحتاً منع شده.
+         همین مترادف‌ها بالای صفحه هم به‌صورت مرئی («نام‌های دیگر: …»)
+         نمایش داده می‌شوند؛ داده‌ی ساختاریافته باید بازتاب چیزی باشد که
+         کاربر می‌بیند، نه چیزی بیشتر. */
+      ...(category.aka && category.aka.length > 0 ? { alternateName: category.aka } : {}),
       description,
       isPartOf: { '@id': `${SITE.url}/#website` },
       inLanguage: SITE.locale,
@@ -133,12 +151,21 @@ const jsonLd = {
 // فیلترهای تخصصی همین دسته — مقادیر از خودِ محصولات استخراج می‌شوند.
 const catFacets = resolveFacets(products, facetsForCategory(category.slug));
 
+/* ⚠️ چیدمان باید بداند نوار فیلتر می‌آید یا نه.
+   بدون این، وقتی هیچ فیلتری رندر نشود، شبکه‌ی محصولات در ستون ۱۵rem
+   له می‌شود. (توضیح کامل در hasUsefulFilters) */
+const showFilters = hasUsefulFilters(products, category.slug);
+
 /** صفت‌های داده روی هر کارت تا فیلتر سمت کلاینت بتواند بخواندشان. */
 function catAttrs(product: typeof products[number]) {
   const attrs: Record<string, string> = {
     'data-brand': product.brandSlug ?? '',
     'data-stock': product.stockStatus,
     'data-buymode': product.buyMode,
+    // «دارای قیمت» از قیمت *موثر* می‌آید (با احتساب تخفیف فعال)، نه از
+    // buyMode. محصولی می‌تواند حالت استعلام داشته باشد ولی قیمت پایه هم
+    // داشته باشد؛ computePrice تنها مرجع قیمت در کل پروژه است.
+    'data-priced': computePrice(product).effective !== null ? '1' : '0',
   };
   for (const f of catFacets) {
     const raw = specValue(product, f.specLabel);
@@ -146,6 +173,15 @@ function catAttrs(product: typeof products[number]) {
   }
   return attrs;
 }
+import { getContact } from '../../../lib/site-options';
+
+/* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
+   قبلاً انتهای فرontmatter بودند و کدِ بالاتر که از آن‌ها استفاده
+   می‌کرد با «Cannot access before initialization» می‌شکست:
+   `const` هویست می‌شود اما تا نقطه‌ی اعلان در ناحیه‌ی مرده‌ی
+   زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
+const contact = await getContact();
+
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
@@ -159,7 +195,7 @@ function catAttrs(product: typeof products[number]) {
         </span>
         <div>
           <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md leading-relaxed">{category.keyword}</h1>
-          <p class="text-lg text-gray-300 max-w-2xl leading-8">{category.blurb}</p>
+          <p class="text-lg text-gray-300 max-w-2xl leading-8">{displayBlurb}</p>
           {category.aka && category.aka.length > 0 && (
             /* مترادف‌ها اینجا نمایش داده می‌شوند تا کاربرِ آشنا با نام دیگرِ
                همین قطعه، صفحه را درست تشخیص دهد — بدون ساختن صفحه‌ی دوم. */
@@ -176,7 +212,7 @@ function catAttrs(product: typeof products[number]) {
   <section class="bg-gray-50 px-4 py-14" aria-labelledby="products-heading">
     <div class="max-w-7xl mx-auto">
       <div class="flex flex-wrap gap-4 justify-between items-end mb-8 border-b border-gray-200 pb-4">
-        <h2 id="products-heading" class="text-2xl font-black text-crane-navy">{category.name}</h2>
+        <h2 id="products-heading" class="text-2xl font-black text-crane-navy">{displayName}</h2>
         {products.length > 0 && (
           <span class="text-sm text-gray-600 font-bold bg-gray-100 px-3 py-1 rounded-full tabular-nums">
             {products.length} قطعه
@@ -188,8 +224,13 @@ function catAttrs(product: typeof products[number]) {
         /* دو ستون: فیلتر تخصصی + شبکه‌ی محصولات.
            این همان «لایه‌ی دوم» معماری فیلتر است — فیلترهای عمومی به‌علاوه
            مشخصه‌هایی که واقعاً انتخاب این قطعه‌ی خاص را تعیین می‌کنند. */
-        <div class="grid lg:grid-cols-[15rem_minmax(0,1fr)] gap-6 items-start">
-          <CategoryFilters products={products} categorySlug={category.slug} class="lg:sticky lg:top-24" />
+        <div class:list={[
+          'gap-6 items-start',
+          showFilters ? 'grid lg:grid-cols-[15rem_minmax(0,1fr)]' : 'block',
+        ]}>
+          {showFilters && (
+            <CategoryFilters products={products} categorySlug={category.slug} class="lg:sticky lg:top-24" />
+          )}
 
           <div class="min-w-0">
             <p class="text-sm text-steel-700 mb-3">
@@ -226,9 +267,9 @@ function catAttrs(product: typeof products[number]) {
             فهرست آنلاین این دسته در حال تکمیل است و تنها اقلامی منتشر می‌شود که تامین آن‌ها قطعی باشد. سریع‌ترین مسیر این است که کد فنی (Part Number)، پلاک دستگاه یا عکس قطعه‌ی فرسوده را برای کارشناسان ما بفرستید تا سازگاری بررسی و پیش‌فاکتور رسمی صادر شود.
           </p>
           <div class="flex flex-col sm:flex-row gap-3">
-            <a href={`/contact?category=${encodeURIComponent(category.name)}`} class="bg-crane-orange text-white px-8 py-4 rounded-xl font-black text-center hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
-            <a href={`tel:${SITE.phone}`} class="bg-crane-navy text-white px-8 py-4 rounded-xl font-black text-center hover:bg-gray-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-navy/30 min-h-[52px] flex items-center justify-center">تماس با واحد فروش</a>
-            <a href={`https://wa.me/${SITE.whatsapp.replace('+', '')}`} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-xl font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
+            <a href={`/contact?category=${encodeURIComponent(displayName)}`} class="bg-crane-orange text-white px-8 py-4 rounded-xl font-black text-center hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
+            <a href={contact.telHref} class="bg-crane-navy text-white px-8 py-4 rounded-xl font-black text-center hover:bg-gray-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-navy/30 min-h-[52px] flex items-center justify-center">تماس با واحد فروش</a>
+            <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-xl font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
           </div>
         </div>
       )}
@@ -236,7 +277,7 @@ function catAttrs(product: typeof products[number]) {
   </section>
 
   {/* ------------------ راهنمای فنی (محتوای وردپرس) ------------------ */}
-  <CategoryGuide content={content} categoryName={category.name} reviewMode={reviewMode} />
+  <CategoryGuide content={content} categoryName={displayName} reviewMode={reviewMode} />
 
   {/* --------------------- لینک‌سازی داخلی درون سیلو --------------------- */}
   {siblings.length > 0 && (
