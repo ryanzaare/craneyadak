@@ -16,8 +16,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 function cyh_register_post_types() {
 
 	// ---------------------------------------------------------------
-	// CPT: product — معادل مستقیم آرایه‌ی mockProducts در فرانت‌اند فعلی
+	// CPT: product
 	// ---------------------------------------------------------------
+	/*
+	 * ⚠️ نگهبان تصادم — تنها چیزی که از یکپارچه‌سازی ووکامرس باقی مانده.
+	 *
+	 * ووکامرس هم نوع محتوایی به همین اسلاگ (`product`) ثبت می‌کند و دو ثبت
+	 * هم‌نام یکدیگر را بازنویسی می‌کنند. نتیجه بسته به اولویت هوک است و هر
+	 * دو حالتش خراب: یا `craneProducts` از گراف‌کیوال حذف می‌شود و کل لایه‌ی
+	 * محصول فرانت‌اند در زمان build می‌میرد، یا پنل ووکامرس از کار می‌افتد.
+	 *
+	 * کل یکپارچه‌سازی ووکامرس حذف شد چون استفاده نمی‌شود، اما این ده خط
+	 * عمداً ماند: اگر روزی کسی ووکامرس را نصب کند، به‌جای سفید شدن سایت،
+	 * یک پیام روشن می‌گیرد. حذف این هم برای صرفه‌جویی چند کیلوبایت،
+	 * معامله‌ی بدی است.
+	 */
+	if ( class_exists( 'WooCommerce' ) ) {
+		add_action( 'admin_notices', function () {
+			echo '<div class="notice notice-error"><p><strong>کرین یدک:</strong> ووکامرس فعال است و با نوع محتوای <code>product</code> این افزونه تصادم دارد.</p>' .
+				'<p>تا زمانی که ووکامرس فعال باشد، محصولات کرین یدک ثبت نمی‌شوند و <code>craneProducts</code> در گراف‌کیوال وجود نخواهد داشت. ' .
+				'ووکامرس را غیرفعال کنید، یا برای یکپارچه‌سازی درست با تیم فنی تماس بگیرید.</p></div>';
+		} );
+	} else {
 	register_post_type(
 		'product',
 		[
@@ -46,6 +66,7 @@ function cyh_register_post_types() {
 			'graphql_plural_name'  => 'craneProducts',
 		]
 	);
+	} // پایان: نگهبان تصادم ووکامرس
 
 	// ---------------------------------------------------------------
 	// CPT: brand — معادل ENRICHED_BRANDS در src/data/site.ts
@@ -76,32 +97,19 @@ function cyh_register_post_types() {
 		]
 	);
 
-	// ---------------------------------------------------------------
-	// CPT: datasheet — معادل DATASHEETS در src/data/content.ts
-	// ---------------------------------------------------------------
-	register_post_type(
-		'datasheet',
-		[
-			'labels'              => [
-				'name'          => 'اسناد فنی',
-				'singular_name' => 'سند فنی',
-				'add_new_item'  => 'افزودن سند فنی جدید',
-				'edit_item'     => 'ویرایش سند فنی',
-			],
-			'public'               => true,
-			'publicly_queryable'   => false,
-			'show_ui'              => true,
-			'show_in_menu'         => true,
-			'menu_icon'            => 'dashicons-media-document',
-			'supports'             => [ 'title' ],
-			'has_archive'          => false,
-			'rewrite'              => false,
-			'show_in_rest'         => true,
-			'show_in_graphql'      => true,
-			'graphql_single_name'  => 'craneDatasheet',
-			'graphql_plural_name'  => 'craneDatasheets',
-		]
-	);
+	/* ⚠️ CPT «اسناد فنی» (datasheet) حذف شد — و همه‌ی بازمانده‌هایش.
+
+	   قابلیت اسناد فنی از فرانت‌اند حذف شد چون شش سندی که تعریف شده بود
+	   عنوان‌های ساختگی برای فایل‌هایی بود که هرگز وجود نداشتند.
+
+	   حذف‌شده‌ها (برای اینکه دوباره کسی دنبالشان نگردد):
+	     • خودِ CPT
+	     • گروه ACF «Datasheet Fields» (acf-json/group_datasheet_fields.json)
+	     • فیلد `datasheet_files` روی محصول — Relationship به CPTای که
+	       دیگر وجود نداشت، یعنی یک فیلد همیشه‌خالی در پنل.
+
+	   اگر روزی سند فنی واقعی وجود داشت، فیلد جدید روی خودِ محصول اضافه
+	   می‌شود — جایی که خریدار دنبالش می‌گردد، نه یک آرشیو مستقل. */
 
 	// ---------------------------------------------------------------
 	// CPT: inquiry — لاگ داخلی درخواست‌های فرم تماس (فقط wp-admin، هرگز در
@@ -110,12 +118,23 @@ function cyh_register_post_types() {
 	// دلیلی ایمیل را نرساند (یک مشکل بسیار رایج هاست‌های اشتراکی ایران)، لید
 	// هرگز به‌طور کامل گم نمی‌شود.
 	// ---------------------------------------------------------------
+	/* ⚠️ برچسب این CPT عوض شد.
+	   قبلاً «درخواست‌های استعلام» نام داشت — دقیقاً همان برچسب CPT
+	   جدید `cyh_quote`. نتیجه دو منوی هم‌نام در نوار کناری بود و
+	   هیچ‌کس نمی‌فهمید کدام کدام است.
+
+	   تفاوت واقعی این دو:
+	     • این یکی (inquiry) → پیام‌های فرم «تماس با ما».
+	     • cyh_quote         → سبد استعلام چندقلمی با کد رهگیری.
+	   این CPT حذف نشد چون هنوز زنده است: اندپوینت REST فرم تماس
+	   لیدها را در همین ثبت می‌کند. حذفش یعنی از دست رفتن لید. */
 	register_post_type(
 		'inquiry',
 		[
 			'labels'             => [
-				'name'          => 'درخواست‌های استعلام',
-				'singular_name' => 'درخواست استعلام',
+				'name'          => 'پیام‌های فرم تماس',
+				'singular_name' => 'پیام تماس',
+				'menu_name'     => 'پیام‌های تماس',
 			],
 			'public'              => false,
 			'publicly_queryable'  => false,
@@ -151,6 +170,10 @@ function cyh_register_taxonomies() {
 			'public'               => true,
 			'publicly_queryable'   => false,
 			'show_ui'              => true,
+			// از منوی «محصولات» خارج می‌شود و منوی مستقل خودش را می‌گیرد
+			// (پایین همین فایل). دسته‌بندی یک موجودیت مستقل است، نه
+			// زیرمجموعه‌ی محصول — و مدیر محتوا هم آن را همان‌جا می‌جوید.
+			'show_in_menu'         => false,
 			'show_admin_column'    => true,
 			// اسلاگ فرانت‌اند فعلی /categories/[slug] است.
 			'rewrite'              => [ 'slug' => 'categories' ],
@@ -163,40 +186,6 @@ function cyh_register_taxonomies() {
 }
 add_action( 'init', 'cyh_register_taxonomies' );
 
-/**
- * محاسبه‌ی خودکار حجم فایل PDF برای CPT «datasheet» هنگام ذخیره — دقیقاً
- * همان فیلد «size» که در حال حاضر به‌صورت دستی در src/data/content.ts
- * نوشته شده (مثل '4.2 MB'). این هوک باعث می‌شود ادمین سایت هرگز مجبور
- * نباشد حجم فایل را دستی محاسبه/تایپ کند — منبع خطای انسانی رایج.
- */
-function cyh_auto_calculate_datasheet_size( $post_id ) {
-	if ( 'datasheet' !== get_post_type( $post_id ) ) {
-		return;
-	}
-
-	if ( ! function_exists( 'get_field' ) ) {
-		return; // ACF هنوز لود نشده — این فقط یک محافظ دفاعی است.
-	}
-
-	$file = get_field( 'pdf_file', $post_id );
-
-	if ( empty( $file ) || empty( $file['url'] ) ) {
-		return;
-	}
-
-	$path = str_replace( wp_get_upload_dir()['baseurl'], wp_get_upload_dir()['basedir'], $file['url'] );
-
-	if ( ! file_exists( $path ) ) {
-		return;
-	}
-
-	$bytes    = filesize( $path );
-	$megabyte = 1024 * 1024;
-	$size_mb  = round( $bytes / $megabyte, 1 ) . ' MB';
-
-	update_field( 'file_size_computed', $size_mb, $post_id );
-}
-add_action( 'acf/save_post', 'cyh_auto_calculate_datasheet_size', 20 );
 
 /**
  * اجبار اسلاگ انگلیسی برای محصول، برند، صنعت و سند فنی.
@@ -223,7 +212,7 @@ add_action( 'acf/save_post', 'cyh_auto_calculate_datasheet_size', 20 );
  * دست رفتن رتبه، و کد نباید این تصمیم را به‌جای انسان بگیرد.
  */
 function cyh_force_latin_slug( $slug, $post_ID, $post_status, $post_type ) {
-	$targets = [ 'product', 'brand', 'industry', 'datasheet' ];
+	$targets = [ 'product', 'brand' ];
 	if ( ! in_array( $post_type, $targets, true ) ) {
 		return $slug;
 	}
@@ -348,7 +337,7 @@ function cyh_repair_latin_slug_after_acf( $post_id ) {
 		return;
 	}
 
-	$targets = [ 'product', 'brand', 'industry', 'datasheet' ];
+	$targets = [ 'product', 'brand' ];
 	if ( ! in_array( $post->post_type, $targets, true ) ) {
 		return;
 	}
@@ -401,7 +390,7 @@ add_action( 'acf/save_post', 'cyh_repair_latin_slug_after_acf', 20 );
 function cyh_repair_all_latin_slugs() {
 	$posts = get_posts(
 		[
-			'post_type'      => [ 'product', 'brand', 'industry', 'datasheet' ],
+			'post_type'      => [ 'product', 'brand' ],
 			'post_status'    => [ 'publish', 'draft', 'pending', 'private' ],
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
@@ -464,7 +453,7 @@ add_action( 'admin_post_cyh_repair_slugs', 'cyh_handle_repair_slugs' );
 /** اسلاگ‌هایی که نیاز به ترمیم دارند. */
 function cyh_find_broken_slugs() {
 	$posts = get_posts( [
-		'post_type'      => [ 'product', 'brand', 'industry', 'datasheet' ],
+		'post_type'      => [ 'product', 'brand' ],
 		'post_status'    => [ 'publish', 'draft', 'pending', 'private' ],
 		'posts_per_page' => -1,
 	] );
@@ -542,7 +531,7 @@ function cyh_slug_tool_page() {
 	echo '<th style="width:170px">اسلاگ جدید</th><th style="width:120px">دلیل</th>';
 	echo '</tr></thead><tbody>';
 
-	$labels = [ 'product' => 'محصول', 'brand' => 'برند', 'industry' => 'صنعت', 'datasheet' => 'سند فنی' ];
+	$labels = [ 'product' => 'محصول', 'brand' => 'برند' ];
 
 	foreach ( $rows as $r ) {
 		printf(
