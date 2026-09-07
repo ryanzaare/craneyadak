@@ -180,23 +180,6 @@
             "graphql_field_name": "gallery"
         },
         {
-            "key": "field_cyh_product_datasheet_files",
-            "label": "اسناد فنی مرتبط",
-            "name": "datasheet_files",
-            "type": "relationship",
-            "instructions": "نقشه‌های انفجاری / وایرینگ / منوال‌های مرتبط با این محصول.",
-            "required": 0,
-            "post_type": [
-                "datasheet"
-            ],
-            "filters": [
-                "search"
-            ],
-            "return_format": "object",
-            "show_in_graphql": 1,
-            "graphql_field_name": "datasheetFiles"
-        },
-        {
             "key": "field_cyh_product_oem_cross_reference",
             "label": "کدهای معادل OEM",
             "name": "oem_cross_reference",
@@ -296,5 +279,5 @@
     "graphql_types": [
         "CraneProduct"
     ],
-    "modified": 20260811
+    "modified": 1787194346
 }

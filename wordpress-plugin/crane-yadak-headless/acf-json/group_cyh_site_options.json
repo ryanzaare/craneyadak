@@ -1,0 +1,277 @@
+{
+    "key": "group_cyh_site_options",
+    "title": "تنظیمات سراسری سایت",
+    "fields": [
+        {
+            "key": "field_cyh_opt_faqs",
+            "label": "سوالات متداول صفحه‌ی اصلی",
+            "name": "faqs",
+            "type": "repeater",
+            "instructions": "معادل آرایه‌ی FAQS در src/data/content.ts.",
+            "required": 0,
+            "layout": "block",
+            "button_label": "افزودن سوال",
+            "sub_fields": [
+                {
+                    "key": "field_cyh_faq_q",
+                    "label": "سوال",
+                    "name": "question",
+                    "type": "text",
+                    "required": 1
+                },
+                {
+                    "key": "field_cyh_faq_a",
+                    "label": "پاسخ",
+                    "name": "answer",
+                    "type": "wysiwyg",
+                    "required": 1,
+                    "tabs": "text",
+                    "toolbar": "basic",
+                    "media_upload": 0
+                }
+            ],
+            "show_in_graphql": 1,
+            "graphql_field_name": "faqs"
+        },
+        {
+            "key": "field_cyh_opt_hours",
+            "label": "ساعات کاری",
+            "name": "business_hours",
+            "type": "repeater",
+            "instructions": "معادل SITE.hours — هر ردیف یک بازه‌ی زمانی برای یک یا چند روز هفته است.",
+            "required": 0,
+            "layout": "table",
+            "button_label": "افزودن بازه‌ی زمانی",
+            "sub_fields": [
+                {
+                    "key": "field_cyh_hours_days",
+                    "label": "روزهای هفته",
+                    "name": "days",
+                    "type": "checkbox",
+                    "choices": {
+                        "Saturday": "شنبه",
+                        "Sunday": "یکشنبه",
+                        "Monday": "دوشنبه",
+                        "Tuesday": "سه‌شنبه",
+                        "Wednesday": "چهارشنبه",
+                        "Thursday": "پنجشنبه",
+                        "Friday": "جمعه"
+                    }
+                },
+                {
+                    "key": "field_cyh_hours_opens",
+                    "label": "ساعت شروع",
+                    "name": "opens",
+                    "type": "time_picker",
+                    "return_format": "H:i",
+                    "display_format": "H:i"
+                },
+                {
+                    "key": "field_cyh_hours_closes",
+                    "label": "ساعت پایان",
+                    "name": "closes",
+                    "type": "time_picker",
+                    "return_format": "H:i",
+                    "display_format": "H:i"
+                }
+            ],
+            "show_in_graphql": 1,
+            "graphql_field_name": "businessHours"
+        },
+        {
+            "key": "field_cyh_opt_geo_lat",
+            "label": "عرض جغرافیایی (Latitude)",
+            "name": "geo_lat",
+            "type": "number",
+            "instructions": "⚠️ فقط بعد از داشتن آدرس واقعی دفتر/انبار پر شود — نگاه کنید به TODO سئوی محلی در src/data/site.ts فرانت‌اند. مختصات جعلی روی نقشه، اعتماد خریدار B2B را خدشه‌دار می‌کند.",
+            "required": 0,
+            "step": "0.000001",
+            "wrapper": {
+                "width": "50"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "geoLat"
+        },
+        {
+            "key": "field_cyh_opt_geo_lng",
+            "label": "طول جغرافیایی (Longitude)",
+            "name": "geo_lng",
+            "type": "number",
+            "required": 0,
+            "step": "0.000001",
+            "wrapper": {
+                "width": "50"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "geoLng"
+        },
+        {
+            "key": "field_cyh_opt_gbp",
+            "label": "لینک گوگل بیزینس پروفایل",
+            "name": "google_business_profile",
+            "type": "url",
+            "required": 0,
+            "wrapper": {
+                "width": "33"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "googleBusinessProfile"
+        },
+        {
+            "key": "field_cyh_opt_neshan",
+            "label": "لینک نشان (Neshan)",
+            "name": "neshan",
+            "type": "url",
+            "required": 0,
+            "wrapper": {
+                "width": "33"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "neshan"
+        },
+        {
+            "key": "field_cyh_opt_balad",
+            "label": "لینک بلد (Balad)",
+            "name": "balad",
+            "type": "url",
+            "required": 0,
+            "wrapper": {
+                "width": "34"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "balad"
+        },
+        {
+            "key": "field_cyh_phone_primary",
+            "label": "تلفن اصلی",
+            "name": "phone_primary",
+            "type": "text",
+            "instructions": "شماره‌ی اصلی واحد فروش. لاتین بنویسید، مثال: 021-12345678",
+            "required": 0,
+            "default_value": "",
+            "show_in_graphql": 1,
+            "graphql_field_name": "phonePrimary"
+        },
+        {
+            "key": "field_cyh_phone_secondary",
+            "label": "تلفن دوم (اختیاری)",
+            "name": "phone_secondary",
+            "type": "text",
+            "instructions": "شماره‌ی پشتیبان یا خط دوم. خالی بماند نمایش داده نمی‌شود.",
+            "required": 0,
+            "default_value": "",
+            "show_in_graphql": 1,
+            "graphql_field_name": "phoneSecondary"
+        },
+        {
+            "key": "field_cyh_whatsapp",
+            "label": "شماره واتساپ",
+            "name": "whatsapp",
+            "type": "text",
+            "instructions": "با کد کشور و بدون علامت، مثال: 989121234567",
+            "required": 0,
+            "default_value": "",
+            "show_in_graphql": 1,
+            "graphql_field_name": "whatsapp"
+        },
+        {
+            "key": "field_cyh_support_email",
+            "label": "ایمیل پشتیبانی",
+            "name": "support_email",
+            "type": "email",
+            "instructions": "مثال: info@craneyadak.com",
+            "required": 0,
+            "default_value": "",
+            "show_in_graphql": 1,
+            "graphql_field_name": "supportEmail"
+        },
+        {
+            "key": "field_cyh_address_street",
+            "label": "نشانی (خیابان و پلاک)",
+            "name": "address_street",
+            "type": "text",
+            "instructions": "بدون نام شهر",
+            "required": 0,
+            "default_value": "",
+            "show_in_graphql": 1,
+            "graphql_field_name": "addressStreet"
+        },
+        {
+            "key": "field_cyh_address_city",
+            "label": "شهر",
+            "name": "address_city",
+            "type": "text",
+            "instructions": "مثال: تهران",
+            "required": 0,
+            "default_value": "",
+            "show_in_graphql": 1,
+            "graphql_field_name": "addressCity"
+        },
+        {
+            "key": "field_cyh_address_region",
+            "label": "استان",
+            "name": "address_region",
+            "type": "text",
+            "instructions": "مثال: تهران",
+            "required": 0,
+            "default_value": "",
+            "show_in_graphql": 1,
+            "graphql_field_name": "addressRegion"
+        },
+        {
+            "key": "field_cyh_address_postal",
+            "label": "کد پستی",
+            "name": "address_postal",
+            "type": "text",
+            "instructions": "۱۰ رقم، بدون خط تیره",
+            "required": 0,
+            "default_value": "",
+            "show_in_graphql": 1,
+            "graphql_field_name": "addressPostal"
+        },
+        {
+            "key": "field_cyh_instagram",
+            "label": "اینستاگرام",
+            "name": "instagram",
+            "type": "url",
+            "instructions": "نشانی کامل صفحه، مثال: https://instagram.com/craneyadak",
+            "required": 0,
+            "default_value": "",
+            "show_in_graphql": 1,
+            "graphql_field_name": "instagram"
+        },
+        {
+            "key": "field_cyh_telegram",
+            "label": "تلگرام",
+            "name": "telegram",
+            "type": "url",
+            "instructions": "نشانی کامل کانال یا آیدی، مثال: https://t.me/craneyadak",
+            "required": 0,
+            "default_value": "",
+            "show_in_graphql": 1,
+            "graphql_field_name": "telegram"
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "options_page",
+                "operator": "==",
+                "value": "crane-site-settings"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "active": true,
+    "show_in_rest": 1,
+    "show_in_graphql": 1,
+    "graphql_field_name": "siteOptionsFields",
+    "graphql_types": [
+        "CraneSiteSettings"
+    ],
+    "modified": 1787927518
+}

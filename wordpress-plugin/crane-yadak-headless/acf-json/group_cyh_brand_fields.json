@@ -66,6 +66,36 @@
             },
             "show_in_graphql": 1,
             "graphql_field_name": "seoDesc"
+        },
+        {
+            "key": "field_cyh_brand_class",
+            "label": "گروه برند",
+            "name": "brand_class",
+            "type": "select",
+            "instructions": "اگر خالی بماند، گروه پیش‌فرضِ همان برند در تاکسونومی سایت استفاده می‌شود. فقط وقتی پر کنید که می‌خواهید برند را به گروه دیگری منتقل کنید.",
+            "required": 0,
+            "choices": {
+                "oem": "سازندگان جرثقیل و بالابر",
+                "control": "سازندگان سیستم کنترل و ریموت",
+                "electrical": "سازندگان تجهیزات برقی"
+            },
+            "default_value": "",
+            "allow_null": 1,
+            "multiple": 0,
+            "ui": 0,
+            "return_format": "value",
+            "show_in_graphql": 1,
+            "graphql_field_name": "brandClass"
+        },
+        {
+            "key": "field_cyh_brand_country",
+            "label": "کشور سازنده",
+            "name": "country",
+            "type": "text",
+            "instructions": "مثلاً آلمان، تایوان، بلغارستان. روی کارت برند نمایش داده می‌شود.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "country"
         }
     ],
     "location": [
@@ -89,5 +119,5 @@
     "graphql_types": [
         "CraneBrand"
     ],
-    "modified": 20260809
+    "modified": 1787244722
 }

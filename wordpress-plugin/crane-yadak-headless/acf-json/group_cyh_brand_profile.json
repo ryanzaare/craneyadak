@@ -1,0 +1,173 @@
+{
+    "key": "group_cyh_brand_profile",
+    "title": "پروفایل تخصصی برند",
+    "graphql_field_name": "brandProfile",
+    "show_in_graphql": 1,
+    "menu_order": 1,
+    "position": "normal",
+    "active": true,
+    "description": "محتوای عمیق صفحه‌ی برند. تمرکز عمدی روی چیزی است که فقط یک تأمین‌کننده‌ی ایرانی می‌تواند بنویسد — نه تاریخچه‌ی شرکت که در ویکی‌پدیا هست.",
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "brand"
+            }
+        ]
+    ],
+    "fields": [
+        {
+            "key": "field_cyh_bp_hero_claim",
+            "label": "جمله‌ی معرف (یک خط)",
+            "name": "hero_claim",
+            "type": "text",
+            "instructions": "یک جمله که می‌گوید این سازنده چه چیزی می‌سازد و چرا مهم است. زیر عنوان صفحه دیده می‌شود. مثال: «سازنده‌ی آلمانی بالابر سیم‌بکسلی و مکانیزم حرکت، با بیشترین پراکندگی نصب در صنایع سنگین ایران.»",
+            "show_in_graphql": 1
+        },
+        {
+            "key": "field_cyh_bp_intro",
+            "label": "معرفی فنی",
+            "name": "intro",
+            "type": "wysiwyg",
+            "tabs": "all",
+            "media_upload": 0,
+            "delay": 0,
+            "instructions": "۲ تا ۳ پاراگراف. پاراگراف اول باید مستقیماً به «X چه می‌سازد؟» پاسخ دهد (۴۰ تا ۶۰ کلمه) تا شانس Featured Snippet داشته باشد. ⚠️ تاریخچه‌ی شرکت را طولانی نکنید — برای آن با سایت خود سازنده و ویکی‌پدیا رقابت می‌کنید و می‌بازید.",
+            "show_in_graphql": 1
+        },
+        {
+            "key": "field_cyh_bp_founded",
+            "label": "سال تأسیس",
+            "name": "founded_year",
+            "type": "text",
+            "instructions": "اختیاری. فقط اگر از منبع معتبر مطمئنید. عدد نامطمئن بدتر از خالی گذاشتن است.",
+            "show_in_graphql": 1
+        },
+        {
+            "key": "field_cyh_bp_hq",
+            "label": "دفتر مرکزی",
+            "name": "headquarters",
+            "type": "text",
+            "instructions": "شهر و کشور. مثال: «دوسلدورف، آلمان»",
+            "show_in_graphql": 1
+        },
+        {
+            "key": "field_cyh_bp_series",
+            "label": "سری‌های محصول",
+            "name": "series",
+            "type": "repeater",
+            "layout": "block",
+            "button_label": "افزودن سری",
+            "instructions": "⭐ مهم‌ترین بخش این صفحه از نظر سئو. جدولی از سری‌های این سازنده. ستون «رایج در ایران» همان چیزی است که هیچ رقیبی ندارد.",
+            "show_in_graphql": 1,
+            "sub_fields": [
+                { "key": "field_cyh_bp_series_name", "label": "نام سری", "name": "series_name", "type": "text", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_series_type", "label": "نوع تجهیز", "name": "equipment_type", "type": "text", "instructions": "مثال: بالابر سیم‌بکسلی، موتور گیربکس حرکت", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_series_cap", "label": "محدوده‌ی ظرفیت", "name": "capacity_note", "type": "text", "instructions": "فقط اگر از کاتالوگ سازنده مطمئنید. وگرنه خالی.", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_series_iran", "label": "رایج در ایران؟", "name": "common_in_iran", "type": "true_false", "ui": 1, "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_series_note", "label": "یادداشت تأمین قطعه", "name": "notes", "type": "text", "instructions": "مثلاً: «قطعات مصرفی هنوز قابل تأمین است» یا «توقف تولید، معادل‌یابی لازم است»", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_series_rev", "label": "⚠️ نیاز به بازبینی", "name": "needs_review", "type": "true_false", "ui": 1, "show_in_graphql": 1 }
+            ]
+        },
+        {
+            "key": "field_cyh_bp_identification",
+            "label": "راهنمای خواندن پلاک و کد فنی",
+            "name": "identification_guide",
+            "type": "wysiwyg",
+            "tabs": "all",
+            "media_upload": 0,
+            "delay": 0,
+            "instructions": "⭐ بالاترین ارزش عملی کل صفحه. پلاک این برند کجاست، چه فرمتی دارد، کدام بخشِ کد، مدل است و کدام بخش شماره‌ی سریال. کاربری که این را پیدا کند، برمی‌گردد.",
+            "show_in_graphql": 1
+        },
+        {
+            "key": "field_cyh_bp_iran",
+            "label": "حضور در بازار ایران",
+            "name": "iran_presence",
+            "type": "wysiwyg",
+            "tabs": "all",
+            "media_upload": 0,
+            "delay": 0,
+            "instructions": "این ماشین‌ها در کدام صنایع ایران نصب‌اند، تقریباً چه نسلی، و مسئله‌ی رایج تأمین قطعه‌شان چیست. ⚠️ سهم بازار یا آمار بدون منبع ننویسید.",
+            "show_in_graphql": 1
+        },
+        {
+            "key": "field_cyh_bp_common_parts",
+            "label": "قطعات پرتقاضای این برند",
+            "name": "common_parts",
+            "type": "repeater",
+            "layout": "table",
+            "button_label": "افزودن قطعه",
+            "instructions": "هر ردیف به یک دسته‌ی واقعی سایت لینک می‌شود. این، ارزش پیوندی را از صفحه‌ی برند به سیلوی دسته‌ها منتقل می‌کند.",
+            "show_in_graphql": 1,
+            "sub_fields": [
+                { "key": "field_cyh_bp_cp_name", "label": "نام قطعه", "name": "part_name", "type": "text", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_cp_cat", "label": "دسته‌ی مرتبط", "name": "category", "type": "taxonomy", "taxonomy": "crane_category", "field_type": "select", "add_term": 0, "return_format": "object", "multiple": 0, "allow_null": 1, "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_cp_why", "label": "چرا تعویض می‌شود", "name": "failure_reason", "type": "text", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_cp_rev", "label": "⚠️ بازبینی", "name": "needs_review", "type": "true_false", "ui": 1, "show_in_graphql": 1 }
+            ]
+        },
+        {
+            "key": "field_cyh_bp_tech",
+            "label": "فناوری‌های شاخص",
+            "name": "technologies",
+            "type": "repeater",
+            "layout": "block",
+            "button_label": "افزودن فناوری",
+            "instructions": "چیزی که این سازنده را از بقیه جدا می‌کند و *روی تأمین قطعه اثر دارد*. فناوری‌ای که برای خریدار قطعه بی‌اثر است، اینجا جا ندارد.",
+            "show_in_graphql": 1,
+            "sub_fields": [
+                { "key": "field_cyh_bp_tech_name", "label": "نام فناوری", "name": "name", "type": "text", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_tech_sum", "label": "چه می‌کند", "name": "summary", "type": "textarea", "rows": 2, "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_tech_why", "label": "چرا برای خریدار قطعه مهم است", "name": "why_it_matters", "type": "textarea", "rows": 2, "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_tech_rev", "label": "⚠️ بازبینی", "name": "needs_review", "type": "true_false", "ui": 1, "show_in_graphql": 1 }
+            ]
+        },
+        {
+            "key": "field_cyh_bp_media",
+            "label": "رسانه‌ها",
+            "name": "media",
+            "type": "repeater",
+            "layout": "block",
+            "button_label": "افزودن رسانه",
+            "instructions": "⚠️ ویدیو با الگوی facade بارگذاری می‌شود (فقط تصویر پوستر؛ پخش‌کننده بعد از کلیک). جاسازی مستقیم iframe، امتیاز Core Web Vitals را خراب می‌کند و سئو را *پایین* می‌آورد، نه بالا.",
+            "show_in_graphql": 1,
+            "sub_fields": [
+                { "key": "field_cyh_bp_media_kind", "label": "نوع", "name": "kind", "type": "select", "choices": { "image": "تصویر", "diagram": "نقشه/دیاگرام", "video": "ویدیو" }, "default_value": "image", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_media_file", "label": "فایل تصویر یا پوستر ویدیو", "name": "asset", "type": "image", "return_format": "array", "preview_size": "medium", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_media_url", "label": "آدرس ویدیو", "name": "video_url", "type": "url", "instructions": "فقط برای نوع «ویدیو». آپارات یا یوتیوب.", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_media_cap", "label": "توضیح زیر تصویر", "name": "caption", "type": "text", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_media_alt", "label": "متن جایگزین (alt)", "name": "alt_text", "type": "text", "instructions": "برای سئوی تصویر و دسترس‌پذیری اجباری است. توصیف کنید چه چیزی در تصویر دیده می‌شود.", "show_in_graphql": 1 }
+            ]
+        },
+        {
+            "key": "field_cyh_bp_faqs",
+            "label": "پرسش‌های متداول این برند",
+            "name": "faqs",
+            "type": "repeater",
+            "layout": "block",
+            "button_label": "افزودن پرسش",
+            "show_in_graphql": 1,
+            "sub_fields": [
+                { "key": "field_cyh_bp_faq_q", "label": "پرسش", "name": "question", "type": "text", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_faq_a", "label": "پاسخ", "name": "answer", "type": "textarea", "rows": 4, "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_faq_rev", "label": "⚠️ بازبینی", "name": "needs_review", "type": "true_false", "ui": 1, "show_in_graphql": 1 }
+            ]
+        },
+        {
+            "key": "field_cyh_bp_sources",
+            "label": "منابع",
+            "name": "sources",
+            "type": "repeater",
+            "layout": "table",
+            "button_label": "افزودن منبع",
+            "instructions": "کاتالوگ سازنده، استاندارد، یا سند فنی که ادعاهای این صفحه از آن آمده. برای E-E-A-T ارزش واقعی دارد — و جلوی نوشتن ادعای بی‌پایه را می‌گیرد.",
+            "show_in_graphql": 1,
+            "sub_fields": [
+                { "key": "field_cyh_bp_src_title", "label": "عنوان", "name": "title", "type": "text", "show_in_graphql": 1 },
+                { "key": "field_cyh_bp_src_url", "label": "آدرس", "name": "url", "type": "url", "show_in_graphql": 1 }
+            ]
+        }
+    ]
+}
