@@ -49,8 +49,20 @@ export interface StandardRow {
   title: string;
 }
 
+/** برند شاخص یک دسته — از فیلد Relationship روی ترم. */
+export interface TopBrand {
+  title: string;
+  slug: string;
+}
+
 export interface CategoryContent {
   introHtml: string | null;
+  /** راهنمای محاسبات و ظرفیت‌سنجی — HTML. */
+  engineeringGuideHtml: string | null;
+  /** ۲ تا ۴ برند شاخصِ همین دسته. */
+  topBrands: TopBrand[];
+  /** صنایعی که این دسته بیشترین کاربرد را در آن‌ها دارد. */
+  targetIndustries: string[];
   symptoms: SymptomRow[];
   causes: TextRow[];
   selectionChecklist: TextRow[];
@@ -66,6 +78,9 @@ export interface CategoryContent {
 
 const EMPTY: CategoryContent = {
   introHtml: null,
+  engineeringGuideHtml: null,
+  topBrands: [],
+  targetIndustries: [],
   symptoms: [],
   causes: [],
   selectionChecklist: [],
@@ -77,25 +92,66 @@ const EMPTY: CategoryContent = {
   pendingReview: 0,
 };
 
-const QUERY = `
-  query CategoryContent($first: Int!) {
-    craneCategories(first: $first) {
-      nodes {
-        slug
-        categoryContent {
-          seoIntro
-          symptoms { symptom cause urgency needsReview }
-          causes { text needsReview }
-          selectionChecklist { text needsReview }
-          materials { name advantage limitation suitableFor needsReview }
-          inspection { type interval checks needsReview }
-          faqs { question answer needsReview }
-          standards { code title }
-        }
-      }
-    }
-  }
+/**
+ * فیلدهای مشترک هر دو شکل کوئری.
+ *
+ * `topBrands` عمداً اینجا نیست — شکل خروجی فیلد Relationship بین نسخه‌های
+ * «WPGraphQL for ACF» فرق می‌کند و باید جداگانه امتحان شود.
+ */
+const COMMON_FIELDS = `
+  seoIntro
+  engineeringGuide
+  targetIndustries
+  symptoms { symptom cause urgency needsReview }
+  causes { text needsReview }
+  selectionChecklist { text needsReview }
+  materials { name advantage limitation suitableFor needsReview }
+  inspection { type interval checks needsReview }
+  faqs { question answer needsReview }
+  standards { code title }
 `;
+
+/**
+ * ⚠️ چرا کوئری چندشکلی است
+ *
+ * فیلد Relationship در «WPGraphQL for ACF» نسخه‌ی ۲ به‌صورت یک connection
+ * برمی‌گردد (`topBrands { nodes { … } }`) اما در نسخه‌های قدیمی‌تر یک
+ * فهرست مستقیم است (`topBrands { … on CraneBrand { … } }`). اگر شکل اشتباه
+ * را بفرستیم، کل کوئری خطا می‌دهد و **همه‌ی** محتوای دسته‌ها از دست می‌رود،
+ * نه فقط برندها.
+ *
+ * دقیقاً همین الگو یک‌بار در `site-options.ts` لازم شد. پس همان درس:
+ * شکل‌ها را به‌ترتیب امتحان کن، و اگر همه شکست خوردند بدون برند ادامه بده.
+ */
+const QUERY_SHAPES = [
+  {
+    name: 'topBrands.nodes',
+    query: `query CategoryContent($first: Int!) {
+      craneCategories(first: $first) { nodes { slug categoryContent {
+        ${COMMON_FIELDS}
+        topBrands { nodes { ... on CraneBrand { title slug } } }
+      } } }
+    }`,
+  },
+  {
+    name: 'topBrands inline',
+    query: `query CategoryContent($first: Int!) {
+      craneCategories(first: $first) { nodes { slug categoryContent {
+        ${COMMON_FIELDS}
+        topBrands { ... on CraneBrand { title slug } }
+      } } }
+    }`,
+  },
+  {
+    // آخرین پناهگاه: بدون برند. محتوای دسته مهم‌تر از یک فهرست برند است.
+    name: 'no topBrands',
+    query: `query CategoryContent($first: Int!) {
+      craneCategories(first: $first) { nodes { slug categoryContent {
+        ${COMMON_FIELDS}
+      } } }
+    }`,
+  },
+];
 
 const str = (v: unknown): string => {
   if (typeof v === 'string') return v.trim();
@@ -118,6 +174,30 @@ const rows = <T>(list: unknown, map: (r: Record<string, unknown>) => T, key: (t:
     .map(map)
     .filter((t) => key(t).length > 0);
 
+/** فهرست رشته‌ای — چک‌باکس ACF آرایه برمی‌گرداند، ولی گاهی رشته‌ی تکی. */
+const strList = (v: unknown): string[] => {
+  if (typeof v === 'string') return v.trim() ? [v.trim()] : [];
+  if (!Array.isArray(v)) return [];
+  return v.map(str).filter(Boolean);
+};
+
+/**
+ * برندهای شاخص — هر دو شکل خروجی Relationship را می‌پذیرد.
+ * `{ nodes: [...] }` (نسخه‌ی ۲) یا آرایه‌ی مستقیم (نسخه‌های قدیمی).
+ */
+const brandList = (v: unknown): TopBrand[] => {
+  const list = Array.isArray(v)
+    ? v
+    : v && typeof v === 'object' && Array.isArray((v as { nodes?: unknown[] }).nodes)
+      ? (v as { nodes: unknown[] }).nodes
+      : [];
+
+  return list
+    .filter((b): b is Record<string, unknown> => Boolean(b) && typeof b === 'object')
+    .map((b) => ({ title: str(b.title), slug: str(b.slug) }))
+    .filter((b) => b.title && b.slug);
+};
+
 function normalize(raw: Record<string, unknown> | null): CategoryContent {
   if (!raw) return EMPTY;
 
@@ -125,6 +205,9 @@ function normalize(raw: Record<string, unknown> | null): CategoryContent {
 
   const content: CategoryContent = {
     introHtml,
+    engineeringGuideHtml: str(raw.engineeringGuide) || null,
+    topBrands: brandList(raw.topBrands),
+    targetIndustries: strList(raw.targetIndustries),
     symptoms: rows(raw.symptoms, (r) => ({
       symptom: str(r.symptom), cause: str(r.cause), urgency: str(r.urgency), needsReview: bool(r.needsReview),
     }), (t) => t.symptom),
@@ -146,7 +229,9 @@ function normalize(raw: Record<string, unknown> | null): CategoryContent {
   };
 
   content.hasContent = Boolean(
-    introHtml || content.symptoms.length || content.causes.length || content.selectionChecklist.length ||
+    introHtml || content.engineeringGuideHtml || content.topBrands.length ||
+    content.targetIndustries.length ||
+    content.symptoms.length || content.causes.length || content.selectionChecklist.length ||
     content.materials.length || content.inspection.length || content.faqs.length
   );
 
@@ -163,9 +248,35 @@ async function fetchAll(): Promise<Map<string, CategoryContent>> {
   const map = new Map<string, CategoryContent>();
   if (!isWpConfigured()) return map;
 
-  const data = await wpQueryPublic<{
+  type Payload = {
     craneCategories: { nodes: { slug: string | null; categoryContent: Record<string, unknown> | null }[] } | null;
-  }>(QUERY, { first: 200 });
+  };
+
+  let data: Payload | null = null;
+  const failures: string[] = [];
+
+  for (const shape of QUERY_SHAPES) {
+    try {
+      data = await wpQueryPublic<Payload>(shape.query, { first: 200 });
+      if (shape !== QUERY_SHAPES[0]) {
+        console.info(`[content] شکل کوئری «${shape.name}» استفاده شد.`);
+      }
+      break;
+    } catch (error) {
+      failures.push(`${shape.name}: ${(error instanceof Error ? error.message : String(error)).slice(0, 100)}`);
+    }
+  }
+
+  if (!data) {
+    // هر سه شکل شکست خورد — یعنی مشکل از فیلد Relationship نیست، از خودِ
+    // اتصال یا گروه ACF است. اینجا سکوت نمی‌کنیم.
+    console.warn(
+      `\n📄 محتوای سئوی دسته‌ها از وردپرس خوانده نشد — صفحات دسته بدون راهنما ساخته می‌شوند.\n` +
+        failures.map((f) => `     • ${f}`).join('\n') +
+        `\n   بررسی کنید: افزونه‌ی کرین یدک نسخه‌ی ۱.۳.۳ فعال است و گروه «محتوای سئوی دسته‌بندی» در ACF دیده می‌شود.\n`
+    );
+    return map;
+  }
 
   for (const node of data?.craneCategories?.nodes ?? []) {
     if (node.slug) map.set(node.slug, normalize(node.categoryContent));

@@ -57,7 +57,7 @@ function cyh_maybe_schedule_deploy() {
  * مستثنا شده چون آن داده اصلاً به فرانت‌اند Astro نمایش داده نمی‌شود).
  */
 function cyh_on_post_save( $post_id, $post ) {
-	$relevant_types = [ 'product', 'brand', 'industry', 'datasheet', 'post' ]; // 'post' = مقالات مجله
+	$relevant_types = [ 'product', 'brand', 'post' ]; // 'post' = مقالات مجله
 
 	if ( ! in_array( $post->post_type, $relevant_types, true ) ) {
 		return;

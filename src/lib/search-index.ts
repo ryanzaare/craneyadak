@@ -67,39 +67,77 @@ export function normalizeFa(input: string): string {
 }
 
 /**
- * ساخت فهرست پیشنهادها. در زمان build یک‌بار اجرا می‌شود.
+ * حذف کامل فاصله — برای تطبیق مستقل از فاصله‌گذاری.
  *
- * ⚠️ باگ بحرانی که با افزودن `products` رفع شد:
- * نسخه‌ی قبل فقط سیلوها، دسته‌ها و برندها را ایندکس می‌کرد. یعنی تایپ‌کردن
- * «MT318» — یعنی دقیقاً همان کد فنی که کل معماری سایت حول آن ساخته شده —
- * هیچ نتیجه‌ای نمی‌داد. کاربری که کد فنی دارد، آماده‌ترین خریدار ممکن است
- * و جستجو برای او خالی برمی‌گشت.
+ * ═══════════════════════════════════════════════════════════════════════
+ * مشکلی که این تابع حل می‌کند
+ * ═══════════════════════════════════════════════════════════════════════
+ * در بازار ایران یک قطعه با چند املای متفاوت نوشته می‌شود و تفاوت اغلب
+ * فقط در فاصله است:
  *
- * حالا خودِ محصولات هم ایندکس می‌شوند: نام، کد فنی، برند و کدهای معادل
- * OEM. کد فنی بالاترین وزن را می‌گیرد چون بدون‌ابهام‌ترین ورودی ممکن است.
+ *     رکتیفایر   ↔  رکتی فایر
+ *     سیم‌بکسل   ↔  سیم بکسل   ↔  سیمبکسل
+ *     روپ‌گاید   ↔  روپ گاید
+ *
+ * `normalizeFa` نیم‌فاصله را به فاصله تبدیل می‌کند، پس دو حالت اول و دوم
+ * به هم می‌رسند. اما «رکتیفایر» (بدون هیچ فاصله‌ای) با «رکتی فایر» تطبیق
+ * نمی‌خورد، چون یکی یک کلمه است و دیگری دو کلمه.
+ *
+ * راه‌حل: علاوه بر شکل عادی، شکل «بی‌فاصله» هم ایندکس و مقایسه می‌شود.
+ * این کار تمام حالت‌های فاصله‌گذاری را به یک نقطه می‌رساند.
+ *
+ * ⚠️ چرا این روش به‌جای متن مخفی انتخاب شد:
+ * راه‌حل رایج برای مترادف‌ها، ریختن کلمات کلیدی در یک عنصر `sr-only`
+ * پنهان است. آن کار «متن مخفی» محسوب می‌شود و صراحتاً در دستورالعمل‌های
+ * اسپم گوگل آمده است — یعنی دقیقاً ریسکی که با فشار رتبه‌ی #۱ نباید
+ * پذیرفت. مترادف‌ها همین حالا به‌صورت *قابل مشاهده* روی صفحه‌ی دسته
+ * («نام‌های دیگر: …») نمایش داده می‌شوند و هم گوگل و هم Pagefind همان
+ * متن مرئی را ایندکس می‌کنند. تطبیق بی‌فاصله بقیه‌ی کار را بدون یک
+ * کاراکتر متن پنهان انجام می‌دهد.
  */
-export function buildSuggestIndex(products: CraneProduct[] = []): SuggestEntry[] {
-  const entries: SuggestEntry[] = [];
+export function despace(input: string): string {
+  return input.replace(/\s+/g, '');
+}
 
-  // محصولات اول می‌آیند: در تساوی امتیاز، یک قطعه‌ی واقعیِ قابل سفارش
-  // بر یک صفحه‌ی دسته اولویت دارد.
-  for (const product of products) {
-    // رکوردهای نمایشی نباید در جستجوی کاربر ظاهر شوند.
-    if (product.isDemo) continue;
-
-    const haystack = [product.name, product.sku ?? '', product.brandNameFa ?? '', product.brandNameEn ?? ''];
-    // کدهای معادل OEM هم قابل جستجو می‌شوند: خریدار اغلب کد سازنده‌ی
-    // اصلی را در دست دارد، نه کد ما.
-    for (const ref of product.oemCrossReference) haystack.push(ref.oemPartNumber);
-
-    entries.push({
-      label: product.name,
-      kind: 'product',
-      href: `/products/${product.slug}`,
-      context: product.sku ? `کد فنی: ${product.sku}` : (product.brandNameFa ?? 'محصول'),
-      haystack: haystack.filter(Boolean).map(normalizeFa),
-    });
+/** شکل عادی + شکل بی‌فاصله، بدون تکرار. */
+function variants(values: string[]): string[] {
+  const out = new Set<string>();
+  for (const value of values) {
+    const n = normalizeFa(value);
+    if (!n) continue;
+    out.add(n);
+    const d = despace(n);
+    if (d !== n) out.add(d);
   }
+  return [...out];
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   دو لایه‌ی فهرست — رفع پیشگیرانه‌ی یک گلوگاه سرعت
+   ═══════════════════════════════════════════════════════════════════════
+   ⚠️ مشکلی که این تفکیک جلویش را می‌گیرد:
+
+   نسخه‌ی قبل کل فهرست پیشنهاد را به‌صورت JSON داخل *هر صفحه* می‌گذاشت،
+   چون کادر جستجو در هدر است و روی همه‌ی صفحات رندر می‌شود. با دو محصول
+   ناچیز بود. اما هر محصول، نام و کد فنی و *همه‌ی کدهای معادل OEM* خود را
+   وارد این فهرست می‌کند. با ۵۰۰ محصول، این یعنی صدها کیلوبایت JSON روی
+   هر بازدید از هر صفحه — حتی صفحاتی که کاربر اصلاً جستجو نمی‌کند.
+
+   این خرابی امروز در هیچ تستی دیده نمی‌شود و بی‌سروصدا LCP موبایل را
+   خراب می‌کند. الان که کاتالوگ کوچک است، ارزان‌ترین زمان رفع آن است.
+
+   تفکیک:
+     • لایه‌ی ساختاری (این تابع) → ۷ سیلو + ۳۱ دسته + ~۱۹ برند.
+       اندازه‌اش ثابت است و با رشد کاتالوگ بزرگ نمی‌شود. همچنان inline
+       می‌ماند تا از همان اولین کاراکتر بدون تاخیر شبکه پاسخ بدهد.
+     • لایه‌ی محصولات (buildProductIndex) → به‌صورت یک فایل استاتیک
+       `/search-index.json` منتشر و فقط هنگام اولین تعامل با کادر جستجو
+       واکشی می‌شود. یک‌بار دانلود، سپس کش مرورگر.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/** لایه‌ی ثابت: سیلو، دسته و برند. با رشد کاتالوگ بزرگ نمی‌شود. */
+export function buildStructuralIndex(): SuggestEntry[] {
+  const entries: SuggestEntry[] = [];
 
   for (const silo of SILOS) {
     entries.push({
@@ -107,7 +145,7 @@ export function buildSuggestIndex(products: CraneProduct[] = []): SuggestEntry[]
       kind: 'silo',
       href: siloPath(silo),
       context: `${silo.categories.length} دسته قطعه`,
-      haystack: [silo.name, silo.keyword, silo.slug].map(normalizeFa),
+      haystack: variants([silo.name, silo.keyword, silo.slug]),
     });
   }
 
@@ -117,9 +155,7 @@ export function buildSuggestIndex(products: CraneProduct[] = []): SuggestEntry[]
       kind: 'category',
       href: categoryPath(category),
       context: category.silo.name,
-      haystack: [category.name, category.keyword, category.slug, ...(category.aka ?? [])].map(
-        normalizeFa
-      ),
+      haystack: variants([category.name, category.keyword, category.slug, ...(category.aka ?? [])]),
     });
   }
 
@@ -129,11 +165,41 @@ export function buildSuggestIndex(products: CraneProduct[] = []): SuggestEntry[]
       kind: 'brand',
       href: `/brands/${brand.slug}`,
       context: `برند ${brand.nameEn} — ${brand.country}`,
-      haystack: [brand.nameFa, brand.nameEn, brand.slug, brand.logoText].map(normalizeFa),
+      haystack: variants([brand.nameFa, brand.nameEn, brand.slug, brand.logoText]),
     });
   }
 
   return entries;
+}
+
+/** لایه‌ی رشدپذیر: محصولات. جداگانه منتشر و با تاخیر واکشی می‌شود. */
+export function buildProductIndex(products: CraneProduct[] = []): SuggestEntry[] {
+  const entries: SuggestEntry[] = [];
+
+  for (const product of products) {
+    if (product.isDemo) continue;
+
+    const haystack = [product.name, product.sku ?? '', product.brandNameFa ?? '', product.brandNameEn ?? ''];
+    for (const ref of product.oemCrossReference) haystack.push(ref.oemPartNumber);
+
+    entries.push({
+      label: product.name,
+      kind: 'product',
+      href: `/products/${product.slug}`,
+      context: product.sku ? `کد فنی: ${product.sku}` : (product.brandNameFa ?? 'محصول'),
+      haystack: variants(haystack.filter(Boolean)),
+    });
+  }
+
+  return entries;
+}
+
+/**
+ * فهرست کامل — فقط برای تست و ابزارهای خط فرمان.
+ * ⚠️ این را در کامپوننت استفاده نکنید؛ باعث inline شدن کل کاتالوگ می‌شود.
+ */
+export function buildSuggestIndex(products: CraneProduct[] = []): SuggestEntry[] {
+  return [...buildProductIndex(products), ...buildStructuralIndex()];
 }
 
 /* -------------------------------------------------------------------------
@@ -182,12 +248,16 @@ export function scoreEntry(entry: SuggestEntry, queryNorm: string): number {
   // اگر کاربر فقط «خرید» یا «قیمت» تایپ کرده باشد، کلمه‌ی معناداری نمانده.
   if (words.length === 0) return 0;
 
+  // پرس‌وجو هم در شکل بی‌فاصله مقایسه می‌شود تا «رکتی فایر» و «رکتیفایر»
+  // به یک نتیجه برسند. (توضیح کامل در despace)
+  const queryTight = despace(queryNorm);
+
   let phrase = 0;
   for (const hay of entry.haystack) {
     if (!hay) continue;
-    if (hay === queryNorm) phrase = Math.max(phrase, 100);
-    else if (hay.startsWith(queryNorm)) phrase = Math.max(phrase, 85);
-    else if (hay.includes(queryNorm)) phrase = Math.max(phrase, 65);
+    if (hay === queryNorm || hay === queryTight) phrase = Math.max(phrase, 100);
+    else if (hay.startsWith(queryNorm) || hay.startsWith(queryTight)) phrase = Math.max(phrase, 85);
+    else if (hay.includes(queryNorm) || hay.includes(queryTight)) phrase = Math.max(phrase, 65);
   }
 
   // ---------------------------------------------------------------------

@@ -1,10 +1,30 @@
 ---
 import AuthorBox from './AuthorBox.astro';
+import SectionNav from './SectionNav.astro';
 import { getPrimaryAuthor } from '../lib/authors';
 import { autolinkHtml } from '../lib/autolink';
 
 // نویسنده از وردپرس؛ اگر نبود، جای‌گذارِ برچسب‌دار.
 const author = await getPrimaryAuthor();
+
+/**
+ * هر <table> را در یک ظرف اسکرول‌پذیر می‌پیچد.
+ *
+ * چرا در کد و نه در وردپرس: متن مقدمه را مدیر محتوا در ویرایشگر می‌نویسد.
+ * انتظار اینکه او هر بار دستی یک <div class="table-scroll"> دور جدول
+ * بگذارد، یعنی اولین باری که فراموش کند، جدول در موبایل خراب می‌شود و
+ * هیچ‌کس متوجه نمی‌شود. این کار در زمان build یک‌بار و قطعی انجام می‌شود.
+ *
+ * جدول‌هایی که از قبل پیچیده شده‌اند دوباره پیچیده نمی‌شوند.
+ */
+function wrapProseTables(html: string): string {
+  if (!html || !html.includes('<table')) return html;
+  return html.replace(
+    /<div class="table-scroll">\s*(<table[\s\S]*?<\/table>)\s*<\/div>|(<table[\s\S]*?<\/table>)/g,
+    (_m, alreadyWrapped, bare) =>
+      `<div class="table-scroll">${alreadyWrapped ?? bare}</div>`,
+  );
+}
 // src/components/CategoryGuide.astro
 // ---------------------------------------------------------------------------
 // رندر محتوای تخصصی دسته — لایه‌ی «راهنما» در برابر لایه‌ی «فروشگاه».
@@ -48,6 +68,7 @@ const sections = [
   { id: 'guide-causes', label: 'علت‌های خرابی', show: content.causes.length > 0 },
   { id: 'guide-selection', label: 'راهنمای سفارش', show: content.selectionChecklist.length > 0 },
   { id: 'guide-materials', label: 'انتخاب جنس', show: content.materials.length > 0 },
+  { id: 'guide-engineering', label: 'محاسبات و ظرفیت', show: Boolean(content.engineeringGuideHtml) },
   { id: 'guide-inspection', label: 'بازرسی', show: content.inspection.length > 0 },
   { id: 'guide-faq', label: 'پرسش‌های متداول', show: content.faqs.length > 0 },
 ].filter((s) => s.show);
@@ -67,32 +88,11 @@ const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
       </div>
     )}
 
-    {/* ------------------- ناوبری چسبان درون‌صفحه‌ای ------------------- */}
-    {sections.length > 2 && (
-      <nav
-        id="guide-nav"
-        class="sticky top-[68px] z-30 bg-white/95 backdrop-blur-sm border-y border-gray-200 print:hidden"
-        style="transform: translateZ(0);"
-        aria-label="بخش‌های راهنمای فنی"
-      >
-        <div class="max-w-7xl mx-auto px-4">
-          <ul class="flex items-center gap-1 overflow-x-auto hide-scrollbar py-2.5" role="list">
-            <li class="shrink-0 text-xs font-black text-gray-500 pl-3 border-l border-gray-200 ml-1">راهنمای فنی</li>
-            {sections.map((section) => (
-              <li class="shrink-0">
-                <a
-                  href={`#${section.id}`}
-                  data-guide-link={section.id}
-                  class="block px-3.5 py-1.5 rounded-full text-sm font-bold text-gray-600 hover:text-crane-orange hover:bg-orange-50 transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-crane-orange"
-                >
-                  {section.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </nav>
-    )}
+    <SectionNav
+      sections={sections}
+      eyebrow="راهنمای فنی"
+      ariaLabel={`بخش‌های راهنمای فنی ${categoryName}`}
+    />
 
     <div class="bg-white">
       {/* ------------------------------ مقدمه ------------------------------ */}
@@ -104,15 +104,56 @@ const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
               {categoryName} چیست و چه می‌کند؟
             </h2>
 
-            <AuthorBox author={author} class="mb-8 max-w-3xl" />
+            {/* بدون نویسنده‌ی واقعی در وردپرس، جعبه‌ی نویسنده رندر نمی‌شود.
+                نویسنده‌ی ساختگی روی محتوای فنی، ریسک E-E-A-T است نه اعتبار. */}
+            {author && <AuthorBox author={author} class="mb-8 max-w-3xl" />}
             {/* عرض محدود عمدی: متن فارسی در خط بلند خوانده نمی‌شود. */}
             {/* لینک‌دهی داخلی خودکار. متن از ویرایشگر وردپرس می‌آید و مدیر
                 محتوا لینک داخلی نمی‌گذارد؛ بدون این، بلندترین متن سایت هیچ
                 ارزش پیوندی توزیع نمی‌کرد. */}
             <div
               class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9"
-              set:html={autolinkHtml(content.introHtml, { currentPath: Astro.url.pathname })}
+              set:html={wrapProseTables(
+                autolinkHtml(content.introHtml, { currentPath: Astro.url.pathname }),
+              )}
             />
+
+            {/* صنایع هدف — برچسب‌های کوتاه، زیر مقدمه.
+                نقش سئویی: هم‌خوانی معنایی صفحه با نیت جستجوی خریدار صنعتی
+                («کوپلینگ جرثقیل فولاد») بدون ساختن صفحه‌ی جدا و بدون
+                هم‌نوع‌خواری کلیدواژه. */}
+            {content.targetIndustries.length > 0 && (
+              <div class="mt-8 max-w-3xl">
+                <p class="text-sm font-black text-steel-500 mb-3">کاربرد اصلی در صنایع</p>
+                <ul class="flex flex-wrap gap-2">
+                  {content.targetIndustries.map((industry) => (
+                    <li class="px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200 text-sm font-bold text-crane-navy">
+                      {industry}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* برندهای شاخص این دسته. لینک واقعی به صفحه‌ی برند =
+                توزیع ارزش پیوندی داخلی بین سیلوی دسته و سیلوی برند. */}
+            {content.topBrands.length > 0 && (
+              <div class="mt-8 max-w-3xl">
+                <p class="text-sm font-black text-steel-500 mb-3">برندهای شاخص این دسته</p>
+                <ul class="flex flex-wrap gap-2">
+                  {content.topBrands.map((brand) => (
+                    <li>
+                      <a
+                        href={`/brands/${brand.slug}`}
+                        class="inline-flex px-4 py-2 rounded-xl bg-white border-2 border-gray-200 text-sm font-black text-crane-navy hover:border-crane-orange transition-colors"
+                      >
+                        {brand.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -272,6 +313,41 @@ const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
                 </article>
               ))}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* --------------------- راهنمای محاسبات و ظرفیت‌سنجی --------------------- */}
+      {/* جایگاه عمدی: بعد از «انتخاب جنس» و قبل از «بازرسی».
+          خواننده اول می‌فهمد چه نوعی می‌خواهد، بعد چطور اندازه‌اش را حساب
+          کند، و آخر چطور نگهش دارد. */}
+      {content.engineeringGuideHtml && (
+        <section
+          id="guide-engineering"
+          class="px-4 py-16 border-t border-gray-100 scroll-mt-32"
+          aria-labelledby="engineering-heading"
+        >
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('guide-engineering')}</span>
+              <div>
+                <h2
+                  id="engineering-heading"
+                  class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed"
+                >
+                  راهنمای محاسبات و ظرفیت‌سنجی
+                </h2>
+                <p class="text-steel-600 mt-1">
+                  اعداد و فرمول‌هایی که پیش از سفارش باید بررسی شوند.
+                </p>
+              </div>
+            </div>
+            <div
+              class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9"
+              set:html={wrapProseTables(
+                autolinkHtml(content.engineeringGuideHtml, { currentPath: Astro.url.pathname }),
+              )}
+            />
           </div>
         </section>
       )}

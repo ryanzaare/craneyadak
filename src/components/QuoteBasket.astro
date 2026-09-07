@@ -1,0 +1,360 @@
+---
+// src/components/QuoteBasket.astro
+// ---------------------------------------------------------------------------
+// سبد استعلام — چند قطعه، یک درخواست پیش‌فاکتور.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// چرا سبد استعلام و نه سبد خرید
+// ═══════════════════════════════════════════════════════════════════════════
+// دکمه‌ی «خرید آنلاین» روی صفحه‌ی محصول هیچ کاری نمی‌کرد. دو راه پیش رو
+// بود: ساختن تسویه‌حساب کامل، یا تبدیل آن به مسیری که با واقعیت این
+// کسب‌وکار بخواند. راه دوم انتخاب شد، به سه دلیل:
+//
+//   • مدیرعامل قیمت‌ها را ناپایدار می‌داند (به همین دلیل نمودار قیمت حذف
+//     شد). فروش قطعی با قیمت ثابت، با همان تشخیص در تناقض است.
+//   • درگاه پرداخت و نماد اعتماد الکترونیکی هنوز وجود ندارند.
+//   • خریدار صنعتی برای تایید داخلی «پیش‌فاکتور رسمی» می‌خواهد، نه رسید
+//     پرداخت.
+//
+// و شکاف واقعی این بود: استعلام تک‌محصولی بود. یک اورهال معمولی به چند
+// قطعه‌ی هم‌زمان نیاز دارد و کاربر باید چند بار فرم پر می‌کرد.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// چرا localStorage
+// ═══════════════════════════════════════════════════════════════════════════
+// سایت استاتیک است و نشست سمت سرور ندارد. سبد باید بین صفحات بماند، پس
+// localStorage تنها گزینه‌ی بدون بک‌اند است. هیچ داده‌ی حساسی ذخیره
+// نمی‌شود — فقط اسلاگ، نام و تعداد. اطلاعات تماس فقط در لحظه‌ی ارسال
+// گرفته می‌شود و هرگز ذخیره نمی‌ماند.
+// ---------------------------------------------------------------------------
+interface Props {
+  wpBase?: string | null;
+}
+const { wpBase = null } = Astro.props;
+---
+
+{/* دکمه‌ی شناور — فقط وقتی سبد چیزی دارد نمایان می‌شود. */}
+<button
+  type="button"
+  id="quote-fab"
+  hidden
+  class="fixed bottom-4 left-4 z-40 bg-steel-900 text-white rounded-full shadow-lg px-5 py-3 font-black text-sm flex items-center gap-2 hover:bg-steel-800 focus:outline-none focus:ring-4 focus:ring-accent/50 print:hidden"
+  style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));"
+  aria-haspopup="dialog"
+  aria-controls="quote-drawer"
+>
+  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-6 0h.01M12 16h3m-6 0h.01" />
+  </svg>
+  سبد استعلام
+  <span id="quote-count" class="bg-accent text-white rounded-full min-w-[1.5rem] h-6 px-1.5 flex items-center justify-center tabular-nums text-xs">0</span>
+</button>
+
+{/* کشوی سبد */}
+<div id="quote-drawer" hidden class="fixed inset-0 z-50 print:hidden" role="dialog" aria-modal="true" aria-labelledby="quote-title">
+  <div id="quote-overlay" class="absolute inset-0 bg-steel-900/60"></div>
+
+  <div class="absolute inset-y-0 left-0 w-full max-w-md bg-white shadow-2xl flex flex-col">
+    <div class="flex items-center justify-between gap-3 px-4 py-3 bg-steel-900 text-white shrink-0">
+      <h2 id="quote-title" class="font-black">سبد استعلام</h2>
+      <button type="button" id="quote-close" class="p-2 -m-2 hover:text-accent focus:outline-none focus:ring-2 focus:ring-white rounded" aria-label="بستن">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4">
+      <p id="quote-intro" class="text-xs text-steel-600 leading-6 bg-steel-50 border border-steel-300 rounded-md p-3 mb-4"></p>
+
+      <ul id="quote-items" role="list" class="space-y-2"></ul>
+
+      <p id="quote-empty" class="text-sm text-steel-600 leading-7 text-center py-8">
+        سبد خالی است. از صفحه‌ی هر قطعه، «افزودن به سبد استعلام» را بزنید.
+      </p>
+
+      {/* فرم — فقط همان چیزی که برای تماس لازم است.
+          ⚠️ عمداً بدون ثبت‌نام و رمز عبور: مهندس نت وسط توقف خط تولید
+          حساب کاربری نمی‌سازد. هر فیلد اضافه یک دلیل برای رها کردن است. */}
+      <form id="quote-form" class="mt-5 space-y-2" hidden>
+        <label class="cyh-honeypot" aria-hidden="true">
+          وب‌سایت <input type="text" name="website" tabindex="-1" autocomplete="off" />
+        </label>
+
+        <input type="text" name="name" required autocomplete="name" placeholder="نام و نام خانوادگی" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+        <input type="tel" name="phone" required autocomplete="tel" inputmode="tel" dir="ltr" placeholder="شماره تماس" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 text-right focus:outline-none focus:ring-4 focus:ring-accent/40" />
+        <input type="text" name="organization" autocomplete="organization" placeholder="نام شرکت یا کارخانه (اختیاری)" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+        <textarea name="note" rows="2" placeholder="توضیح یا مدل دستگاه (اختیاری)" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40 resize-y"></textarea>
+
+        <button type="submit" id="quote-submit" class="w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+          ثبت درخواست پیش‌فاکتور
+        </button>
+        <p id="quote-msg" class="text-xs leading-6" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script define:vars={{ wpBase }}>
+  (function () {
+    const KEY = 'cy-quote-v1';
+
+    /* ⚠️ هر دسترسی به localStorage در try/catch:
+       در حالت ناشناس بعضی مرورگرها و با تنظیمات سخت‌گیرانه‌ی حریم
+       خصوصی، خواندن یا نوشتن استثنا پرتاب می‌کند. بدون این محافظ، یک
+       تنظیم مرورگر کل جاوااسکریپت صفحه را می‌خواباند. */
+    function read() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        return Array.isArray(list) ? list : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function write(list) {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(list));
+      } catch {
+        /* سبد در همین صفحه کار می‌کند حتی اگر ذخیره نشود. */
+      }
+      render();
+    }
+
+    const fab = document.getElementById('quote-fab');
+    const drawer = document.getElementById('quote-drawer');
+    const itemsEl = document.getElementById('quote-items');
+    const emptyEl = document.getElementById('quote-empty');
+    const formEl = document.getElementById('quote-form');
+    const countEl = document.getElementById('quote-count');
+    const msgEl = document.getElementById('quote-msg');
+
+    function render() {
+      const list = read();
+      const allDirect = list.length > 0 && list.every((x) => x.mode === 'cart');
+
+      // ⚠️ عنوان با محتوای سبد عوض می‌شود. اگر همه‌ی اقلام قیمت قطعی
+      // دارند این یک «سفارش» است؛ حتی یک قلم استعلامی، کل درخواست را
+      // استعلامی می‌کند چون مبلغ نهایی معلوم نیست. همین منطق سمت سرور
+      // هم دوباره و مستقل محاسبه می‌شود.
+      const titleEl = document.getElementById('quote-title');
+      if (titleEl) titleEl.textContent = allDirect ? 'سبد سفارش' : 'سبد استعلام';
+      const submitEl = document.getElementById('quote-submit');
+      if (submitEl && !submitEl.disabled) {
+        submitEl.textContent = allDirect ? 'ثبت سفارش' : 'ثبت درخواست پیش‌فاکتور';
+      }
+      const noteEl = document.getElementById('quote-intro');
+      if (noteEl) {
+        noteEl.textContent = allDirect
+          ? 'همه‌ی اقلام این سبد قیمت قطعی دارند. پس از ثبت، کارشناس برای هماهنگی پرداخت و ارسال تماس می‌گیرد.'
+          : 'قیمت برخی اقلام به برند، موجودی و نرخ روز بستگی دارد. پس از ثبت، کارشناس سازگاری فنی را بررسی و پیش‌فاکتور رسمی صادر می‌کند.';
+      }
+
+      if (countEl) countEl.textContent = String(list.length);
+      if (fab) fab.hidden = list.length === 0;
+      if (emptyEl) emptyEl.hidden = list.length > 0;
+      if (formEl) formEl.hidden = list.length === 0;
+
+      // دکمه‌های «افزودن» روی همین صفحه وضعیتشان را به‌روز می‌کنند.
+      document.querySelectorAll('[data-quote-add]').forEach((btn) => {
+        const inCart = list.some((x) => x.slug === btn.dataset.quoteAdd);
+        btn.dataset.inCart = inCart ? '1' : '0';
+        const label = btn.querySelector('[data-quote-label]');
+        if (label) label.textContent = inCart ? '✓ در سبد استعلام' : 'افزودن به سبد استعلام';
+      });
+
+      if (!itemsEl) return;
+      itemsEl.textContent = '';
+      for (const item of list) {
+        const li = document.createElement('li');
+        li.className = 'flex items-start gap-2 border border-steel-300 rounded-md p-2.5';
+
+        const info = document.createElement('div');
+        info.className = 'min-w-0 flex-1';
+        const name = document.createElement('p');
+        name.className = 'text-sm font-bold text-steel-900 leading-6';
+        // textContent نه innerHTML — نام محصول از وردپرس می‌آید و نباید
+        // به‌عنوان HTML اجرا شود.
+        name.textContent = item.name || item.slug;
+        info.appendChild(name);
+        if (item.sku) {
+          const sku = document.createElement('p');
+          sku.className = 'text-xs text-steel-600 font-mono';
+          sku.dir = 'ltr';
+          sku.textContent = item.sku;
+          info.appendChild(sku);
+        }
+
+        /* ⚠️ برچسب مسیر خرید، اما بدون عدد قیمت.
+           قیمت عمداً در سبد نمایش داده نمی‌شود و از سبد هم به سرور
+           فرستاده نمی‌شود: سبد در localStorage است و کاربر می‌تواند
+           آن را ویرایش کند. قیمت لحظه‌ی ثبت، سمت سرور از وردپرس خوانده
+           می‌شود. اینجا فقط *نوع* مسیر اعلام می‌شود تا کاربر بداند این
+           قلم قیمت قطعی دارد یا استعلامی است. */
+        const tag = document.createElement('span');
+        const direct = item.mode === 'cart';
+        tag.className = direct
+          ? 'inline-block mt-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5'
+          : 'inline-block mt-1 text-[11px] font-bold text-steel-700 bg-steel-50 border border-steel-300 rounded px-1.5 py-0.5';
+        tag.textContent = direct ? 'قیمت قطعی' : 'نیازمند استعلام';
+        info.appendChild(tag);
+
+        const qty = document.createElement('input');
+        qty.type = 'number';
+        qty.min = '1';
+        qty.value = String(item.qty || 1);
+        qty.className = 'w-16 shrink-0 text-sm border border-steel-300 rounded px-2 py-1 text-center';
+        qty.setAttribute('aria-label', `تعداد ${item.name || item.slug}`);
+        qty.addEventListener('change', () => {
+          const next = read().map((x) =>
+            x.slug === item.slug ? { ...x, qty: Math.max(1, parseInt(qty.value, 10) || 1) } : x
+          );
+          write(next);
+        });
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'shrink-0 text-steel-600 hover:text-red-700 p-1 focus:outline-none focus:ring-2 focus:ring-accent rounded';
+        del.setAttribute('aria-label', `حذف ${item.name || item.slug}`);
+        del.textContent = '✕';
+        del.addEventListener('click', () => write(read().filter((x) => x.slug !== item.slug)));
+
+        li.append(info, qty, del);
+        itemsEl.appendChild(li);
+      }
+    }
+
+    function open() {
+      if (!drawer) return;
+      drawer.hidden = false;
+      document.body.style.overflow = 'hidden';
+      drawer.querySelector('input, button')?.focus();
+    }
+
+    function close() {
+      if (!drawer) return;
+      drawer.hidden = true;
+      document.body.style.overflow = '';
+      fab?.focus();
+    }
+
+    fab?.addEventListener('click', open);
+    document.getElementById('quote-close')?.addEventListener('click', close);
+    document.getElementById('quote-overlay')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && drawer && !drawer.hidden) close();
+    });
+
+    // دکمه‌های افزودن، در هر صفحه‌ای که باشند.
+    document.querySelectorAll('[data-quote-add]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const slug = btn.dataset.quoteAdd;
+        if (!slug) return;
+        const list = read();
+        if (list.some((x) => x.slug === slug)) {
+          open();
+          return;
+        }
+        list.push({
+          slug,
+          name: btn.dataset.quoteName || slug,
+          sku: btn.dataset.quoteSku || '',
+          mode: btn.dataset.quoteMode || 'rfq',
+          qty: 1,
+        });
+        write(list);
+        open();
+      });
+    });
+
+    formEl?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!wpBase) {
+        if (msgEl) {
+          msgEl.className = 'text-xs leading-6 text-red-700 font-bold';
+          msgEl.textContent = 'ارسال آنلاین در دسترس نیست. لطفاً تماس بگیرید.';
+        }
+        return;
+      }
+
+      const button = document.getElementById('quote-submit');
+      const data = new FormData(formEl);
+      const payload = {
+        name: String(data.get('name') || ''),
+        phone: String(data.get('phone') || ''),
+        organization: String(data.get('organization') || ''),
+        note: String(data.get('note') || ''),
+        website: String(data.get('website') || ''),
+        items: read(),
+      };
+
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'در حال ارسال…';
+      }
+      if (msgEl) msgEl.textContent = '';
+
+      try {
+        const res = await fetch(`${wpBase}/wp-json/crane-yadak/v1/quote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+
+        if (res.ok && json.ok) {
+          if (msgEl) {
+            msgEl.className = 'text-xs leading-6 text-green-700 font-bold';
+            msgEl.textContent = json.message || 'درخواست ثبت شد.';
+          }
+          /* کد رهگیری روی همین دستگاه ذخیره می‌شود تا کاربر لازم نباشد
+             آن را یادداشت کند. ⚠️ شماره تماس عمداً ذخیره نمی‌شود —
+             نگه‌داشتنش در مرورگر یعنی هر کسی با دسترسی به دستگاه
+             می‌تواند سفارش را ببیند، و کاربر شماره‌ی خودش را می‌داند. */
+          if (json.code) {
+            try {
+              const CODES = 'cy-quote-codes-v1';
+              const prev = JSON.parse(localStorage.getItem(CODES) || '[]');
+              const next = Array.isArray(prev) ? prev : [];
+              next.unshift({
+                code: json.code,
+                date: new Date().toLocaleDateString('fa-IR'),
+              });
+              localStorage.setItem(CODES, JSON.stringify(next.slice(0, 20)));
+            } catch {
+              /* بدون حافظه هم کد در پیام بالا به کاربر نشان داده شده. */
+            }
+
+            const link = document.createElement('a');
+            link.href = `/track?code=${encodeURIComponent(json.code)}`;
+            link.className = 'block mt-2 text-accent-ink font-bold underline text-sm';
+            link.textContent = 'پیگیری وضعیت این درخواست ←';
+            msgEl?.after(link);
+          }
+
+          // سبد فقط پس از ثبت *موفق* خالی می‌شود. خالی کردن زودهنگام
+          // یعنی اگر ارسال شکست بخورد، کاربر انتخاب‌هایش را از دست
+          // می‌دهد و دوباره شروع نمی‌کند.
+          write([]);
+          formEl.reset();
+        } else {
+          if (msgEl) {
+            msgEl.className = 'text-xs leading-6 text-red-700 font-bold';
+            msgEl.textContent = json.message || 'ثبت نشد. لطفاً دوباره تلاش کنید.';
+          }
+        }
+      } catch {
+        if (msgEl) {
+          msgEl.className = 'text-xs leading-6 text-red-700 font-bold';
+          msgEl.textContent = 'ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.';
+        }
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'ثبت درخواست پیش‌فاکتور';
+        }
+      }
+    });
+
+    render();
+  })();
+</script>

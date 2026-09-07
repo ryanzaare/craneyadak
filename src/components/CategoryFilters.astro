@@ -31,14 +31,42 @@ for (const p of products) {
 }
 const activeBrands = BRANDS.filter((b) => brandCounts.has(b.slug));
 
+/* ── لایه ۱: فیلترهای عمومی، یکسان در همه‌ی دسته‌ها ──────────────────
+   نسخه‌ی قبل فقط دو گزینه داشت: «موجود در انبار» و «قابل خرید آنلاین».
+   دو حالتِ مقابلشان («سفارشی» و «فقط استعلام») هیچ‌وقت قابل انتخاب
+   نبودند، در حالی که برای خریدار صنعتی هر دو جهت معنا دارد:
+     • مهندسی که خط تولیدش خوابیده، فقط «موجود در انبار» را می‌خواهد.
+     • مدیر خریدی که بودجه می‌بندد، دقیقاً دنبال اقلام «دارای قیمت» است.
+     • کسی که پروژه‌ی آینده دارد، «سفارشی» هم برایش قابل قبول است.
+   یک فیلتر تک‌گزینه‌ای که همیشه همه چیز را نشان می‌دهد بی‌فایده است،
+   بنابراین هر گزینه فقط وقتی رندر می‌شود که واقعاً چیزی را کم کند. */
 const inStockCount = products.filter((p) => p.stockStatus === 'in_stock').length;
+const backorderCount = products.length - inStockCount;
 const rfqCount = products.filter((p) => p.buyMode === 'rfq').length;
+const pricedCount = products.filter((p) => computePrice(p).effective !== null).length;
+
+/** گزینه‌ای که همه‌ی محصولات یا هیچ‌کدام را می‌گیرد، چیزی را باریک نمی‌کند. */
+const narrows = (count: number) => count > 0 && count < products.length;
+
+const showInStock = narrows(inStockCount);
+const showBackorder = narrows(backorderCount);
+const showPriced = narrows(pricedCount);
+const showRfq = narrows(rfqCount);
+const hasStateFilter = showInStock || showBackorder;
+const hasBuyFilter = showPriced || showRfq;
 
 // یک فیلتر با کمتر از دو گزینه بی‌فایده است — هیچ چیزی را باریک نمی‌کند.
 const usefulBrands = activeBrands.length >= 2 ? activeBrands : [];
 const usefulSpecs = specFacets.filter((f) => (f.kind === 'range' ? f.min !== f.max : f.values.length >= 2));
 
-const hasAnyFilter = usefulBrands.length > 0 || usefulSpecs.length > 0 || inStockCount > 0;
+/* مشخصه‌هایی که برای این دسته تعریف شده‌اند ولی هنوز قابل فیلتر نیستند،
+   چون همه‌ی محصولات موجود یک مقدار دارند (یا مقدار ندارند).
+   این‌ها به‌عنوان فیلتر رندر نمی‌شوند — اما پنهان کردن کاملشان باعث شد
+   نوار فیلتر «ساده» به نظر برسد در حالی که معماری دولایه کامل بود.
+   یک خط توضیح، تفاوت «نداریم» و «هنوز داده‌اش را نداریم» را روشن می‌کند. */
+const pendingSpecs = specFacets.filter((f) => !usefulSpecs.includes(f)).map((f) => f.label);
+
+const hasAnyFilter = usefulBrands.length > 0 || usefulSpecs.length > 0 || hasStateFilter || hasBuyFilter;
 
 /** صفت‌های داده روی هر کارت — سمت کلاینت خوانده می‌شود. */
 export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
@@ -72,26 +100,46 @@ export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
       </div>
 
       <div class="divide-y divide-steel-100">
-        {/* ── لایه ۱: عمومی ── */}
-        <fieldset class="p-4">
-          <legend class="text-xs font-black text-steel-900 mb-2">وضعیت</legend>
-          {inStockCount > 0 && (
-            <label class="flex items-center gap-2 py-1.5 cursor-pointer">
-              <input type="checkbox" data-cat-stock class="w-4 h-4 accent-accent" />
-              <span class="text-sm text-steel-700">فقط موجود در انبار</span>
-              <span class="text-xs text-steel-600 tabular-nums mr-auto">{inStockCount}</span>
-            </label>
-          )}
-          {rfqCount > 0 && rfqCount < products.length && (
-            <label class="flex items-center gap-2 py-1.5 cursor-pointer">
-              <input type="checkbox" data-cat-cart class="w-4 h-4 accent-accent" />
-              <span class="text-sm text-steel-700">فقط قابل خرید آنلاین</span>
-              <span class="text-xs text-steel-600 tabular-nums mr-auto">
-                {products.length - rfqCount}
-              </span>
-            </label>
-          )}
-        </fieldset>
+        {/* ── لایه ۱: عمومی — یکسان در هر ۳۱ دسته ── */}
+        {hasStateFilter && (
+          <fieldset class="p-4">
+            <legend class="text-xs font-black text-steel-900 mb-2">وضعیت موجودی</legend>
+            {showInStock && (
+              <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+                <input type="checkbox" data-cat-stock class="w-4 h-4 accent-accent" />
+                <span class="text-sm text-steel-700">موجود در انبار</span>
+                <span class="text-xs text-steel-600 tabular-nums mr-auto">{inStockCount}</span>
+              </label>
+            )}
+            {showBackorder && (
+              <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+                <input type="checkbox" data-cat-backorder class="w-4 h-4 accent-accent" />
+                <span class="text-sm text-steel-700">سفارشی / تامین از کارخانه</span>
+                <span class="text-xs text-steel-600 tabular-nums mr-auto">{backorderCount}</span>
+              </label>
+            )}
+          </fieldset>
+        )}
+
+        {hasBuyFilter && (
+          <fieldset class="p-4">
+            <legend class="text-xs font-black text-steel-900 mb-2">نوع خرید</legend>
+            {showPriced && (
+              <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+                <input type="checkbox" data-cat-priced class="w-4 h-4 accent-accent" />
+                <span class="text-sm text-steel-700">دارای قیمت</span>
+                <span class="text-xs text-steel-600 tabular-nums mr-auto">{pricedCount}</span>
+              </label>
+            )}
+            {showRfq && (
+              <label class="flex items-center gap-2 py-1.5 cursor-pointer">
+                <input type="checkbox" data-cat-rfq class="w-4 h-4 accent-accent" />
+                <span class="text-sm text-steel-700">فقط استعلام قیمت</span>
+                <span class="text-xs text-steel-600 tabular-nums mr-auto">{rfqCount}</span>
+              </label>
+            )}
+          </fieldset>
+        )}
 
         {usefulBrands.length > 0 && (
           <fieldset class="p-4">
@@ -158,6 +206,17 @@ export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
             )}
           </fieldset>
         ))}
+
+        {/* مشخصه‌های تعریف‌شده‌ای که هنوز داده‌ی کافی برای فیلتر شدن ندارند. */}
+        {pendingSpecs.length > 0 && (
+          <div class="p-4 bg-steel-50">
+            <p class="text-[11px] text-steel-600 leading-5">
+              فیلتر تخصصی این دسته روی{' '}
+              <strong class="text-steel-800">{pendingSpecs.join('، ')}</strong>{' '}
+              تعریف شده و به‌محض ثبت این مشخصات برای چند قطعه، همین‌جا فعال می‌شود.
+            </p>
+          </div>
+        )}
       </div>
     </aside>
   )
@@ -178,7 +237,10 @@ export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
     const specBoxes = Array.from(root.querySelectorAll<HTMLInputElement>('[data-cat-spec]'));
     const ranges = Array.from(root.querySelectorAll<HTMLInputElement>('[data-cat-range]'));
     const stockBox = root.querySelector<HTMLInputElement>('[data-cat-stock]');
-    const cartBox = root.querySelector<HTMLInputElement>('[data-cat-cart]');
+    const backorderBox = root.querySelector<HTMLInputElement>('[data-cat-backorder]');
+    const pricedBox = root.querySelector<HTMLInputElement>('[data-cat-priced]');
+    const rfqBox = root.querySelector<HTMLInputElement>('[data-cat-rfq]');
+    const stateBoxes = [stockBox, backorderBox, pricedBox, rfqBox];
 
     /** اولین عدد داخل یک مقدار مشخصات — «۱۶ mm» → 16 */
     function num(raw: string): number | null {
@@ -206,8 +268,18 @@ export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
         let show = true;
 
         if (brands.length && !brands.includes(item.dataset.brand ?? '')) show = false;
-        if (show && stockBox?.checked && item.dataset.stock !== 'in_stock') show = false;
-        if (show && cartBox?.checked && item.dataset.buymode !== 'cart') show = false;
+
+        // درون هر گروه OR، بین گروه‌ها AND — همان قاعده‌ی فیلتر فاستد.
+        // انتخاب همزمان «موجود» و «سفارشی» یعنی هر دو، نه هیچ‌کدام.
+        if (show && (stockBox?.checked || backorderBox?.checked)) {
+          const inStock = item.dataset.stock === 'in_stock';
+          if (!((stockBox?.checked && inStock) || (backorderBox?.checked && !inStock))) show = false;
+        }
+
+        if (show && (pricedBox?.checked || rfqBox?.checked)) {
+          const priced = item.dataset.priced === '1';
+          if (!((pricedBox?.checked && priced) || (rfqBox?.checked && !priced))) show = false;
+        }
 
         if (show) {
           for (const [id, values] of specGroups) {
@@ -243,7 +315,7 @@ export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
       if (emptyEl) emptyEl.hidden = visible !== 0;
     }
 
-    for (const el of [...brandBoxes, ...specBoxes, stockBox, cartBox]) {
+    for (const el of [...brandBoxes, ...specBoxes, ...stateBoxes]) {
       el?.addEventListener('change', apply);
     }
     for (const range of ranges) {
@@ -256,8 +328,7 @@ export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
 
     root.querySelector<HTMLElement>('[data-cat-clear]')?.addEventListener('click', () => {
       for (const b of [...brandBoxes, ...specBoxes]) b.checked = false;
-      if (stockBox) stockBox.checked = false;
-      if (cartBox) cartBox.checked = false;
+      for (const b of stateBoxes) if (b) b.checked = false;
       for (const r of ranges) {
         r.value = r.max;
         const out = root.querySelector<HTMLElement>(`[data-range-out="${r.dataset.catRange}"]`);

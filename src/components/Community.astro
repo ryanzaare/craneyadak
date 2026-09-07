@@ -40,6 +40,9 @@ const reviews = entries.filter((e) => e.type === 'review');
 const answered = questions.filter((q) => q.answer);
 const canSubmit = Boolean(wpBase && productId);
 
+/** هیچ محتوایی هنوز ثبت نشده — حالت پیش‌فرض هر محصول تازه. */
+const isEmpty = questions.length === 0 && fitments.length === 0 && reviews.length === 0;
+
 const faDate = (iso: string | null) => {
   if (!iso) return '';
   try {
@@ -51,16 +54,27 @@ const faDate = (iso: string | null) => {
 ---
 
 <section class={`bg-white border-t border-steel-300 ${className}`} aria-labelledby="community-heading">
+  {/* ⚠️ چیدمان با حجم محتوا عوض می‌شود.
+      وقتی هنوز هیچ پرسش، گزارش یا نظری ثبت نشده، ستون محتوا فقط دو
+      جعبه‌ی «هنوز چیزی ثبت نشده» دارد و بقیه‌اش سفید می‌ماند — در حالی
+      که فرم در ستون مقابل فشرده شده است. صفحه‌ی محصولِ تازه‌منتشرشده
+      همیشه در همین حالت است، یعنی این حالتِ استثنا نیست، حالتِ پیش‌فرض
+      است و باید مثل یک طراحی عمدی به نظر برسد.
+      در حالت خالی: یک ستون، فرم در وسط، بدون فضای مرده. */}
+
   <div class="max-w-7xl mx-auto px-4 py-10">
     <h2 id="community-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-1">
       پرسش‌ها و تجربه‌ی کاربران
     </h2>
     <p class="text-steel-600 leading-7 mb-6 pb-4 border-b border-steel-300">
-      پرسش فنی درباره‌ی سازگاری این قطعه بپرسید، یا اگر آن را نصب کرده‌اید تجربه‌تان را ثبت کنید.
+      پرسش فنی درباره‌ی سازگاری این قطعه بپرسید، تجربه‌ی نصب خود را ثبت کنید، یا نظرتان را بنویسید.
     </p>
 
-    <div class="grid lg:grid-cols-[minmax(0,1fr)_22rem] gap-8 lg:gap-10 items-start">
-      <div class="min-w-0 space-y-8">
+    <div class:list={[
+      'gap-8 lg:gap-10 items-start',
+      isEmpty ? 'max-w-xl mx-auto' : 'grid lg:grid-cols-[minmax(0,1fr)_22rem]',
+    ]}>
+      <div class:list={['min-w-0 space-y-8', isEmpty && 'hidden']}>
         {/* ───────────────── پرسش و پاسخ فنی ───────────────── */}
         <div>
           <h3 class="text-lg font-black text-steel-900 mb-3 flex items-center gap-2">
@@ -175,63 +189,93 @@ const faDate = (iso: string | null) => {
         )}
       </div>
 
-      {/* ───────────────── فرم‌های ارسال ───────────────── */}
-      <aside class="lg:sticky lg:top-24 space-y-4">
+      {/* ───────────────── فرم ارسال (یک فرم، سه نیت) ─────────────────
+          ⚠️ بازطراحی — سه ایراد هم‌زمان رفع شد:
+
+          ۱) سه جعبه‌ی جدا روی هم چیده شده بود و ستون کناری را شلوغ
+             می‌کرد، در حالی که ستون مقابل خالی می‌ماند.
+          ۲) راهی برای ثبت «نظر ساده» وجود نداشت. کسی که قطعه را نصب
+             نکرده اما می‌خواست نظر بدهد، هیچ جایی نداشت — با این‌که
+             اندپوینت /review از قبل در افزونه ساخته شده بود و بی‌استفاده
+             مانده بود.
+          ۳) عنوان «مدل جرثقیل» گمراه‌کننده بود.
+
+          حالا یک فرم با سه نیت: پرسش، تجربه‌ی نصب، نظر کلی. فیلدهای
+          غیرمرتبط با نیتِ انتخاب‌شده پنهان و از اعتبارسنجی خارج می‌شوند،
+          و اندپوینت هم بر همان اساس عوض می‌شود. */}
+      <aside class:list={[!isEmpty && 'lg:sticky lg:top-24']}>
         {canSubmit ? (
-          <>
-            <form
-              class="cy-community-form bg-steel-50 border border-steel-300 rounded-lg p-4"
-              data-endpoint={`${wpBase}/wp-json/crane-yadak/v1/question`}
-              data-post-id={productId}
-            >
-              <h3 class="font-black text-steel-900 mb-1">پرسش فنی بپرسید</h3>
-              <p class="text-xs text-steel-600 leading-6 mb-3">
-                کارشناس فنی پاسخ می‌دهد و پرسش و پاسخ روی همین صفحه منتشر می‌شود.
-              </p>
+          <form
+            class="cy-community-form bg-steel-50 border border-steel-300 rounded-lg p-4"
+            data-endpoint-base={`${wpBase}/wp-json/crane-yadak/v1`}
+            data-post-id={productId}
+          >
+            <h3 class="font-black text-steel-900 mb-3">مشارکت شما</h3>
 
-              <label class="cyh-honeypot" aria-hidden="true">
-                وب‌سایت <input type="text" name="website" tabindex="-1" autocomplete="off" />
-              </label>
+            {/* انتخاب نیت — رادیو، نه تب: بدون جاوااسکریپت هم قابل استفاده
+                است و صفحه‌خوان گروه را درست اعلام می‌کند. */}
+            <fieldset class="mb-3">
+              <legend class="sr-only">نوع مشارکت</legend>
+              <div class="grid grid-cols-3 gap-1 bg-white border border-steel-300 rounded-md p-1">
+                {[
+                  { v: 'question', label: 'پرسش فنی' },
+                  { v: 'fitment', label: 'تجربه‌ی نصب' },
+                  { v: 'review', label: 'نظر کلی' },
+                ].map((opt, i) => (
+                  <label class="cy-intent-tab relative">
+                    <input
+                      type="radio"
+                      name="intent"
+                      value={opt.v}
+                      checked={i === 0}
+                      class="peer sr-only"
+                    />
+                    <span class="block text-center text-xs font-bold py-2 rounded cursor-pointer text-steel-700 peer-checked:bg-accent peer-checked:text-white peer-focus-visible:ring-4 peer-focus-visible:ring-accent/40 transition-colors">
+                      {opt.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
-              <div class="space-y-2">
-                <input type="text" name="name" required placeholder="نام شما" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
-                <input type="text" name="crane_model" placeholder="مدل جرثقیل (اختیاری)" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
-                <textarea name="body" required rows="3" placeholder="پرسش فنی خود را بنویسید…" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40 resize-y"></textarea>
+            <p class="cy-intent-hint text-xs text-steel-600 leading-6 mb-3"></p>
+
+            <label class="cyh-honeypot" aria-hidden="true">
+              وب‌سایت <input type="text" name="website" tabindex="-1" autocomplete="off" />
+            </label>
+
+            <div class="space-y-2">
+              <input type="text" name="name" required placeholder="نام شما" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+
+              {/* «دستگاه» به‌جای «جرثقیل»:
+                  این قطعه ممکن است روی جرثقیل سقفی، دروازه‌ای، بازویی یا
+                  یک بالابر مستقل نصب شود. «جرثقیل» کاربرِ بالابرِ مستقل را
+                  سردرگم می‌کرد. عمداً «محصول» هم نشد — مدلِ محصول از روی
+                  همین صفحه معلوم است؛ چیزی که کارشناس برای پاسخ لازم دارد
+                  مدلِ *دستگاهِ میزبان* است. */}
+              <input type="text" name="crane_model" data-field="machine" placeholder="مدل و برند دستگاه (مثلاً دماگ DH ۵ تن)" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+
+              <input type="number" name="service_months" data-field="months" min="0" placeholder="چند ماه کار کرده؟" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+
+              <div data-field="rating" hidden>
+                <label class="block text-xs font-bold text-steel-700 mb-1" for="cy-rating">امتیاز شما</label>
+                <select id="cy-rating" name="rating" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40">
+                  <option value="5">۵ — عالی</option>
+                  <option value="4">۴ — خوب</option>
+                  <option value="3">۳ — متوسط</option>
+                  <option value="2">۲ — ضعیف</option>
+                  <option value="1">۱ — بد</option>
+                </select>
               </div>
 
-              <button type="submit" class="w-full mt-3 bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
-                ارسال پرسش
-              </button>
-              <p class="cy-form-msg text-xs leading-6 mt-2" role="status" aria-live="polite"></p>
-            </form>
+              <textarea name="body" required rows="3" class="cy-body w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40 resize-y"></textarea>
+            </div>
 
-            <form
-              class="cy-community-form bg-white border-2 border-accent/30 rounded-lg p-4"
-              data-endpoint={`${wpBase}/wp-json/crane-yadak/v1/fitment`}
-              data-post-id={productId}
-            >
-              <h3 class="font-black text-steel-900 mb-1">این قطعه را نصب کرده‌اید؟</h3>
-              <p class="text-xs text-steel-600 leading-6 mb-3">
-                ثبت مدل دستگاه و مدت کارکرد، برای خریدار بعدی از هر توضیحی مفیدتر است.
-              </p>
-
-              <label class="cyh-honeypot" aria-hidden="true">
-                وب‌سایت <input type="text" name="website" tabindex="-1" autocomplete="off" />
-              </label>
-
-              <div class="space-y-2">
-                <input type="text" name="name" required placeholder="نام شما" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
-                <input type="text" name="crane_model" required placeholder="مدل و برند جرثقیل" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
-                <input type="number" name="service_months" min="0" placeholder="چند ماه کار کرده؟" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40" />
-                <textarea name="body" required rows="3" placeholder="تجربه‌ی نصب و کارکرد…" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40 resize-y"></textarea>
-              </div>
-
-              <button type="submit" class="w-full mt-3 bg-steel-900 text-white py-3 rounded-md font-black hover:bg-steel-800 transition-colors focus:outline-none focus:ring-4 focus:ring-steel-600/40 min-h-[48px]">
-                ثبت گزارش نصب
-              </button>
-              <p class="cy-form-msg text-xs leading-6 mt-2" role="status" aria-live="polite"></p>
-            </form>
-          </>
+            <button type="submit" class="cy-submit w-full mt-3 bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+              ارسال
+            </button>
+            <p class="cy-form-msg text-xs leading-6 mt-2" role="status" aria-live="polite"></p>
+          </form>
         ) : (
           /* بدون آدرس وردپرس، فرم رندر نمی‌شود — فرمی که به هیچ‌جا ارسال
              نمی‌کند، بدتر از نبودن فرم است چون کاربر فکر می‌کند پیامش
@@ -258,12 +302,19 @@ const faDate = (iso: string | null) => {
 
       const msg = form.querySelector<HTMLElement>('.cy-form-msg');
       const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
-      const endpoint = form.dataset.endpoint;
+      // اندپوینت از روی نیتِ انتخاب‌شده ساخته می‌شود، نه از یک صفت ثابت.
+      const base = form.dataset.endpointBase;
+      const intent = form.querySelector<HTMLInputElement>('input[name="intent"]:checked')?.value ?? 'question';
+      const endpoint = base ? `${base}/${intent}` : null;
       if (!endpoint || !msg || !button) return;
 
       const payload: Record<string, string> = { post_id: form.dataset.postId ?? '' };
       for (const [key, value] of new FormData(form).entries()) {
-        payload[key] = String(value);
+        // `intent` فقط برای انتخاب اندپوینت است و نباید به سرور برود.
+        if (key === 'intent') continue;
+        const text = String(value);
+        // فیلد خالی اصلاً ارسال نمی‌شود تا در وردپرس متای تهی ساخته نشود.
+        if (text.trim() !== '') payload[key] = text;
       }
 
       button.disabled = true;
@@ -296,5 +347,75 @@ const faDate = (iso: string | null) => {
         button.textContent = original;
       }
     });
+  });
+
+  /* ───────────────── تعویض نیت فرم ─────────────────
+     هر نیت فیلدهای خودش را دارد. فیلدِ پنهان باید هم از دید و هم از
+     اعتبارسنجی خارج شود؛ اگر فقط پنهان شود و `required` بماند، مرورگر
+     روی یک فیلد نامرئی خطا می‌دهد و کاربر هیچ‌وقت نمی‌فهمد چرا فرم
+     ارسال نمی‌شود. */
+  const INTENTS: Record<string, {
+    hint: string;
+    placeholder: string;
+    submit: string;
+    show: string[];
+    requireMachine: boolean;
+  }> = {
+    question: {
+      hint: 'کارشناس فنی پاسخ می‌دهد و پرسش و پاسخ روی همین صفحه منتشر می‌شود.',
+      placeholder: 'پرسش فنی خود را بنویسید…',
+      submit: 'ارسال پرسش',
+      show: ['machine'],
+      requireMachine: false,
+    },
+    fitment: {
+      hint: 'ثبت مدل دستگاه و مدت کارکرد، برای خریدار بعدی از هر توضیحی مفیدتر است.',
+      placeholder: 'تجربه‌ی نصب و کارکرد…',
+      submit: 'ثبت گزارش نصب',
+      show: ['machine', 'months'],
+      requireMachine: true,
+    },
+    review: {
+      hint: 'نظرتان درباره‌ی این قطعه — حتی اگر آن را نصب نکرده‌اید.',
+      placeholder: 'نظر خود را بنویسید…',
+      submit: 'ثبت نظر',
+      show: ['rating'],
+      requireMachine: false,
+    },
+  };
+
+  document.querySelectorAll<HTMLFormElement>('.cy-community-form').forEach((form) => {
+    const hint = form.querySelector<HTMLElement>('.cy-intent-hint');
+    const body = form.querySelector<HTMLTextAreaElement>('.cy-body');
+    const submit = form.querySelector<HTMLButtonElement>('.cy-submit');
+    const machine = form.querySelector<HTMLInputElement>('[data-field="machine"]');
+
+    function apply() {
+      const value = form.querySelector<HTMLInputElement>('input[name="intent"]:checked')?.value ?? 'question';
+      const config = INTENTS[value];
+      if (!config) return;
+
+      for (const field of ['machine', 'months', 'rating']) {
+        const el = form.querySelector<HTMLElement>(`[data-field="${field}"]`);
+        if (!el) continue;
+        const visible = config.show.includes(field);
+        el.hidden = !visible;
+        // ورودی پنهان از ارسال هم خارج می‌شود تا داده‌ی بی‌ربط نرود.
+        el.querySelectorAll?.('input, select')?.forEach?.((c) => {
+          (c as HTMLInputElement).disabled = !visible;
+        });
+        if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) el.disabled = !visible;
+      }
+
+      if (machine) machine.required = config.requireMachine;
+      if (hint) hint.textContent = config.hint;
+      if (body) body.placeholder = config.placeholder;
+      if (submit) submit.textContent = config.submit;
+    }
+
+    form.querySelectorAll<HTMLInputElement>('input[name="intent"]').forEach((radio) => {
+      radio.addEventListener('change', apply);
+    });
+    apply();
   });
 </script>

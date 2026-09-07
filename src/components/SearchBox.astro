@@ -15,8 +15,7 @@
 // کلیدهای جهت‌دار. یک فهرست پیشنهاد که فقط با ماوس کار کند، برای کاربر
 // کیبورد و اسکرین‌ریدر عملاً وجود ندارد.
 // ---------------------------------------------------------------------------
-import { buildSuggestIndex } from '../lib/search-index';
-import { getAllProducts } from '../lib/wp';
+import { buildStructuralIndex } from '../lib/search-index';
 
 interface Props {
   id?: string;
@@ -35,16 +34,20 @@ const {
   class: className = '',
 } = Astro.props;
 
-// در زمان build سریال می‌شود و به‌صورت JSON داخل صفحه می‌نشیند.
-//
-// محصولات هم وارد فهرست می‌شوند — بدون این، تایپ‌کردن یک کد فنی مثل
-// «MT318» هیچ نتیجه‌ای نمی‌داد، که بدترین حالت ممکن بود: کاربری که کد
-// فنی در دست دارد، آماده‌ترین خریدار است.
-//
-// getAllProducts در زمان build کش می‌شود، پس چند بار صدا زدن آن در
-// صفحات مختلف هزینه‌ی شبکه‌ی اضافه ندارد.
-const products = await getAllProducts();
-const index = buildSuggestIndex(products);
+/* ⚠️ فقط لایه‌ی ساختاری inline می‌شود — نه محصولات.
+   این کامپوننت در هدر است و روی هر صفحه رندر می‌شود. قبلاً کل کاتالوگ
+   (نام، کد فنی و همه‌ی کدهای معادل OEM هر محصول) داخل HTML هر صفحه
+   سریال می‌شد. با رشد کاتالوگ، این به صدها کیلوبایت روی هر بازدید
+   تبدیل می‌شد.
+
+   حالا:
+     • این آرایه = ۷ سیلو + ۳۱ دسته + ~۱۹ برند. اندازه‌اش ثابت است و
+       با رشد کاتالوگ بزرگ نمی‌شود. از اولین کاراکتر بدون شبکه جواب
+       می‌دهد — همان هدف اصلی این کامپوننت.
+     • محصولات از `/search-index.json` و فقط هنگام اولین تعامل کاربر
+       با کادر جستجو واکشی می‌شوند.
+   (توضیح کامل در src/pages/search-index.json.ts) */
+const index = buildStructuralIndex();
 const listId = `${id}-listbox`;
 ---
 
@@ -155,15 +158,22 @@ const listId = `${id}-listbox`;
         return kept.length ? kept : all;
       }
 
+      // تطبیق بی‌فاصله: «رکتی فایر» و «رکتیفایر» یک چیزند.
+      const tight = (x) => x.replace(/\s+/g, '');
+
       function score(entry, q) {
         const ws = words(q);
         if (!ws.length) return 0;
+        const qt = tight(q);
         let phrase = 0;
         for (const hay of entry.haystack) {
           if (!hay) continue;
           if (hay === q) phrase = Math.max(phrase, 100);
           else if (hay.startsWith(q)) phrase = Math.max(phrase, 85);
           else if (hay.includes(q)) phrase = Math.max(phrase, 65);
+          else if (qt !== q && (hay === qt || hay.startsWith(qt) || hay.includes(qt))) {
+            phrase = Math.max(phrase, hay === qt ? 100 : 65);
+          }
         }
         let sum = 0;
         for (const qw of ws) {
@@ -269,8 +279,51 @@ const listId = `${id}-listbox`;
         el.scrollIntoView({ block: 'nearest' });
       }
 
-      input.addEventListener('input', () => render(suggest(input.value, 7), input.value));
+      /* ───────── واکشی تنبل فهرست محصولات ─────────
+         لایه‌ی ساختاری (دسته/برند/سیلو) از قبل inline است و فوراً جواب
+         می‌دهد. محصولات فقط وقتی دانلود می‌شوند که کاربر واقعاً سراغ
+         جستجو بیاید. یک‌بار برای کل نشست — نه یک‌بار در هر صفحه.
+
+         ⚠️ اگر واکشی شکست بخورد، جستجو *کار می‌کند*، فقط محدود به
+         دسته‌ها و برندها. شکست شبکه نباید کادر جستجو را بشکند. */
+      let productsLoaded = false;
+      let loadingProducts = null;
+
+      function loadProducts() {
+        if (productsLoaded) return Promise.resolve();
+        if (loadingProducts) return loadingProducts;
+
+        loadingProducts = fetch('/search-index.json')
+          .then((res) => (res.ok ? res.json() : []))
+          .then((list) => {
+            if (Array.isArray(list) && list.length) {
+              // محصولات جلوتر از ساختار می‌آیند: در تساوی امتیاز، یک
+              // قطعه‌ی واقعیِ قابل سفارش بر صفحه‌ی دسته اولویت دارد.
+              index.unshift(...list);
+            }
+            productsLoaded = true;
+          })
+          .catch(() => {
+            // بی‌صدا نیست، اما بیلد و جستجو را هم نمی‌شکند.
+            productsLoaded = true;
+          });
+
+        return loadingProducts;
+      }
+
+      input.addEventListener('input', () => {
+        render(suggest(input.value, 7), input.value);
+        // پس از رسیدن محصولات، همان پرس‌وجو دوباره امتیازدهی می‌شود تا
+        // کاربر بدون تایپ دوباره، نتیجه‌ی کامل را ببیند.
+        loadProducts().then(() => {
+          if (document.activeElement === input && input.value.trim()) {
+            render(suggest(input.value, 7), input.value);
+          }
+        });
+      });
+
       input.addEventListener('focus', () => {
+        loadProducts();
         if (input.value.trim()) render(suggest(input.value, 7), input.value);
       });
 

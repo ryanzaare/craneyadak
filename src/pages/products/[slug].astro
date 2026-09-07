@@ -9,7 +9,7 @@
 //     «آیا این همان قطعه است؟». به همین دلیل کد فنی، کدهای معادل و
 //     مدل‌های سازگار بالاتر از هر چیز دیگری و در دسترس فوری‌اند.
 //   • خرید صنعتی چندنفره است: مهندس نت پیدا می‌کند، مدیر خرید تایید
-//     می‌کند. پس «ارسال برای همکار» و «چاپ مشخصات» ابزار واقعی کارند،
+//     می‌کند. پس «اشتراک گذاری» و «چاپ مشخصات» ابزار واقعی کارند،
 //     نه تزئین.
 //   • او زیر فشار توقف خط تولید است. نوار اقدام چسبان موبایل و کپی
 //     یک‌کلیکی کد فنی، اصطکاک را در همان لحظه کم می‌کنند.
@@ -23,8 +23,8 @@ import ProductCard from '../../components/ProductCard.astro';
 import ProductGallery from '../../components/ProductGallery.astro';
 import PartNumber from '../../components/PartNumber.astro';
 import TrustBadges from '../../components/TrustBadges.astro';
-import PriceHistory from '../../components/PriceHistory.astro';
 import Community from '../../components/Community.astro';
+import QuoteBasket from '../../components/QuoteBasket.astro';
 import { qaPageJsonLd, aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
 import { autolinkHtml } from '../../lib/autolink';
 import { SITE } from '../../data/site';
@@ -123,7 +123,6 @@ const jsonLd = {
 };
 
 const hasFitment = product.oemCrossReference.length > 0 || product.compatibleModels.length > 0;
-const canBuyOnline = product.buyMode === 'cart' && price.hasPrice;
 const heroImage = product.images[0] ?? null;
 
 const stockLabel: Record<CraneProduct['stockStatus'], string | null> = {
@@ -137,6 +136,15 @@ const stockLabel: Record<CraneProduct['stockStatus'], string | null> = {
 const modifiedDate = product.modified
   ? new Date(product.modified).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' })
   : null;
+import { getContact } from '../../lib/site-options';
+
+/* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
+   قبلاً انتهای فرontmatter بودند و کدِ بالاتر که از آن‌ها استفاده
+   می‌کرد با «Cannot access before initialization» می‌شکست:
+   `const` هویست می‌شود اما تا نقطه‌ی اعلان در ناحیه‌ی مرده‌ی
+   زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
+const contact = await getContact();
+
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd} ogImage={heroImage?.url} noindex={product.isDemo}>
@@ -231,7 +239,7 @@ const modifiedDate = product.modified
               فرایندی روبه‌روست. ابهام بین «خرید» و «استعلام» مکث ایجاد
               می‌کند، و مکث در خرید صنعتی یعنی رفتن سراغ تامین‌کننده‌ی بعدی. */}
           <p class="text-xs font-black tracking-wider text-steel-600 mb-3">
-            {canBuyOnline ? 'خرید آنلاین' : 'استعلام قیمت و پیش‌فاکتور رسمی'}
+            استعلام قیمت و پیش‌فاکتور رسمی
           </p>
 
           {/* قلاب‌های تبدیل — لحظه‌ی تصمیم.
@@ -257,54 +265,40 @@ const modifiedDate = product.modified
           </ul>
           <PriceTag price={price} size="page" />
 
+          {/* ⚠️ «افزودن به سبد خرید» و «خرید آنلاین» حذف شدند.
+              آن دکمه به هیچ‌جا وصل نبود و کاری نمی‌کرد. دو راه وجود داشت:
+              ساختن تسویه‌حساب کامل، یا هم‌راستا کردن دکمه با فرایند واقعی
+              فروش. دومی انتخاب شد چون درگاه پرداخت و نماد اعتماد هنوز
+              وجود ندارند، و مهم‌تر: مدیرعامل قیمت‌ها را ناپایدار می‌داند
+              (به همین دلیل نمودار قیمت حذف شد). فروش قطعی با قیمت ثابت
+              با همان تشخیص در تناقض است.
+              قیمت — اگر ثبت شده باشد — همچنان بالا نمایش داده می‌شود، اما
+              به‌عنوان مرجع، نه تعهد. */}
           <div class="flex flex-col sm:flex-row gap-3 mt-6">
-            {canBuyOnline ? (
-              <>
-                <div class="flex items-stretch gap-2 shrink-0">
-                  <label for="qty" class="sr-only">تعداد</label>
-                  <input
-                    id="qty"
-                    type="number"
-                    min="1"
-                    value="1"
-                    inputmode="numeric"
-                    class="w-20 text-center bg-white border border-gray-200 rounded-xl font-bold text-crane-navy min-h-[52px] focus:outline-none focus:ring-4 focus:ring-crane-orange/30"
-                  />
-                </div>
-                <button
-                  type="button"
-                  data-add-to-cart
-                  data-slug={product.slug}
-                  class="flex-1 bg-crane-orange text-white px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px]"
-                >
-                  افزودن به سبد خرید
-                </button>
-                <a
-                  href={inquiryHref(product)}
-                  class="flex-1 bg-white border-2 border-crane-navy text-crane-navy text-center px-6 py-4 rounded-xl font-black hover:bg-crane-navy hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-crane-navy/30 min-h-[52px] flex items-center justify-center"
-                >
-                  پیش‌فاکتور رسمی
-                </a>
-              </>
-            ) : (
-              <>
-                <a
-                  href={inquiryHref(product)}
-                  class="flex-1 bg-crane-orange text-white text-center px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px] flex items-center justify-center"
-                >
-                  استعلام قیمت و پیش‌فاکتور
-                </a>
-                <a
-                  href={`https://wa.me/${SITE.whatsapp.replace('+', '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="flex-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-center px-6 py-4 rounded-xl font-black hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center"
-                >
-                  ارسال عکس قطعه در واتساپ
-                </a>
-              </>
-            )}
+            <button
+              type="button"
+              data-quote-add={product.slug}
+              data-quote-name={product.name}
+              data-quote-sku={product.sku ?? ''}
+              data-quote-mode={product.buyMode === 'cart' && price.hasPrice ? 'cart' : 'rfq'}
+              class="flex-1 bg-crane-orange text-white px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px]"
+            >
+              <span data-quote-label>افزودن به سبد استعلام</span>
+            </button>
+            <a
+              href={contact.whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-center px-6 py-4 rounded-xl font-black hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center"
+            >
+              ارسال عکس قطعه در واتساپ
+            </a>
           </div>
+
+          <p class="text-xs text-steel-600 leading-6 mt-3">
+            می‌توانید چند قطعه را در سبد جمع کنید و یک درخواست پیش‌فاکتور بفرستید —
+            بدون ثبت‌نام و بدون رمز عبور.
+          </p>
 
           {/* بلوک اطمینان — دقیقاً کنار دکمه، جایی که تردید خرید رخ می‌دهد. */}
           <div class="mt-5 pt-4 border-t border-steel-300">
@@ -333,9 +327,9 @@ const modifiedDate = product.modified
               ترجیح می‌دهد همان لحظه تماس بگیرد. پنهان‌کردن شماره پشت یک
               صفحه‌ی دیگر، همان‌جا لید را از دست می‌دهد. */}
           <div class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-6 pt-5 border-t border-gray-200 text-sm">
-            <a href={`tel:${SITE.phone}`} class="inline-flex items-center gap-2 font-bold text-crane-navy hover:text-crane-orange transition-colors">
+            <a href={contact.telHref} class="inline-flex items-center gap-2 font-bold text-crane-navy hover:text-crane-orange transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-              <span dir="ltr">{SITE.phoneDisplay}</span>
+              <span dir="ltr">{contact.phoneDisplay}</span>
             </a>
             <span class="text-gray-300" aria-hidden="true">|</span>
             <span class="text-gray-600">پاسخ‌گویی در ساعات کاری</span>
@@ -352,7 +346,7 @@ const modifiedDate = product.modified
             class="inline-flex items-center gap-2 text-sm font-bold text-crane-navy bg-white border border-gray-200 rounded-xl px-4 py-2.5 hover:border-crane-orange hover:text-crane-orange transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/30"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342a3 3 0 100-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684zm0-12.632a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z" /></svg>
-            <span id="share-label">ارسال برای همکار</span>
+            <span id="share-label">اشتراک گذاری</span>
           </button>
           <button
             type="button"
@@ -459,14 +453,6 @@ const modifiedDate = product.modified
   )}
 
   {/* ============================ توضیحات ============================ */}
-  {/* روند قیمت — بعد از مشخصات، پیش از توضیحات.
-      در اقتصاد تورمی، «الان بخرم یا صبر کنم؟» یک سوال واقعی خرید است. */}
-  <section class="bg-steel-50 px-4 py-9 border-b border-steel-100 print:hidden" aria-label="روند قیمت">
-    <div class="max-w-7xl mx-auto max-w-3xl">
-      <PriceHistory history={product.priceHistory} currentPrice={price.effective} />
-    </div>
-  </section>
-
   {product.bodyHtml && (
     <section class="bg-gray-50 px-4 py-9 border-b border-gray-100 print:hidden" aria-labelledby="description-heading">
       <div class="max-w-4xl mx-auto">
@@ -486,16 +472,27 @@ const modifiedDate = product.modified
     </section>
   )}
 
+  {/* ===================== پرسش، پاسخ و تجربه‌ی کاربران ===================== */}
+  {/* ⚠️ باگی که اینجا رفع شد — علت «نبودن بخش نظرات» روی سایت:
+      این کامپوننت داخل شرط `related.length > 0` قرار گرفته بود، یعنی
+      بخش پرسش و پاسخ فقط وقتی رندر می‌شد که *محصول مرتبط* وجود داشته
+      باشد. با دو محصول در پایگاه داده که هم‌دسته نبودند، `related`
+      همیشه خالی بود و کل بخش اجتماعی هرگز روی صفحه نمی‌آمد.
+
+      این دو چیز هیچ ربطی به هم ندارند: پرسش کاربر درباره‌ی این قطعه
+      وابسته به وجود قطعه‌ی مشابه نیست. حالا مستقل رندر می‌شود و فرم
+      ثبت پرسش حتی روی محصولی که هنوز هیچ پرسشی ندارد هم دیده می‌شود —
+      که دقیقاً همان جایی است که اولین پرسش باید بتواند ثبت شود. */}
+  <Community
+    entries={product.community}
+    productId={product.wpId}
+    productName={product.name}
+    wpBase={wpBase}
+    class="print:hidden"
+  />
+
   {/* ========================= محصولات مرتبط ========================= */}
   {related.length > 0 && (
-    <Community
-      entries={product.community}
-      productId={product.wpId}
-      productName={product.name}
-      wpBase={wpBase}
-      class="print:hidden"
-    />
-
     <section class="bg-white px-4 py-9 print:hidden" aria-labelledby="related-heading">
       <div class="max-w-7xl mx-auto">
         <h2 id="related-heading" class="text-xl md:text-xl font-black text-steel-900 mb-5">قطعات مرتبط</h2>
@@ -523,14 +520,16 @@ const modifiedDate = product.modified
         href={inquiryHref(product)}
         class="bg-crane-orange text-white px-6 py-3 rounded-xl font-black text-sm shrink-0 min-h-[48px] flex items-center focus:outline-none focus:ring-4 focus:ring-crane-orange/40"
       >
-        {canBuyOnline ? 'پیش‌فاکتور' : 'استعلام قیمت'}
+        استعلام قیمت
       </a>
     </div>
   </div>
+
+  <QuoteBasket wpBase={wpBase} />
 </Layout>
 
 <script>
-  // ---------------- ارسال برای همکار ----------------
+  // ---------------- اشتراک گذاری ----------------
   // خرید صنعتی چندنفره است: مهندس نت قطعه را پیدا می‌کند، مدیر خرید تایید
   // می‌کند. Web Share API روی موبایل مستقیماً واتساپ/تلگرام را باز می‌کند —
   // همان کانالی که این انتقال واقعاً در آن اتفاق می‌افتد. روی دسکتاپ به
@@ -555,7 +554,7 @@ const modifiedDate = product.modified
     try {
       await navigator.clipboard.writeText(url);
       if (shareLabel) shareLabel.textContent = 'لینک کپی شد ✓';
-      setTimeout(() => { if (shareLabel) shareLabel.textContent = 'ارسال برای همکار'; }, 2000);
+      setTimeout(() => { if (shareLabel) shareLabel.textContent = 'اشتراک گذاری'; }, 2000);
     } catch {
       if (shareLabel) shareLabel.textContent = 'کپی نشد';
     }

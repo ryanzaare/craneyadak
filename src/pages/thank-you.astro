@@ -10,6 +10,19 @@
 // اما مسیرهای بازگشت معتبر برای عبور Link Equity دارد.
 import Layout from '../layouts/Layout.astro';
 import { SITE } from '../data/site';
+import { getContact, getSiteOptions } from '../lib/site-options';
+
+/* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
+   قبلاً انتهای فرontmatter بودند و کدِ بالاتر که از آن‌ها استفاده
+   می‌کرد با «Cannot access before initialization» می‌شکست:
+   `const` هویست می‌شود اما تا نقطه‌ی اعلان در ناحیه‌ی مرده‌ی
+   زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
+const contact = await getContact();
+const social = (await getSiteOptions()).social;
+
+/* کانال‌های تماس از وردپرس. هر دکمه فقط وقتی رندر می‌شود که مقدارش
+   واقعاً ثبت شده باشد — دکمه‌ای که به هیچ‌جا نمی‌رود بدتر از نبودش است. */
+
 
 const title = `درخواست شما ثبت شد | ${SITE.name}`;
 // نکته صداقت داده: ادعای «حداکثر ۲ ساعت کاری» یک SLA مشخص است که تا
@@ -31,18 +44,26 @@ const description = 'درخواست استعلام قیمت شما با موفق
         از تماس شما با <strong class="text-crane-navy">{SITE.name}</strong> سپاسگزاریم. کارشناسان واحد فروش و نت درخواست شما را بررسی و
         <strong class="text-crane-navy"> در اولین فرصت کاری</strong> با شما تماس خواهند گرفت.
       </p>
+      {(contact.whatsappHref || social.telegram) && (
       <p class="text-gray-600 text-sm leading-7 mb-10">
-        برای پیگیری فوری‌تر یا ارسال عکس قطعه، می‌توانید مستقیماً از طریق واتساپ یا تلگرام هم با ما در ارتباط باشید.
+        برای پیگیری فوری‌تر یا ارسال عکس قطعه، می‌توانید مستقیماً از طریق پیام‌رسان هم با ما در ارتباط باشید.
       </p>
+      )}
 
+      {(contact.whatsappHref || social.telegram) && (
       <div class="flex flex-wrap justify-center gap-4 mb-12">
-        <a href={`https://wa.me/${SITE.whatsapp.replace('+', '')}`} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 px-6 py-3 rounded-full font-bold text-sm transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30">
+        {contact.whatsappHref && (
+        <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 px-6 py-3 rounded-full font-bold text-sm transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30">
           پیگیری در واتساپ
         </a>
-        <a href={`https://t.me/${SITE.telegram}`} target="_blank" rel="noopener noreferrer" class="bg-sky-50 hover:bg-sky-500 hover:text-white text-sky-700 px-6 py-3 rounded-full font-bold text-sm transition-colors focus:outline-none focus:ring-4 focus:ring-sky-500/30">
+        )}
+        {social.telegram && (
+        <a href={social.telegram} target="_blank" rel="noopener noreferrer" class="bg-sky-50 hover:bg-sky-500 hover:text-white text-sky-700 px-6 py-3 rounded-full font-bold text-sm transition-colors focus:outline-none focus:ring-4 focus:ring-sky-500/30">
           پیگیری در تلگرام
         </a>
+        )}
       </div>
+      )}
 
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
         <a href="/" class="bg-crane-navy text-white px-8 py-3.5 rounded-full font-bold hover:bg-gray-800 transition-colors">بازگشت به صفحه اصلی</a>

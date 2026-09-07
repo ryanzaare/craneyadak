@@ -20,13 +20,25 @@
 // بدون جاوااسکریپت هم کار می‌کند: فرم مستقیم به صفحه‌ی تماس ارسال می‌شود.
 // ---------------------------------------------------------------------------
 import { SITE } from '../data/site';
+import { getContact } from '../lib/site-options';
+
+/* ⚠️ بالای فرontmatter اعلان می‌شوند.
+   قبلاً پایین‌تر از محل استفاده بودند و رندر با خطای
+   «Cannot access 'contact' before initialization» می‌شکست —
+   `const` تا نقطه‌ی اعلان در ناحیه‌ی مرده‌ی زمانی است. */
+const contact = await getContact();
 
 interface Props {
   class?: string;
 }
 
 const { class: className = '' } = Astro.props;
-const waDigits = SITE.whatsapp.replace(/[^0-9]/g, '');
+/* ⚠️ قبلاً `contact.whatsapp ?? ''` بود و وقتی شماره‌ای ثبت نشده باشد،
+   لینک به `https://wa.me/` (بدون شماره) تبدیل می‌شد — یک دکمه‌ی زنده که
+   به صفحه‌ی خطای واتساپ می‌رود. دقیقاً همان چیزی که قرار بود با گارد
+   null جلویش گرفته شود، اما این یک مورد از قلم افتاده بود. */
+
+
 ---
 
 <section
@@ -80,8 +92,9 @@ const waDigits = SITE.whatsapp.replace(/[^0-9]/g, '');
             </svg>
             ارسال فهرست برای استعلام
           </button>
+          {contact.whatsappHref && (
           <a
-            href={`https://wa.me/${waDigits}`}
+            href={contact.whatsappHref}
             rel="noopener noreferrer"
             target="_blank"
             class="inline-flex items-center justify-center gap-2 bg-transparent border border-white/25 text-steel-300 px-6 py-2.5 rounded-md text-sm font-bold hover:bg-white/10 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-white/30"
@@ -93,6 +106,7 @@ const waDigits = SITE.whatsapp.replace(/[^0-9]/g, '');
             </svg>
             ارسال عکس قطعه در واتساپ
           </a>
+          )}
         </div>
       </form>
     </div>
@@ -126,10 +140,10 @@ const waDigits = SITE.whatsapp.replace(/[^0-9]/g, '');
       </p>
 
       <a
-        href={`tel:${SITE.phone}`}
+        href={contact.telHref}
         class="block text-center bg-white text-accent-ink px-5 py-3 rounded-md font-black hover:bg-steel-50 transition-colors focus:outline-none focus:ring-4 focus:ring-white/50 min-h-[48px] leading-6"
       >
-        تماس فوری: {SITE.phoneDisplay}
+        تماس فوری: {contact.phoneDisplay}
       </a>
 
       <p class="text-white/80 text-xs leading-6 mt-3">

@@ -8,6 +8,17 @@
 // دسترس‌پذیری: nav با aria-label مستقل، دکمه‌ها حداقل ۴۴×۴۴px (اندازه لمسی
 // استاندارد اپل/گوگل) و focus ring مشخص برای کاربران کیبورد/صفحه‌خوان.
 import { SITE } from '../data/site';
+import { getContact, getSiteOptions } from '../lib/site-options';
+
+/* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
+   قبلاً انتهای فرontmatter بودند و کدِ بالاتر که از آن‌ها استفاده
+   می‌کرد با «Cannot access before initialization» می‌شکست:
+   `const` هویست می‌شود اما تا نقطه‌ی اعلان در ناحیه‌ی مرده‌ی
+   زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
+const contact = await getContact();
+const social = (await getSiteOptions()).social;
+
+
 ---
 
 <nav
@@ -16,7 +27,7 @@ import { SITE } from '../data/site';
   aria-label="راه‌های ارتباطی سریع"
 >
   <a
-    href={`tel:${SITE.phone}`}
+    href={contact.telHref}
     class="flex flex-col items-center justify-center gap-1 py-2.5 min-h-[56px] text-crane-navy hover:bg-gray-50 active:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-crane-orange"
   >
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -26,7 +37,7 @@ import { SITE } from '../data/site';
   </a>
 
   <a
-    href={`https://wa.me/${SITE.whatsapp.replace('+', '')}`}
+    href={contact.whatsappHref}
     target="_blank"
     rel="noopener noreferrer"
     class="flex flex-col items-center justify-center gap-1 py-2.5 min-h-[56px] text-emerald-700 border-x border-gray-100 hover:bg-emerald-50 active:bg-emerald-100 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-crane-orange"
@@ -38,7 +49,7 @@ import { SITE } from '../data/site';
   </a>
 
   <a
-    href={`https://t.me/${SITE.telegram}`}
+    href={social.telegram}
     target="_blank"
     rel="noopener noreferrer"
     class="flex flex-col items-center justify-center gap-1 py-2.5 min-h-[56px] text-sky-700 hover:bg-sky-50 active:bg-sky-100 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-crane-orange"

@@ -28,6 +28,7 @@ const WP_BASE_URL: string | null =
   nodeEnv?.WP_GRAPHQL_URL || (import.meta.env.WP_GRAPHQL_URL as string | undefined) || null;
 
 import { normalizeCommunity, type CommunityEntry } from './community';
+import { SILOS, ALL_CATEGORIES } from '../data/taxonomy';
 
 const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_ATTEMPTS = 3;
@@ -55,14 +56,6 @@ export interface CraneImage {
    * هیچ فیلد تازه‌ای می‌تواند علامت بزند، و alt به‌هرحال باید پر شود.
    */
   source: ImageSource;
-}
-
-/** یک نقطه‌ی تاریخی قیمت. */
-export interface PricePoint {
-  /** ISO date (YYYY-MM-DD). */
-  date: string;
-  /** قیمت به ریال. */
-  price: number;
 }
 
 /**
@@ -136,9 +129,6 @@ export interface CraneProduct {
 
   /** تاریخ آخرین به‌روزرسانی محتوا در وردپرس (ISO). */
   modified: string | null;
-
-  /** تاریخچه‌ی قیمت از ACF — ممکن است خالی باشد و آن کاملاً عادی است. */
-  priceHistory: PricePoint[];
 
   /** شناسه‌ی عددی وردپرس — برای ارسال پرسش/گزارش به REST لازم است. */
   wpId: number | null;
@@ -307,6 +297,102 @@ function cleanText(input: unknown): string | null {
   return asString(input);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   تطبیق دسته‌ی وردپرس با تاکسونومی — علتِ «هیچ محصولی اضافه نشده»
+   ═══════════════════════════════════════════════════════════════════════
+   محصول ریموت کنترل در وردپرس به دسته‌ی درست نسبت داده شده بود، اما
+   صفحه‌ی /categories/control-safety/remote-control همچنان خالی بود.
+
+   علت: تطبیق فقط بر اساس `slug` انجام می‌شد. وقتی مدیر سایت یک دسته را
+   با نام فارسی («ریموت کنترل جرثقیل سقفی») در وردپرس می‌سازد، وردپرس
+   اسلاگ را از همان نام فارسی تولید می‌کند. اسلاگ واقعی چیزی شبیه
+   `%D8%B1%DB%8C%D9%85%D9%88%D8%AA-…` می‌شود، نه `remote-control` — و
+   `categorySlugs.includes('remote-control')` هرگز true نمی‌شود.
+
+   این *دقیقاً* همان باگی است که در برندها هم رخ داد. آن‌جا با تطبیق
+   چندکلیدی حل شد؛ همان راه‌حل اینجا هم درست است.
+
+   ⚠️ چرا این جایگزین ابزار همگام‌سازی نیست:
+   این لایه محصول را روی صفحه‌ی درست نشان می‌دهد، اما اسلاگ فارسی در
+   وردپرس همچنان باقی است. ابزار «همگام‌سازی دسته‌بندی‌ها» باید اجرا
+   شود تا اسلاگ‌ها لاتین شوند. این لایه تور ایمنی است، نه راه‌حل.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/** نرمال‌سازی برای مقایسه: نیم‌فاصله، ی/ک عربی، فاصله‌ی چندتایی. */
+function normalizeFa(value: string): string {
+  return value
+    .replace(/‌/g, ' ')       // نیم‌فاصله → فاصله
+    .replace(/ي/g, 'ی')  // ي عربی → ی فارسی
+    .replace(/ك/g, 'ک')  // ك عربی → ک فارسی
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/** نام فارسی نرمال‌شده → اسلاگ لاتین تاکسونومی. */
+const CATEGORY_BY_NAME = new Map<string, string>();
+for (const silo of SILOS) {
+  for (const category of silo.categories) {
+    CATEGORY_BY_NAME.set(normalizeFa(category.name), category.slug);
+    CATEGORY_BY_NAME.set(normalizeFa(category.keyword), category.slug);
+    for (const alias of category.aka ?? []) {
+      CATEGORY_BY_NAME.set(normalizeFa(alias), category.slug);
+    }
+  }
+}
+const CATEGORY_SLUGS = new Set(ALL_CATEGORIES.map((c) => c.slug));
+
+/** ترم‌هایی که به هیچ دسته‌ای نخوردند — برای گزارش زمان build. */
+const unmatchedTerms = new Map<string, string>();
+
+function resolveCategorySlugs(
+  nodes: { slug: string | null; name?: string | null }[]
+): string[] {
+  const out = new Set<string>();
+
+  for (const node of nodes) {
+    const rawSlug = cleanText(node?.slug);
+    const rawName = cleanText(node?.name);
+
+    // ۱) اسلاگ مستقیم — حالت درست و مطلوب.
+    if (rawSlug && CATEGORY_SLUGS.has(rawSlug)) {
+      out.add(rawSlug);
+      continue;
+    }
+
+    // ۲) اسلاگِ درصد-کدشده را رمزگشایی و دوباره امتحان کن.
+    if (rawSlug) {
+      let decoded: string | null = null;
+      try {
+        decoded = decodeURIComponent(rawSlug);
+      } catch {
+        decoded = null; // اسلاگ ناقص — قابل رمزگشایی نیست، مهم نیست.
+      }
+      const bySlugName = decoded ? CATEGORY_BY_NAME.get(normalizeFa(decoded.replace(/-/g, ' '))) : undefined;
+      if (bySlugName) {
+        out.add(bySlugName);
+        if (rawName) unmatchedTerms.set(rawSlug, rawName);
+        continue;
+      }
+    }
+
+    // ۳) نام فارسی ترم — آخرین و مطمئن‌ترین کلید.
+    const byName = rawName ? CATEGORY_BY_NAME.get(normalizeFa(rawName)) : undefined;
+    if (byName) {
+      out.add(byName);
+      if (rawSlug) unmatchedTerms.set(rawSlug, rawName ?? rawSlug);
+      continue;
+    }
+
+    // ۴) هیچ‌کدام — ترم واقعاً ناشناخته است.
+    if (rawSlug || rawName) {
+      unmatchedTerms.set(rawSlug ?? rawName!, `⛔ ${rawName ?? rawSlug} — در تاکسونومی نیست`);
+    }
+  }
+
+  return [...out];
+}
+
 /** حذف تگ‌های HTML برای متن خلاصه (که در متا دیسکریپشن هم می‌رود). */
 function stripHtml(input: string | null | undefined): string | null {
   if (!input) return null;
@@ -407,7 +493,7 @@ interface RawProductNode {
   excerpt: string | null;
   content: string | null;
   modified: string | null;
-  craneCategories?: { nodes?: { slug: string | null }[] } | null;
+  craneCategories?: { nodes?: { slug: string | null; name?: string | null }[] } | null;
   productFields?: {
     sku: unknown;
     price: unknown;
@@ -454,9 +540,7 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
     brandSlug: cleanText(brand?.slug),
     brandNameFa: cleanText(brand?.title),
     brandNameEn: cleanText(brand?.brandFields?.nameEn),
-    categorySlugs: (node.craneCategories?.nodes ?? [])
-      .map((c) => cleanText(c?.slug))
-      .filter((s): s is string => s !== null),
+    categorySlugs: resolveCategorySlugs(node.craneCategories?.nodes ?? []),
 
     price: parsePrice(f?.price),
     salePrice: parsePrice(f?.salePrice),
@@ -499,8 +583,7 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
       )
       .map((r) => ({ label: r.specLabel.trim(), value: r.specValue.trim() })),
 
-    // `priceHistory` و `community` در لایه‌ی اختیاری پر می‌شوند — پایین.
-    priceHistory: [],
+    // `community` در لایه‌ی اختیاری پر می‌شود — پایین.
     wpId: typeof node.databaseId === 'number' ? node.databaseId : null,
     community: [],
 
@@ -560,7 +643,7 @@ const ALL_PRODUCTS_QUERY = `
         excerpt
         content
         modified
-        craneCategories { nodes { slug } }
+        craneCategories { nodes { slug name } }
         productFields {
           sku
           price
@@ -676,7 +759,7 @@ async function fetchAllProducts(): Promise<CraneProduct[]> {
   for (let page = 0; page < MAX_PAGES; page++) {
     const data: AllProductsResponse | null = await wpQuery<AllProductsResponse>(
       ALL_PRODUCTS_QUERY,
-      { first: PAGE_SIZE, after }
+      { first: PAGE_SIZE, after },
     );
     const connection = data?.craneProducts;
     if (!connection) break;
@@ -709,6 +792,45 @@ function reportCatalogHealth(products: CraneProduct[]): void {
   const cartWithoutPrice = products.filter((p) => p.buyMode === 'cart' && p.price === null);
 
   console.info(`[wp] ${products.length} محصول منتشرشده واکشی شد.`);
+
+  // ── گزارش تطبیق دسته‌ها ──────────────────────────────────────────
+  // این گزارش وجود دارد چون همین خرابی یک‌بار کاملاً بی‌صدا اتفاق افتاد:
+  // محصول در وردپرس به دسته نسبت داده شده بود، صفحه‌ی دسته خالی بود، و
+  // هیچ خطایی هیچ‌جا چاپ نمی‌شد.
+  if (unmatchedTerms.size > 0) {
+    const broken = [...unmatchedTerms.entries()].filter(([, v]) => v.startsWith('⛔'));
+    const rescued = [...unmatchedTerms.entries()].filter(([, v]) => !v.startsWith('⛔'));
+
+    if (rescued.length > 0) {
+      console.warn(
+        `\n⚠️  ${rescued.length} دسته در وردپرس اسلاگ لاتین ندارد و با نام فارسی تطبیق داده شد:\n` +
+          rescued.map(([slug, name]) => `    • «${name}»  اسلاگ فعلی: ${slug.slice(0, 40)}`).join('\n') +
+          `\n\n  محصول‌ها درست نمایش داده می‌شوند، اما این وضعیت پایدار نیست.\n` +
+          `  در پنل: محصولات کرین یدک ← «همگام‌سازی دسته‌بندی‌ها» را اجرا کنید\n` +
+          `  تا اسلاگ‌ها لاتین شوند.\n`
+      );
+    }
+    if (broken.length > 0) {
+      console.warn(
+        `\n⛔ ${broken.length} دسته در وردپرس هست که در تاکسونومی سایت وجود ندارد:\n` +
+          broken.map(([slug, name]) => `    • ${name} (${slug.slice(0, 40)})`).join('\n') +
+          `\n  محصولات این دسته‌ها روی هیچ صفحه‌ی دسته‌ای دیده نمی‌شوند.\n` +
+          `  یا نام دسته را در وردپرس با تاکسونومی یکی کنید، یا به من بگویید\n` +
+          `  تا دسته‌ی جدید به تاکسونومی اضافه شود.\n`
+      );
+    }
+  }
+
+  // دسته‌هایی که صفحه دارند اما هیچ محصولی ندارند — «محتوای نازک».
+  const populated = new Set(products.flatMap((p) => p.categorySlugs));
+  const emptyCats = ALL_CATEGORIES.filter((c) => !populated.has(c.slug));
+  if (emptyCats.length > 0) {
+    console.info(
+      `\n[seo] ${emptyCats.length} از ${ALL_CATEGORIES.length} دسته هنوز هیچ محصولی ندارد.\n` +
+        `      این صفحات «محتوای نازک» محسوب می‌شوند و رتبه نمی‌گیرند.\n` +
+        `      این خطا نیست — وضعیت طبیعی کاتالوگی است که در حال پر شدن است.\n`
+    );
+  }
 
   const demo = products.filter((p) => p.isDemo);
   if (demo.length > 0) {
@@ -752,14 +874,14 @@ function reportCatalogHealth(products: CraneProduct[]): void {
 // دو بار پشت سر هم، افزودن یک فیلد تازه به کوئری اصلی کل سایت را از کار
 // انداخت:
 //     Cannot query field "isDemo" on type "CraneProduct"
-//     Cannot query field "priceHistory" on type "ProductFields"
+//     Cannot query field "..." on type "ProductFields"
 //
 // علت هر دو یکی بود: مخزن کد و افزونه‌ی وردپرس *جداگانه* نسخه می‌خورند،
 // اما کوئری اصلی طوری نوشته شده بود که هر فیلد تازه را واجب می‌کرد. یعنی
 // هر قابلیت جدید بک‌اند، تا لحظه‌ی نصب افزونه، سایت را کاملاً می‌خواباند.
 //
 // بار اول با حذف وابستگی (استنتاج از پیشوند کد فنی) رفع شد. اما آن راه
-// فقط برای همان یک فیلد جواب می‌داد؛ `priceHistory` و `community` واقعاً
+// فقط برای همان یک فیلد جواب می‌داد؛ `community` واقعاً
 // داده‌ی سمت سرور لازم دارند و از هیچ چیزِ موجود قابل استنتاج نیستند.
 //
 // راه‌حل ساختاری: کوئری *دو تکه* می‌شود.
@@ -779,7 +901,6 @@ const OPTIONAL_QUERY = `
       nodes {
         databaseId
         slug
-        productFields { priceHistory { logDate logPrice } }
         community {
           id type author content date craneModel serviceMonths rating
           answer answerAuthor answerDate
@@ -792,7 +913,6 @@ const OPTIONAL_QUERY = `
 interface RawExtras {
   databaseId?: number | null;
   slug?: string | null;
-  productFields?: { priceHistory?: ({ logDate: string | null; logPrice: unknown } | null)[] | null } | null;
   community?: unknown;
 }
 
@@ -800,8 +920,8 @@ interface RawExtras {
  * تلاش برای واکشی فیلدهای اختیاری. **هرگز throw نمی‌کند.**
  * شکست = افزونه هنوز به‌روز نشده، که یک حالت کاملاً عادی است.
  */
-async function fetchOptionalExtras(): Promise<Map<string, { history: PricePoint[]; community: CommunityEntry[]; wpId: number | null }>> {
-  const map = new Map<string, { history: PricePoint[]; community: CommunityEntry[]; wpId: number | null }>();
+async function fetchOptionalExtras(): Promise<Map<string, { community: CommunityEntry[]; wpId: number | null }>> {
+  const map = new Map<string, { community: CommunityEntry[]; wpId: number | null }>();
   if (!isWpConfigured()) return map;
 
   try {
@@ -815,17 +935,7 @@ async function fetchOptionalExtras(): Promise<Map<string, { history: PricePoint[
         const slug = cleanText(node?.slug);
         if (!slug) continue;
 
-        const history = (node?.productFields?.priceHistory ?? [])
-          .map((row) => {
-            const date = cleanText(row?.logDate);
-            const value = parsePrice(row?.logPrice);
-            return date && value !== null ? { date, price: value } : null;
-          })
-          .filter((row): row is PricePoint => row !== null)
-          .sort((a, b) => a.date.localeCompare(b.date));
-
         map.set(slug, {
-          history,
           community: normalizeCommunity(node?.community),
           wpId: typeof node?.databaseId === 'number' ? node.databaseId : null,
         });
@@ -839,7 +949,7 @@ async function fetchOptionalExtras(): Promise<Map<string, { history: PricePoint[
     const message = error instanceof Error ? error.message : String(error);
     console.warn(
       `\n📋 قابلیت‌های اختیاری بک‌اند در دسترس نیستند — سایت بدون آن‌ها ساخته می‌شود.\n` +
-        `   (تاریخچه‌ی قیمت، پرسش‌وپاسخ، گزارش نصب و نظرها نمایش داده نمی‌شوند.)\n` +
+        `   (پرسش‌وپاسخ، گزارش نصب و نظرها نمایش داده نمی‌شوند.)\n` +
         `   برای فعال‌شدن، آخرین نسخه‌ی افزونه‌ی «کرین یدک» را روی وردپرس نصب کنید.\n` +
         `   جزئیات: ${message.slice(0, 200)}\n`
     );
@@ -861,7 +971,7 @@ export async function getAllProducts(): Promise<CraneProduct[]> {
   return products.map((product) => {
     const extra = extras.get(product.slug);
     if (!extra) return product;
-    return { ...product, priceHistory: extra.history, community: extra.community, wpId: extra.wpId };
+    return { ...product, community: extra.community, wpId: extra.wpId };
   });
 }
 

@@ -339,3 +339,48 @@ export function validateFilterLabels(products: CraneProduct[]): void {
     );
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   آیا نوار فیلتر اصلاً چیزی برای نشان دادن دارد؟
+   ═══════════════════════════════════════════════════════════════════════
+   ⚠️ باگی که این تابع رفع می‌کند — و من خودم ساخته بودمش:
+
+   صفحه‌ی دسته چیدمان دوستونی دارد:
+       grid-cols-[15rem_minmax(0,1fr)]
+   ستون اول نوار فیلتر، ستون دوم شبکه‌ی محصولات.
+
+   وقتی هیچ فیلتر مفیدی وجود ندارد، کامپوننت CategoryFilters *هیچ چیز*
+   رندر نمی‌کند. آن‌وقت گرید فقط یک فرزند دارد و آن فرزند در ستون
+   *اول* می‌نشیند — یعنی کل شبکه‌ی محصولات در ۱۵rem له می‌شود. دقیقاً
+   همان چیزی که در صفحه‌ی «کمربند جرثقیل سقفی» دیده شد: کارت محصول به
+   یک ستون باریک تبدیل شده بود و متنش سه‌نقطه خورده بود.
+
+   این باگ وقتی ظاهر شد که شرط نمایش فیلترها را سخت‌گیرانه‌تر کردم
+   (فیلتری که همه‌ی محصولات را می‌گیرد حذف شود). با یک محصول در دسته،
+   هیچ فیلتری باقی نمی‌ماند و چیدمان می‌شکست.
+
+   راه‌حل: صفحه باید *پیش از* رندر بداند که نوار فیلتر می‌آید یا نه، تا
+   بتواند چیدمان تک‌ستونی یا دوستونی را انتخاب کند. همین تابع تنها مرجع
+   آن تصمیم است و هر دو طرف از آن استفاده می‌کنند — تا دوباره از هم
+   واگرا نشوند.
+   ═══════════════════════════════════════════════════════════════════════ */
+export function hasUsefulFilters(products: CraneProduct[], categorySlug: string): boolean {
+  if (products.length === 0) return false;
+
+  /** گزینه‌ای که همه یا هیچ‌کدام را می‌گیرد، چیزی را باریک نمی‌کند. */
+  const narrows = (count: number) => count > 0 && count < products.length;
+
+  const inStock = products.filter((p) => p.stockStatus === 'in_stock').length;
+  const rfq = products.filter((p) => p.buyMode === 'rfq').length;
+  const priced = products.filter((p) => p.price !== null || p.salePrice !== null).length;
+
+  if (narrows(inStock) || narrows(products.length - inStock)) return true;
+  if (narrows(priced) || narrows(rfq)) return true;
+
+  const brands = new Set(products.map((p) => p.brandSlug).filter(Boolean));
+  if (brands.size >= 2) return true;
+
+  return resolveFacets(products, facetsForCategory(categorySlug)).some((f) =>
+    f.kind === 'range' ? f.min !== f.max : f.values.length >= 2
+  );
+}

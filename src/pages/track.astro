@@ -1,0 +1,297 @@
+---
+// src/pages/track.astro
+// ---------------------------------------------------------------------------
+// پیگیری درخواست — بدون حساب کاربری.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// مسئله‌ای که این صفحه حل می‌کند
+// ═══════════════════════════════════════════════════════════════════════════
+// کاربر عمداً مجبور به ثبت‌نام نمی‌شود، اما نتیجه‌اش این بود که با بستن
+// مرورگر یا عوض کردن دستگاه، کد رهگیری و کل درخواست را از دست می‌داد.
+//
+// راه‌حل دو لایه دارد و هر لایه یک سناریوی متفاوت را پوشش می‌دهد:
+//
+//   ۱) همان دستگاه → کدها در localStorage می‌مانند و فهرست «درخواست‌های
+//      شما» خودکار پر می‌شود. کاربر لازم نیست چیزی به خاطر بسپارد.
+//   ۲) دستگاه دیگر → «کد رهگیری + شماره تماس». روی گوشی همکار، روی
+//      کامپیوتر مدیر خرید، یا بعد از پاک شدن حافظه‌ی مرورگر.
+//
+// ⚠️ چرا شماره تماس هم لازم است: کد به‌تنهایی برای حدس تصادفی امن است،
+// اما اگر کسی کد را ببیند (روی کاغذ، در پیام فوروارد شده) می‌تواند
+// اطلاعات تماس و اقلام آن سفارش را ببیند. تطابق شماره این نشت را
+// می‌بندد. سمت سرور هم محدودسازی نرخ دارد.
+//
+// noindex: این صفحه محتوای عمومی نیست و نباید در نتایج جستجو بیاید.
+// ---------------------------------------------------------------------------
+import Layout from '../layouts/Layout.astro';
+import { SITE } from '../data/site';
+
+const wpBase = (import.meta.env.WP_GRAPHQL_URL as string | undefined)?.replace(/\/+$/, '') ?? null;
+
+const title = `پیگیری درخواست | ${SITE.name}`;
+const description = 'وضعیت درخواست استعلام یا سفارش خود را با کد رهگیری و شماره تماس ببینید.';
+---
+
+<Layout title={title} description={description} noindex>
+  <section class="bg-steel-900 text-white px-4 py-10">
+    <div class="max-w-3xl mx-auto">
+      <h1 class="text-2xl md:text-3xl font-black mb-2">پیگیری درخواست</h1>
+      <p class="text-steel-300 leading-8">
+        کد رهگیری و شماره تماسی که هنگام ثبت وارد کرده‌اید را بنویسید.
+      </p>
+    </div>
+  </section>
+
+  <section class="bg-white px-4 py-10">
+    <div class="max-w-3xl mx-auto">
+      {/* درخواست‌های ثبت‌شده روی همین دستگاه */}
+      <div id="track-mine" hidden class="mb-8">
+        <h2 class="text-lg font-black text-steel-900 mb-3">درخواست‌های شما روی این دستگاه</h2>
+        <ul id="track-mine-list" role="list" class="space-y-2"></ul>
+      </div>
+
+      <form id="track-form" class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label for="track-code" class="block text-sm font-bold text-steel-900 mb-1">کد رهگیری</label>
+            <input
+              id="track-code"
+              name="code"
+              required
+              dir="ltr"
+              placeholder="CY-XXXXXX"
+              class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 text-center font-mono uppercase focus:outline-none focus:ring-4 focus:ring-accent/40"
+            />
+          </div>
+          <div>
+            <label for="track-phone" class="block text-sm font-bold text-steel-900 mb-1">شماره تماس</label>
+            <input
+              id="track-phone"
+              name="phone"
+              required
+              type="tel"
+              inputmode="tel"
+              dir="ltr"
+              class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 text-right focus:outline-none focus:ring-4 focus:ring-accent/40"
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          id="track-submit"
+          class="w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]"
+        >
+          مشاهده‌ی وضعیت
+        </button>
+        <p id="track-msg" class="text-sm leading-7" role="status" aria-live="polite"></p>
+      </form>
+
+      <div id="track-result" hidden class="mt-6 border border-steel-300 rounded-lg overflow-hidden"></div>
+
+      <p class="text-sm text-steel-600 leading-7 mt-6">
+        کد رهگیری را ندارید؟ با واحد فروش تماس بگیرید —
+        <a href="/contact" class="text-accent-ink font-bold hover:underline">تماس با ما</a>.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ wpBase }}>
+  (function () {
+    const KEY = 'cy-quote-codes-v1';
+    const form = document.getElementById('track-form');
+    const msg = document.getElementById('track-msg');
+    const box = document.getElementById('track-result');
+
+    function readCodes() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        return Array.isArray(list) ? list : [];
+      } catch {
+        return [];
+      }
+    }
+
+    /* فهرست کدهای همین دستگاه — کاربر فقط کلیک می‌کند و کد پر می‌شود.
+       شماره تماس عمداً ذخیره *نمی‌شود*: نگه‌داشتن آن در مرورگر یعنی هر
+       کسی که به دستگاه دسترسی دارد می‌تواند سفارش را ببیند، و هیچ
+       ضرورتی هم ندارد چون کاربر شماره‌ی خودش را می‌داند. */
+    const mine = readCodes();
+    if (mine.length > 0) {
+      const wrap = document.getElementById('track-mine');
+      const list = document.getElementById('track-mine-list');
+      if (wrap && list) {
+        wrap.hidden = false;
+        for (const entry of mine) {
+          const li = document.createElement('li');
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className =
+            'w-full text-right bg-white border border-steel-300 rounded-md px-4 py-3 hover:border-accent focus:outline-none focus:ring-4 focus:ring-accent/30';
+
+          const code = document.createElement('span');
+          code.className = 'font-mono font-black text-steel-900';
+          code.dir = 'ltr';
+          code.textContent = entry.code;
+
+          const when = document.createElement('span');
+          when.className = 'text-xs text-steel-600 mr-3';
+          when.textContent = entry.date || '';
+
+          btn.append(code, when);
+          btn.addEventListener('click', () => {
+            const input = document.getElementById('track-code');
+            if (input) input.value = entry.code;
+            document.getElementById('track-phone')?.focus();
+          });
+          li.appendChild(btn);
+          list.appendChild(li);
+        }
+      }
+    }
+
+    // پر کردن خودکار از پارامتر آدرس (?code=CY-XXXX)
+    const fromUrl = new URLSearchParams(location.search).get('code');
+    if (fromUrl) {
+      const input = document.getElementById('track-code');
+      if (input) input.value = fromUrl.toUpperCase();
+    }
+
+    const STATUS_STYLE = {
+      new: 'bg-amber-50 text-amber-900 border-amber-200',
+      in_progress: 'bg-sky-50 text-sky-900 border-sky-200',
+      answered: 'bg-emerald-50 text-emerald-900 border-emerald-200',
+      closed: 'bg-steel-50 text-steel-700 border-steel-300',
+    };
+
+    function render(data) {
+      if (!box) return;
+      box.textContent = '';
+      box.hidden = false;
+
+      const head = document.createElement('div');
+      head.className = 'bg-steel-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2';
+      const h = document.createElement('h2');
+      h.className = 'font-black';
+      h.textContent = data.kind === 'order' ? 'سفارش شما' : 'درخواست استعلام شما';
+      const c = document.createElement('span');
+      c.className = 'font-mono text-sm';
+      c.dir = 'ltr';
+      c.textContent = data.code;
+      head.append(h, c);
+      box.appendChild(head);
+
+      const body = document.createElement('div');
+      body.className = 'p-4 space-y-4 bg-white';
+
+      const badge = document.createElement('p');
+      badge.className = `inline-block text-sm font-bold border rounded-md px-3 py-1.5 ${
+        STATUS_STYLE[data.status] || STATUS_STYLE.closed
+      }`;
+      badge.textContent = data.statusLabel;
+      body.appendChild(badge);
+
+      if (Array.isArray(data.items) && data.items.length) {
+        const t = document.createElement('h3');
+        t.className = 'font-black text-steel-900 text-sm';
+        t.textContent = 'اقلام درخواستی';
+        const ul = document.createElement('ul');
+        ul.className = 'space-y-1.5';
+        for (const item of data.items) {
+          const li = document.createElement('li');
+          li.className = 'text-sm text-steel-700 leading-6 flex justify-between gap-3 border-b border-steel-100 pb-1.5';
+          const n = document.createElement('span');
+          // textContent — نام از پایگاه داده می‌آید و نباید HTML اجرا شود.
+          n.textContent = item.sku ? `${item.name} (${item.sku})` : item.name;
+          const q = document.createElement('span');
+          q.className = 'shrink-0 tabular-nums text-steel-600';
+          q.textContent = `× ${item.qty}`;
+          li.append(n, q);
+          ul.appendChild(li);
+        }
+        body.append(t, ul);
+      }
+
+      if (data.response) {
+        const t = document.createElement('h3');
+        t.className = 'font-black text-steel-900 text-sm';
+        t.textContent = 'پاسخ واحد فروش';
+        const p = document.createElement('p');
+        p.className = 'text-sm text-steel-700 leading-7 bg-steel-50 border border-steel-300 rounded-md p-3 whitespace-pre-line';
+        p.textContent = data.response;
+        body.append(t, p);
+      }
+
+      if (data.proformaUrl) {
+        const a = document.createElement('a');
+        a.href = data.proformaUrl;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.className =
+          'inline-flex items-center gap-2 bg-accent text-white px-5 py-3 rounded-md font-black text-sm hover:bg-accent-ink transition-colors';
+        a.textContent = 'دریافت فایل پیش‌فاکتور';
+        body.appendChild(a);
+      }
+
+      if (!data.response && data.status !== 'answered') {
+        const p = document.createElement('p');
+        p.className = 'text-sm text-steel-600 leading-7';
+        p.textContent =
+          'هنوز پاسخی منتشر نشده است. پس از بررسی فنی، پاسخ و پیش‌فاکتور همین‌جا نمایش داده می‌شود.';
+        body.appendChild(p);
+      }
+
+      box.appendChild(body);
+    }
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!wpBase) {
+        if (msg) {
+          msg.className = 'text-sm leading-7 text-red-700 font-bold';
+          msg.textContent = 'پیگیری آنلاین در دسترس نیست. لطفاً تماس بگیرید.';
+        }
+        return;
+      }
+
+      const button = document.getElementById('track-submit');
+      const data = new FormData(form);
+      const code = String(data.get('code') || '').trim().toUpperCase();
+      const phone = String(data.get('phone') || '').trim();
+
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'در حال بررسی…';
+      }
+      if (msg) msg.textContent = '';
+      if (box) box.hidden = true;
+
+      try {
+        const url = `${wpBase}/wp-json/crane-yadak/v1/quote-status?code=${encodeURIComponent(
+          code
+        )}&phone=${encodeURIComponent(phone)}`;
+        const res = await fetch(url);
+        const json = await res.json().catch(() => ({}));
+
+        if (res.ok && json.ok) {
+          render(json);
+        } else if (msg) {
+          msg.className = 'text-sm leading-7 text-red-700 font-bold';
+          msg.textContent = json.message || 'درخواستی با این مشخصات پیدا نشد.';
+        }
+      } catch {
+        if (msg) {
+          msg.className = 'text-sm leading-7 text-red-700 font-bold';
+          msg.textContent = 'ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.';
+        }
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'مشاهده‌ی وضعیت';
+        }
+      }
+    });
+  })();
+</script>

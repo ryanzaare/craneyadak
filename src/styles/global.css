@@ -139,17 +139,52 @@
   margin-top: 1.25em;
 }
 
+/* ⚠️ سلسله‌مراتب عنوان‌ها بازنویسی شد.
+   مشکل نسخه‌ی قبل: عنوان‌های داخل متن محصول تقریباً از خودِ متن قابل
+   تشخیص نبودند. h3 با ۱.۱۲۵rem فقط کمی از پاراگراف ۱rem بزرگ‌تر بود،
+   همان رنگ را داشت و هیچ نشانه‌ی بصری دیگری نداشت. چون بیشتر عنوان‌ها
+   در این متن‌ها *پرسش* هستند («ریموت ساگا با کدام جرثقیل‌ها سازگار
+   است؟»)، نتیجه این بود که پرسش و پاسخ در یک بلوک خاکستری یکنواخت حل
+   می‌شدند و خواننده نمی‌توانست متن ۲۰۰۰ کلمه‌ای را اسکن کند.
+   خریدار صنعتی متن را نمی‌خواند، اسکن می‌کند تا پاسخِ سوال خودش را
+   پیدا کند؛ اگر سوال‌ها دیده نشوند، کل مقاله بی‌فایده است.
+
+   حالا سه چیز عنوان را جدا می‌کند: اندازه‌ی واقعاً بزرگ‌تر، یک خط
+   لنگر نارنجی در سمت راست (شروع خط در RTL)، و فاصله‌ی بالای بیشتر.
+   خط لنگر با border است نه با pseudo-element رنگی، تا در حالت چاپ و
+   حالت کنتراست بالا هم باقی بماند. */
 .prose-crane h2,
 .prose-crane h3,
 .prose-crane h4 {
   color: var(--color-crane-navy);
-  font-weight: 800;
-  line-height: 1.8;
-  margin-top: 2em;
+  font-weight: 900;
+  line-height: 1.9;
+  margin-top: 2.25em;
+  margin-bottom: 0.75em;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 4px solid var(--color-crane-orange);
+  /* letter-spacing منفیِ ملایم روی فارسیِ سنگین‌وزن، عنوان را جمع‌تر و
+     خواناتر می‌کند بدون آن‌که حروف به هم بچسبند. */
+  letter-spacing: -0.01em;
 }
 
-.prose-crane h2 { font-size: 1.375rem; }
-.prose-crane h3 { font-size: 1.125rem; }
+.prose-crane h2 { font-size: 1.625rem; }
+.prose-crane h3 { font-size: 1.3125rem; }
+.prose-crane h4 {
+  font-size: 1.0625rem;
+  /* h4 عمق چهارم است و نباید با h2/h3 رقابت کند — لنگر باریک‌تر و کم‌رنگ‌تر. */
+  border-inline-start-width: 3px;
+  border-inline-start-color: var(--color-steel-300, #cbd5e1);
+}
+
+/* عنوانی که با علامت سوال تمام می‌شود یک پرسش است. نمی‌توان در CSS به
+   محتوای متن شرط گذاشت، بنابراین پاراگرافِ بلافاصله بعد از هر عنوان —
+   یعنی «پاسخ» — کمی متمایز می‌شود: شروعش پررنگ‌تر و خواناتر است. این
+   جفتِ پرسش/پاسخ را بدون نیاز به تغییر HTML تولیدشده می‌سازد. */
+.prose-crane h2 + p,
+.prose-crane h3 + p {
+  color: var(--color-steel-800, #1e293b);
+}
 
 .prose-crane a {
   color: var(--color-crane-orange);
@@ -175,12 +210,36 @@
   height: auto;
 }
 
+/* جدول‌های داخل متن راهنما.
+   ستون متن به ۷۰ کاراکتر محدود است تا خوانا بماند، ولی همان محدودیت روی
+   یک جدول چهارستونی فارسی در موبایل فاجعه است: هر ستون ~۸۰ پیکسل می‌شود و
+   هر کلمه در یک خط جدا می‌شکند. راه‌حل، اسکرول افقیِ خودِ جدول است — نه
+   کوچک‌کردن فونت و نه شکستن ساختار جدول با display:block (که الگوریتم
+   چیدمان ستون‌ها را از بین می‌برد و ردیف‌ها را در هم می‌ریزد).
+   بسته‌بندی در زمان build توسط CategoryGuide انجام می‌شود. */
+.prose-crane .table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-block: 1.5em;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+}
+
+.prose-crane .table-scroll table {
+  /* حداقل عرض تا ستون‌ها له نشوند؛ زیر این عدد اسکرول فعال می‌شود. */
+  min-width: 32rem;
+  margin-block: 0;
+  border: 0;
+  border-radius: 0;
+}
+
 .prose-crane table {
   width: 100%;
   font-size: 0.875rem;
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
   overflow: hidden;
+  border-collapse: collapse;
 }
 
 .prose-crane th,

@@ -17,7 +17,6 @@ import sitemap from '@astrojs/sitemap';
 // خودکار هم قابل‌ایندکس می‌شود و هم به sitemap برمی‌گردد.
 // ---------------------------------------------------------------------------
 const pdfDir = fileURLToPath(new URL('./public/pdfs/', import.meta.url));
-const hasPublishedDatasheets =
   existsSync(pdfDir) && readdirSync(pdfDir).some((file) => file.toLowerCase().endsWith('.pdf'));
 
 // ---------------------------------------------------------------------------
@@ -108,7 +107,8 @@ export default defineConfig({
         !page.includes('/products/demo-') &&
         !page.includes('/search') &&
         !page.includes('/thank-you') &&
-        (hasPublishedDatasheets || !page.replace(/\/$/, '').endsWith('/datasheets')),
+        // The tracking page is noindex and has no public content.
+        !page.includes('/track')
     }),
   ],
 
