@@ -19,10 +19,18 @@
 import { isWpConfigured, wpQueryPublic } from './wp';
 import { SHAPES } from './brand-queries.mjs';
 
+/** مقادیر کنترل‌شده‌ی «وضعیت تأمین» — با choices در ACF یکی است. */
+export type SupplyStatus = 'current' | 'supported' | 'equivalent' | null;
+
 export interface BrandSeries {
   seriesName: string;
   equipmentType: string;
   capacityNote: string;
+  /**
+   * مهم‌ترین چیزی که خریدار می‌خواهد بداند: «هنوز می‌توانم قطعه بگیرم؟»
+   * تا پیش از این، همین اطلاعات داخل متن آزادِ `notes` دفن بود.
+   */
+  supplyStatus: SupplyStatus;
   commonInIran: boolean;
   notes: string;
   needsReview: boolean;
@@ -126,6 +134,19 @@ const rows = <T>(list: unknown, map: (r: Record<string, unknown>) => T, key: (t:
     .map(map)
     .filter((t) => key(t).length > 0);
 
+/**
+ * فیلد select ای‌سی‌اف → یکی از سه مقدار مجاز، یا null.
+ *
+ * ⚠️ هر چیز ناشناخته null می‌شود، نه «حدسِ نزدیک». اگر کسی در وردپرس
+ * choices را عوض کند، نتیجه باید *نبودِ نشان* باشد نه نشانِ اشتباه —
+ * «در تولید» نشان دادن برای سری‌ای که تولیدش متوقف شده، خریدار را به
+ * سفارش اشتباه می‌برد.
+ */
+function supply(v: unknown): SupplyStatus {
+  const s = str(v);
+  return s === 'current' || s === 'supported' || s === 'equivalent' ? s : null;
+}
+
 /** شیء را از پوسته‌ی `{ node: … }` بیرون می‌کشد؛ اگر پوسته‌ای نبود، خودش. */
 function unwrapNode(v: unknown): Record<string, unknown> | null {
   if (!v || typeof v !== 'object') return null;
@@ -159,6 +180,7 @@ function normalize(raw: Record<string, unknown> | null): BrandProfile {
       seriesName: str(r.seriesName),
       equipmentType: str(r.equipmentType),
       capacityNote: str(r.capacityNote),
+      supplyStatus: supply(r.supplyStatus),
       commonInIran: bool(r.commonInIran),
       notes: str(r.notes),
       needsReview: bool(r.needsReview),

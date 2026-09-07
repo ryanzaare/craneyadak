@@ -54,11 +54,33 @@ export const CORE_FIELDS = `
   headquarters
   identificationGuide
   iranPresence
-  series { seriesName equipmentType capacityNote commonInIran notes needsReview }
   technologies { name summary whyItMatters needsReview }
   faqs { question answer needsReview }
   sources { title url }
 `;
+
+/**
+ * `supplyStatus` فیلد **جدید** است.
+ *
+ * ⚠️ اگر داخل CORE_FIELDS می‌رفت، تا لحظه‌ای که افزونه‌ی جدید نصب شود
+ * *هر* شکل کوئری شکست می‌خورد و کل صفحه‌ی برند خالی می‌ماند — دقیقاً همان
+ * دامی که یک بار با `media` افتادیم. هر فیلد تازه باید محور تنزل‌پذیر
+ * خودش را داشته باشد تا نبودنش فقط خودش را ببرد.
+ */
+export const SERIES_VARIANTS = [
+  {
+    id: 'series-full',
+    label: 'سری‌ها با وضعیت تأمین',
+    hasSupplyStatus: true,
+    frag: `series { seriesName equipmentType capacityNote supplyStatus commonInIran notes needsReview }`,
+  },
+  {
+    id: 'series-basic',
+    label: 'سری‌ها بدون وضعیت تأمین',
+    hasSupplyStatus: false,
+    frag: `series { seriesName equipmentType capacityNote commonInIran notes needsReview }`,
+  },
+];
 
 /**
  * فیلد Image در ACF.
@@ -118,18 +140,30 @@ ${body}
   } } }
 }`;
 
-/** نردبان کامل: قطعات بیرونی (دیرتر تنزل)، رسانه داخلی (زودتر تنزل). */
+/**
+ * نردبان کامل — سه محور، به ترتیب *ارزش*.
+ *
+ * حلقه‌ی بیرونی دیرتر تنزل می‌کند، حلقه‌ی داخلی زودتر. پس ترتیب لانه‌گذاری
+ * دقیقاً برعکس ارزش است:
+ *
+ *   قطعات (لینک داخلی) ← باارزش‌ترین، آخر از دست می‌رود
+ *     سری‌ها (وضعیت تأمین)
+ *       رسانه ← کم‌ارزش‌ترین (برای همه‌ی برندها خالی)، اول قربانی می‌شود
+ */
 export const SHAPES = [];
 
 for (const parts of PARTS_VARIANTS) {
-  for (const media of MEDIA_VARIANTS) {
-    SHAPES.push({
-      name: `${parts.label} + ${media.label}`,
-      hasCategoryLink: parts.hasCategoryLink,
-      hasMedia: media.hasMedia,
-      hasParts: true,
-      query: wrap([CORE_FIELDS, media.frag, parts.frag].filter(Boolean).join('\n')),
-    });
+  for (const series of SERIES_VARIANTS) {
+    for (const media of MEDIA_VARIANTS) {
+      SHAPES.push({
+        name: `${parts.label} + ${series.label} + ${media.label}`,
+        hasCategoryLink: parts.hasCategoryLink,
+        hasSupplyStatus: series.hasSupplyStatus,
+        hasMedia: media.hasMedia,
+        hasParts: true,
+        query: wrap([CORE_FIELDS, series.frag, media.frag, parts.frag].filter(Boolean).join('\n')),
+      });
+    }
   }
 }
 
@@ -138,9 +172,10 @@ for (const parts of PARTS_VARIANTS) {
 SHAPES.push({
   name: 'فقط هسته',
   hasCategoryLink: false,
+  hasSupplyStatus: false,
   hasMedia: false,
   hasParts: false,
-  query: wrap(CORE_FIELDS),
+  query: wrap([CORE_FIELDS, SERIES_VARIANTS[1].frag].join('\n')),
 });
 
 /**
@@ -171,21 +206,49 @@ export function auditShapes(shapes = SHAPES) {
     if (s.hasMedia !== /\bmedia\s*\{/.test(s.query)) problems.push(`شکل ${i}: پرچم hasMedia با کوئری نمی‌خواند.`);
     if (s.hasParts !== /\bcommonParts\s*\{/.test(s.query)) problems.push(`شکل ${i}: پرچم hasParts با کوئری نمی‌خواند.`);
     if (s.hasCategoryLink !== /\bcategory\s*\{/.test(s.query)) problems.push(`شکل ${i}: پرچم hasCategoryLink با کوئری نمی‌خواند.`);
+    if (s.hasSupplyStatus !== /\bsupplyStatus\b/.test(s.query)) problems.push(`شکل ${i}: پرچم hasSupplyStatus با کوئری نمی‌خواند.`);
+
+    // هر شکلی باید سری‌ها را داشته باشد — فقط ستون وضعیت است که تنزل می‌کند.
+    if (!/\bseries\s*\{/.test(s.query)) problems.push(`شکل ${i} («${s.name}») اصلاً سری‌ها را نمی‌خواهد.`);
   });
 
-  // ۴) قاعده‌ی اصلی نردبان: رسانه باید **قبل از** لینک دسته قربانی شود.
-  const firstNoMedia = shapes.findIndex((s) => !s.hasMedia);
-  const firstNoLink = shapes.findIndex((s) => !s.hasCategoryLink);
-  if (firstNoMedia === -1) problems.push('هیچ شکلی بدون رسانه وجود ندارد — خرابی media کل صفحه را می‌برد.');
-  else if (firstNoLink !== -1 && firstNoLink < firstNoMedia) {
-    problems.push(
-      `ترتیب نردبان وارونه است: لینک دسته در شکل ${firstNoLink} حذف می‌شود ولی رسانه تا شکل ${firstNoMedia} می‌ماند. ` +
-        'یعنی یک فیلد رسانه‌ی خراب، لینک‌های داخلی را با خودش می‌برد.',
-    );
+  /*
+   * ۴) قاعده‌ی اصلی: محورها باید به ترتیب *ارزش* قربانی شوند.
+   *
+   *      رسانه  ←  وضعیت تأمین  ←  لینک دسته
+   *    (کم‌ارزش)                   (باارزش)
+   *
+   * این دقیقاً همان چیزی است که یک بار نقض شد: `media` هم‌سطح با لینک
+   * دسته بود، پس یک فیلد رسانه‌ی ناسازگار پنج لینک داخلی را با خودش برد.
+   */
+  const first = (pred) => shapes.findIndex(pred);
+  const noMedia = first((s) => !s.hasMedia);
+  const noStatus = first((s) => !s.hasSupplyStatus);
+  const noLink = first((s) => !s.hasCategoryLink);
+
+  if (noMedia === -1) problems.push('هیچ شکلی بدون رسانه وجود ندارد — خرابی media کل صفحه را می‌برد.');
+  if (noStatus === -1) problems.push('هیچ شکلی بدون supplyStatus وجود ندارد — تا نصب افزونه‌ی جدید، صفحه خالی می‌ماند.');
+
+  const order = [
+    ['رسانه', noMedia],
+    ['وضعیت تأمین', noStatus],
+    ['لینک دسته', noLink],
+  ].filter(([, i]) => i !== -1);
+
+  for (let k = 1; k < order.length; k++) {
+    const [prevName, prevIdx] = order[k - 1];
+    const [name, idx] = order[k];
+    if (idx < prevIdx) {
+      problems.push(
+        `ترتیب نردبان وارونه است: «${name}» در پله‌ی ${idx} حذف می‌شود ولی «${prevName}» ` +
+          `تا پله‌ی ${prevIdx} می‌ماند — یعنی خرابیِ کم‌ارزش‌تر، باارزش‌تر را با خودش می‌برد.`,
+      );
+    }
   }
 
   // ۵) شکل اول باید غنی‌ترین باشد.
-  if (shapes[0] && (!shapes[0].hasMedia || !shapes[0].hasCategoryLink)) {
+  const s0 = shapes[0];
+  if (s0 && (!s0.hasMedia || !s0.hasCategoryLink || !s0.hasSupplyStatus)) {
     problems.push('شکل اول غنی‌ترین نیست — نردبان از پله‌ی وسط شروع می‌شود.');
   }
 

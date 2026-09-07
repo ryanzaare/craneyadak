@@ -73,6 +73,47 @@ const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
 
 /** نشانِ «نیاز به بازبینی» فقط در حالت بازبینی دیده می‌شود. */
 const flag = (needs: boolean) => (reviewMode && needs ? 'bg-amber-50 ring-1 ring-amber-300' : '');
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   وضعیت تأمین — تنها جایی که رنگ در این صفحه معنا دارد
+   ═══════════════════════════════════════════════════════════════════════════
+   صفحه قبلاً سراسر خاکستری بود، ولی مشکل «کمبود رنگ» نبود؛ مشکل این بود که
+   هیچ واقعیتی *کدگذاری بصری* نشده بود. «هنوز در تولید است» و «۲۰ سال است
+   توقف تولید شده» با یک وزن و یک رنگ چاپ می‌شدند، داخل سلولی که ۱۳۶ تا ۳۳۰
+   کاراکتر متن داشت.
+
+   رنگ اینجا تزئین نیست؛ جواب همان سؤالی است که خریدار با آن وارد صفحه شده:
+   «برای دستگاه من هنوز قطعه پیدا می‌شود؟»
+
+   سه دلیل که این کار سئو یا سرعت را خراب نمی‌کند:
+     • هیچ جاوااسکریپت و هیچ تصویری اضافه نمی‌شود.
+     • متن کامل سر جایش می‌ماند و ایندکس می‌شود — نشان *جایگزینش* نمی‌شود،
+       خلاصه‌اش می‌کند.
+     • رنگ تنها حاملِ معنا نیست: متن فارسی کنارش هست (WCAG 1.4.1)، پس
+       کوررنگی یا چاپ سیاه‌وسفید چیزی را از بین نمی‌برد.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const SUPPLY = {
+  current:    { label: 'در تولید',        cls: 'bg-emerald-50 text-emerald-900 ring-emerald-200/70', dot: 'bg-emerald-500' },
+  supported:  { label: 'قطعه موجود',      cls: 'bg-sky-50 text-sky-900 ring-sky-200/70',             dot: 'bg-sky-500' },
+  equivalent: { label: 'معادل‌یابی',       cls: 'bg-amber-50 text-amber-900 ring-amber-200/70',       dot: 'bg-amber-500' },
+} as const;
+
+/* ⚠️ ستونی که در *همه‌ی* ردیف‌ها خالی است، نباید رندر شود.
+   ستون «رایج در ایران» برای هر ۶ سری دماگ خالی بود و یک ستون تمام‌قد «—»
+   می‌ساخت: هم فضا را می‌گرفت، هم به بازدیدکننده حس خرابی می‌داد، هم هیچ
+   اطلاعاتی نمی‌داد. این بررسی عمومی است، پس برای ۱۸ برند بعدی هم — که هنوز
+   داده‌شان وارد نشده — خودبه‌خود درست عمل می‌کند. */
+const showIran   = profile.series.some((s) => s.commonInIran);
+const showSupply = profile.series.some((s) => s.supplyStatus !== null);
+const showCap    = profile.series.some((s) => s.capacityNote.trim() !== '');
+const showType   = profile.series.some((s) => s.equipmentType.trim() !== '');
+const showNotes  = profile.series.some((s) => s.notes.trim() !== '');
+
+const supplyCounts = {
+  current: profile.series.filter((s) => s.supplyStatus === 'current').length,
+  supported: profile.series.filter((s) => s.supplyStatus === 'supported').length,
+  equivalent: profile.series.filter((s) => s.supplyStatus === 'equivalent').length,
+};
 ---
 
 {profile.hasContent && (
@@ -133,29 +174,62 @@ const flag = (needs: boolean) => (reviewMode && needs ? 'bg-amber-50 ring-1 ring
               </div>
             </div>
 
+            {showSupply && (
+              <ul class="flex flex-wrap gap-2 mb-5 text-xs font-bold" role="list">
+                <li class="px-3 py-1.5 rounded-lg bg-gray-100 text-steel-700 tabular-nums">{profile.series.length} سری</li>
+                {(['current', 'supported', 'equivalent'] as const).map((k) => supplyCounts[k] > 0 && (
+                  <li class={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg ring-1 ${SUPPLY[k].cls}`}>
+                    <span class={`w-1.5 h-1.5 rounded-full ${SUPPLY[k].dot}`} aria-hidden="true"></span>
+                    <span class="tabular-nums">{supplyCounts[k]}</span> {SUPPLY[k].label}
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <div class="table-scroll bg-white rounded-2xl border border-gray-200">
               <table class="w-full text-sm">
                 <thead>
                   <tr class="bg-gray-50 border-b border-gray-200">
                     <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">سری</th>
-                    <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">نوع تجهیز</th>
-                    <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">ظرفیت</th>
-                    <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">رایج در ایران</th>
-                    <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">وضعیت تأمین</th>
+                    {showType && <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">نوع تجهیز</th>}
+                    {showCap && <th scope="col" class="text-right font-black text-crane-navy px-5 py-3 whitespace-nowrap">ظرفیت</th>}
+                    {showSupply && <th scope="col" class="text-right font-black text-crane-navy px-5 py-3 whitespace-nowrap">وضعیت تأمین</th>}
+                    {showIran && <th scope="col" class="text-right font-black text-crane-navy px-5 py-3 whitespace-nowrap">رایج در ایران</th>}
+                    {showNotes && <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">توضیح</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {profile.series.map((s) => (
-                    <tr class={`border-b border-gray-100 last:border-0 ${flag(s.needsReview)}`}>
-                      <th scope="row" class="text-right px-5 py-3 font-black text-crane-navy whitespace-nowrap">{s.seriesName}</th>
-                      <td class="px-5 py-3 text-steel-700">{s.equipmentType || '—'}</td>
-                      <td class="px-5 py-3 text-steel-700 tabular-nums">{s.capacityNote || '—'}</td>
-                      <td class="px-5 py-3">
-                        {s.commonInIran
-                          ? <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 font-bold text-xs">بله</span>
-                          : <span class="text-steel-400">—</span>}
-                      </td>
-                      <td class="px-5 py-3 text-steel-700">{s.notes || '—'}</td>
+                  {profile.series.map((s, i) => (
+                    <tr class={`border-b border-gray-100 last:border-0 transition-colors hover:bg-orange-50/40 ${i % 2 ? 'bg-gray-50/50' : ''} ${flag(s.needsReview)}`}>
+                      {/* نامِ سری لنگرِ اسکن است — پس تنها ستونی است که وزن کامل می‌گیرد. */}
+                      <th scope="row" class="text-right px-5 py-4 font-black text-crane-navy whitespace-nowrap align-top border-r-2 border-crane-orange/30">
+                        {s.seriesName}
+                      </th>
+                      {showType && <td class="px-5 py-4 text-steel-700 align-top">{s.equipmentType || '—'}</td>}
+                      {showCap && <td class="px-5 py-4 text-steel-700 tabular-nums align-top whitespace-nowrap">{s.capacityNote || '—'}</td>}
+                      {showSupply && (
+                        <td class="px-5 py-4 align-top">
+                          {s.supplyStatus ? (
+                            <span class={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full ring-1 font-bold text-xs whitespace-nowrap ${SUPPLY[s.supplyStatus].cls}`}>
+                              <span class={`w-1.5 h-1.5 rounded-full ${SUPPLY[s.supplyStatus].dot}`} aria-hidden="true"></span>
+                              {SUPPLY[s.supplyStatus].label}
+                            </span>
+                          ) : (
+                            <span class="text-steel-400">—</span>
+                          )}
+                        </td>
+                      )}
+                      {showIran && (
+                        <td class="px-5 py-4 align-top">
+                          {s.commonInIran
+                            ? <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-crane-navy text-white font-bold text-xs">بله</span>
+                            : <span class="text-steel-400">—</span>}
+                        </td>
+                      )}
+                      {/* متن کامل حذف نمی‌شود — فقط از «تیترِ» سلول به «زیرنویس»
+                          تنزل می‌کند. گوگل همان متن را می‌خواند؛ انسان دیگر
+                          مجبور نیست برای یک بیت اطلاعات، سه خط بخواند. */}
+                      {showNotes && <td class="px-5 py-4 text-steel-600 leading-7 align-top max-w-md">{s.notes || '—'}</td>}
                     </tr>
                   ))}
                 </tbody>
@@ -245,9 +319,12 @@ const flag = (needs: boolean) => (reviewMode && needs ? 'bg-amber-50 ring-1 ring
               </h2>
             </div>
 
-            <div class="grid gap-5 md:grid-cols-2 max-w-5xl">
+            {/* ⚠️ `md:grid-cols-2` با یک آیتم، نیمی از ردیف را خالی می‌گذارد و
+                کارت را بی‌دلیل باریک می‌کند — دقیقاً چیزی که در صفحه‌ی دماگ
+                دیده می‌شد. تعداد ستون از تعداد داده می‌آید، نه برعکس. */}
+            <div class={`grid gap-5 ${profile.technologies.length > 1 ? 'md:grid-cols-2 max-w-5xl' : 'max-w-3xl'}`}>
               {profile.technologies.map((t) => (
-                <article class={`rounded-2xl bg-white border border-gray-200 p-6 ${flag(t.needsReview)}`}>
+                <article class={`rounded-2xl bg-white border border-gray-200 border-r-4 border-r-crane-orange/50 p-6 ${flag(t.needsReview)}`}>
                   <h3 class="font-black text-crane-navy text-lg mb-2">{t.name}</h3>
                   {t.summary && <p class="text-steel-700 leading-8 mb-3">{t.summary}</p>}
                   {t.whyItMatters && (
@@ -345,10 +422,10 @@ const flag = (needs: boolean) => (reviewMode && needs ? 'bg-amber-50 ring-1 ring
                 محتوایش برای گوگل همیشه قابل خواندن است. */}
             <div class="max-w-3xl space-y-3">
               {profile.faqs.map((f) => (
-                <details class={`group rounded-2xl bg-white border border-gray-200 overflow-hidden ${flag(f.needsReview)}`}>
-                  <summary class="cursor-pointer list-none px-6 py-4 font-black text-crane-navy flex items-center justify-between gap-4 hover:bg-gray-50">
+                <details class={`group rounded-2xl bg-white border border-gray-200 border-r-4 border-r-transparent open:border-r-crane-orange/60 overflow-hidden transition-colors ${flag(f.needsReview)}`}>
+                  <summary class="cursor-pointer list-none px-6 py-4 font-black text-crane-navy flex items-center justify-between gap-4 hover:bg-orange-50/50 transition-colors">
                     <span>{f.question}</span>
-                    <span class="shrink-0 text-crane-orange transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+                    <span class="shrink-0 w-6 h-6 grid place-items-center rounded-full bg-orange-50 text-crane-orange text-lg leading-none transition-transform group-open:rotate-45" aria-hidden="true">+</span>
                   </summary>
                   <div class="px-6 pb-5 text-steel-700 leading-8 whitespace-pre-line">{f.answer}</div>
                 </details>
