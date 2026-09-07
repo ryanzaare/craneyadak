@@ -1,0 +1,382 @@
+---
+// src/components/BrandGuide.astro
+// ---------------------------------------------------------------------------
+// «هاب برند» — لایه‌ی تحریریه‌ی صفحه‌ی برند.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// استراتژی محتوایی که این ساختار از آن می‌آید
+// ═══════════════════════════════════════════════════════════════════════════
+// تاریخچه‌ی شرکت، محتوای «کالایی» است: سایت خود سازنده و ویکی‌پدیا همیشه
+// برایش بالاتر از ما رتبه می‌گیرند و نیت جستجوی «قطعات دماگ» هم اصلاً
+// تاریخی نیست — تراکنشی است.
+//
+// پس وزن صفحه روی چیزی گذاشته شده که *فقط یک تأمین‌کننده‌ی ایرانی*
+// می‌تواند بنویسد:
+//
+//   ۱) جدول سری‌ها با ستون «رایج در ایران»
+//   ۲) راهنمای خواندن پلاک و کد فنی  ← بالاترین ارزش عملی
+//   ۳) قطعات پرتقاضا، با لینک واقعی به سیلوی دسته‌ها
+//
+// این سه، هم تفکیک‌پذیرند و هم دقیقاً همان چیزی که خریدار دنبالش است.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// چرا هیچ کتابخانه‌ی نمودار یا iframe ویدیو اینجا نیست
+// ═══════════════════════════════════════════════════════════════════════════
+// یک iframe یوتیوب/آپارات معمولاً بیش از ۵۰۰ کیلوبایت و چند درخواست
+// مسدودکننده‌ی رندر است؛ کتابخانه‌ی نمودار سه‌بعدی بین ۵۰۰ کیلوبایت تا
+// ۱ مگابایت جاوااسکریپت. گوگل برای «داشتن نمودار» رتبه نمی‌دهد، ولی
+// Core Web Vitals را *اندازه می‌گیرد* — یعنی این دو، سئو را پایین
+// می‌آورند نه بالا.
+//
+// جایگزین‌ها: جدول‌های معنایی (که برای موتور جستجو خواناترند)، و ویدیو با
+// الگوی facade — فقط تصویر پوستر، و پخش‌کننده تنها پس از کلیک کاربر.
+// ---------------------------------------------------------------------------
+
+import SectionNav from './SectionNav.astro';
+import { autolinkHtml } from '../lib/autolink';
+import { findCategory, categoryPath } from '../data/taxonomy';
+import type { BrandProfile } from '../lib/brand-profile';
+
+export interface Props {
+  profile: BrandProfile;
+  brandName: string;
+  reviewMode: boolean;
+}
+
+const { profile, brandName, reviewMode } = Astro.props;
+
+/** جدول‌ها را برای موبایل در ظرف اسکرول‌پذیر می‌پیچد. */
+function wrapProseTables(html: string): string {
+  if (!html || !html.includes('<table')) return html;
+  return html.replace(
+    /<div class="table-scroll">\s*(<table[\s\S]*?<\/table>)\s*<\/div>|(<table[\s\S]*?<\/table>)/g,
+    (_m, wrapped, bare) => `<div class="table-scroll">${wrapped ?? bare}</div>`,
+  );
+}
+
+const link = (html: string | null) =>
+  html ? wrapProseTables(autolinkHtml(html, { currentPath: Astro.url.pathname })) : '';
+
+const sections = [
+  { id: 'brand-intro', label: 'معرفی', show: Boolean(profile.introHtml) },
+  { id: 'brand-series', label: 'سری‌های محصول', show: profile.series.length > 0 },
+  { id: 'brand-nameplate', label: 'خواندن پلاک', show: Boolean(profile.identificationHtml) },
+  { id: 'brand-iran', label: 'در بازار ایران', show: Boolean(profile.iranPresenceHtml) },
+  { id: 'brand-parts', label: 'قطعات پرتقاضا', show: profile.commonParts.length > 0 },
+  { id: 'brand-tech', label: 'فناوری‌ها', show: profile.technologies.length > 0 },
+  { id: 'brand-media', label: 'تصاویر', show: profile.media.length > 0 },
+  { id: 'brand-faq', label: 'پرسش‌های متداول', show: profile.faqs.length > 0 },
+].filter((s) => s.show);
+
+const numbered = sections.filter((s) => s.id !== 'brand-intro');
+const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
+
+/** نشانِ «نیاز به بازبینی» فقط در حالت بازبینی دیده می‌شود. */
+const flag = (needs: boolean) => (reviewMode && needs ? 'bg-amber-50 ring-1 ring-amber-300' : '');
+---
+
+{profile.hasContent && (
+  <>
+    {reviewMode && profile.pendingReview > 0 && (
+      <div class="bg-amber-100 border-y-2 border-amber-400 px-4 py-3 print:hidden">
+        <p class="max-w-7xl mx-auto text-sm font-bold text-amber-900">
+          حالت بازبینی — {profile.pendingReview} ردیف نیاز به تایید دارد.
+        </p>
+      </div>
+    )}
+
+    <SectionNav sections={sections} eyebrow="پروفایل برند" ariaLabel={`بخش‌های صفحه‌ی ${brandName}`} />
+
+    <div class="bg-white">
+      {/* ------------------------------ معرفی ------------------------------ */}
+      {profile.introHtml && (
+        <section id="brand-intro" class="px-4 pt-16 pb-12 scroll-mt-32" aria-labelledby="brand-intro-heading">
+          <div class="max-w-7xl mx-auto">
+            <p class="text-sm font-black text-crane-orange tracking-widest mb-3">پروفایل فنی</p>
+            <h2 id="brand-intro-heading" class="text-3xl md:text-4xl font-black text-crane-navy leading-relaxed mb-6 max-w-3xl">
+              {brandName} چه می‌سازد؟
+            </h2>
+
+            {(profile.foundedYear || profile.headquarters) && (
+              <dl class="flex flex-wrap gap-x-8 gap-y-3 mb-8 text-sm">
+                {profile.foundedYear && (
+                  <div class="flex gap-2">
+                    <dt class="font-black text-steel-500">سال تأسیس:</dt>
+                    <dd class="font-bold text-crane-navy tabular-nums">{profile.foundedYear}</dd>
+                  </div>
+                )}
+                {profile.headquarters && (
+                  <div class="flex gap-2">
+                    <dt class="font-black text-steel-500">دفتر مرکزی:</dt>
+                    <dd class="font-bold text-crane-navy">{profile.headquarters}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+
+            <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={link(profile.introHtml)} />
+          </div>
+        </section>
+      )}
+
+      {/* --------------------------- سری‌های محصول --------------------------- */}
+      {profile.series.length > 0 && (
+        <section id="brand-series" class="px-4 py-16 border-t border-gray-100 bg-gray-50 scroll-mt-32" aria-labelledby="brand-series-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('brand-series')}</span>
+              <div>
+                <h2 id="brand-series-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">
+                  سری‌های {brandName} و وضعیت تأمین قطعه
+                </h2>
+                <p class="text-steel-600 mt-1">ستون «رایج در ایران» بر اساس تجربه‌ی میدانی تیم فنی است.</p>
+              </div>
+            </div>
+
+            <div class="table-scroll bg-white rounded-2xl border border-gray-200">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="bg-gray-50 border-b border-gray-200">
+                    <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">سری</th>
+                    <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">نوع تجهیز</th>
+                    <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">ظرفیت</th>
+                    <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">رایج در ایران</th>
+                    <th scope="col" class="text-right font-black text-crane-navy px-5 py-3">وضعیت تأمین</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {profile.series.map((s) => (
+                    <tr class={`border-b border-gray-100 last:border-0 ${flag(s.needsReview)}`}>
+                      <th scope="row" class="text-right px-5 py-3 font-black text-crane-navy whitespace-nowrap">{s.seriesName}</th>
+                      <td class="px-5 py-3 text-steel-700">{s.equipmentType || '—'}</td>
+                      <td class="px-5 py-3 text-steel-700 tabular-nums">{s.capacityNote || '—'}</td>
+                      <td class="px-5 py-3">
+                        {s.commonInIran
+                          ? <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 font-bold text-xs">بله</span>
+                          : <span class="text-steel-400">—</span>}
+                      </td>
+                      <td class="px-5 py-3 text-steel-700">{s.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* --------------------------- خواندن پلاک --------------------------- */}
+      {profile.identificationHtml && (
+        <section id="brand-nameplate" class="px-4 py-16 border-t border-gray-100 scroll-mt-32" aria-labelledby="brand-nameplate-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('brand-nameplate')}</span>
+              <div>
+                <h2 id="brand-nameplate-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">
+                  پلاک {brandName} را چطور بخوانیم؟
+                </h2>
+                <p class="text-steel-600 mt-1">بدون کد درست، هیچ استعلامی دقیق نیست.</p>
+              </div>
+            </div>
+            <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={link(profile.identificationHtml)} />
+          </div>
+        </section>
+      )}
+
+      {/* --------------------------- بازار ایران --------------------------- */}
+      {profile.iranPresenceHtml && (
+        <section id="brand-iran" class="px-4 py-16 border-t border-gray-100 bg-gray-50 scroll-mt-32" aria-labelledby="brand-iran-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('brand-iran')}</span>
+              <h2 id="brand-iran-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">
+                {brandName} در صنعت ایران
+              </h2>
+            </div>
+            <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={link(profile.iranPresenceHtml)} />
+          </div>
+        </section>
+      )}
+
+      {/* ------------------------- قطعات پرتقاضا ------------------------- */}
+      {profile.commonParts.length > 0 && (
+        <section id="brand-parts" class="px-4 py-16 border-t border-gray-100 scroll-mt-32" aria-labelledby="brand-parts-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('brand-parts')}</span>
+              <h2 id="brand-parts-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">
+                پرتقاضاترین قطعات {brandName}
+              </h2>
+            </div>
+
+            <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="list">
+              {profile.commonParts.map((p) => (
+                <li class={`rounded-2xl border border-gray-200 p-5 hover:border-crane-orange transition-colors ${flag(p.needsReview)}`}>
+                  <h3 class="font-black text-crane-navy mb-2">{p.partName}</h3>
+                  {p.failureReason && <p class="text-sm text-steel-600 leading-7 mb-3">{p.failureReason}</p>}
+                  {/* لینک واقعی به سیلوی دسته — انتقال ارزش پیوندی برند ← دسته. */}
+                  {(() => {
+                    // مسیر واقعی دسته، نه جستجو: لینک به /categories/[silo]/[cat]
+                    // ارزش پیوندی را به سیلو منتقل می‌کند؛ لینک به صفحه‌ی
+                    // جستجو هیچ ارزشی منتقل نمی‌کند و معمولاً noindex است.
+                    const cat = p.categorySlug ? findCategory(p.categorySlug) : undefined;
+                    if (!cat) return null;
+                    return (
+                      <a href={categoryPath(cat)} class="text-sm font-black text-crane-orange hover:underline">
+                        دیدن {p.categoryName ?? cat.name} ←
+                      </a>
+                    );
+                  })()}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {/* ---------------------------- فناوری‌ها ---------------------------- */}
+      {profile.technologies.length > 0 && (
+        <section id="brand-tech" class="px-4 py-16 border-t border-gray-100 bg-gray-50 scroll-mt-32" aria-labelledby="brand-tech-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('brand-tech')}</span>
+              <h2 id="brand-tech-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">
+                فناوری‌های شاخص {brandName}
+              </h2>
+            </div>
+
+            <div class="grid gap-5 md:grid-cols-2 max-w-5xl">
+              {profile.technologies.map((t) => (
+                <article class={`rounded-2xl bg-white border border-gray-200 p-6 ${flag(t.needsReview)}`}>
+                  <h3 class="font-black text-crane-navy text-lg mb-2">{t.name}</h3>
+                  {t.summary && <p class="text-steel-700 leading-8 mb-3">{t.summary}</p>}
+                  {t.whyItMatters && (
+                    <p class="text-sm text-steel-600 leading-7 border-t border-gray-100 pt-3">
+                      <strong class="text-crane-navy">برای خریدار قطعه:</strong> {t.whyItMatters}
+                    </p>
+                  )}
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ----------------------------- رسانه‌ها ----------------------------- */}
+      {profile.media.length > 0 && (
+        <section id="brand-media" class="px-4 py-16 border-t border-gray-100 scroll-mt-32" aria-labelledby="brand-media-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('brand-media')}</span>
+              <h2 id="brand-media-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">
+                تصاویر و ویدیو
+              </h2>
+            </div>
+
+            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {profile.media.map((m) => (
+                <figure class="rounded-2xl overflow-hidden border border-gray-200 bg-white">
+                  {m.kind === 'video' && m.videoUrl ? (
+                    /* ⚠️ الگوی facade: هیچ iframeای تا کلیک کاربر ساخته نمی‌شود.
+                       جاسازی مستقیم، بیش از ۵۰۰ کیلوبایت و چند درخواست
+                       مسدودکننده به هر بازدید اضافه می‌کند — یعنی LCP بدتر و
+                       سئوی پایین‌تر، نه بالاتر. */
+                    <a
+                      href={m.videoUrl}
+                      target="_blank"
+                      rel="noopener"
+                      class="group block relative aspect-video bg-crane-navy"
+                      aria-label={`پخش ویدیو: ${m.alt || m.caption || 'ویدیو'}`}
+                    >
+                      {m.url && (
+                        <img
+                          src={m.url}
+                          alt={m.alt}
+                          width={m.width ?? undefined}
+                          height={m.height ?? undefined}
+                          loading="lazy"
+                          decoding="async"
+                          class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        />
+                      )}
+                      <span class="absolute inset-0 grid place-items-center" aria-hidden="true">
+                        <span class="w-16 h-16 rounded-full bg-white/95 grid place-items-center shadow-lg group-hover:scale-110 transition-transform">
+                          <svg viewBox="0 0 24 24" class="w-7 h-7 translate-x-0.5" fill="currentColor" aria-hidden="true">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </span>
+                      </span>
+                    </a>
+                  ) : (
+                    m.url && (
+                      <img
+                        src={m.url}
+                        alt={m.alt}
+                        width={m.width ?? undefined}
+                        height={m.height ?? undefined}
+                        loading="lazy"
+                        decoding="async"
+                        class="w-full h-auto"
+                      />
+                    )
+                  )}
+                  {m.caption && (
+                    <figcaption class="px-4 py-3 text-sm text-steel-600 border-t border-gray-100">{m.caption}</figcaption>
+                  )}
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ------------------------ پرسش‌های متداول ------------------------ */}
+      {profile.faqs.length > 0 && (
+        <section id="brand-faq" class="px-4 py-16 border-t border-gray-100 bg-gray-50 scroll-mt-32" aria-labelledby="brand-faq-heading">
+          <div class="max-w-7xl mx-auto">
+            <div class="flex items-start gap-4 mb-8">
+              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('brand-faq')}</span>
+              <h2 id="brand-faq-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">
+                پرسش‌های متداول درباره‌ی {brandName}
+              </h2>
+            </div>
+
+            {/* <details> بومی: بدون هیچ جاوااسکریپتی باز و بسته می‌شود، و
+                محتوایش برای گوگل همیشه قابل خواندن است. */}
+            <div class="max-w-3xl space-y-3">
+              {profile.faqs.map((f) => (
+                <details class={`group rounded-2xl bg-white border border-gray-200 overflow-hidden ${flag(f.needsReview)}`}>
+                  <summary class="cursor-pointer list-none px-6 py-4 font-black text-crane-navy flex items-center justify-between gap-4 hover:bg-gray-50">
+                    <span>{f.question}</span>
+                    <span class="shrink-0 text-crane-orange transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+                  </summary>
+                  <div class="px-6 pb-5 text-steel-700 leading-8 whitespace-pre-line">{f.answer}</div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ------------------------------ منابع ------------------------------ */}
+      {profile.sources.length > 0 && (
+        <section class="px-4 py-10 border-t border-gray-100" aria-labelledby="brand-sources-heading">
+          <div class="max-w-7xl mx-auto">
+            <h2 id="brand-sources-heading" class="text-lg font-black text-crane-navy mb-3">منابع</h2>
+            <ul class="flex flex-wrap gap-x-6 gap-y-2 text-sm" role="list">
+              {profile.sources.map((s) => (
+                <li>
+                  {/* rel=nofollow عمدی نیست — لینک به منبع معتبر، سیگنال
+                      E-E-A-T مثبت است. ولی noopener برای امنیت لازم است. */}
+                  <a href={s.url} target="_blank" rel="noopener" class="text-steel-600 hover:text-crane-orange underline underline-offset-4">
+                    {s.title || s.url}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+    </div>
+  </>
+)}

@@ -19,6 +19,9 @@ import { SITE } from '../../data/site';
 import { BRAND_CLASSES, categoryPath, findCategory } from '../../data/taxonomy';
 import { getBrands, type EnrichedBrand } from '../../lib/brands';
 import { getProductsByBrand, computePrice, productJsonLd, type CraneProduct } from '../../lib/wp';
+import BrandGuide from '../../components/BrandGuide.astro';
+import { getBrandProfile, type BrandProfile } from '../../lib/brand-profile';
+import { isReviewMode } from '../../lib/category-content';
 
 export async function getStaticPaths() {
   // برندها از وردپرس غنی می‌شوند: رنگ، متن لوگو، انکرتکست و توضیح سئو
@@ -28,7 +31,11 @@ export async function getStaticPaths() {
   return Promise.all(
     brands.map(async (brand) => ({
       params: { slug: brand.slug },
-      props: { brand, products: await getProductsByBrand(brand.slug) },
+      props: {
+        brand,
+        products: await getProductsByBrand(brand.slug),
+        profile: await getBrandProfile(brand.slug),
+      },
     }))
   );
 }
@@ -36,13 +43,19 @@ export async function getStaticPaths() {
 interface Props {
   brand: EnrichedBrand;
   products: CraneProduct[];
+  profile: BrandProfile;
 }
 
-const { brand, products } = Astro.props as Props;
+const { brand, products, profile } = Astro.props as Props;
+const reviewMode = isReviewMode();
 
 const classMeta = BRAND_CLASSES[brand.brandClass];
 const title = `قطعات ${brand.nameFa} (${brand.nameEn}) | تامین و استعلام قیمت | ${SITE.name}`;
-const description = `تامین ${brand.seoDesc}، ساخت ${brand.country}. استعلام قیمت با کد فنی، بررسی سازگاری و صدور فاکتور رسمی.`;
+// جمله‌ی معرفِ نوشته‌شده در وردپرس بر توضیح تولیدی اولویت دارد — متنی که
+// انسان نوشته، همیشه از متن قالبی بهتر در SERP دیده می‌شود.
+const description = profile.heroClaim
+  ? `${profile.heroClaim} استعلام قیمت با کد فنی و بررسی سازگاری.`.slice(0, 158)
+  : `تامین ${brand.seoDesc}، ساخت ${brand.country}. استعلام قیمت با کد فنی، بررسی سازگاری و صدور فاکتور رسمی.`;
 const canonical = `${SITE.url}/brands/${brand.slug}`;
 
 // همه‌ی برندها برای لینک‌سازی داخلی هم‌کلاس.
@@ -100,6 +113,11 @@ const jsonLd = {
       '@id': brandNodeId,
       name: brand.nameEn,
       alternateName: brand.nameFa,
+      // فقط فیلدهایی که واقعاً مقدار دارند وارد اسکیما می‌شوند.
+      // فیلد خالی یا حدسی در structured data ریسک جریمه است، نه امتیاز.
+      ...(profile.headquarters ? { location: profile.headquarters } : {}),
+      ...(profile.foundedYear ? { foundingDate: profile.foundedYear } : {}),
+      ...(profile.sources.length ? { sameAs: profile.sources.map((x) => x.url) } : {}),
     },
     {
       '@type': 'CollectionPage',
@@ -114,6 +132,15 @@ const jsonLd = {
     },
   ],
 };
+import { getContact } from '../../lib/site-options';
+
+/* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
+   قبلاً انتهای فرontmatter بودند و کدِ بالاتر که از آن‌ها استفاده
+   می‌کرد با «Cannot access before initialization» می‌شکست:
+   `const` هویست می‌شود اما تا نقطه‌ی اعلان در ناحیه‌ی مرده‌ی
+   زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
+const contact = await getContact();
+
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
@@ -182,7 +209,7 @@ const jsonLd = {
           </p>
           <div class="flex flex-col sm:flex-row gap-3">
             <a href={`/contact?brand=${encodeURIComponent(brand.nameEn)}`} class="bg-crane-orange text-white px-8 py-4 rounded-xl font-black text-center hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
-            <a href={`https://wa.me/${SITE.whatsapp.replace('+', '')}`} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-xl font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
+            <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-xl font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
           </div>
         </div>
       )}
@@ -211,6 +238,9 @@ const jsonLd = {
       </div>
     </section>
   )}
+
+  {/* ------------------- هاب برند (محتوای عمیق) ------------------- */}
+  <BrandGuide profile={profile} brandName={brand.nameFa} reviewMode={reviewMode} />
 
   {/* ---------------------- برندهای هم‌گروه ---------------------- */}
   {siblings.length > 0 && (

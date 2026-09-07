@@ -1,0 +1,122 @@
+---
+// src/components/SectionNav.astro
+// ---------------------------------------------------------------------------
+// ناوبری چسبانِ درون‌صفحه‌ای — مشترک بین راهنمای دسته و صفحه‌ی برند.
+//
+// چرا مشترک: نسخه‌ی اول فقط داخل CategoryGuide بود. کپی‌کردنش برای صفحه‌ی
+// برند یعنی دو پیاده‌سازی که با هم واگرا می‌شوند — یکی رفتار اسکرول را
+// درست می‌کند و آن یکی نه.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// چرا این کامپوننت جاوااسکریپت دارد (و چرا فقط ۲۰ خط)
+// ═══════════════════════════════════════════════════════════════════════════
+// لینک‌های `#anchor` بدون هیچ اسکریپتی کار می‌کنند؛ اسکرول نرم هم با CSS
+// انجام می‌شود. تنها چیزی که JS لازم دارد، *برجسته‌کردن بخش فعال* هنگام
+// اسکرول است.
+//
+// این کار با IntersectionObserver انجام می‌شود، نه با شنیدن رویداد scroll:
+//   • رویداد scroll ده‌ها بار در ثانیه اجرا می‌شود و اگر داخلش
+//     getBoundingClientRect صدا بزنید، مرورگر مجبور به layout مجدد می‌شود
+//     (layout thrashing) — که مستقیماً امتیاز INP را خراب می‌کند.
+//   • IntersectionObserver خارج از رشته‌ی اصلی محاسبه می‌شود و فقط وقتی
+//     وضعیت واقعاً عوض شود صدا زده می‌شود.
+//
+// اسکریپت `is:inline` نیست تا Astro آن را باندل و minify کند، و
+// `prefers-reduced-motion` هم رعایت می‌شود.
+// ---------------------------------------------------------------------------
+
+export interface NavSection {
+  id: string;
+  label: string;
+}
+
+export interface Props {
+  sections: NavSection[];
+  /** برچسبی که سمت راست نوار می‌آید. */
+  eyebrow: string;
+  /** برای aria-label ناوبری — باید در هر صفحه یکتا و توصیفی باشد. */
+  ariaLabel: string;
+}
+
+const { sections, eyebrow, ariaLabel } = Astro.props;
+---
+
+{sections.length > 2 && (
+  <nav
+    class="section-nav sticky top-[68px] z-30 bg-white/95 backdrop-blur-sm border-y border-gray-200 print:hidden"
+    style="transform: translateZ(0);"
+    aria-label={ariaLabel}
+  >
+    <div class="max-w-7xl mx-auto px-4">
+      <ul class="flex items-center gap-1 overflow-x-auto hide-scrollbar py-2.5" role="list">
+        <li class="shrink-0 text-xs font-black text-gray-500 pl-3 border-l border-gray-200 ml-1">
+          {eyebrow}
+        </li>
+        {sections.map((section) => (
+          <li class="shrink-0">
+            <a
+              href={`#${section.id}`}
+              data-section-link={section.id}
+              class="block px-3.5 py-1.5 rounded-full text-sm font-bold text-gray-600 hover:text-crane-orange hover:bg-orange-50 transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-crane-orange"
+            >
+              {section.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </nav>
+)}
+
+<script>
+  // هر نوار ناوبری صفحه را مستقل مدیریت می‌کند.
+  document.querySelectorAll<HTMLElement>('.section-nav').forEach((nav) => {
+    const links = Array.from(
+      nav.querySelectorAll<HTMLAnchorElement>('a[data-section-link]'),
+    );
+    if (links.length === 0) return;
+
+    const byId = new Map(links.map((a) => [a.dataset.sectionLink!, a]));
+    const targets = links
+      .map((a) => document.getElementById(a.dataset.sectionLink!))
+      .filter((el): el is HTMLElement => el !== null);
+    if (targets.length === 0) return;
+
+    const ACTIVE = ['text-crane-orange', 'bg-orange-50'];
+    let current: HTMLAnchorElement | null = null;
+
+    const setActive = (id: string) => {
+      const link = byId.get(id);
+      if (!link || link === current) return;
+      current?.classList.remove(...ACTIVE);
+      current?.removeAttribute('aria-current');
+      link.classList.add(...ACTIVE);
+      // aria-current واقعی — نه فقط رنگ. صفحه‌خوان هم باید بداند کجاست.
+      link.setAttribute('aria-current', 'true');
+      current = link;
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // نزدیک‌ترین بخش به بالای ناحیه‌ی دید برنده است.
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible?.target.id) setActive(visible.target.id);
+      },
+      // بالای ناحیه به اندازه‌ی هدر + نوار ناوبری کنار گذاشته می‌شود.
+      { rootMargin: '-120px 0px -55% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  });
+</script>
+
+<style>
+  /* اسکرول نرم فقط برای کسی که حرکت را محدود نکرده است. */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html) {
+      scroll-behavior: smooth;
+    }
+  }
+</style>

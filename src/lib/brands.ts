@@ -66,6 +66,8 @@ const BRANDS_QUERY = `
           brandColor
           seoAnchor
           seoDesc
+          brandClass
+          country
         }
       }
     }
@@ -82,6 +84,8 @@ interface RawBrand {
     brandColor?: string | null;
     seoAnchor?: string | null;
     seoDesc?: string | null;
+    brandClass?: string | null;
+    country?: string | null;
   } | null;
 }
 
@@ -158,27 +162,112 @@ async function fetchBrands(): Promise<EnrichedBrand[]> {
     byslug = new Map();
   }
 
-  const enriched: EnrichedBrand[] = BRANDS.map((base) => {
-    // به ترتیب: اسلاگ، نام انگلیسی، نام فارسی، متن لوگو.
+  /* ═══════════════════════════════════════════════════════════════════════
+     اجتماع دو منبع — رفع باگی که برند نوزدهم را نامرئی کرده بود
+     ═══════════════════════════════════════════════════════════════════════
+     ⚠️ نسخه‌ی قبل `BRANDS.map(...)` بود: یعنی فهرست *هجده‌تایی محلی* را
+     می‌پیمود و هرکدام را با داده‌ی وردپرس غنی می‌کرد. نتیجه‌ی منطقی‌اش
+     این بود که برندی که فقط در وردپرس وجود دارد — مثل «بریما» که تازه
+     اضافه شد — هرگز در حلقه نمی‌افتاد و روی هیچ صفحه‌ای دیده نمی‌شد.
+     هیچ خطایی هم چاپ نمی‌شد، چون از دید کد اصلاً وجود نداشت.
+
+     این دقیقاً همان اشتباهی است که در دسته‌ها هم رخ داد: فهرست محلی
+     مرجعِ *وجود* گرفته شده بود، در حالی که وردپرس باید مرجع باشد.
+
+     حالا خروجی، اجتماع دو مجموعه است:
+       • هر برندی که در وردپرس هست  → نمایش داده می‌شود (حتی اگر در
+         تاکسونومی نباشد).
+       • هر برندی که در تاکسونومی هست ولی هنوز در وردپرس نه → با داده‌ی
+         محلی نمایش داده می‌شود و در خروجی build نام‌به‌نام گزارش می‌شود.
+
+     تاکسونومی از این پس فقط «تور ایمنی» است، نه دروازه‌بان.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /** گروه معتبر یا پیش‌فرض امن. */
+  function toBrandClass(value: unknown): BrandClass {
+    const v = clean(value)?.toLowerCase();
+    return v === 'control' || v === 'electrical' || v === 'oem' ? v : 'oem';
+  }
+
+  /** اسلاگ لاتین از نام انگلیسی — برای برندی که اسلاگ وردپرسش فارسی است. */
+  function latinSlug(node: RawBrand): string | null {
+    const candidate = clean(node?.slug);
+    if (candidate && /^[a-z0-9-]+$/i.test(candidate)) return candidate.toLowerCase();
+    const en = clean(node?.brandFields?.nameEn) ?? clean(node?.brandFields?.logoText);
+    if (!en) return null;
+    return en.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || null;
+  }
+
+  const enriched: EnrichedBrand[] = [];
+  const usedWpIds = new Set<number>();
+
+  // ── ۱) برندهای تاکسونومی، غنی‌شده با وردپرس ──
+  for (const base of BRANDS) {
     const wp =
       byslug.get(base.slug) ??
       byslug.get(base.nameEn.toLowerCase()) ??
       byslug.get(base.nameFa.toLowerCase()) ??
       byslug.get(base.logoText.toLowerCase());
     const f = wp?.brandFields;
+    if (wp?.databaseId) usedWpIds.add(wp.databaseId);
 
-    return {
+    enriched.push({
       ...base,
-      // نام فارسی: عنوان پست وردپرس بر تاکسونومی اولویت دارد.
       nameFa: clean(wp?.title) ?? base.nameFa,
       nameEn: clean(f?.nameEn) ?? base.nameEn,
       logoText: clean(f?.logoText) ?? base.logoText,
       seoDesc: clean(f?.seoDesc) ?? base.seoDesc,
+      country: clean(f?.country) ?? base.country,
+      /* ⚠️ گروه: وردپرس فقط وقتی برنده است که *صریحاً* مقداری ثبت شده باشد.
+         باگی که اینجا رخ داد: فیلد ACF با `default_value: 'oem'` ساخته شده
+         بود. ACF برای هر رکوردی که آن فیلد را هرگز ذخیره نکرده، همان مقدار
+         پیش‌فرض را برمی‌گرداند — یعنی هر ۱۹ برند «oem» گزارش می‌شدند و چون
+         وردپرس اولویت داشت، گروه‌های کنترل و برقی خالی می‌شدند.
+         پیش‌فرض از فیلد حذف شد؛ این `clean()` هم تضمین می‌کند رشته‌ی خالی
+         به‌عنوان انتخاب واقعی تفسیر نشود. */
+      brandClass: clean(f?.brandClass) ? toBrandClass(f?.brandClass) : base.brandClass,
       color: cleanHex(f?.brandColor),
       seoAnchor: clean(f?.seoAnchor),
       fromWordPress: Boolean(wp),
-    };
-  });
+    });
+  }
+
+  // ── ۲) برندهایی که فقط در وردپرس هستند ──
+  const known = new Set(enriched.map((b) => b.slug));
+  const wpOnly: string[] = [];
+
+  for (const node of raw) {
+    if (node?.databaseId && usedWpIds.has(node.databaseId)) continue;
+
+    const slug = latinSlug(node);
+    const f = node?.brandFields;
+    const nameFa = clean(node?.title);
+    // بدون اسلاگ لاتین نمی‌توان آدرس صفحه ساخت، و بدون نام چیزی برای
+    // نمایش نیست. چنین رکوردی رد می‌شود اما گزارش هم می‌شود.
+    if (!slug || known.has(slug) || !nameFa) continue;
+
+    known.add(slug);
+    wpOnly.push(`${nameFa} (${slug})`);
+
+    enriched.push({
+      slug,
+      nameFa,
+      nameEn: clean(f?.nameEn) ?? nameFa,
+      logoText: clean(f?.logoText) ?? (clean(f?.nameEn) ?? nameFa).toUpperCase(),
+      brandClass: toBrandClass(f?.brandClass),
+      country: clean(f?.country) ?? '',
+      seoDesc: clean(f?.seoDesc) ?? '',
+      color: cleanHex(f?.brandColor),
+      seoAnchor: clean(f?.seoAnchor),
+      fromWordPress: true,
+    });
+  }
+
+  if (wpOnly.length > 0) {
+    console.log(
+      `[wp] ✓ ${wpOnly.length} برند فقط از وردپرس اضافه شد: ${wpOnly.join('، ')}`
+    );
+  }
 
   // ── گزارش زمان build ─────────────────────────────────────────────
   // فالبک بی‌صدا همان چیزی بود که باعث شد این باگ هفته‌ها دیده نشود.
