@@ -23,6 +23,10 @@ interface Props {
 }
 
 const { variant = 'footer', class: className = '' } = Astro.props;
+
+/** حالت فشرده فقط نشان‌های تاییدشده را نشان می‌دهد — ادعای تاییدنشده در
+    جعبه‌ی خرید، ادعای نادرست است نه «جای‌گذار». */
+const compactBadges = TRUST_BADGES.filter((b) => b.verified);
 ---
 
 {
@@ -95,9 +99,17 @@ const { variant = 'footer', class: className = '' } = Astro.props;
         </div>
       </div>
     </section>
-  ) : (
+  ) : compactBadges.length === 0 ? null : (
+    /* ⚠️ فقط نشان‌های *تاییدشده*.
+       نسخه‌ی قبل هر چهار نشان را در جعبه‌ی خرید نشان می‌داد، بدون هیچ
+       قید و شرطی — در حالی که هر چهار مورد `verified: false` هستند.
+       یعنی «نماد اعتماد الکترونیکی» و «پرداخت امن بانکی» به‌عنوان
+       واقعیت اعلام می‌شدند در حالی که هنوز نه اینمادی ثبت شده و نه
+       درگاه پرداختی فعال است. این از نوار فوتر بدتر بود، چون آن‌جا
+       دست‌کم برچسب «در دست اقدام» داشت.
+       تا وقتی موردی تایید نشود، اینجا هیچ چیزی رندر نمی‌شود. */
     <ul role="list" class={`grid grid-cols-2 gap-x-4 gap-y-3 ${className}`}>
-      {TRUST_BADGES.map((badge) => (
+      {compactBadges.map((badge) => (
         <li class="flex items-center gap-2 min-w-0">
           <span class="w-5 h-5 shrink-0 text-accent-ink" aria-hidden="true">
             <svg class="w-full h-full" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
