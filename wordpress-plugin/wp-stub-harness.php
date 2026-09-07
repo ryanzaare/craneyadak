@@ -21,14 +21,27 @@ $GLOBALS['cyh_test_posts']      = [];
 $GLOBALS['cyh_test_transients'] = [];
 
 function add_action( $hook, $cb, $priority = 10, $args = 1 ) {
+	// ⚠️ اولویت واقعاً ذخیره می‌شود. ووکامرس `product` را با اولویت ۵ ثبت
+	// می‌کند و ما با ۱۰ — اگر هارنس ترتیب را نادیده بگیرد، دقیقاً همان
+	// تصادمی که می‌خواهیم اثبات کنیم حل شده، آزمایش نشده باقی می‌ماند.
+	$GLOBALS['cyh_test_actions_pri'][ $hook ][ $priority ][] = $cb;
 	$GLOBALS['cyh_test_actions'][ $hook ][] = $cb;
+	// ⚠️ نسخه‌ی قبلی این هارنس $args را دور می‌ریخت. به همین دلیل هرگز
+	// نمی‌توانست ناسازگاری امضای هوک را تشخیص بدهد — دقیقاً همان باگی که
+	// نسخه‌ی ۱.۳.۰ افزونه را کشت. حالا ثبت می‌شود.
+	$GLOBALS['cyh_test_hook_reg'][] = [ 'hook' => $hook, 'cb' => $cb, 'accepted' => (int) $args, 'kind' => 'action' ];
 }
 function add_filter( $hook, $cb, $priority = 10, $args = 1 ) {
 	$GLOBALS['cyh_test_filters'][ $hook ][] = $cb;
+	$GLOBALS['cyh_test_hook_reg'][] = [ 'hook' => $hook, 'cb' => $cb, 'accepted' => (int) $args, 'kind' => 'filter' ];
 }
 function do_action( $hook, ...$args ) {
-	foreach ( $GLOBALS['cyh_test_actions'][ $hook ] ?? [] as $cb ) {
-		call_user_func_array( $cb, $args );
+	$buckets = $GLOBALS['cyh_test_actions_pri'][ $hook ] ?? [];
+	ksort( $buckets, SORT_NUMERIC );
+	foreach ( $buckets as $cbs ) {
+		foreach ( $cbs as $cb ) {
+			call_user_func_array( $cb, $args );
+		}
 	}
 }
 function apply_filters( $hook, $value, ...$args ) {
@@ -41,6 +54,9 @@ function register_post_type( $slug, $args ) {
 	if ( ! is_string( $slug ) || empty( $args['labels']['name'] ) ) {
 		throw new Exception( "register_post_type($slug): invalid args" );
 	}
+	// هسته این فیلتر را اعمال می‌کند؛ بدون آن، تزریق تنظیمات گراف‌کیوال
+	// روی محصول ووکامرس اصلاً آزمایش نمی‌شود.
+	$args = apply_filters( 'register_post_type_args', $args, $slug );
 	$GLOBALS['cyh_test_post_types'][ $slug ] = $args;
 	return (object) [ 'name' => $slug ];
 }
@@ -137,6 +153,19 @@ class WP_Error {
 	}
 }
 
+// نقطه‌ی خروج هر endpoint REST. تا وقتی هارنس کال‌بک‌های REST را صدا
+// نمی‌زد پنهان ماند — یعنی یک fatal خفته، نه یک باگ برطرف‌شده.
+class WP_REST_Response {
+	public $data;
+	public $status;
+	public function __construct( $data = null, $status = 200, $headers = [] ) {
+		$this->data   = $data;
+		$this->status = $status;
+	}
+	public function get_data() { return $this->data; }
+	public function get_status() { return $this->status; }
+}
+
 class WP_REST_Request {
 	private $params;
 	public function __construct( $params ) {
@@ -152,6 +181,215 @@ class WP_REST_Request {
 // --------------------------------------------------------------------
 $plugin_dir = __DIR__ . '/crane-yadak-headless/';
 
+// ── ووکامرس: stub اختیاری ───────────────────────────────────────────────────
+// با متغیر محیطی CYH_TEST_WOO=1 «فعال» می‌شود تا هر دو مسیر پل ووکامرس
+// آزمایش شوند. بدون اجرای واقعی، تنها راه اثبات اینکه تصادم `product` حل
+// شده همین است.
+if ( getenv( 'CYH_TEST_WOO' ) === '1' ) {
+	class WooCommerce {}
+
+	// (mockهای قیمت/موجودی ووکامرس حذف شدند — فقط برای resolver ‌‌`craneCommerce`
+	//  بودند و آن فیلد با کل پل ووکامرس پاک شد. mock برای کدی که وجود ندارد،
+	//  فقط این توهم را می‌سازد که چیزی آزموده می‌شود.)
+
+	// ووکامرس نوع محتوای `product` را خودش ثبت می‌کند — با اولویت ۵،
+	// یعنی *پیش از* ثبت ما (اولویت ۱۰). همان ترتیب واقعی شبیه‌سازی می‌شود.
+	add_action( 'init', function () {
+		register_post_type( 'product', [
+			'labels'   => [ 'name' => 'Products (WooCommerce)' ],
+			'supports' => [ 'title', 'editor', 'thumbnail' ],
+		] );
+	}, 5 );
+}
+
+function register_taxonomy_for_object_type( $tax, $type ) {
+	$GLOBALS['cyh_test_tax_attached'][] = $tax . ' -> ' . $type;
+	return true;
+}
+function taxonomy_exists( $t ) { return isset( $GLOBALS['cyh_test_taxonomies'][ $t ] ); }
+function post_type_exists( $t ) { return isset( $GLOBALS['cyh_test_post_types'][ $t ] ); }
+function unregister_post_type( $t ) { unset( $GLOBALS['cyh_test_post_types'][ $t ] ); return true; }
+function remove_menu_page( $slug ) { $GLOBALS['cyh_test_removed_menus'][] = $slug; return false; }
+// ⚠️ `is_uploaded_file()` عمداً stub ندارد.
+//
+// این تابع **جزو هسته‌ی خود PHP** است، نه وردپرس. تعریف دوباره‌اش
+// `Cannot redeclare function` می‌دهد و کل هارنس را پیش از اجرای هر
+// آزمونی می‌کشد — یعنی همان اتفاقی که افتاد.
+//
+// درس: فهرست stubها باید فقط توابع *وردپرس* باشد. پیش از افزودن هر
+// stub جدید، `php -r "var_dump(function_exists('نام'));"` را بزنید؛
+// اگر true بود، آن تابع مال PHP است و نباید stub شود.
+//
+// پیامد: مسیر «آپلود فایل» در ابزار ورود محتوا با هارنس پوشش داده
+// نمی‌شود (نسخه‌ی واقعی همیشه false برمی‌گرداند). مسیر «چسباندن در
+// کادر متن» پوشش داده می‌شود، و بارگذاری فایل‌ها — که هدف اصلی این
+// هارنس است — کاملاً آزموده می‌شود.
+function wp_kses_post( $s ) { return $s; }
+// (تعریف دوم `sanitize_textarea_field` حذف شد — نسخه‌ی خط ۸۵ نگه داشته شد،
+//  چون مثل وردپرس واقعی تگ‌ها را هم strip می‌کند.)
+function wp_count_posts( $type = 'post' ) { return (object) [ 'publish' => 0, 'draft' => 0 ]; }
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// stubهای افزوده‌شده — توابع پنل، ترم، متا و گراف‌کیوال
+//
+// ⚠️ چرا این بلوک وجود دارد: نسخه‌ی قبلی این هارنس فقط ۵۱ تابع را stub
+// می‌کرد و روی add_submenu_page() با «Call to undefined function» می‌افتاد.
+// یعنی ابزاری که قرار بود خطای مرگبار را بگیرد، خودش مرگبار می‌شد.
+//
+// این فهرست دستی حدس زده نشده: با استخراج *همه‌ی* فراخوانی‌های تابع از کل
+// فایل‌های افزونه و کم کردن توابع داخلی PHP و توابع خود افزونه ساخته شده.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ⚠️ OBJECT/ARRAY_A ثابت‌های خود وردپرس‌اند و در امضای stubها به‌عنوان
+// مقدار پیش‌فرض استفاده شده‌اند. در PHP 8 ثابت تعریف‌نشده «Error» است، نه
+// notice — یعنی بدون این خط، خودِ هارنس fatal می‌شد.
+if ( ! defined( 'OBJECT' ) )  { define( 'OBJECT', 'OBJECT' ); }
+if ( ! defined( 'ARRAY_A' ) ) { define( 'ARRAY_A', 'ARRAY_A' ); }
+if ( ! defined( 'ARRAY_N' ) ) { define( 'ARRAY_N', 'ARRAY_N' ); }
+if ( ! defined( 'CYH_PLUGIN_DIR' ) ) { define( 'CYH_PLUGIN_DIR', __DIR__ . '/crane-yadak-headless/' ); }
+if ( ! defined( 'CYH_PLUGIN_URL' ) ) { define( 'CYH_PLUGIN_URL', 'https://example.test/wp-content/plugins/crane-yadak-headless/' ); }
+if ( ! defined( 'CYH_VERSION' ) )    { define( 'CYH_VERSION', 'harness' ); }
+if ( ! defined( 'HOUR_IN_SECONDS' ) ) { define( 'HOUR_IN_SECONDS', 3600 ); }
+if ( ! defined( 'DAY_IN_SECONDS' ) )  { define( 'DAY_IN_SECONDS', 86400 ); }
+
+// ── پنل مدیریت ─────────────────────────────────────────────────────────────
+
+// ⚠️ `add_menu_page` جا افتاده بود.
+//
+// کامنت بالای این بلوک ادعا می‌کرد فهرست stubها «حدس زده نشده» و از
+// استخراج همه‌ی فراخوانی‌ها ساخته شده. آن ادعا درست نبود: منوی سطح‌بالای
+// «دسته‌بندی قطعات» این تابع را صدا می‌زند و stub نداشت، و هارنس دقیقاً
+// روی همان خط با «Call to undefined function» مرد.
+//
+// حالا `check-stub-coverage.php` همان استخراج را *واقعاً* و در هر اجرا
+// انجام می‌دهد، به‌جای اینکه یک بار دستی انجام شده باشد و ادعا شود.
+function add_menu_page( $page_title, $menu_title, $cap, $slug, $cb = null, $icon = '', $pos = null ) {
+	if ( '' === (string) $slug ) { throw new Exception( 'add_menu_page: empty slug' ); }
+	if ( $cb !== null && '' !== $cb && ! is_callable( $cb ) ) {
+		throw new Exception( "add_menu_page($slug): callback «" . ( is_string( $cb ) ? $cb : 'closure' ) . "» تعریف نشده" );
+	}
+	$GLOBALS['cyh_test_menus'][ $slug ] = [ 'title' => $menu_title, 'cb' => $cb, 'pos' => $pos ];
+	return $slug;
+}
+
+function add_submenu_page( $parent, $page_title, $menu_title, $cap, $slug, $cb = null, $pos = null ) {
+	if ( '' === (string) $slug ) { throw new Exception( 'add_submenu_page: empty slug' ); }
+	if ( $cb !== null && ! is_callable( $cb ) ) {
+		throw new Exception( "add_submenu_page($slug): callback «" . ( is_string( $cb ) ? $cb : 'closure' ) . "» تعریف نشده" );
+	}
+	$GLOBALS['cyh_test_submenus'][ $slug ] = [ 'parent' => $parent, 'title' => $menu_title, 'cb' => $cb ];
+	return $slug;
+}
+function add_meta_box( $id, $title, $cb, $screen = null, $ctx = 'advanced', $pri = 'default', $args = null ) {
+	if ( ! is_callable( $cb ) ) { throw new Exception( "add_meta_box($id): callback تعریف نشده" ); }
+	$GLOBALS['cyh_test_metaboxes'][ $id ] = [ 'screen' => $screen, 'cb' => $cb ];
+	return $id;
+}
+function get_current_screen() { return (object) [ 'id' => $GLOBALS['cyh_test_screen'] ?? 'dashboard', 'base' => 'edit' ]; }
+function check_admin_referer( $action = -1, $q = '_wpnonce' ) { return true; }
+function wp_nonce_url( $url, $action = -1, $name = '_wpnonce' ) { return $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . '_wpnonce=test'; }
+function add_query_arg( ...$a ) {
+	if ( is_array( $a[0] ) ) { $args = $a[0]; $url = $a[1] ?? ''; } else { $args = [ $a[0] => $a[1] ]; $url = $a[2] ?? ''; }
+	return $url . ( str_contains( (string) $url, '?' ) ? '&' : '?' ) . http_build_query( $args );
+}
+function wp_safe_redirect( $url, $status = 302 ) { $GLOBALS['cyh_test_redirects'][] = $url; return true; }
+// این دو با الگوی POST→redirect→GET در ابزار «ورود محتوا از فایل» لازم شدند.
+// نبودشان، بارگذاری را نمی‌شکست (فقط داخل بدنه‌ی تابع صدا زده می‌شوند) —
+// یعنی هارنس بی‌سروصدا کمتر از چیزی که فکر می‌کردیم پوشش می‌داد.
+function get_current_user_id() { return 1; }
+function sanitize_key( $key ) { return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $key ) ); }
+function wp_die( $msg = '', $title = '', $args = [] ) { throw new Exception( 'wp_die: ' . ( is_string( $msg ) ? $msg : 'error' ) ); }
+function selected( $a, $b = true, $echo = true ) { $r = ( (string) $a === (string) $b ) ? " selected='selected'" : ''; if ( $echo ) { echo $r; } return $r; }
+function wp_enqueue_media( $args = [] ) { return true; }
+function get_edit_post_link( $id = 0, $ctx = 'display' ) { return 'https://example.test/wp-admin/post.php?post=' . (int) $id . '&action=edit'; }
+function get_post_type_object( $t ) { return isset( $GLOBALS['cyh_test_post_types'][ $t ] ) ? (object) [ 'name' => $t, 'label' => $t ] : null; }
+function add_post_type_support( $t, $f ) { $GLOBALS['cyh_test_supports'][ $t ][] = $f; return true; }
+function add_role( $r, $n, $caps = [] ) { $GLOBALS['cyh_test_roles'][ $r ] = $caps; return null; }
+function get_role( $r ) { return isset( $GLOBALS['cyh_test_roles'][ $r ] ) ? (object) [ 'name' => $r ] : null; }
+
+// ── ترم و تاکسونومی ────────────────────────────────────────────────────────
+function get_term( $t, $tax = '', $out = OBJECT ) { return $GLOBALS['cyh_test_terms'][ is_object( $t ) ? $t->term_id : $t ] ?? null; }
+function get_term_by( $field, $value, $tax = '', $out = OBJECT ) {
+	foreach ( $GLOBALS['cyh_test_terms'] ?? [] as $t ) { if ( ( $t->$field ?? null ) === $value ) { return $t; } }
+	return false;
+}
+function get_terms( $args = [] ) { return array_values( $GLOBALS['cyh_test_terms'] ?? [] ); }
+function term_exists( $term, $tax = '', $parent = null ) {
+	foreach ( $GLOBALS['cyh_test_terms'] ?? [] as $t ) { if ( $t->slug === $term || $t->name === $term ) { return [ 'term_id' => $t->term_id ]; } }
+	return null;
+}
+function wp_insert_term( $name, $tax, $args = [] ) {
+	$id = count( $GLOBALS['cyh_test_terms'] ?? [] ) + 100;
+	$GLOBALS['cyh_test_terms'][ $id ] = (object) [
+		'term_id' => $id, 'name' => $name, 'slug' => $args['slug'] ?? sanitize_title( $name ),
+		'description' => $args['description'] ?? '', 'parent' => (int) ( $args['parent'] ?? 0 ), 'count' => 0,
+	];
+	return [ 'term_id' => $id, 'term_taxonomy_id' => $id ];
+}
+function wp_update_term( $id, $tax, $args = [] ) {
+	if ( ! isset( $GLOBALS['cyh_test_terms'][ $id ] ) ) { return new WP_Error( 'missing', 'term not found' ); }
+	foreach ( $args as $k => $v ) { $GLOBALS['cyh_test_terms'][ $id ]->$k = $v; }
+	return [ 'term_id' => $id, 'term_taxonomy_id' => $id ];
+}
+function wp_set_object_terms( $obj, $terms, $tax, $append = false ) { $GLOBALS['cyh_test_object_terms'][ $obj ][ $tax ] = $terms; return (array) $terms; }
+function sanitize_title( $t, $fallback = '', $ctx = 'save' ) {
+	$t = strtolower( trim( (string) $t ) );
+	$t = preg_replace( '/[^a-z0-9\-\_\s]/u', '', $t );   // غیرلاتین حذف می‌شود — دقیقاً مثل وردپرس
+	$t = preg_replace( '/[\s\-]+/', '-', (string) $t );
+	return trim( (string) $t, '-' );
+}
+
+// ── پست و متا ──────────────────────────────────────────────────────────────
+function get_post( $p = null, $out = OBJECT ) { return $GLOBALS['cyh_test_posts'][ is_object( $p ) ? $p->ID : (int) $p ] ?? null; }
+function get_posts( $args = [] ) { return array_values( $GLOBALS['cyh_test_posts'] ?? [] ); }
+function get_page_by_path( $path, $out = OBJECT, $type = 'page' ) { return null; }
+function get_post_field( $f, $p = null, $ctx = 'display' ) { $post = get_post( $p ); return $post->$f ?? ''; }
+function get_post_meta( $id, $key = '', $single = false ) { $v = $GLOBALS['cyh_test_meta'][ $id ][ $key ] ?? ( $single ? '' : [] ); return $v; }
+function update_post_meta( $id, $key, $val, $prev = '' ) { $GLOBALS['cyh_test_meta'][ $id ][ $key ] = $val; return true; }
+function delete_post_meta( $id, $key, $val = '' ) { unset( $GLOBALS['cyh_test_meta'][ $id ][ $key ] ); return true; }
+function wp_update_post( $post = [], $wp_error = false, $fire = true ) { return is_array( $post ) ? ( $post['ID'] ?? 1 ) : 1; }
+function wp_unique_post_slug( $slug, $id, $status, $type, $parent ) { return $slug; }
+function clean_post_cache( $p ) { return null; }
+function get_the_date( $fmt = '', $p = null ) { return '2026-01-01'; }
+
+// ── دیدگاه ─────────────────────────────────────────────────────────────────
+function get_comment( $c = null, $out = OBJECT ) { return $GLOBALS['cyh_test_comments'][ is_object( $c ) ? $c->comment_ID : (int) $c ] ?? null; }
+function get_comments( $args = [] ) { return array_values( $GLOBALS['cyh_test_comments'] ?? [] ); }
+function wp_insert_comment( $data ) { $id = count( $GLOBALS['cyh_test_comments'] ?? [] ) + 1; $GLOBALS['cyh_test_comments'][ $id ] = (object) array_merge( [ 'comment_ID' => $id ], $data ); return $id; }
+function get_comment_meta( $id, $key = '', $single = false ) { return $GLOBALS['cyh_test_cmeta'][ $id ][ $key ] ?? ( $single ? '' : [] ); }
+function add_comment_meta( $id, $key, $val, $unique = false ) { $GLOBALS['cyh_test_cmeta'][ $id ][ $key ] = $val; return true; }
+
+// ── ACF ────────────────────────────────────────────────────────────────────
+function acf_add_local_field_group( $group ) {
+	if ( empty( $group['key'] ) ) { throw new Exception( 'acf_add_local_field_group: missing key' ); }
+	$name = $group['graphql_field_name'] ?? null;
+	if ( $name && isset( $GLOBALS['cyh_test_acf_gql'][ $name ] ) && $GLOBALS['cyh_test_acf_gql'][ $name ] !== $group['key'] ) {
+		// همان تصادمی که سه بیلد را سوزاند.
+		$GLOBALS['cyh_test_acf_collisions'][] = $name;
+	}
+	if ( $name ) { $GLOBALS['cyh_test_acf_gql'][ $name ] = $group['key']; }
+	$GLOBALS['cyh_test_acf_groups'][ $group['key'] ] = $group;
+	return $group;
+}
+function get_field( $sel, $post_id = false, $format = true ) { return $GLOBALS['cyh_test_fields'][ (string) $post_id ][ $sel ] ?? ''; }
+function update_field( $sel, $val, $post_id = false ) { $GLOBALS['cyh_test_fields'][ (string) $post_id ][ $sel ] = $val; return true; }
+
+// ── WPGraphQL ──────────────────────────────────────────────────────────────
+function register_graphql_object_type( $name, $config ) { $GLOBALS['cyh_test_gql_types'][ $name ] = $config; return true; }
+function register_graphql_field( $type, $name, $config ) { $GLOBALS['cyh_test_gql_fields'][ "$type.$name" ] = $config; return true; }
+
+// ── متفرقه ─────────────────────────────────────────────────────────────────
+function esc_url( $u, $p = null, $ctx = 'display' ) { return (string) $u; }
+function is_email( $e ) { return (bool) filter_var( $e, FILTER_VALIDATE_EMAIL ); }
+function wp_json_encode( $d, $flags = 0, $depth = 512 ) { return json_encode( $d, $flags | JSON_UNESCAPED_UNICODE, $depth ); }
+function wp_kses( $str, $allowed = [], $protocols = [] ) { return strip_tags( (string) $str, array_map( fn( $t ) => "<$t>", array_keys( (array) $allowed ) ) ); }
+function wp_strip_all_tags( $str, $break = false ) { return trim( strip_tags( (string) $str ) ); }
+function wp_rand( $min = 0, $max = 0 ) { return $max > $min ? random_int( $min, $max ) : random_int( 0, PHP_INT_MAX ); }
+function trailingslashit( $s ) { return rtrim( (string) $s, '/\\' ) . '/'; }
+function rest_get_url_prefix() { return 'wp-json'; }
+
+
 function acf_add_options_page( $args ) {
 	if ( empty( $args['menu_slug'] ) ) {
 		throw new Exception( 'acf_add_options_page: missing menu_slug' );
@@ -160,12 +398,17 @@ function acf_add_options_page( $args ) {
 	return $args;
 }
 
-require $plugin_dir . 'includes/class-post-types.php';
-require $plugin_dir . 'includes/class-cors.php';
-require $plugin_dir . 'includes/class-rest-contact.php';
-require $plugin_dir . 'includes/class-admin-settings.php';
-require $plugin_dir . 'includes/class-options-page.php';
-require $plugin_dir . 'includes/class-deploy-webhook.php';
+// ⚠️ قبلاً اینجا یک فهرست دستی از ۶ فایل بود. هر فایل جدیدی که به افزونه
+// اضافه می‌شد، در این هارنس *اجرا نمی‌شد* — یعنی تست سبز می‌ماند در حالی که
+// کد جدید اصلاً بارگذاری نشده بود. glob این کلاس از خطا را می‌بندد.
+$plugin_files = glob( $plugin_dir . 'includes/*.php' );
+sort( $plugin_files );
+// class-taxonomy-hierarchy به cyh_taxonomy_blueprint() در class-taxonomy-sync
+// وابسته است؛ چون فقط در زمان *فراخوانی* لازم است، ترتیب الفبایی کافی است.
+foreach ( $plugin_files as $__f ) {
+	require_once $__f;
+}
+echo '✓ ' . count( $plugin_files ) . " فایل افزونه بارگذاری شد\n";
 
 // هوک init را واقعاً «اجرا» می‌کنیم تا register_post_type/register_taxonomy
 // واقعاً فراخوانی شوند، نه فقط تعریف.
@@ -174,6 +417,11 @@ do_action( 'rest_api_init' );
 do_action( 'admin_menu' );
 do_action( 'admin_init' );
 do_action( 'acf/init' );
+// ⚠️ بدون این خط، هیچ‌کدام از ثبت‌های گراف‌کیوال اجرا نمی‌شدند:
+// craneCommerce، تنظیمات سایت، و بخش انجمن. یعنی هارنس ماه‌ها سبز بود
+// در حالی که یک لایه‌ی کامل را اصلاً لمس نکرده بود.
+// WPGraphQL این اکشن را با یک آرگومان (TypeRegistry) صدا می‌زند.
+do_action( 'graphql_register_types', null );
 
 $errors = [];
 
@@ -182,7 +430,8 @@ if ( empty( $GLOBALS['cyh_test_options_pages']['crane-site-settings'] ) ) {
 }
 
 // بررسی ۱: همه‌ی CPTهای مورد انتظار ثبت شده‌اند؟
-$expected_cpts = [ 'product', 'brand', 'industry', 'datasheet', 'inquiry' ];
+// datasheet و industry عمداً حذف شده‌اند؛ cyh_quote اضافه شده.
+$expected_cpts = [ 'product', 'brand', 'inquiry', 'cyh_quote' ];
 foreach ( $expected_cpts as $cpt ) {
 	if ( ! isset( $GLOBALS['cyh_test_post_types'][ $cpt ] ) ) {
 		$errors[] = "CPT ثبت نشد: $cpt";
@@ -371,6 +620,136 @@ if ( empty( $GLOBALS['cyh_test_remote_post_calls'] ) ) {
 } else {
 	echo "✓ اجرای وبهوک به‌درستی به آدرس تنظیم‌شده POST می‌زند\n";
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// بررسی امضای هوک‌ها — همان چیزی که نسخه‌ی ۱.۳.۰ را کشت
+// ═══════════════════════════════════════════════════════════════════════════
+// وردپرس به هر کال‌بک دقیقاً min(accepted_args، تعداد آرگومان واقعی هوک)
+// آرگومان می‌دهد. اگر کال‌بک پارامتر *اجباری* بیشتری داشته باشد، PHP 8 یک
+// ArgumentCountError پرتاب می‌کند و سایت سفید می‌شود.
+//
+// از Reflection استفاده می‌کنیم و نه از فراخوانی واقعی: بدنه‌ی کال‌بک اجرا
+// نمی‌شود، پس هیچ عارضه‌ی جانبی (ریدایرکت، نوشتن در دیتابیس، wp_die) رخ
+// نمی‌دهد — ولی ناسازگاری امضا دقیق و قطعی پیدا می‌شود.
+$hook_arity = [
+	'pre_term_slug' => 2, 'pre_term_name' => 2, 'pre_term_description' => 2,
+	'wp_insert_term_data' => 3, 'wp_update_term_data' => 4, 'term_name' => 2,
+	'save_post' => 3, 'wp_insert_post_data' => 4, 'wp_unique_post_slug' => 6,
+	'add_meta_boxes' => 2, 'pre_comment_approved' => 2,
+	'manage_comments_custom_column' => 2, 'manage_edit-comments_columns' => 1,
+	'init' => 0, 'admin_init' => 0, 'admin_menu' => 0, 'admin_notices' => 0,
+	'admin_enqueue_scripts' => 1, 'rest_api_init' => 1,
+	'acf/init' => 0, 'acf/save_post' => 1,
+	'acf/settings/load_json' => 1, 'acf/settings/save_json' => 1,
+	'graphql_register_types' => 1,
+];
+$dynamic_arity = [ '/^saved_/' => 4, '/^created_/' => 4, '/^edited_/' => 4,
+	'/^delete_/' => 5, '/^admin_post_/' => 0, '/^wp_ajax_/' => 0 ];
+
+$sig_checked = 0;
+foreach ( $GLOBALS['cyh_test_hook_reg'] ?? [] as $reg ) {
+	if ( ! is_string( $reg['cb'] ) || ! function_exists( $reg['cb'] ) ) {
+		continue;
+	}
+
+	$arity = $hook_arity[ $reg['hook'] ] ?? null;
+	if ( null === $arity ) {
+		foreach ( $dynamic_arity as $pattern => $n ) {
+			if ( preg_match( $pattern, $reg['hook'] ) ) { $arity = $n; break; }
+		}
+	}
+
+	$ref      = new ReflectionFunction( $reg['cb'] );
+	$required = $ref->getNumberOfRequiredParameters();
+
+	// کف ۱: do_action بدون آرگومان اضافه هم یک رشته‌ی خالی پاس می‌دهد.
+	$passes = ( null === $arity ) ? $reg['accepted'] : min( $reg['accepted'], $arity );
+	$passes = max( $passes, 1 );
+	$sig_checked++;
+
+	if ( $required > $passes ) {
+		$errors[] = sprintf(
+			'امضای هوک اشتباه: %s() روی «%s» — %d پارامتر اجباری دارد ولی وردپرس %d آرگومان می‌دهد → ArgumentCountError (سفید شدن سایت)',
+			$reg['cb'], $reg['hook'], $required, $passes
+		);
+	}
+}
+if ( ! array_filter( $errors, fn( $e ) => str_contains( $e, 'امضای هوک' ) ) ) {
+	echo "✓ هر $sig_checked کال‌بک هوک با تعداد آرگومان وردپرس سازگار است\n";
+}
+
+// تصادم نام گراف‌کیوال بین گروه‌های ACF — باگی که سه بیلد را سوزاند.
+if ( ! empty( $GLOBALS['cyh_test_acf_collisions'] ) ) {
+	foreach ( array_unique( $GLOBALS['cyh_test_acf_collisions'] ) as $name ) {
+		$errors[] = "دو گروه ACF یک graphql_field_name دارند: «$name» — یکی بی‌صدا از اسکیما حذف می‌شود";
+	}
+} else {
+	echo "✓ هیچ تصادم graphql_field_name بین گروه‌های ACF نیست\n";
+}
+
+// هر زیرمنو باید کال‌بک واقعی داشته باشد (stub خودش throw می‌کند، این گزارش است).
+echo '✓ ' . count( $GLOBALS['cyh_test_submenus'] ?? [] ) . " زیرمنوی پنل با کال‌بک معتبر ثبت شد\n";
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// تصادم `product` با ووکامرس — اثبات حل شدن
+// ═══════════════════════════════════════════════════════════════════════════
+$woo_mode = getenv( 'CYH_TEST_WOO' ) === '1';
+echo "\n--- حالت: " . ( $woo_mode ? 'ووکامرس فعال' : 'ووکامرس غیرفعال' ) . " ---\n";
+
+$pt = $GLOBALS['cyh_test_post_types']['product'] ?? null;
+
+if ( $woo_mode ) {
+	// ⚠️ این شاخه بازنویسی شد. قرارداد قدیمی («ووکامرس صاحب ثبت می‌شود و ما
+	// تنظیمات گراف‌کیوال را رویش تزریق می‌کنیم») مربوط به پلی بود که کاملاً
+	// حذف شد. تست همچنان آن رفتار را می‌خواست، پس برای رفتار *درستِ فعلی*
+	// شکست می‌خورد.
+	//
+	// قرارداد امروز ساده‌تر و صادقانه‌تر است: اگر ووکامرس فعال باشد ما اصلاً
+	// `product` را ثبت نمی‌کنیم و یک اعلان روشن در پنل می‌گذاریم. سایت سفید
+	// نمی‌شود، ولی وانمود هم نمی‌کنیم که یکپارچه‌سازی‌ای وجود دارد.
+	// ⚠️ نه `$pt === null`. خودِ ووکامرسِ ساختگی در همین هارنس، `product` را
+	// با اولویت ۵ ثبت می‌کند — پس ثبت *وجود دارد*. چیزی که باید اثبات شود
+	// این است که ثبت **مال او مانده** و ثبت ما (اولویت ۱۰) رویش ننشسته.
+	if ( ! $pt ) {
+		$errors[] = 'در حالت ووکامرس، product اصلاً ثبت نشد — خود ووکامرسِ ساختگی باید ثبتش کند';
+	} elseif ( 'Products (WooCommerce)' !== ( $pt['labels']['name'] ?? '' ) ) {
+		$errors[] = 'ثبت ووکامرس بازنویسی شد — نگهبان تصادم کار نکرد';
+	} else {
+		echo "✓ ثبت ووکامرس دست‌نخورده ماند (ما کنار کشیدیم)\n";
+	}
+
+	$notices = $GLOBALS['cyh_test_actions']['admin_notices'] ?? [];
+	if ( empty( $notices ) ) {
+		$errors[] = 'هیچ اعلانی برای مدیر ثبت نشد — کاربر بی‌خبر می‌ماند که چرا محصولات غایب‌اند';
+	} else {
+		echo "✓ اعلان پنل ثبت شد (کاربر می‌فهمد چرا craneProducts نیست)\n";
+	}
+} elseif ( ! $pt ) {
+	$errors[] = 'نوع محتوای product اصلاً ثبت نشد';
+} elseif ( 'محصولات کرین یدک' !== ( $pt['labels']['name'] ?? '' ) ) {
+	$errors[] = 'بدون ووکامرس، ثبت product باید مال ما باشد';
+} else {
+	echo "✓ بدون ووکامرس، رفتار دقیقاً مثل قبل است (سازگاری عقب‌رو)\n";
+}
+
+/*
+ * ⚠️ آزمون `craneCommerce` عمداً حذف شد — و این حذف، خودش یک آزمون است.
+ *
+ * آن فیلد بخشی از پل ووکامرس بود که به‌درخواست صریح شما کاملاً پاک شد.
+ * ولی هارنس همچنان وجودش را الزامی می‌دانست، پس یک ❌ چاپ می‌کرد برای
+ * چیزی که **درست** بود: نبودن کدی که خواسته بودیم نباشد.
+ *
+ * تستی که برای کد حذف‌شده شکست می‌خورد، بدتر از بی‌فایده است — آدم را
+ * وادار می‌کند یا کد مرده را برگرداند یا یاد بگیرد خطای قرمز را نادیده
+ * بگیرد. هر دو نتیجه بد است.
+ *
+ * چیزی که *هنوز* آزموده می‌شود و مهم است، بالاتر است: اگر ووکامرس نصب
+ * شود، ما مالکیت نوع محتوای `product` را واگذار می‌کنیم ولی تنظیمات
+ * گراف‌کیوال خودمان را تزریق می‌کنیم تا `craneProducts` از اسکیما نیفتد
+ * و فرانت‌اند نشکند. آن محافظ ده‌خطی هنوز در `class-post-types.php` هست.
+ */
 
 echo "\n----------------------------------------\n";
 if ( empty( $errors ) ) {
