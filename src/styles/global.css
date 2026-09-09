@@ -558,3 +558,21 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* تصویرِ درج‌شده در متن راهنما.
+   `.prose-crane img` بالاتر گردی و max-width را می‌دهد؛ این‌ها فاصله و
+   زیرنویس را اضافه می‌کنند تا تصویر وسط متن، پرتاب‌شده به نظر نرسد.
+
+   ⚠️ `height: auto` در قانون بالا لازم است و باید بماند: وقتی HTML مقدار
+   width/height واقعی دارد (که باید داشته باشد، برای CLS)، بدون این قانون
+   تصویر روی موبایل کشیده می‌شود. */
+.prose-crane img { margin-block: 1.75rem; }
+.prose-crane figure { margin-block: 1.75rem; }
+.prose-crane figure img { margin-block: 0; }
+.prose-crane figcaption {
+  margin-top: 0.6rem;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--color-steel-600, #4b5563);
+  text-align: center;
+}

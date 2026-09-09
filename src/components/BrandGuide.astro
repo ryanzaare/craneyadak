@@ -34,6 +34,7 @@
 
 import SectionNav from './SectionNav.astro';
 import { autolinkHtml } from '../lib/autolink';
+import { wrapProseTables, normalizeProseImages, mergeAudit, reportImageAudit, EMPTY_AUDIT } from '../lib/prose-html';
 import { findCategory, categoryPath } from '../data/taxonomy';
 import type { BrandProfile } from '../lib/brand-profile';
 
@@ -45,30 +46,43 @@ export interface Props {
 
 const { profile, brandName, reviewMode } = Astro.props;
 
-/** جدول‌ها را برای موبایل در ظرف اسکرول‌پذیر می‌پیچد. */
-function wrapProseTables(html: string): string {
-  if (!html || !html.includes('<table')) return html;
-  return html.replace(
-    /<div class="table-scroll">\s*(<table[\s\S]*?<\/table>)\s*<\/div>|(<table[\s\S]*?<\/table>)/g,
-    (_m, wrapped, bare) => `<div class="table-scroll">${wrapped ?? bare}</div>`,
-  );
-}
+// جدول‌ها و تصاویر داخل متن از یک ماژول مشترک عبور می‌کنند — پیش‌تر
+// `wrapProseTables` در این فایل و در CategoryGuide کپی شده بود و دو نسخه
+// از هم واگرا شده بودند.
+let imgAudit = EMPTY_AUDIT;
+const link = (html: string | null) => {
+  if (!html) return '';
+  const linked = wrapProseTables(autolinkHtml(html, { currentPath: Astro.url.pathname }));
+  const { html: withImages, audit } = normalizeProseImages(linked);
+  imgAudit = mergeAudit(imgAudit, audit);
+  return withImages;
+};
 
-const link = (html: string | null) =>
-  html ? wrapProseTables(autolinkHtml(html, { currentPath: Astro.url.pathname })) : '';
+/* رسانه اول می‌آید — تصمیم تجاری: بازدیدکننده باید ویدیو را اول ببیند.
+   دو پیامد فنی که با همین تغییر مدیریت شده‌اند:
 
+   ۱) LCP. تا پیش از این، بزرگ‌ترین عنصرِ قابل رنگ‌آمیزی، متنِ هیرو بود که
+      عملاً آنی رندر می‌شود. حالا یک تصویر بالای صفحه می‌آید و به احتمال
+      زیاد خودش LCP می‌شود. پس تصویر *اول* دیگر lazy نیست: با
+      fetchpriority='high' زودتر از بقیه دانلود می‌شود. اگر lazy می‌ماند،
+      مرورگر عمداً عقب می‌انداختش و LCP بدتر از قبل می‌شد.
+
+   ۲) شماره‌گذاری. «معرفی» و «رسانه» هر دو مقدمه‌اند، نه گامِ شماره‌دار.
+      اگر رسانه شماره می‌گرفت، «معرفی» بدون شماره وسط دو بخش شماره‌دار
+      می‌افتاد و ترتیب بی‌معنا می‌شد. */
 const sections = [
+  { id: 'brand-media', label: 'تصاویر و ویدیو', show: profile.media.length > 0 },
   { id: 'brand-intro', label: 'معرفی', show: Boolean(profile.introHtml) },
   { id: 'brand-series', label: 'سری‌های محصول', show: profile.series.length > 0 },
   { id: 'brand-nameplate', label: 'خواندن پلاک', show: Boolean(profile.identificationHtml) },
   { id: 'brand-iran', label: 'در بازار ایران', show: Boolean(profile.iranPresenceHtml) },
   { id: 'brand-parts', label: 'قطعات پرتقاضا', show: profile.commonParts.length > 0 },
   { id: 'brand-tech', label: 'فناوری‌ها', show: profile.technologies.length > 0 },
-  { id: 'brand-media', label: 'تصاویر', show: profile.media.length > 0 },
   { id: 'brand-faq', label: 'پرسش‌های متداول', show: profile.faqs.length > 0 },
 ].filter((s) => s.show);
 
-const numbered = sections.filter((s) => s.id !== 'brand-intro');
+const LEAD_IN = new Set(['brand-intro', 'brand-media']);
+const numbered = sections.filter((s) => !LEAD_IN.has(s.id));
 const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
 
 /** نشانِ «نیاز به بازبینی» فقط در حالت بازبینی دیده می‌شود. */
@@ -114,6 +128,14 @@ const supplyCounts = {
   supported: profile.series.filter((s) => s.supplyStatus === 'supported').length,
   equivalent: profile.series.filter((s) => s.supplyStatus === 'equivalent').length,
 };
+
+// ⚠️ متن‌ها *اینجا* آماده می‌شوند، نه داخل قالب. اگر `link()` وسط رندر صدا
+// زده شود، شمارشِ تصاویر بعد از چاپ شدن صفحه کامل می‌شود و دیگر جایی برای
+// گزارش دادنش نیست — هشدار CLS هرگز به لاگ build نمی‌رسید.
+const introHtml = link(profile.introHtml);
+const identificationHtml = link(profile.identificationHtml);
+const iranPresenceHtml = link(profile.iranPresenceHtml);
+reportImageAudit(imgAudit, `صفحه‌ی برند ${brandName}`);
 ---
 
 {profile.hasContent && (
@@ -129,6 +151,72 @@ const supplyCounts = {
     <SectionNav sections={sections} eyebrow="پروفایل برند" ariaLabel={`بخش‌های صفحه‌ی ${brandName}`} />
 
     <div class="bg-white">
+      {/* ---- رسانه‌ها — اولین چیزی که بازدیدکننده می‌بیند ---- */}
+      {profile.media.length > 0 && (
+        <section id="brand-media" class="px-4 pt-12 pb-12 scroll-mt-32" aria-labelledby="brand-media-heading">
+          <div class="max-w-7xl mx-auto">
+            <h2 id="brand-media-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed mb-8">
+              {brandName} در یک نگاه
+            </h2>
+
+            <div class={`grid gap-6 ${profile.media.length > 1 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'max-w-3xl'}`}>
+              {profile.media.map((m, i) => (
+                <figure class="rounded-2xl overflow-hidden border border-gray-200 bg-white">
+                  {m.kind === 'video' && m.videoUrl ? (
+                    /* ⚠️ الگوی facade: هیچ iframeای تا کلیک کاربر ساخته نمی‌شود.
+                       جاسازی مستقیم، بیش از ۵۰۰ کیلوبایت و چند درخواست
+                       مسدودکننده به هر بازدید اضافه می‌کند — یعنی LCP بدتر و
+                       سئوی پایین‌تر، نه بالاتر. */
+                    <a
+                      href={m.videoUrl}
+                      target="_blank"
+                      rel="noopener"
+                      class="group block relative aspect-video bg-crane-navy"
+                      aria-label={`پخش ویدیو: ${m.alt || m.caption || 'ویدیو'}`}
+                    >
+                      {m.url && (
+                        <img
+                          src={m.url}
+                          alt={m.alt}
+                          width={m.width ?? undefined}
+                          height={m.height ?? undefined}
+                          loading={i === 0 ? 'eager' : 'lazy'}
+                          fetchpriority={i === 0 ? 'high' : undefined}
+                          decoding="async"
+                          class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        />
+                      )}
+                      <span class="absolute inset-0 grid place-items-center" aria-hidden="true">
+                        <span class="w-16 h-16 rounded-full bg-white/95 grid place-items-center shadow-lg group-hover:scale-110 transition-transform">
+                          <svg viewBox="0 0 24 24" class="w-7 h-7 translate-x-0.5" fill="currentColor" aria-hidden="true">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </span>
+                      </span>
+                    </a>
+                  ) : (
+                    m.url && (
+                      <img
+                        src={m.url}
+                        alt={m.alt}
+                        width={m.width ?? undefined}
+                        height={m.height ?? undefined}
+                        loading="lazy"
+                        decoding="async"
+                        class="w-full h-auto"
+                      />
+                    )
+                  )}
+                  {m.caption && (
+                    <figcaption class="px-4 py-3 text-sm text-steel-600 border-t border-gray-100">{m.caption}</figcaption>
+                  )}
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ------------------------------ معرفی ------------------------------ */}
       {profile.introHtml && (
         <section id="brand-intro" class="px-4 pt-16 pb-12 scroll-mt-32" aria-labelledby="brand-intro-heading">
@@ -155,7 +243,7 @@ const supplyCounts = {
               </dl>
             )}
 
-            <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={link(profile.introHtml)} />
+            <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={introHtml} />
           </div>
         </section>
       )}
@@ -252,7 +340,7 @@ const supplyCounts = {
                 <p class="text-steel-600 mt-1">بدون کد درست، هیچ استعلامی دقیق نیست.</p>
               </div>
             </div>
-            <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={link(profile.identificationHtml)} />
+            <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={identificationHtml} />
           </div>
         </section>
       )}
@@ -267,7 +355,7 @@ const supplyCounts = {
                 {brandName} در صنعت ایران
               </h2>
             </div>
-            <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={link(profile.iranPresenceHtml)} />
+            <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={iranPresenceHtml} />
           </div>
         </section>
       )}
@@ -333,74 +421,6 @@ const supplyCounts = {
                     </p>
                   )}
                 </article>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ----------------------------- رسانه‌ها ----------------------------- */}
-      {profile.media.length > 0 && (
-        <section id="brand-media" class="px-4 py-16 border-t border-gray-100 scroll-mt-32" aria-labelledby="brand-media-heading">
-          <div class="max-w-7xl mx-auto">
-            <div class="flex items-start gap-4 mb-8">
-              <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">{numberOf('brand-media')}</span>
-              <h2 id="brand-media-heading" class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">
-                تصاویر و ویدیو
-              </h2>
-            </div>
-
-            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {profile.media.map((m) => (
-                <figure class="rounded-2xl overflow-hidden border border-gray-200 bg-white">
-                  {m.kind === 'video' && m.videoUrl ? (
-                    /* ⚠️ الگوی facade: هیچ iframeای تا کلیک کاربر ساخته نمی‌شود.
-                       جاسازی مستقیم، بیش از ۵۰۰ کیلوبایت و چند درخواست
-                       مسدودکننده به هر بازدید اضافه می‌کند — یعنی LCP بدتر و
-                       سئوی پایین‌تر، نه بالاتر. */
-                    <a
-                      href={m.videoUrl}
-                      target="_blank"
-                      rel="noopener"
-                      class="group block relative aspect-video bg-crane-navy"
-                      aria-label={`پخش ویدیو: ${m.alt || m.caption || 'ویدیو'}`}
-                    >
-                      {m.url && (
-                        <img
-                          src={m.url}
-                          alt={m.alt}
-                          width={m.width ?? undefined}
-                          height={m.height ?? undefined}
-                          loading="lazy"
-                          decoding="async"
-                          class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                        />
-                      )}
-                      <span class="absolute inset-0 grid place-items-center" aria-hidden="true">
-                        <span class="w-16 h-16 rounded-full bg-white/95 grid place-items-center shadow-lg group-hover:scale-110 transition-transform">
-                          <svg viewBox="0 0 24 24" class="w-7 h-7 translate-x-0.5" fill="currentColor" aria-hidden="true">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </span>
-                      </span>
-                    </a>
-                  ) : (
-                    m.url && (
-                      <img
-                        src={m.url}
-                        alt={m.alt}
-                        width={m.width ?? undefined}
-                        height={m.height ?? undefined}
-                        loading="lazy"
-                        decoding="async"
-                        class="w-full h-auto"
-                      />
-                    )
-                  )}
-                  {m.caption && (
-                    <figcaption class="px-4 py-3 text-sm text-steel-600 border-t border-gray-100">{m.caption}</figcaption>
-                  )}
-                </figure>
               ))}
             </div>
           </div>
