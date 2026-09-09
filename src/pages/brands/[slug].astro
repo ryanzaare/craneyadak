@@ -21,6 +21,7 @@ import { getBrands, type EnrichedBrand } from '../../lib/brands';
 import { getProductsByBrand, computePrice, productJsonLd, type CraneProduct } from '../../lib/wp';
 import BrandGuide from '../../components/BrandGuide.astro';
 import { getBrandSectionOrder } from '../../lib/section-order';
+import { getBrandCustomSections } from '../../lib/brand-custom-sections';
 import { getBrandProfile, type BrandProfile } from '../../lib/brand-profile';
 import { isReviewMode } from '../../lib/category-content';
 
@@ -145,6 +146,7 @@ const contact = await getContact();
 // ترتیب بخش‌ها از پنل وردپرس؛ اگر تنظیم نشده باشد null و ترتیب پیش‌فرض
 // کامپوننت استفاده می‌شود. این کوئری هرگز throw نمی‌کند.
 const sectionOrder = await getBrandSectionOrder();
+const customSections = await getBrandCustomSections(brand.slug);
 
 ---
 
@@ -245,7 +247,7 @@ const sectionOrder = await getBrandSectionOrder();
   )}
 
   {/* ------------------- هاب برند (محتوای عمیق) ------------------- */}
-  <BrandGuide profile={profile} brandName={brand.nameFa} reviewMode={reviewMode} sectionOrder={sectionOrder} />
+  <BrandGuide profile={profile} brandName={brand.nameFa} reviewMode={reviewMode} sectionOrder={sectionOrder} customSections={customSections} />
 
   {/* ---------------------- برندهای هم‌گروه ---------------------- */}
   {siblings.length > 0 && (

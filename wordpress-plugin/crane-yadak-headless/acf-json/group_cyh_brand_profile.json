@@ -358,6 +358,46 @@
                     "show_in_graphql": 1
                 }
             ]
+        },
+        {
+            "key": "field_cyh_bp_custom",
+            "label": "بخش‌های دلخواه",
+            "name": "custom_sections",
+            "type": "repeater",
+            "instructions": "هر ردیف یک بخش کامل روی صفحه می‌سازد — عنوان + متن. برای افزودن بخش تازه به کد دست نزنید؛ همین‌جا ردیف اضافه کنید. ترتیب ردیف‌ها = ترتیب نمایش. جای کل این بلوک را در «تنظیمات کرین یدک ← ترتیب بخش‌های صفحه‌ی برند» تعیین کنید.",
+            "layout": "row",
+            "button_label": "افزودن بخش",
+            "show_in_graphql": 1,
+            "sub_fields": [
+                {
+                    "key": "field_cyh_bp_custom_h",
+                    "label": "عنوان بخش",
+                    "name": "heading",
+                    "type": "text",
+                    "show_in_graphql": 1,
+                    "required": 1
+                },
+                {
+                    "key": "field_cyh_bp_custom_b",
+                    "label": "متن",
+                    "name": "body",
+                    "type": "wysiwyg",
+                    "show_in_graphql": 1,
+                    "tabs": "all",
+                    "media_upload": 1,
+                    "delay": 0,
+                    "instructions": "تصویر را از «افزودن رسانه» درج کنید تا ابعادش خودکار ثبت شود. چسباندن آدرس تصویر، CLS می‌سازد."
+                },
+                {
+                    "key": "field_cyh_bp_custom_r",
+                    "label": "نیاز به بازبینی",
+                    "name": "needs_review",
+                    "type": "true_false",
+                    "show_in_graphql": 1,
+                    "ui": 1,
+                    "default_value": 0
+                }
+            ]
         }
     ]
 }

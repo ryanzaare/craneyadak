@@ -38,7 +38,7 @@ import { getImage } from 'astro:assets';
 import { wrapProseTables, normalizeProseImages, optimizeProseImages, mergeAudit, reportImageAudit, EMPTY_AUDIT } from '../lib/prose-html';
 import { findCategory, categoryPath } from '../data/taxonomy';
 import { applySectionOrder } from '../lib/section-order';
-import { buildCapacityScale } from '../lib/capacity';
+import type { BrandCustomSection } from '../lib/brand-custom-sections';
 import type { BrandProfile } from '../lib/brand-profile';
 
 export interface Props {
@@ -47,9 +47,11 @@ export interface Props {
   reviewMode: boolean;
   /** ترتیب دلخواه بخش‌ها از وردپرس. null یعنی ترتیب پیش‌فرض کد. */
   sectionOrder?: readonly string[] | null;
+  /** بخش‌هایی که مدیر محتوا خودش در وردپرس ساخته است. */
+  customSections?: readonly BrandCustomSection[];
 }
 
-const { profile, brandName, reviewMode, sectionOrder = null } = Astro.props;
+const { profile, brandName, reviewMode, sectionOrder = null, customSections = [] } = Astro.props;
 
 // جدول‌ها و تصاویر داخل متن از یک ماژول مشترک عبور می‌کنند — پیش‌تر
 // `wrapProseTables` در این فایل و در CategoryGuide کپی شده بود و دو نسخه
@@ -92,6 +94,9 @@ const DEFAULT_SECTIONS = [
   { id: 'brand-parts', label: 'قطعات پرتقاضا', show: profile.commonParts.length > 0 },
   { id: 'brand-tech', label: 'فناوری‌ها', show: profile.technologies.length > 0 },
   { id: 'brand-faq', label: 'پرسش‌های متداول', show: profile.faqs.length > 0 },
+  // بلوک بخش‌های دلخواه یک واحد است: جایش را مدیر تعیین می‌کند، ترتیب
+  // درونی‌اش را خودِ ردیف‌های ریپیتر.
+  { id: 'brand-custom', label: 'بخش‌های بیشتر', show: customSections.length > 0 },
 ].filter((s) => s.show);
 
 /** شناسه‌ها به ترتیب نهایی — همین آرایه هم ناوبری و هم صفحه را می‌راند. */
@@ -145,14 +150,6 @@ const showCap    = profile.series.some((s) => s.capacityNote.trim() !== '');
 const showType   = profile.series.some((s) => s.equipmentType.trim() !== '');
 const showNotes  = profile.series.some((s) => s.notes.trim() !== '');
 
-/* نمودار ظرفیت — فقط اگر داده‌اش قابل اعتماد باشد.
-   `buildCapacityScale` وقتی کمتر از دو ردیفِ قابل تجزیه پیدا کند `null`
-   برمی‌گرداند و هیچ نموداری رسم نمی‌شود. نمودار با عدد حدسی، از نبودِ
-   نمودار بدتر است. */
-const capacityScale = buildCapacityScale(
-  profile.series.map((x) => ({ label: x.seriesName, capacity: x.capacityNote })),
-);
-
 const supplyCounts = {
   current: profile.series.filter((s) => s.supplyStatus === 'current').length,
   supported: profile.series.filter((s) => s.supplyStatus === 'supported').length,
@@ -165,6 +162,7 @@ const supplyCounts = {
 const introHtml = await link(profile.introHtml);
 const identificationHtml = await link(profile.identificationHtml);
 const iranPresenceHtml = await link(profile.iranPresenceHtml);
+const customHtml = await Promise.all(customSections.map((c) => link(c.bodyHtml)));
 reportImageAudit(imgAudit, `صفحه‌ی برند ${brandName}`);
 ---
 
@@ -303,42 +301,6 @@ reportImageAudit(imgAudit, `صفحه‌ی برند ${brandName}`);
                   </li>
                 ))}
               </ul>
-            )}
-
-            {capacityScale && (
-              <figure class="mb-8 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
-                <figcaption class="text-sm font-black text-crane-navy mb-1">
-                  پوشش ظرفیت هر سری
-                </figcaption>
-                <p class="text-xs text-steel-500 mb-5">مقیاس لگاریتمی — تا سری‌های سبک هم دیده شوند.</p>
-
-                {/* هیچ کتابخانه‌ای، هیچ جاوااسکریپتی، هیچ درخواستی. درصدها در
-                    زمان build حساب شده‌اند و مستقیم در style نشسته‌اند. */}
-                <ul class="space-y-2.5" role="list">
-                  {capacityScale.bars.map((b) => (
-                    <li class="grid grid-cols-[7rem_1fr] items-center gap-3 sm:grid-cols-[9rem_1fr]">
-                      <span class="text-xs font-black text-crane-navy truncate" title={b.label}>{b.label}</span>
-                      <span class="relative block h-5 rounded-full bg-gray-100" role="img"
-                            aria-label={`${b.label}: از ${b.minT < 1 ? `${Math.round(b.minT * 1000)} کیلوگرم` : `${b.minT} تن`} تا ${b.maxT} تن`}>
-                        <span
-                          class="absolute inset-y-0 rounded-full bg-crane-orange/85"
-                          style={`inset-inline-start:${b.left}%;width:${b.width}%`}
-                        ></span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div class="relative mt-3 h-4 grid-cols-[7rem_1fr] sm:grid-cols-[9rem_1fr] grid gap-3" aria-hidden="true">
-                  <span></span>
-                  <span class="relative block">
-                    {capacityScale.ticks.map((t) => (
-                      <span class="absolute -translate-x-1/2 text-[10px] tabular-nums text-steel-400"
-                            style={`inset-inline-start:${t.at}%`}>{t.label}</span>
-                    ))}
-                  </span>
-                </div>
-              </figure>
             )}
 
             <div class="table-scroll bg-white rounded-2xl border border-gray-200">
@@ -523,6 +485,29 @@ reportImageAudit(imgAudit, `صفحه‌ی برند ${brandName}`);
       )}
 
       {/* ------------------------------ منابع ------------------------------ */}
+        {sectionId === 'brand-custom' && customSections.length > 0 && (
+          <section id="brand-custom" class={`px-4 py-16 border-t border-gray-100 scroll-mt-32 ${bandBg(idx)}`} aria-labelledby="brand-custom-heading">
+            <div class="max-w-7xl mx-auto">
+              <h2 id="brand-custom-heading" class="sr-only">بخش‌های بیشتر درباره‌ی {brandName}</h2>
+              <div class="space-y-14">
+                {customSections.map((c, n) => (
+                  <article class={`${flag(c.needsReview)} rounded-2xl`}>
+                    {c.heading && (
+                      <div class="flex items-start gap-4 mb-6">
+                        <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">
+                          {numberOf('brand-custom') + n}
+                        </span>
+                        <h3 class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">{c.heading}</h3>
+                      </div>
+                    )}
+                    <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={customHtml[n]} />
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         </Fragment>
       ))}
 
