@@ -20,6 +20,7 @@ import { BRAND_CLASSES, categoryPath, findCategory } from '../../data/taxonomy';
 import { getBrands, type EnrichedBrand } from '../../lib/brands';
 import { getProductsByBrand, computePrice, productJsonLd, type CraneProduct } from '../../lib/wp';
 import BrandGuide from '../../components/BrandGuide.astro';
+import { getBrandSectionOrder } from '../../lib/section-order';
 import { getBrandProfile, type BrandProfile } from '../../lib/brand-profile';
 import { isReviewMode } from '../../lib/category-content';
 
@@ -141,6 +142,10 @@ import { getContact } from '../../lib/site-options';
    زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
 const contact = await getContact();
 
+// ترتیب بخش‌ها از پنل وردپرس؛ اگر تنظیم نشده باشد null و ترتیب پیش‌فرض
+// کامپوننت استفاده می‌شود. این کوئری هرگز throw نمی‌کند.
+const sectionOrder = await getBrandSectionOrder();
+
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
@@ -240,7 +245,7 @@ const contact = await getContact();
   )}
 
   {/* ------------------- هاب برند (محتوای عمیق) ------------------- */}
-  <BrandGuide profile={profile} brandName={brand.nameFa} reviewMode={reviewMode} />
+  <BrandGuide profile={profile} brandName={brand.nameFa} reviewMode={reviewMode} sectionOrder={sectionOrder} />
 
   {/* ---------------------- برندهای هم‌گروه ---------------------- */}
   {siblings.length > 0 && (

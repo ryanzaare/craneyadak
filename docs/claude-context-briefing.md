@@ -31,12 +31,14 @@ regenerated from WordPress on every build — never edit it by hand.
 
 - Frontend builds clean. Lighthouse on production preview: **Perf 99,
   A11y 97, Best Practices 100, SEO 100** (dev-server scores are meaningless).
-- Backend plugin v1.4.0 — 4 CPTs (`product`, `brand`, `inquiry`, `cyh_quote`),
+- Backend plugin v1.9.0 — 4 CPTs (`product`, `brand`, `inquiry`, `cyh_quote`),
   1 taxonomy, 5 ACF groups, 6 REST endpoints.
-- **WooCommerce bridge landed.** `product` is shared with Woo: when Woo is
-  active we skip our registration and inject GraphQL args onto its. No data
-  migration, no frontend rewrite. Price/stock come from `craneCommerce`,
-  single-source. Verified in both modes by the stub harness.
+- **WooCommerce integration was removed entirely** — it was never used. A
+  ten-line guard remains in `class-post-types.php`: if Woo is ever activated we
+  skip registering `product` and show an admin notice, rather than white-
+  screening. Both paths are covered by the stub harness (`CYH_TEST_WOO=1`).
+- **There is no price or stock field.** Products show no price; the buying path
+  is an enquiry. No number is guessed.
 - **Catalog is nearly empty**: the user deleted every product except
   `saga1-l12`. This is deliberate — the others were not written to L12 standard.
 - Category SEO content written for `crane-coupling` and `rope-guide`, staged in

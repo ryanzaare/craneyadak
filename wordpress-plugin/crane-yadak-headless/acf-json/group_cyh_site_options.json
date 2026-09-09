@@ -250,6 +250,40 @@
             "default_value": "",
             "show_in_graphql": 1,
             "graphql_field_name": "telegram"
+        },
+        {
+            "key": "field_cyh_so_brand_sections",
+            "label": "ترتیب بخش‌های صفحه‌ی برند",
+            "name": "brand_section_order",
+            "type": "repeater",
+            "instructions": "ردیف‌ها را بکشید تا ترتیب نمایش بخش‌ها در همه‌ی صفحات برند عوض شود. هر بخشی که اینجا نیاید، خودکار به انتها می‌رود — هیچ بخشی حذف نمی‌شود.",
+            "layout": "table",
+            "button_label": "افزودن بخش",
+            "show_in_graphql": 1,
+            "sub_fields": [
+                {
+                    "key": "field_cyh_so_brand_section",
+                    "label": "بخش",
+                    "name": "section",
+                    "type": "select",
+                    "show_in_graphql": 1,
+                    "allow_null": 0,
+                    "multiple": 0,
+                    "ui": 0,
+                    "return_format": "value",
+                    "default_value": "",
+                    "choices": {
+                        "brand-intro": "معرفی",
+                        "brand-series": "سری‌های محصول",
+                        "brand-media": "تصاویر و ویدیو",
+                        "brand-nameplate": "خواندن پلاک",
+                        "brand-iran": "در بازار ایران",
+                        "brand-parts": "قطعات پرتقاضا",
+                        "brand-tech": "فناوری‌ها",
+                        "brand-faq": "پرسش‌های متداول"
+                    }
+                }
+            ]
         }
     ],
     "location": [
