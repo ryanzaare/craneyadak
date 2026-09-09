@@ -3,7 +3,8 @@ import AuthorBox from './AuthorBox.astro';
 import SectionNav from './SectionNav.astro';
 import { getPrimaryAuthor } from '../lib/authors';
 import { autolinkHtml } from '../lib/autolink';
-import { wrapProseTables, normalizeProseImages, mergeAudit, reportImageAudit, EMPTY_AUDIT } from '../lib/prose-html';
+import { getImage } from 'astro:assets';
+import { wrapProseTables, normalizeProseImages, optimizeProseImages, mergeAudit, reportImageAudit, EMPTY_AUDIT } from '../lib/prose-html';
 
 // نویسنده از وردپرس؛ اگر نبود، جای‌گذارِ برچسب‌دار.
 const author = await getPrimaryAuthor();
@@ -72,15 +73,18 @@ const numbered = sections.filter((s) => s.id !== 'guide-intro');
 const numberOf = (id: string) => numbered.findIndex((s) => s.id === id) + 1;
 // متن‌ها پیش از رندر آماده می‌شوند تا شمارش تصاویر پیش از چاپ صفحه کامل شود.
 let imgAudit = EMPTY_AUDIT;
-const prose = (html: string | null | undefined) => {
+const prose = async (html: string | null | undefined) => {
   if (!html) return '';
   const linked = wrapProseTables(autolinkHtml(html, { currentPath: Astro.url.pathname }));
-  const { html: out, audit } = normalizeProseImages(linked);
+  // ترتیب مهم است: بهینه‌سازی، width/height واقعی را اضافه می‌کند؛
+  // بعد نرمال‌سازی lazy/decoding می‌گذارد و آنچه واقعاً ابعاد ندارد را می‌شمارد.
+  const { html: optimised } = await optimizeProseImages(linked, getImage);
+  const { html: out, audit } = normalizeProseImages(optimised);
   imgAudit = mergeAudit(imgAudit, audit);
   return out;
 };
-const introHtml = prose(content.introHtml);
-const engineeringGuideHtml = prose(content.engineeringGuideHtml);
+const introHtml = await prose(content.introHtml);
+const engineeringGuideHtml = await prose(content.engineeringGuideHtml);
 reportImageAudit(imgAudit, 'صفحه‌ی دسته');
 
 ---

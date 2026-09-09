@@ -1,23 +1,8 @@
 // @ts-check
-import { existsSync, readdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-
 import { defineConfig } from 'astro/config';
 
 import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
-
-// ---------------------------------------------------------------------------
-// آیا حداقل یک سند فنی واقعی برای دانلود منتشر شده است؟
-//
-// صفحه‌ی /datasheets تا وقتی هیچ PDF واقعی در public/pdfs/ نباشد `noindex`
-// است (نگاه کنید به src/pages/datasheets/index.astro). این بررسی، همان
-// تصمیم را در sitemap هم اعمال می‌کند تا Search Console هشدار
-// «Submitted URL marked noindex» ندهد. به‌محض افزودن اولین فایل، صفحه
-// خودکار هم قابل‌ایندکس می‌شود و هم به sitemap برمی‌گردد.
-// ---------------------------------------------------------------------------
-const pdfDir = fileURLToPath(new URL('./public/pdfs/', import.meta.url));
-  existsSync(pdfDir) && readdirSync(pdfDir).some((file) => file.toLowerCase().endsWith('.pdf'));
 
 // ---------------------------------------------------------------------------
 // نقشه‌ی ریدایرکت: مسیرهای تخت قدیمی → مسیرهای تودرتوی سیلو.

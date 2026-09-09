@@ -92,6 +92,87 @@ export function normalizeProseImages(html: string): { html: string; audit: Image
   return { html: out, audit };
 }
 
+/**
+ * تصاویر داخل متن را از خط لوله‌ی بهینه‌سازی Astro رد می‌کند.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ⚠️ باگی که این تابع رفع می‌کند — و کارفرما درست حدس زد
+ * ═══════════════════════════════════════════════════════════════════════════
+ * `RemoteImage.astro` از `astro:assets` استفاده می‌کند و تصاویر را در زمان
+ * build به AVIF (با fallback به WebP) تبدیل می‌کند. ولی آن مسیر فقط برای
+ * تصویرهایی کار می‌کند که به‌صورت **کامپوننت** نوشته شده باشند.
+ *
+ * متنِ راهنما با `set:html` رندر می‌شود، یعنی یک **رشته‌ی خام**. کامپایلر
+ * Astro داخل رشته را نمی‌بیند، پس هر `<img>` که مدیر محتوا در ویرایشگر
+ * وردپرس درج کند **کاملاً از خط لوله رد می‌شود**: همان JPEG چندمگابایتی
+ * مستقیم از `admin.craneyadak.com` به موبایل کاربر می‌رود.
+ *
+ * راه‌حل، `getImage()` است — همان API برنامه‌نویسیِ زیرِ `<Image>`. اینجا
+ * روی رشته اجرا می‌شود و `src` را با فایل بهینه‌شده جایگزین می‌کند.
+ *
+ * سه سود جانبی:
+ *   • `inferSize` ابعاد واقعی را در زمان build می‌خواند، پس `width`/`height`
+ *     خودکار درج می‌شود و مسئله‌ی CLS از ریشه حل می‌شود.
+ *   • بازدیدکننده هرگز به وردپرس وصل نمی‌شود؛ فایل از دامنه‌ی خودمان می‌آید.
+ *   • دامنه‌های مجاز در `astro.config.mjs` محدودند، پس آدرس دلخواه نمی‌تواند
+ *     build ما را به سرویس رایگان پردازش تصویر تبدیل کند.
+ *
+ * ⚠️ اگر بهینه‌سازی یک تصویر شکست بخورد (آدرس خراب، دامنه‌ی غیرمجاز، فایل
+ * حذف‌شده)، **build متوقف نمی‌شود**. تصویر با آدرس اصلی می‌ماند و یک هشدار
+ * چاپ می‌شود. یک عکس بهینه‌نشده بد است؛ کل سایت که ساخته نشود بدتر است.
+ */
+export async function optimizeProseImages(
+  html: string,
+  getImage: (opts: Record<string, unknown>) => Promise<{ src: string; attributes?: Record<string, unknown> }>,
+): Promise<{ html: string; optimized: number; skipped: string[] }> {
+  const skipped: string[] = [];
+  let optimized = 0;
+  if (!html || !html.includes('<img')) return { html, optimized, skipped };
+
+  const tags = [...html.matchAll(/<img\b([^>]*?)(\s*\/?)>/gi)];
+  if (tags.length === 0) return { html, optimized, skipped };
+
+  const replacements = await Promise.all(
+    tags.map(async ([full, attrs]) => {
+      const src = /(?:^|\s)src\s*=\s*["']([^"']+)["']/i.exec(attrs)?.[1];
+      // data: و SVG درون‌خطی چیزی برای بهینه‌سازی ندارند.
+      if (!src || src.startsWith('data:') || src.endsWith('.svg')) return [full, full] as const;
+
+      try {
+        const out = await getImage({ src, format: 'avif', inferSize: true });
+        const w = out.attributes?.width;
+        const h = out.attributes?.height;
+
+        let next = attrs
+          .replace(/(?:^|\s)src\s*=\s*["'][^"']*["']/i, ` src="${out.src}"`)
+          // srcset قدیمیِ وردپرس به فایل‌های بهینه‌نشده اشاره می‌کند و باید برود.
+          .replace(/(?:^|\s)(?:srcset|sizes)\s*=\s*["'][^"']*["']/gi, '');
+
+        if (w && !hasAttr(next, 'width')) next += ` width="${w}"`;
+        if (h && !hasAttr(next, 'height')) next += ` height="${h}"`;
+
+        optimized++;
+        return [full, `<img${next}>`] as const;
+      } catch (error) {
+        skipped.push(`${src.slice(0, 70)} — ${error instanceof Error ? error.message.slice(0, 80) : 'خطای ناشناخته'}`);
+        return [full, full] as const;
+      }
+    }),
+  );
+
+  let out = html;
+  for (const [from, to] of replacements) if (from !== to) out = out.replace(from, to);
+
+  if (skipped.length) {
+    console.warn(
+      `[prose] ⚠ ${skipped.length} تصویر بهینه نشد و با آدرس اصلی وردپرس رندر می‌شود:\n` +
+        skipped.map((s) => `     • ${s}`).join('\n'),
+    );
+  }
+
+  return { html: out, optimized, skipped };
+}
+
 /** جمع دو گزارش تصویر — برای شمارش در سطح یک صفحه. */
 export function mergeAudit(a: ImageAudit, b: ImageAudit): ImageAudit {
   return {

@@ -34,7 +34,8 @@
 
 import SectionNav from './SectionNav.astro';
 import { autolinkHtml } from '../lib/autolink';
-import { wrapProseTables, normalizeProseImages, mergeAudit, reportImageAudit, EMPTY_AUDIT } from '../lib/prose-html';
+import { getImage } from 'astro:assets';
+import { wrapProseTables, normalizeProseImages, optimizeProseImages, mergeAudit, reportImageAudit, EMPTY_AUDIT } from '../lib/prose-html';
 import { findCategory, categoryPath } from '../data/taxonomy';
 import type { BrandProfile } from '../lib/brand-profile';
 
@@ -50,12 +51,15 @@ const { profile, brandName, reviewMode } = Astro.props;
 // `wrapProseTables` در این فایل و در CategoryGuide کپی شده بود و دو نسخه
 // از هم واگرا شده بودند.
 let imgAudit = EMPTY_AUDIT;
-const link = (html: string | null) => {
+const link = async (html: string | null) => {
   if (!html) return '';
   const linked = wrapProseTables(autolinkHtml(html, { currentPath: Astro.url.pathname }));
-  const { html: withImages, audit } = normalizeProseImages(linked);
+  // ترتیب مهم است: بهینه‌سازی، width/height واقعی را اضافه می‌کند؛
+  // بعد نرمال‌سازی lazy/decoding می‌گذارد و آنچه واقعاً ابعاد ندارد را می‌شمارد.
+  const { html: optimised } = await optimizeProseImages(linked, getImage);
+  const { html: out, audit } = normalizeProseImages(optimised);
   imgAudit = mergeAudit(imgAudit, audit);
-  return withImages;
+  return out;
 };
 
 /* رسانه اول می‌آید — تصمیم تجاری: بازدیدکننده باید ویدیو را اول ببیند.
@@ -132,9 +136,9 @@ const supplyCounts = {
 // ⚠️ متن‌ها *اینجا* آماده می‌شوند، نه داخل قالب. اگر `link()` وسط رندر صدا
 // زده شود، شمارشِ تصاویر بعد از چاپ شدن صفحه کامل می‌شود و دیگر جایی برای
 // گزارش دادنش نیست — هشدار CLS هرگز به لاگ build نمی‌رسید.
-const introHtml = link(profile.introHtml);
-const identificationHtml = link(profile.identificationHtml);
-const iranPresenceHtml = link(profile.iranPresenceHtml);
+const introHtml = await link(profile.introHtml);
+const identificationHtml = await link(profile.identificationHtml);
+const iranPresenceHtml = await link(profile.iranPresenceHtml);
 reportImageAudit(imgAudit, `صفحه‌ی برند ${brandName}`);
 ---
 
