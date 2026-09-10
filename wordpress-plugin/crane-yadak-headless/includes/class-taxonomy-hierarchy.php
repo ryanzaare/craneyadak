@@ -373,36 +373,6 @@ function cyh_hierarchy_page() {
 }
 
 /** هندلر. */
-function cyh_handle_build_hierarchy() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( 'دسترسی مجاز نیست.' );
-	}
-	check_admin_referer( 'cyh_build_hierarchy' );
-
-	$r = cyh_build_taxonomy_hierarchy();
-
-	// ⚠️ ترتیب مهم است: اول ساختار، بعد متادیتا. بذر متادیتا ترم‌ها را با
-	// نامک پیدا می‌کند، پس ترم‌ها باید از قبل وجود داشته باشند.
-	$m = cyh_seed_category_meta();
-
-	wp_safe_redirect(
-		add_query_arg(
-			[
-				'post_type'      => 'product',
-				'page'           => 'cyh-hierarchy',
-				'cyh_h_done'     => 1,
-				'cyh_h_created'  => $r['silos_created'],
-				'cyh_h_existing' => $r['silos_existing'],
-				'cyh_h_moved'    => $r['moved'],
-				'cyh_h_already'  => $r['already'],
-				'cyh_h_meta'     => $m['filled'],
-			],
-			admin_url( 'edit.php' )
-		)
-	);
-	exit;
-}
-add_action( 'admin_post_cyh_build_hierarchy', 'cyh_handle_build_hierarchy' );
 
 
 /**

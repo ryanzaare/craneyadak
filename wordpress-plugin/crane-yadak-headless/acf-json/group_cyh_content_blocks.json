@@ -30,7 +30,9 @@
                         "table": "جدول",
                         "faq": "پرسش و پاسخ",
                         "parts": "قطعات مرتبط",
-                        "media": "تصویر و ویدیو"
+                        "media": "تصویر و ویدیو",
+                        "specs": "مشخصات فنی",
+                        "callout": "هشدار / نکته"
                     },
                     "wrapper": {
                         "width": "30"
@@ -397,6 +399,107 @@
                             "show_in_graphql": 1
                         }
                     ]
+                },
+                {
+                    "key": "field_cyh_cb_specs",
+                    "label": "مشخصات",
+                    "name": "specs",
+                    "type": "repeater",
+                    "layout": "table",
+                    "button_label": "افزودن مشخصه",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "specs"
+                            }
+                        ]
+                    ],
+                    "instructions": "جفت‌های کلید/مقدار. روی محصول، این‌ها به additionalProperty در داده‌ی ساختاریافته تبدیل می‌شوند — چیزی که جدول عمومی نمی‌تواند تولید کند.",
+                    "sub_fields": [
+                        {
+                            "key": "field_cyh_cb_s_l",
+                            "label": "نام مشخصه",
+                            "name": "label",
+                            "type": "text",
+                            "show_in_graphql": 1,
+                            "required": 1,
+                            "wrapper": {
+                                "width": "40"
+                            }
+                        },
+                        {
+                            "key": "field_cyh_cb_s_v",
+                            "label": "مقدار",
+                            "name": "value",
+                            "type": "text",
+                            "show_in_graphql": 1,
+                            "required": 1,
+                            "wrapper": {
+                                "width": "40"
+                            }
+                        },
+                        {
+                            "key": "field_cyh_cb_s_u",
+                            "label": "واحد",
+                            "name": "unit",
+                            "type": "text",
+                            "show_in_graphql": 1,
+                            "wrapper": {
+                                "width": "20"
+                            },
+                            "instructions": "اختیاری — مثل تن، ولت، میلی‌متر"
+                        }
+                    ]
+                },
+                {
+                    "key": "field_cyh_cb_tone",
+                    "label": "نوع هشدار",
+                    "name": "tone",
+                    "type": "select",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "callout"
+                            }
+                        ]
+                    ],
+                    "allow_null": 0,
+                    "multiple": 0,
+                    "ui": 0,
+                    "return_format": "value",
+                    "default_value": "note",
+                    "choices": {
+                        "danger": "خطر ایمنی",
+                        "note": "نکته",
+                        "tip": "توصیه"
+                    },
+                    "wrapper": {
+                        "width": "30"
+                    }
+                },
+                {
+                    "key": "field_cyh_cb_callout",
+                    "label": "متن هشدار",
+                    "name": "callout_body",
+                    "type": "textarea",
+                    "rows": 3,
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "callout"
+                            }
+                        ]
+                    ],
+                    "instructions": "کوتاه و صریح. هشدار بلند، هشدار نیست."
                 }
             ]
         }

@@ -11,7 +11,7 @@
     "postbuild": "pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
-    "check": "node scripts/check-docs-fresh.mjs && node scripts/check-imports.mjs && node scripts/check-wp-hooks.mjs && node scripts/check-brand-shapes.mjs && node scripts/check-braces.mjs src/lib/*.ts src/data/*.ts && node scripts/check-astro-tags.mjs src/components/*.astro src/pages/**/*.astro",
+    "check": "node scripts/check-architecture.mjs && node scripts/check-docs-fresh.mjs && node scripts/check-imports.mjs && node scripts/check-wp-hooks.mjs && node scripts/check-braces.mjs src/lib/*.ts src/data/*.ts && node scripts/check-astro-tags.mjs src/components/*.astro src/pages/**/*.astro",
     "taxonomy": "node scripts/generate-taxonomy.mjs",
     "test:taxonomy": "node scripts/generate-taxonomy.test.mjs",
     "check:hooks": "node scripts/check-wp-hooks.mjs",

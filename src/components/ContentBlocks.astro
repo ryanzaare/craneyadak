@@ -77,6 +77,14 @@ const faqJsonLd = faqItems.length > 0
     }
   : null;
 
+/* لحن هشدار. رنگ **تنها** حامل معنا نیست — برچسب متنی همیشه کنارش است،
+   وگرنه کوررنگی یا چاپ سیاه‌وسفید پیام ایمنی را از بین می‌برد (WCAG 1.4.1). */
+const TONE = {
+  danger: { label: 'هشدار ایمنی', box: 'bg-red-50 border-red-300 text-red-950',      dot: 'bg-red-600' },
+  note:   { label: 'نکته',        box: 'bg-sky-50 border-sky-300 text-sky-950',      dot: 'bg-sky-600' },
+  tip:    { label: 'توصیه',       box: 'bg-emerald-50 border-emerald-300 text-emerald-950', dot: 'bg-emerald-600' },
+} as const;
+
 const flag = (needs: boolean) => (reviewMode && needs ? 'bg-amber-50 ring-1 ring-amber-300' : '');
 const band = (i: number) => (i % 2 === 1 ? 'bg-gray-50' : '');
 ---
@@ -152,6 +160,37 @@ const band = (i: number) => (i % 2 === 1 ? 'bg-gray-50' : '');
                     <div class="px-6 pb-5 text-steel-700 leading-8 whitespace-pre-line">{f.answer}</div>
                   </details>
                 ))}
+              </div>
+            )}
+
+            {/* ── مشخصات فنی ─────────────────────────────────────────── */}
+            {b.type === 'specs' && (
+              /* <dl> و نه <table>: این‌ها جفت‌های نام/مقدارند، نه یک ماتریس.
+                 همین تمایز معنایی است که اجازه می‌دهد صفحه‌ی محصول از این
+                 بلوک `additionalProperty` بسازد. */
+              <dl class="grid gap-x-8 gap-y-0 sm:grid-cols-2 max-w-4xl">
+                {b.specs.map((sp) => (
+                  <div class="flex items-baseline justify-between gap-4 border-b border-gray-100 py-3">
+                    <dt class="text-steel-600 shrink-0">{sp.label}</dt>
+                    <dd class="font-black text-crane-navy text-left tabular-nums">
+                      {sp.value}{sp.unit && <span class="font-bold text-steel-500 text-sm"> {sp.unit}</span>}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            {/* ── هشدار ──────────────────────────────────────────────── */}
+            {b.type === 'callout' && (
+              <div
+                role="note"
+                class={`max-w-3xl rounded-2xl border-2 px-6 py-5 ${TONE[b.tone].box}`}
+              >
+                <p class="flex items-center gap-2 font-black text-sm mb-2">
+                  <span class={`w-2 h-2 rounded-full ${TONE[b.tone].dot}`} aria-hidden="true"></span>
+                  {TONE[b.tone].label}
+                </p>
+                <p class="leading-8 whitespace-pre-line">{b.calloutBody}</p>
               </div>
             )}
 

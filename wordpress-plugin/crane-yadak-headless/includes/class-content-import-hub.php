@@ -284,12 +284,9 @@ function cyh_hub_take( $key ) {
 
 function cyh_hub_page() {
 	$import_url = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_hub_import' ), 'cyh_hub_import' );
-	$repair_dry = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_hub_repair&dry=1' ), 'cyh_hub_repair' );
-	$repair_run = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_hub_repair' ), 'cyh_hub_repair' );
 
 	$report = cyh_hub_take( 'report' );
 	$blocks = cyh_hub_take( 'blocks' );
-	$repair = cyh_hub_take( 'repair' );
 	$error  = cyh_hub_take( 'error' );
 
 	echo '<div class="wrap">';
@@ -300,46 +297,6 @@ function cyh_hub_page() {
 			wp_kses_post( $error ) . '</p>' .
 			'<p>اگر از کادر متن استفاده کرده‌اید، به‌جایش <strong>فایل را آپلود کنید</strong> — مطمئن‌ترین راه است.</p></div>';
 	}
-
-	// ── ابزار تعمیر ─────────────────────────────────────────────────────
-	echo '<div class="card" style="max-width:860px;padding:4px 20px 16px">';
-	echo '<h2>تعمیر HTML خراب</h2>';
-	echo '<p>اگر متنی را در تب <strong>بصری</strong> چسبانده‌اید، تگ‌ها روی سایت به‌صورت متن خام دیده می‌شوند. این ابزار همان متن را نگه می‌دارد و فقط تگ‌ها را برمی‌گرداند — چیزی بازنویسی نمی‌شود.</p>';
-	printf(
-		'<p><a class="button" href="%s">بررسی (بدون تغییر)</a> <a class="button button-primary" href="%s">تعمیر کن</a></p>',
-		esc_url( $repair_dry ),
-		esc_url( $repair_run )
-	);
-
-	if ( is_array( $repair ) ) {
-		$rep = (array) ( $repair['rows'] ?? [] );
-		$dry = ! empty( $repair['dry'] );
-
-		if ( empty( $rep ) ) {
-			echo '<div class="notice notice-success inline"><p>هیچ فیلد خرابی پیدا نشد.</p></div>';
-		} else {
-			printf(
-				'<div class="notice notice-%s inline"><p><strong>%d فیلد %s.</strong></p></div>',
-				$dry ? 'warning' : 'success',
-				count( $rep ),
-				$dry ? 'خراب است و تعمیر می‌شود' : 'تعمیر شد'
-			);
-			echo '<table class="widefat striped" style="margin-top:8px"><thead><tr>';
-			echo '<th>نوع</th><th>اسلاگ</th><th>فیلد</th><th>اندازه</th>';
-			echo '</tr></thead><tbody>';
-			foreach ( $rep as $row ) {
-				printf(
-					'<tr><td>%s</td><td><code>%s</code></td><td><code>%s</code></td><td>%s</td></tr>',
-					esc_html( $row[0] ),
-					esc_html( $row[1] ),
-					esc_html( $row[2] ),
-					esc_html( $row[3] )
-				);
-			}
-			echo '</tbody></table>';
-		}
-	}
-	echo '</div>';
 
 	// ── مهاجرت به بلوک‌های محتوا ────────────────────────────────────────
 	$mig_dry = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_blocks_migrate&dry=1' ), 'cyh_blocks_migrate' );
@@ -629,74 +586,4 @@ add_action( 'admin_post_cyh_hub_import', 'cyh_hub_handle' );
  * @param bool $dry_run فقط گزارش؟
  * @return array
  */
-function cyh_hub_repair_html( $dry_run = true ) {
-	$fixed = [];
-
-	if ( ! function_exists( 'update_field' ) ) {
-		return $fixed;
-	}
-
-	$targets = [];
-
-	foreach ( get_posts( [ 'post_type' => 'brand', 'posts_per_page' => -1, 'post_status' => 'any' ] ) as $post ) {
-		$targets[] = [ 'brand', $post->post_name, (int) $post->ID,
-			[ 'intro', 'identification_guide', 'iran_presence' ] ];
-	}
-
-	$terms = get_terms( [ 'taxonomy' => 'crane_category', 'hide_empty' => false ] );
-	if ( ! is_wp_error( $terms ) ) {
-		foreach ( $terms as $term ) {
-			$targets[] = [ 'category', $term->slug, 'crane_category_' . $term->term_id,
-				[ 'seo_intro', 'engineering_guide' ] ];
-		}
-	}
-
-	foreach ( $targets as list( $kind, $slug, $id, $fields ) ) {
-		foreach ( $fields as $name ) {
-			$value = (string) get_field( $name, $id );
-			if ( '' === trim( $value ) ) {
-				continue;
-			}
-
-			// نشانه‌ی خرابی: تگ escape شده.
-			if ( ! preg_match( '/&lt;\/?(p|h2|h3|h4|ul|ol|li|strong|em|table|tr|td|th|div)&gt;/i', $value ) ) {
-				continue;
-			}
-
-			$repaired = cyh_hub_clean( $value, true );
-
-			if ( $repaired === $value ) {
-				continue;
-			}
-
-			if ( ! $dry_run ) {
-				update_field( $name, $repaired, $id );
-			}
-
-			$fixed[] = [
-				$kind,
-				$slug,
-				$name,
-				sprintf( '%d → %d کاراکتر', mb_strlen( $value ), mb_strlen( $repaired ) ),
-			];
-		}
-	}
-
-	return $fixed;
-}
-
 /** هندلر تعمیر. */
-function cyh_hub_handle_repair() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( 'دسترسی مجاز نیست.' );
-	}
-	check_admin_referer( 'cyh_hub_repair' );
-
-	$dry   = ! empty( $_GET['dry'] );
-	$fixed = cyh_hub_repair_html( $dry );
-
-	cyh_hub_stash( 'repair', [ 'rows' => $fixed, 'dry' => $dry ] );
-	wp_safe_redirect( cyh_hub_url() );
-	exit;
-}
-add_action( 'admin_post_cyh_hub_repair', 'cyh_hub_handle_repair' );

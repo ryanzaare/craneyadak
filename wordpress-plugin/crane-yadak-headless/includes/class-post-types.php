@@ -410,25 +410,6 @@ function cyh_repair_all_latin_slugs() {
 }
 
 /** دکمه‌ی «اصلاح آدرس‌های فارسی» روی فهرست محصولات. */
-function cyh_handle_repair_slugs() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( 'دسترسی مجاز نیست.' );
-	}
-	check_admin_referer( 'cyh_repair_slugs' );
-
-	$fixed = cyh_repair_all_latin_slugs();
-
-	// بازگشت به *همان صفحه‌ی ابزار*، نه فهرست محصولات. نسخه‌ی قبل به
-	// edit.php برمی‌گشت و نتیجه‌ی عملیات جایی نمایش داده نمی‌شد.
-	wp_safe_redirect(
-		add_query_arg(
-			[ 'post_type' => 'product', 'page' => 'cyh-fix-slugs', 'cyh_slugs_fixed' => $fixed ],
-			admin_url( 'edit.php' )
-		)
-	);
-	exit;
-}
-add_action( 'admin_post_cyh_repair_slugs', 'cyh_handle_repair_slugs' );
 
 /* =========================================================================
    صفحه‌ی «ابزار اصلاح آدرس‌ها»

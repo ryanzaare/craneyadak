@@ -23,9 +23,9 @@ import {
   type Category,
   type Silo,
 } from '../../../data/taxonomy';
-import CategoryGuide from '../../../components/CategoryGuide.astro';
+import ContentBlocks from '../../../components/ContentBlocks.astro';
 import { getProductsByCategory, computePrice, productJsonLd, type CraneProduct } from '../../../lib/wp';
-import { getCategoryContent, isReviewMode, type CategoryContent } from '../../../lib/category-content';
+import { getBlocks } from '../../../lib/content-blocks';
 import { resolveCategoryTerm, type CategoryTerm } from '../../../lib/categories';
 
 export async function getStaticPaths() {
@@ -37,7 +37,6 @@ export async function getStaticPaths() {
           silo,
           category,
           products: await getProductsByCategory(category.slug),
-          content: await getCategoryContent(category.slug),
           // نام و توضیح از وردپرس؛ تاکسونومی فقط تور ایمنی است.
           term: await resolveCategoryTerm(category.slug, category.name, category.blurb),
         },
@@ -50,18 +49,18 @@ interface Props {
   silo: Silo;
   category: Category;
   products: CraneProduct[];
-  content: CategoryContent;
   term: CategoryTerm;
 }
 
-const { silo, category, products, content, term } = Astro.props as Props;
+const { silo, category, products, term } = Astro.props as Props;
 
 /* نام نمایشی و توضیح از وردپرس می‌آیند. `category.keyword` عمداً از کد
    می‌آید — عبارت هدف سئو یک تصمیم استراتژیک است، نه متنی که هر روز در
    پنل ویرایش شود. تفکیک: عنوان H1 = عبارت هدف، نام دسته = محتوای وردپرس. */
 const displayName = term.name;
 const displayBlurb = term.blurb;
-const reviewMode = isReviewMode();
+const reviewMode = import.meta.env.CONTENT_REVIEW === '1';
+const blocks = await getBlocks('category', category.slug);
 
 const title = `${category.keyword} | خرید و استعلام قیمت | ${SITE.name}`;
 const description = `${category.blurb} تامین ${category.keyword} با تضمین اصالت کالا، بررسی سازگاری فنی و صدور فاکتور رسمی.`;
@@ -95,23 +94,11 @@ const itemList =
       }
     : null;
 
-// نکته سئو: پرسش‌های واقعیِ ثبت‌شده در وردپرس مستقیماً وارد اسکیمای
-// FAQPage می‌شوند. بدون این، محتوای پرسش و پاسخ فقط برای انسان مفید است و
-// شانس ریچ‌ریزالت را از دست می‌دهد. گره فقط وقتی ساخته می‌شود که پرسش
-// واقعی وجود داشته باشد — FAQPage خالی خطای اعتبارسنجی می‌دهد.
-const faqNode =
-  content.faqs.length > 0
-    ? {
-        '@type': 'FAQPage',
-        '@id': `${canonical}#faq`,
-        isPartOf: { '@id': `${canonical}#webpage` },
-        mainEntity: content.faqs.map((faq) => ({
-          '@type': 'Question',
-          name: faq.question,
-          acceptedAnswer: { '@type': 'Answer', text: faq.answer },
-        })),
-      }
-    : null;
+/* ⚠️ FAQPage دیگر اینجا ساخته نمی‌شود.
+   پرسش‌ها حالا بلوک‌اند و `ContentBlocks.astro` خودش گره FAQPage را تولید
+   می‌کند. اگر اینجا هم ساخته می‌شد، صفحه دو گره FAQPage می‌داشت — سیگنال
+   متناقض برای گوگل و ریسک حذف ریچ‌ریزالت. */
+const faqNode = null;
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -277,7 +264,7 @@ const contact = await getContact();
   </section>
 
   {/* ------------------ راهنمای فنی (محتوای وردپرس) ------------------ */}
-  <CategoryGuide content={content} categoryName={displayName} reviewMode={reviewMode} />
+  <ContentBlocks blocks={blocks} title={displayName} reviewMode={reviewMode} eyebrow="راهنمای فنی" />
 
   {/* --------------------- لینک‌سازی داخلی درون سیلو --------------------- */}
   {siblings.length > 0 && (

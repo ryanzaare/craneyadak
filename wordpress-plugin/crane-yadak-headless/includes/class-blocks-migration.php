@@ -1,30 +1,33 @@
 <?php
 /**
- * مهاجرت فیلدهای اختصاصی برند → پالت بلوک محتوا.
+ * مهاجرت فیلدهای اختصاصی → پالت بلوک محتوا.
  *
  * ═══════════════════════════════════════════════════════════════════════════
- * چرا این مهاجرت لازم شد
+ * ⚠️ چرا این فایل postmeta خام می‌خواند و نه `get_field()`
  * ═══════════════════════════════════════════════════════════════════════════
- * مدل قبلی برای هر موجودیت فیلد اختصاصی می‌ساخت: دماگ سری دارد، پس فیلد
- * «سری‌ها» ساخته شد. برند بعدی سری ندارد و چیز دیگری دارد، پس فیلد دیگری
- * لازم می‌شد — یعنی **هر محتوای تازه، یک تغییر در بک‌اند**.
+ * نسخه‌ی اول از `get_field()` استفاده می‌کرد. اما گروه‌های `brandProfile` و
+ * `categoryContent` در همین تغییر **حذف شده‌اند** — و `get_field()` برای
+ * فیلدی که ACF دیگر نمی‌شناسد `null` برمی‌گرداند.
  *
- * پالت بلوک این را وارونه می‌کند. ولی داده‌ی موجود نباید دوباره تایپ شود؛
- * این ابزار آن را مکانیکی منتقل می‌کند:
+ * یعنی مهاجرت، بی‌سروصدا صفر ردیف پیدا می‌کرد و گزارش می‌داد «چیزی برای
+ * منتقل کردن نبود» — در حالی که تمام محتوای دماگ سر جایش در دیتابیس بود.
+ * بدترین نوع شکست: موفق به نظر می‌رسد.
  *
- *     intro                → بلوک متن
- *     series[]             → بلوک جدول   ← «سری» دیگر فیلد ویژه نیست
- *     media[]              → بلوک رسانه
- *     identification_guide → بلوک متن
- *     iran_presence        → بلوک متن
- *     common_parts[]       → بلوک قطعات مرتبط
- *     technologies[]       → بلوک جدول
- *     faqs[]               → بلوک پرسش و پاسخ
- *     custom_sections[]    → بلوک متن
+ * خواندن مستقیم از postmeta این وابستگی را قطع می‌کند. ساختار ACF ساده و
+ * پایدار است:
  *
- * ⚠️ فیلدهای قدیمی **پاک نمی‌شوند**. اگر نتیجه بد بود، بلوک‌ها را حذف
- * کنید و همه‌چیز سر جایش است. حذف داده‌ی انسان، کاری است که باید آگاهانه
- * و جداگانه انجام شود، نه به‌عنوان اثر جانبی یک مهاجرت.
+ *     فیلد ساده     →  meta_key = 'intro'
+ *     ریپیتر        →  meta_key = 'series'            (مقدار = تعداد ردیف)
+ *     زیرفیلد ریپیتر →  meta_key = 'series_0_series_name'
+ *
+ * پس داده حتی پس از حذف تعریف فیلد هم خوانا می‌ماند.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * تاریخ انقضا
+ * ═══════════════════════════════════════════════════════════════════════════
+ * این ابزار **یک‌بارمصرف** است. پس از اینکه هر ۱۹ برند و ۳۱ دسته منتقل
+ * شدند، کل این فایل حذف می‌شود. ابزار مهاجرتی که از مهاجرت عمر بیشتری
+ * کند، خودش همان فنجان یک‌بارمصرفی است که قرار بود حذفش کنیم.
  *
  * @package CraneYadakHeadless
  */
@@ -33,39 +36,57 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** یک بلوک خالی با همه‌ی کلیدها — ACF کلید غایب را بی‌صدا نادیده می‌گیرد. */
-function cyh_blocks_empty() {
+/** خواندن meta — نوشته یا ترم. */
+function cyh_bm_meta( $kind, $id, $key ) {
+	return 'term' === $kind ? get_term_meta( $id, $key, true ) : get_post_meta( $id, $key, true );
+}
+
+/**
+ * ردیف‌های یک ریپیتر ACF را از postmeta خام بازسازی می‌کند.
+ *
+ * @param string   $kind 'post' یا 'term'.
+ * @param int      $id   شناسه.
+ * @param string   $name نام ریپیتر.
+ * @param string[] $subs نام زیرفیلدها.
+ * @return array<int,array<string,mixed>>
+ */
+function cyh_bm_repeater( $kind, $id, $name, $subs ) {
+	$count = (int) cyh_bm_meta( $kind, $id, $name );
+	$rows  = [];
+
+	for ( $i = 0; $i < $count; $i++ ) {
+		$row = [];
+		foreach ( $subs as $sub ) {
+			$row[ $sub ] = cyh_bm_meta( $kind, $id, "{$name}_{$i}_{$sub}" );
+		}
+		$rows[] = $row;
+	}
+
+	return $rows;
+}
+
+function cyh_bm_empty() {
 	return [
 		'block_type' => 'text', 'heading' => '', 'needs_review' => 0,
 		'body' => '', 'intro' => '',
 		'col1' => '', 'col2' => '', 'col3' => '', 'col4' => '', 'col5' => '',
 		'rows' => [], 'faqs' => [], 'parts' => [], 'media' => [],
+		'specs' => [], 'tone' => 'note', 'callout_body' => '',
 	];
 }
 
-function cyh_blocks_text( $heading, $body ) {
-	if ( '' === trim( (string) $body ) ) {
+function cyh_bm_text( $heading, $body ) {
+	$body = (string) $body;
+	if ( '' === trim( $body ) ) {
 		return null;
 	}
-	return array_merge( cyh_blocks_empty(), [
-		'block_type' => 'text',
-		'heading'    => $heading,
-		'body'       => $body,
-	] );
+	return array_merge( cyh_bm_empty(), [ 'block_type' => 'text', 'heading' => $heading, 'body' => $body ] );
 }
 
-/**
- * ساخت بلوک جدول از ردیف‌های یک ریپیتر.
- *
- * @param string   $heading عنوان بلوک.
- * @param string   $intro   توضیح زیر عنوان.
- * @param string[] $cols    عنوان ستون‌ها (حداکثر ۵).
- * @param array[]  $rows    هر ردیف: آرایه‌ای از مقادیر سلول.
- */
-function cyh_blocks_table( $heading, $intro, $cols, $rows ) {
+function cyh_bm_table( $heading, $cols, $rows ) {
 	$rows = array_values( array_filter( $rows, function ( $r ) {
-		foreach ( (array) $r as $cell ) {
-			if ( '' !== trim( (string) $cell ) ) {
+		foreach ( (array) $r as $c ) {
+			if ( '' !== trim( (string) $c ) ) {
 				return true;
 			}
 		}
@@ -76,201 +97,198 @@ function cyh_blocks_table( $heading, $intro, $cols, $rows ) {
 		return null;
 	}
 
-	$block = array_merge( cyh_blocks_empty(), [
-		'block_type' => 'table',
-		'heading'    => $heading,
-		'intro'      => $intro,
-	] );
-
+	$b = array_merge( cyh_bm_empty(), [ 'block_type' => 'table', 'heading' => $heading ] );
 	foreach ( array_slice( array_values( $cols ), 0, 5 ) as $i => $label ) {
-		$block[ 'col' . ( $i + 1 ) ] = $label;
+		$b[ 'col' . ( $i + 1 ) ] = $label;
 	}
-
 	foreach ( $rows as $r ) {
 		$row = [];
 		foreach ( array_slice( array_values( (array) $r ), 0, 5 ) as $i => $cell ) {
 			$row[ 'c' . ( $i + 1 ) ] = (string) $cell;
 		}
-		$block['rows'][] = $row;
+		$b['rows'][] = $row;
 	}
-
-	return $block;
+	return $b;
 }
 
-/** ردیف‌های ریپیتر ACF را با کلیدهای مورد انتظار برمی‌گرداند. */
-function cyh_blocks_rows( $value ) {
-	return is_array( $value ) ? array_values( array_filter( $value, 'is_array' ) ) : [];
+function cyh_bm_faq( $heading, $pairs ) {
+	$out = [];
+	foreach ( $pairs as $p ) {
+		if ( '' !== trim( (string) $p[0] ) ) {
+			$out[] = [ 'question' => (string) $p[0], 'answer' => (string) $p[1] ];
+		}
+	}
+	if ( empty( $out ) ) {
+		return null;
+	}
+	return array_merge( cyh_bm_empty(), [ 'block_type' => 'faq', 'heading' => $heading, 'faqs' => $out ] );
 }
 
-/**
- * تبدیل پروفایل یک برند به فهرست بلوک‌ها.
- *
- * @param int $post_id شناسه‌ی نوشته‌ی برند.
- * @return array فهرست بلوک‌ها، به همان ترتیبی که صفحه نمایش می‌دهد.
- */
-function cyh_blocks_from_brand( $post_id ) {
-	$get    = fn( $name ) => function_exists( 'get_field' ) ? get_field( $name, $post_id ) : null;
+/** برند → بلوک‌ها. */
+function cyh_bm_brand( $id ) {
+	$m      = fn( $k ) => cyh_bm_meta( 'post', $id, $k );
 	$blocks = [];
-
-	$add = function ( $block ) use ( &$blocks ) {
-		if ( null !== $block ) {
-			$blocks[] = $block;
+	$add    = function ( $b ) use ( &$blocks ) {
+		if ( null !== $b ) {
+			$blocks[] = $b;
 		}
 	};
 
-	$add( cyh_blocks_text( 'معرفی', (string) $get( 'intro' ) ) );
+	$add( cyh_bm_text( 'معرفی', $m( 'intro' ) ) );
 
-	// ── سری‌ها → جدول ────────────────────────────────────────────────
-	$series = cyh_blocks_rows( $get( 'series' ) );
-	if ( $series ) {
-		$labels = [
-			'current'    => 'در تولید',
-			'supported'  => 'قطعه موجود',
-			'equivalent' => 'معادل‌یابی',
+	$labels = [ 'current' => 'در تولید', 'supported' => 'قطعه موجود', 'equivalent' => 'معادل‌یابی' ];
+	$rows   = [];
+	foreach ( cyh_bm_repeater( 'post', $id, 'series',
+		[ 'series_name', 'equipment_type', 'capacity_note', 'supply_status', 'notes' ] ) as $s ) {
+		$rows[] = [
+			$s['series_name'],
+			$s['equipment_type'],
+			$s['capacity_note'],
+			$labels[ (string) $s['supply_status'] ] ?? '',
+			$s['notes'],
 		];
-		$rows = [];
-		foreach ( $series as $s ) {
-			$status = (string) ( $s['supply_status'] ?? '' );
-			$rows[] = [
-				(string) ( $s['series_name'] ?? '' ),
-				(string) ( $s['equipment_type'] ?? '' ),
-				(string) ( $s['capacity_note'] ?? '' ),
-				$labels[ $status ] ?? '',
-				(string) ( $s['notes'] ?? '' ),
-			];
-		}
-		$add( cyh_blocks_table(
-			'سری‌های محصول و وضعیت تأمین قطعه',
-			'',
-			[ 'سری', 'نوع تجهیز', 'ظرفیت', 'وضعیت تأمین', 'توضیح' ],
-			$rows
-		) );
 	}
+	$add( cyh_bm_table( 'سری‌های محصول و وضعیت تأمین قطعه',
+		[ 'سری', 'نوع تجهیز', 'ظرفیت', 'وضعیت تأمین', 'توضیح' ], $rows ) );
 
 	// ── رسانه ────────────────────────────────────────────────────────
-	$media = cyh_blocks_rows( $get( 'media' ) );
+	$media = cyh_bm_repeater( 'post', $id, 'media', [ 'kind', 'asset', 'video_url', 'caption', 'alt_text' ] );
 	if ( $media ) {
-		$block = array_merge( cyh_blocks_empty(), [ 'block_type' => 'media', 'heading' => 'تصاویر و ویدیو' ] );
-		foreach ( $media as $m ) {
-			$block['media'][] = [
-				'kind'      => (string) ( $m['kind'] ?? 'image' ),
-				// ⚠️ ACF برای فیلد تصویر **شناسه** می‌خواهد. اگر آرایه‌ی کامل
-				// ذخیره شود، مقدار بی‌صدا خراب می‌شود و تصویر ناپدید.
-				'asset'     => is_array( $m['asset'] ?? null ) ? (int) ( $m['asset']['ID'] ?? 0 ) : (int) ( $m['asset'] ?? 0 ),
-				'video_url' => (string) ( $m['video_url'] ?? '' ),
-				'caption'   => (string) ( $m['caption'] ?? '' ),
-				'alt_text'  => (string) ( $m['alt_text'] ?? '' ),
+		$b = array_merge( cyh_bm_empty(), [ 'block_type' => 'media', 'heading' => 'تصاویر و ویدیو' ] );
+		foreach ( $media as $x ) {
+			$b['media'][] = [
+				'kind'      => (string) ( $x['kind'] ?: 'image' ),
+				// ⚠️ ACF شناسه می‌خواهد، نه آرایه. postmeta خام هم شناسه دارد.
+				'asset'     => (int) $x['asset'],
+				'video_url' => (string) $x['video_url'],
+				'caption'   => (string) $x['caption'],
+				'alt_text'  => (string) $x['alt_text'],
 			];
 		}
-		$add( $block );
+		$add( $b );
 	}
 
-	$add( cyh_blocks_text( 'راهنمای خواندن پلاک و کد فنی', (string) $get( 'identification_guide' ) ) );
-	$add( cyh_blocks_text( 'در بازار ایران', (string) $get( 'iran_presence' ) ) );
+	$add( cyh_bm_text( 'راهنمای خواندن پلاک و کد فنی', $m( 'identification_guide' ) ) );
+	$add( cyh_bm_text( 'در بازار ایران', $m( 'iran_presence' ) ) );
 
 	// ── قطعات پرتقاضا ────────────────────────────────────────────────
-	$parts = cyh_blocks_rows( $get( 'common_parts' ) );
+	$parts = cyh_bm_repeater( 'post', $id, 'common_parts', [ 'part_name', 'category', 'failure_reason' ] );
 	if ( $parts ) {
-		$block = array_merge( cyh_blocks_empty(), [ 'block_type' => 'parts', 'heading' => 'قطعات پرتقاضا' ] );
+		$b = array_merge( cyh_bm_empty(), [ 'block_type' => 'parts', 'heading' => 'قطعات پرتقاضا' ] );
 		foreach ( $parts as $p ) {
-			$cat = $p['category'] ?? null;
-			if ( is_object( $cat ) ) {
-				$cat = (int) $cat->term_id;
-			} elseif ( is_array( $cat ) ) {
-				$cat = (int) ( $cat['term_id'] ?? 0 );
-			} else {
-				$cat = (int) $cat;
+			$cat = $p['category'];
+			if ( is_array( $cat ) ) {
+				$cat = reset( $cat );
 			}
-			$block['parts'][] = [
-				'part_name'      => (string) ( $p['part_name'] ?? '' ),
-				'category'       => $cat ?: '',
-				'failure_reason' => (string) ( $p['failure_reason'] ?? '' ),
+			$b['parts'][] = [
+				'part_name'      => (string) $p['part_name'],
+				'category'       => $cat ? (int) $cat : '',
+				'failure_reason' => (string) $p['failure_reason'],
 			];
 		}
-		$add( $block );
+		$add( $b );
 	}
 
-	// ── فناوری‌ها → جدول ─────────────────────────────────────────────
-	$tech = cyh_blocks_rows( $get( 'technologies' ) );
-	if ( $tech ) {
-		$rows = [];
-		foreach ( $tech as $t ) {
-			$rows[] = [
-				(string) ( $t['name'] ?? '' ),
-				(string) ( $t['summary'] ?? '' ),
-				(string) ( $t['why_it_matters'] ?? '' ),
-			];
-		}
-		$add( cyh_blocks_table( 'فناوری‌های شاخص', '', [ 'فناوری', 'چیست', 'برای خریدار قطعه' ], $rows ) );
+	$rows = [];
+	foreach ( cyh_bm_repeater( 'post', $id, 'technologies', [ 'name', 'summary', 'why_it_matters' ] ) as $t ) {
+		$rows[] = [ $t['name'], $t['summary'], $t['why_it_matters'] ];
 	}
+	$add( cyh_bm_table( 'فناوری‌های شاخص', [ 'فناوری', 'چیست', 'برای خریدار قطعه' ], $rows ) );
 
-	// ── پرسش‌های متداول ──────────────────────────────────────────────
-	$faqs = cyh_blocks_rows( $get( 'faqs' ) );
-	if ( $faqs ) {
-		$block = array_merge( cyh_blocks_empty(), [ 'block_type' => 'faq', 'heading' => 'پرسش‌های متداول' ] );
-		foreach ( $faqs as $f ) {
-			if ( '' === trim( (string) ( $f['question'] ?? '' ) ) ) {
-				continue;
-			}
-			$block['faqs'][] = [
-				'question' => (string) $f['question'],
-				'answer'   => (string) ( $f['answer'] ?? '' ),
-			];
-		}
-		if ( $block['faqs'] ) {
-			$add( $block );
-		}
+	$pairs = [];
+	foreach ( cyh_bm_repeater( 'post', $id, 'faqs', [ 'question', 'answer' ] ) as $f ) {
+		$pairs[] = [ $f['question'], $f['answer'] ];
 	}
+	$add( cyh_bm_faq( 'پرسش‌های متداول', $pairs ) );
 
-	// ── بخش‌های دلخواه ───────────────────────────────────────────────
-	foreach ( cyh_blocks_rows( $get( 'custom_sections' ) ) as $c ) {
-		$add( cyh_blocks_text( (string) ( $c['heading'] ?? '' ), (string) ( $c['body'] ?? '' ) ) );
+	foreach ( cyh_bm_repeater( 'post', $id, 'custom_sections', [ 'heading', 'body' ] ) as $c ) {
+		$add( cyh_bm_text( (string) $c['heading'], $c['body'] ) );
 	}
 
 	return $blocks;
 }
 
+/** دسته → بلوک‌ها. */
+function cyh_bm_category( $term_id ) {
+	$m      = fn( $k ) => cyh_bm_meta( 'term', $term_id, $k );
+	$blocks = [];
+	$add    = function ( $b ) use ( &$blocks ) {
+		if ( null !== $b ) {
+			$blocks[] = $b;
+		}
+	};
+
+	$add( cyh_bm_text( 'این قطعه چیست و چه می‌کند؟', $m( 'seo_intro' ) ) );
+	$add( cyh_bm_text( 'راهنمای فنی', $m( 'engineering_guide' ) ) );
+
+	foreach ( [
+		[ 'symptoms', 'نشانه‌های خرابی', [ 'title', 'detail' ], [ 'نشانه', 'توضیح' ] ],
+		[ 'causes', 'علت‌های خرابی', [ 'title', 'detail' ], [ 'علت', 'توضیح' ] ],
+		[ 'selection_checklist', 'راهنمای سفارش', [ 'title', 'detail' ], [ 'مورد', 'توضیح' ] ],
+		[ 'materials', 'انتخاب جنس', [ 'title', 'detail' ], [ 'جنس', 'توضیح' ] ],
+		[ 'inspection', 'بازرسی', [ 'title', 'detail' ], [ 'مورد', 'توضیح' ] ],
+		[ 'standards', 'استانداردها', [ 'title', 'detail' ], [ 'استاندارد', 'توضیح' ] ],
+	] as list( $name, $heading, $subs, $cols ) ) {
+		$rows = [];
+		foreach ( cyh_bm_repeater( 'term', $term_id, $name, $subs ) as $r ) {
+			$rows[] = [ $r[ $subs[0] ], $r[ $subs[1] ] ];
+		}
+		$add( cyh_bm_table( $heading, $cols, $rows ) );
+	}
+
+	$pairs = [];
+	foreach ( cyh_bm_repeater( 'term', $term_id, 'faqs', [ 'question', 'answer' ] ) as $f ) {
+		$pairs[] = [ $f['question'], $f['answer'] ];
+	}
+	$add( cyh_bm_faq( 'پرسش‌های متداول', $pairs ) );
+
+	return $blocks;
+}
+
 /**
- * اجرای مهاجرت روی همه‌ی برندها.
+ * اجرای مهاجرت.
  *
  * @param bool $dry_run فقط گزارش؟
- * @return array{rows:array,written:int,skipped:int}
  */
-function cyh_blocks_migrate( $dry_run = true ) {
+function cyh_bm_run( $dry_run = true ) {
 	$report  = [];
 	$written = 0;
 	$skipped = 0;
 
-	if ( ! function_exists( 'get_field' ) ) {
+	if ( ! function_exists( 'update_field' ) ) {
 		return [ 'rows' => [], 'written' => 0, 'skipped' => 0, 'error' => 'ACF فعال نیست.' ];
 	}
 
-	$posts = get_posts( [
-		'post_type'      => 'brand',
-		'posts_per_page' => -1,
-		'post_status'    => [ 'publish', 'draft', 'pending' ],
-	] );
+	$targets = [];
 
-	foreach ( $posts as $post ) {
-		$existing = get_field( 'content_blocks', $post->ID );
+	foreach ( get_posts( [ 'post_type' => 'brand', 'posts_per_page' => -1, 'post_status' => 'any' ] ) as $p ) {
+		$targets[] = [ 'برند', $p->post_name, $p->ID, cyh_bm_brand( $p->ID ) ];
+	}
 
-		// ⚠️ هرگز روی بلوک‌های موجود نمی‌نویسیم. اگر کسی دستی بلوک ساخته،
-		// مهاجرت نباید کارش را پاک کند.
+	$terms = get_terms( [ 'taxonomy' => 'crane_category', 'hide_empty' => false ] );
+	if ( ! is_wp_error( $terms ) ) {
+		foreach ( $terms as $t ) {
+			$targets[] = [ 'دسته', $t->slug, 'crane_category_' . $t->term_id, cyh_bm_category( $t->term_id ) ];
+		}
+	}
+
+	foreach ( $targets as list( $kind, $slug, $acf_id, $blocks ) ) {
+		$existing = get_field( 'content_blocks', $acf_id );
+
+		// ⚠️ هرگز روی بلوک موجود نمی‌نویسیم — کار دست انسان مقدم است.
 		if ( is_array( $existing ) && ! empty( $existing ) ) {
 			$skipped++;
-			$report[] = [ $post->post_name, count( $existing ) . ' بلوک', 'رد شد — از قبل بلوک دارد' ];
+			$report[] = [ $kind, $slug, count( $existing ) . ' بلوک', 'رد شد — از قبل بلوک دارد' ];
 			continue;
 		}
 
-		$blocks = cyh_blocks_from_brand( $post->ID );
-
 		if ( empty( $blocks ) ) {
-			$report[] = [ $post->post_name, '—', 'چیزی برای منتقل کردن نبود' ];
+			$report[] = [ $kind, $slug, '—', 'چیزی برای انتقال نبود' ];
 			continue;
 		}
 
 		if ( ! $dry_run ) {
-			update_field( 'content_blocks', $blocks, $post->ID );
+			update_field( 'content_blocks', $blocks, $acf_id );
 		}
 
 		$written++;
@@ -278,32 +296,30 @@ function cyh_blocks_migrate( $dry_run = true ) {
 		foreach ( $blocks as $b ) {
 			$kinds[ $b['block_type'] ] = ( $kinds[ $b['block_type'] ] ?? 0 ) + 1;
 		}
-		$summary = [];
+		$sum = [];
 		foreach ( $kinds as $k => $n ) {
-			$summary[] = "$k×$n";
+			$sum[] = "$k×$n";
 		}
 		$report[] = [
-			$post->post_name,
+			$kind,
+			$slug,
 			count( $blocks ) . ' بلوک',
-			( $dry_run ? 'ساخته می‌شود' : 'ساخته شد' ) . ' — ' . implode( '، ', $summary ),
+			( $dry_run ? 'ساخته می‌شود' : 'ساخته شد' ) . ' — ' . implode( '، ', $sum ),
 		];
 	}
 
 	return [ 'rows' => $report, 'written' => $written, 'skipped' => $skipped ];
 }
 
-/** هندلر — الگوی POST → کار → redirect → GET، مثل بقیه‌ی ابزارهای این پنل. */
-function cyh_blocks_handle() {
+function cyh_bm_handle() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( 'دسترسی مجاز نیست.' );
 	}
 	check_admin_referer( 'cyh_blocks_migrate' );
 
-	$dry    = ! empty( $_GET['dry'] );
-	$result = cyh_blocks_migrate( $dry );
-
-	cyh_hub_stash( 'blocks', [ 'result' => $result, 'dry' => $dry ] );
+	$dry = ! empty( $_GET['dry'] );
+	cyh_hub_stash( 'blocks', [ 'result' => cyh_bm_run( $dry ), 'dry' => $dry ] );
 	wp_safe_redirect( cyh_hub_url() );
 	exit;
 }
-add_action( 'admin_post_cyh_blocks_migrate', 'cyh_blocks_handle' );
+add_action( 'admin_post_cyh_blocks_migrate', 'cyh_bm_handle' );

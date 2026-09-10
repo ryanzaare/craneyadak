@@ -19,13 +19,8 @@ import { SITE } from '../../data/site';
 import { BRAND_CLASSES, categoryPath, findCategory } from '../../data/taxonomy';
 import { getBrands, type EnrichedBrand } from '../../lib/brands';
 import { getProductsByBrand, computePrice, productJsonLd, type CraneProduct } from '../../lib/wp';
-import BrandGuide from '../../components/BrandGuide.astro';
-import { getBrandSectionOrder } from '../../lib/section-order';
-import { getBrandCustomSections } from '../../lib/brand-custom-sections';
 import ContentBlocks from '../../components/ContentBlocks.astro';
-import { getBrandBlocks } from '../../lib/content-blocks';
-import { getBrandProfile, type BrandProfile } from '../../lib/brand-profile';
-import { isReviewMode } from '../../lib/category-content';
+import { getBlocks } from '../../lib/content-blocks';
 
 export async function getStaticPaths() {
   // برندها از وردپرس غنی می‌شوند: رنگ، متن لوگو، انکرتکست و توضیح سئو
@@ -38,7 +33,6 @@ export async function getStaticPaths() {
       props: {
         brand,
         products: await getProductsByBrand(brand.slug),
-        profile: await getBrandProfile(brand.slug),
       },
     }))
   );
@@ -47,19 +41,22 @@ export async function getStaticPaths() {
 interface Props {
   brand: EnrichedBrand;
   products: CraneProduct[];
-  profile: BrandProfile;
 }
 
-const { brand, products, profile } = Astro.props as Props;
-const reviewMode = isReviewMode();
+const { brand, products } = Astro.props as Props;
+const reviewMode = import.meta.env.CONTENT_REVIEW === '1';
 
 const classMeta = BRAND_CLASSES[brand.brandClass];
 const title = `قطعات ${brand.nameFa} (${brand.nameEn}) | تامین و استعلام قیمت | ${SITE.name}`;
 // جمله‌ی معرفِ نوشته‌شده در وردپرس بر توضیح تولیدی اولویت دارد — متنی که
 // انسان نوشته، همیشه از متن قالبی بهتر در SERP دیده می‌شود.
-const description = profile.heroClaim
-  ? `${profile.heroClaim} استعلام قیمت با کد فنی و بررسی سازگاری.`.slice(0, 158)
-  : `تامین ${brand.seoDesc}، ساخت ${brand.country}. استعلام قیمت با کد فنی، بررسی سازگاری و صدور فاکتور رسمی.`;
+/* ⚠️ توضیح متا از `brandFields.seoDesc` می‌آید، نه از محتوا.
+   طبق مرز معماری: توضیح متا **پیکربندی موتور جستجو** است، نه محتوای صفحه.
+   بلوک‌ها محتوا هستند و ممکن است فردا جابه‌جا یا حذف شوند؛ توضیح متا نباید
+   با آن‌ها تکان بخورد. طول هم در Layout کوتاه می‌شود. */
+const description =
+  brand.seoDesc ||
+  `تأمین قطعات یدکی ${brand.nameFa} برای جرثقیل سقفی — استعلام قیمت با کد فنی و بررسی سازگاری.`;
 const canonical = `${SITE.url}/brands/${brand.slug}`;
 
 // همه‌ی برندها برای لینک‌سازی داخلی هم‌کلاس.
@@ -102,28 +99,8 @@ const itemList =
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
-    /* ⚠️ مسیر قدیمی هم باید FAQPage بدهد.
-       ممیزی نشان داد صفحه‌ی برند پرسش‌های متداول را نمایش می‌داد ولی هیچ
-       داده‌ی ساختاریافته‌ای برایشان تولید نمی‌کرد — یعنی شانس rich result
-       که کل دلیل نوشتن آن پرسش‌ها بود، هدر می‌رفت. تا وقتی همه‌ی برندها به
-       بلوک منتقل نشده‌اند، هر دو مسیر باید اسکیما بدهند.
-
-       فقط پرسش‌های دارای پاسخ وارد می‌شوند؛ FAQPage با پاسخ خالی نقض
-       راهنمای گوگل است. */
-    ...(() => {
-      const qa = profile.faqs.filter((f) => f.question.trim() !== '' && f.answer.trim() !== '');
-      return qa.length > 0
-        ? [{
-            '@type': 'FAQPage',
-            '@id': `${canonical}#faq`,
-            mainEntity: qa.map((f) => ({
-              '@type': 'Question',
-              name: f.question,
-              acceptedAnswer: { '@type': 'Answer', text: f.answer },
-            })),
-          }]
-        : [];
-    })(),
+    /* پرسش و پاسخ از بلوک‌ها. ContentBlocks خودش FAQPage جدا می‌سازد، پس
+       اینجا تکرار نمی‌شود — دو گره FAQPage روی یک صفحه، سیگنال متناقض است. */
     {
       '@type': 'BreadcrumbList',
       '@id': `${canonical}#breadcrumb`,
@@ -141,9 +118,9 @@ const jsonLd = {
       alternateName: brand.nameFa,
       // فقط فیلدهایی که واقعاً مقدار دارند وارد اسکیما می‌شوند.
       // فیلد خالی یا حدسی در structured data ریسک جریمه است، نه امتیاز.
-      ...(profile.headquarters ? { location: profile.headquarters } : {}),
-      ...(profile.foundedYear ? { foundingDate: profile.foundedYear } : {}),
-      ...(profile.sources.length ? { sameAs: profile.sources.map((x) => x.url) } : {}),
+      ...(brand.headquarters ? { location: brand.headquarters } : {}),
+      ...(brand.foundedYear ? { foundingDate: brand.foundedYear } : {}),
+      ...(brand.officialUrl ? { sameAs: [brand.officialUrl] } : {}),
     },
     {
       '@type': 'CollectionPage',
@@ -169,15 +146,8 @@ const contact = await getContact();
 
 // ترتیب بخش‌ها از پنل وردپرس؛ اگر تنظیم نشده باشد null و ترتیب پیش‌فرض
 // کامپوننت استفاده می‌شود. این کوئری هرگز throw نمی‌کند.
-const sectionOrder = await getBrandSectionOrder();
-const customSections = await getBrandCustomSections(brand.slug);
 
-/* ⚠️ گذارِ بی‌وقفه به مدل بلوک.
-   اگر برند بلوک دارد، پالت جدید رندر می‌شود؛ وگرنه ساختار قدیمی سر جایش
-   می‌ماند. یعنی مهاجرت می‌تواند برند به برند انجام شود و هیچ صفحه‌ای در
-   این فاصله خالی نمی‌شود. وقتی هر ۱۹ برند منتقل شدند، BrandGuide و
-   فیلدهای اختصاصی‌اش حذف می‌شوند. */
-const blocks = await getBrandBlocks(brand.slug);
+const blocks = await getBlocks('brand', brand.slug);
 
 ---
 
@@ -278,9 +248,7 @@ const blocks = await getBrandBlocks(brand.slug);
   )}
 
   {/* ------------------- هاب برند (محتوای عمیق) ------------------- */}
-  {blocks.length > 0
-    ? <ContentBlocks blocks={blocks} title={`صفحه‌ی ${brand.nameFa}`} reviewMode={reviewMode} eyebrow="پروفایل برند" />
-    : <BrandGuide profile={profile} brandName={brand.nameFa} reviewMode={reviewMode} sectionOrder={sectionOrder} customSections={customSections} />}
+  <ContentBlocks blocks={blocks} title={`صفحه‌ی ${brand.nameFa}`} reviewMode={reviewMode} eyebrow="پروفایل برند" />
 
   {/* ---------------------- برندهای هم‌گروه ---------------------- */}
   {siblings.length > 0 && (

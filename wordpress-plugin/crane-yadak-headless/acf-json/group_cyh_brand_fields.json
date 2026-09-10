@@ -96,6 +96,33 @@
             "required": 0,
             "show_in_graphql": 1,
             "graphql_field_name": "country"
+        },
+        {
+            "key": "field_cyh_bf_founded",
+            "label": "سال تأسیس",
+            "name": "founded_year",
+            "type": "text",
+            "instructions": "فقط عدد سال. حقیقتِ هویتی برند است، نه محتوای صفحه.",
+            "show_in_graphql": 1,
+            "required": 0
+        },
+        {
+            "key": "field_cyh_bf_hq",
+            "label": "دفتر مرکزی",
+            "name": "headquarters",
+            "type": "text",
+            "instructions": "شهر و کشور.",
+            "show_in_graphql": 1,
+            "required": 0
+        },
+        {
+            "key": "field_cyh_bf_url",
+            "label": "سایت رسمی سازنده",
+            "name": "official_url",
+            "type": "url",
+            "instructions": "برای sameAs در داده‌ی ساختاریافته. آدرس پنل خودمان را اینجا نگذارید.",
+            "show_in_graphql": 1,
+            "required": 0
         }
     ],
     "location": [

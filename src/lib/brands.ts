@@ -44,6 +44,11 @@ export interface EnrichedBrand extends Brand {
   seoAnchor: string | null;
   /** آیا داده‌ی وردپرس واقعاً پیدا شد؟ برای گزارش زمان build. */
   fromWordPress: boolean;
+  /* حقایق هویتی برند — از `brandFields`، نه از محتوا. این‌ها با جابه‌جا
+     شدن بلوک‌ها تکان نمی‌خورند و مستقیم وارد داده‌ی ساختاریافته می‌شوند. */
+  foundedYear: string | null;
+  headquarters: string | null;
+  officialUrl: string | null;
 }
 
 // ⚠️ آرگومان `where` عمداً حذف شد.
@@ -66,6 +71,9 @@ const BRANDS_QUERY = `
           brandColor
           seoAnchor
           seoDesc
+          foundedYear
+          headquarters
+          officialUrl
           brandClass
           country
         }
@@ -84,6 +92,9 @@ interface RawBrand {
     brandColor?: string | null;
     seoAnchor?: string | null;
     seoDesc?: string | null;
+    foundedYear?: string | null;
+    headquarters?: string | null;
+    officialUrl?: string | null;
     brandClass?: string | null;
     country?: string | null;
   } | null;
@@ -217,6 +228,9 @@ async function fetchBrands(): Promise<EnrichedBrand[]> {
       nameEn: clean(f?.nameEn) ?? base.nameEn,
       logoText: clean(f?.logoText) ?? base.logoText,
       seoDesc: clean(f?.seoDesc) ?? base.seoDesc,
+      foundedYear: clean(f?.foundedYear) ?? null,
+      headquarters: clean(f?.headquarters) ?? null,
+      officialUrl: clean(f?.officialUrl) ?? null,
       country: clean(f?.country) ?? base.country,
       /* ⚠️ گروه: وردپرس فقط وقتی برنده است که *صریحاً* مقداری ثبت شده باشد.
          باگی که اینجا رخ داد: فیلد ACF با `default_value: 'oem'` ساخته شده
@@ -257,6 +271,9 @@ async function fetchBrands(): Promise<EnrichedBrand[]> {
       brandClass: toBrandClass(f?.brandClass),
       country: clean(f?.country) ?? '',
       seoDesc: clean(f?.seoDesc) ?? '',
+      foundedYear: clean(f?.foundedYear) ?? null,
+      headquarters: clean(f?.headquarters) ?? null,
+      officialUrl: clean(f?.officialUrl) ?? null,
       color: cleanHex(f?.brandColor),
       seoAnchor: clean(f?.seoAnchor),
       fromWordPress: true,

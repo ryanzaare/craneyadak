@@ -36,11 +36,18 @@
 
 import { isWpConfigured, wpQueryPublic } from './wp';
 
-export type BlockType = 'text' | 'table' | 'faq' | 'parts' | 'media';
+export type BlockType = 'text' | 'table' | 'faq' | 'parts' | 'media' | 'specs' | 'callout';
+export type CalloutTone = 'danger' | 'note' | 'tip';
 
 export interface BlockTableRow {
   cells: string[];
 }
+export interface BlockSpec {
+  label: string;
+  value: string;
+  unit: string;
+}
+
 export interface BlockFaq {
   question: string;
   answer: string;
@@ -77,6 +84,11 @@ export interface ContentBlock {
   faqs: BlockFaq[];
   parts: BlockPart[];
   media: BlockMedia[];
+  // مشخصات فنی
+  specs: BlockSpec[];
+  // هشدار
+  tone: CalloutTone;
+  calloutBody: string;
 }
 
 const str = (v: unknown): string => {
@@ -113,7 +125,10 @@ function firstTerm(v: unknown): { slug: string | null; name: string | null } {
 const arr = (v: unknown): Record<string, unknown>[] =>
   (Array.isArray(v) ? v : []).filter((r): r is Record<string, unknown> => Boolean(r) && typeof r === 'object');
 
-const TYPES: BlockType[] = ['text', 'table', 'faq', 'parts', 'media'];
+/** ⚠️ این آرایه باید با choices در ACF و شاخه‌های ContentBlocks.astro یکی
+ *  بماند. `check-architecture.mjs` واگرایی هر سه را می‌شکند. */
+const TYPES: BlockType[] = ['text', 'table', 'faq', 'parts', 'media', 'specs', 'callout'];
+const TONES: CalloutTone[] = ['danger', 'note', 'tip'];
 
 export function normalizeBlocks(raw: unknown): ContentBlock[] {
   return arr(raw)
@@ -170,6 +185,15 @@ export function normalizeBlocks(raw: unknown): ContentBlock[] {
             };
           })
           .filter((m) => (m.kind === 'video' ? m.videoUrl : m.url)),
+
+        specs: arr(r.specs)
+          .map((x) => ({ label: str(x.label), value: str(x.value), unit: str(x.unit) }))
+          // مشخصه‌ی بدون مقدار، یک ردیف نیمه‌کاره است؛ روی صفحه «—» نشان
+          // دادن بدتر از نبودنش است.
+          .filter((x) => x.label !== '' && x.value !== ''),
+
+        tone: (TONES.includes(str(r.tone) as CalloutTone) ? str(r.tone) : 'note') as CalloutTone,
+        calloutBody: str(r.calloutBody),
       };
     })
     // بلوکی که هیچ محتوایی ندارد، یک ردیف فراموش‌شده است.
@@ -183,6 +207,8 @@ export function hasContent(b: ContentBlock): boolean {
     case 'faq':   return b.faqs.length > 0;
     case 'parts': return b.parts.length > 0;
     case 'media': return b.media.length > 0;
+    case 'specs': return b.specs.length > 0;
+    case 'callout': return b.calloutBody !== '';
     default:      return false;
   }
 }
@@ -195,6 +221,10 @@ export const BLOCK_FIELDS = `
     intro col1 col2 col3 col4 col5
     rows { c1 c2 c3 c4 c5 }
     faqs { question answer }
+    specs { label value unit }
+    tone calloutBody
+    specs { label value unit }
+    tone calloutBody
     parts { partName failureReason category { nodes { ... on CraneCategory { slug name } } } }
     media { kind videoUrl caption altText asset { node { sourceUrl altText mediaDetails { width height } } } }
   }
@@ -212,30 +242,44 @@ export const BLOCK_FIELDS_SAFE = `
   }
 `;
 
-type BrandPayload = {
-  craneBrands: { nodes: { slug: string | null; contentBlocks: unknown }[] } | null;
-};
+/*
+ * یک واکشی‌کننده برای هر سه نوع موجودیت.
+ *
+ * ⚠️ عمداً *یک* تابع، نه سه تا. مدل قبلی دقیقاً به این دلیل از هم پاشید که
+ * برای هر موجودیت مسیر جدا ساخته شد و آن مسیرها آرام‌آرام واگرا شدند.
+ * اینجا فقط نام کوئری ریشه فرق می‌کند.
+ */
+type EntityPayload = { [k: string]: { nodes: { slug: string | null; contentBlocks: unknown }[] } | null };
 
-let brandCache: Promise<Map<string, ContentBlock[]>> | null = null;
+const ROOTS = {
+  brand: 'craneBrands',
+  product: 'craneProducts',
+  category: 'craneCategories',
+} as const;
 
-async function fetchBrandBlocks(): Promise<Map<string, ContentBlock[]>> {
+export type BlockEntity = keyof typeof ROOTS;
+
+const caches: Partial<Record<BlockEntity, Promise<Map<string, ContentBlock[]>>>> = {};
+
+async function fetchBlocks(entity: BlockEntity): Promise<Map<string, ContentBlock[]>> {
   const map = new Map<string, ContentBlock[]>();
   if (!isWpConfigured()) return map;
+  const root = ROOTS[entity];
 
   // نردبان دو پله‌ای: کامل، بعد امن. غنی‌سازی اختیاری — هرگز throw نمی‌کند.
   for (const fields of [BLOCK_FIELDS, BLOCK_FIELDS_SAFE]) {
     try {
-      const data = await wpQueryPublic<BrandPayload>(
-        `query BrandBlocks($first: Int!) { craneBrands(first: $first) { nodes { slug ${fields} } } }`,
-        { first: 100 },
+      const data = await wpQueryPublic<EntityPayload>(
+        `query EntityBlocks($first: Int!) { ${root}(first: $first) { nodes { slug ${fields} } } }`,
+        { first: 200 },
       );
-      for (const node of data?.craneBrands?.nodes ?? []) {
+      for (const node of data?.[root]?.nodes ?? []) {
         if (!node.slug) continue;
         const blocks = normalizeBlocks(node.contentBlocks);
         if (blocks.length) map.set(node.slug, blocks);
       }
       const total = [...map.values()].reduce((n, b) => n + b.length, 0);
-      if (total > 0) console.info(`[blocks] ${total} بلوک روی ${map.size} برند.`);
+      if (total > 0) console.info(`[blocks] ${entity}: ${total} بلوک روی ${map.size} مورد.`);
       return map;
     } catch {
       // پله‌ی بعد
@@ -244,7 +288,19 @@ async function fetchBrandBlocks(): Promise<Map<string, ContentBlock[]>> {
   return map;
 }
 
-export function getBrandBlocks(slug: string): Promise<ContentBlock[]> {
-  brandCache ??= fetchBrandBlocks();
-  return brandCache.then((m) => m.get(slug) ?? []);
+export function getBlocks(entity: BlockEntity, slug: string): Promise<ContentBlock[]> {
+  caches[entity] ??= fetchBlocks(entity);
+  return caches[entity]!.then((m) => m.get(slug) ?? []);
+}
+
+/** مشخصات فنیِ همه‌ی بلوک‌های `specs` → `additionalProperty` در اسکیمای محصول. */
+export function specsToJsonLd(blocks: readonly ContentBlock[]): Record<string, string>[] {
+  return blocks
+    .filter((b) => b.type === 'specs')
+    .flatMap((b) => b.specs)
+    .map((sp) => ({
+      '@type': 'PropertyValue',
+      name: sp.label,
+      value: sp.unit ? `${sp.value} ${sp.unit}` : sp.value,
+    }));
 }
