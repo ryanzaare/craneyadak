@@ -102,6 +102,28 @@ const itemList =
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
+    /* ⚠️ مسیر قدیمی هم باید FAQPage بدهد.
+       ممیزی نشان داد صفحه‌ی برند پرسش‌های متداول را نمایش می‌داد ولی هیچ
+       داده‌ی ساختاریافته‌ای برایشان تولید نمی‌کرد — یعنی شانس rich result
+       که کل دلیل نوشتن آن پرسش‌ها بود، هدر می‌رفت. تا وقتی همه‌ی برندها به
+       بلوک منتقل نشده‌اند، هر دو مسیر باید اسکیما بدهند.
+
+       فقط پرسش‌های دارای پاسخ وارد می‌شوند؛ FAQPage با پاسخ خالی نقض
+       راهنمای گوگل است. */
+    ...(() => {
+      const qa = profile.faqs.filter((f) => f.question.trim() !== '' && f.answer.trim() !== '');
+      return qa.length > 0
+        ? [{
+            '@type': 'FAQPage',
+            '@id': `${canonical}#faq`,
+            mainEntity: qa.map((f) => ({
+              '@type': 'Question',
+              name: f.question,
+              acceptedAnswer: { '@type': 'Answer', text: f.answer },
+            })),
+          }]
+        : [];
+    })(),
     {
       '@type': 'BreadcrumbList',
       '@id': `${canonical}#breadcrumb`,

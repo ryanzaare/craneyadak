@@ -309,10 +309,3 @@ export function getBrands(): Promise<EnrichedBrand[]> {
   return brandsPromise;
 }
 
-export async function getBrand(slug: string): Promise<EnrichedBrand | undefined> {
-  return (await getBrands()).find((b) => b.slug === slug);
-}
-
-export async function getBrandsByClass(brandClass: BrandClass): Promise<EnrichedBrand[]> {
-  return (await getBrands()).filter((b) => b.brandClass === brandClass);
-}

@@ -198,10 +198,6 @@ export function buildProductIndex(products: CraneProduct[] = []): SuggestEntry[]
  * فهرست کامل — فقط برای تست و ابزارهای خط فرمان.
  * ⚠️ این را در کامپوننت استفاده نکنید؛ باعث inline شدن کل کاتالوگ می‌شود.
  */
-export function buildSuggestIndex(products: CraneProduct[] = []): SuggestEntry[] {
-  return [...buildProductIndex(products), ...buildStructuralIndex()];
-}
-
 /* -------------------------------------------------------------------------
    امتیازدهی — همان منطق روی سرور (تست) و مرورگر (اجرا).
 ------------------------------------------------------------------------- */

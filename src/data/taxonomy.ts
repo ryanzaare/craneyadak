@@ -107,10 +107,6 @@ export function siloPath(silo: Pick<Silo, 'slug'>): string {
 }
 
 /** یافتن یک سیلو با اسلاگ. */
-export function findSilo(slug: string): Silo | undefined {
-  return SILOS.find((s) => s.slug === slug);
-}
-
 // ---------------------------------------------------------------------------
 // برندها — عمداً در سه کلاس گروه‌بندی شده‌اند، نه یک فهرست تخت.
 //

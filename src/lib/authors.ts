@@ -177,6 +177,3 @@ export async function getPrimaryAuthor(): Promise<Author | null> {
 }
 
 /** یافتن نویسنده با اسلاگ — برای صفحات اختصاصی نویسنده در آینده. */
-export async function findAuthor(slug: string): Promise<Author | undefined> {
-  return (await getAuthors()).find((a) => a.slug === slug);
-}
