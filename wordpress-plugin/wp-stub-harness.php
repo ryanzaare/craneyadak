@@ -133,6 +133,25 @@ function wp_remote_post( $url, $args = [] ) {
 	return [ 'response' => [ 'code' => 200 ] ]; // شبیه‌سازی موفقیت — این تابع در تست واقعاً به هیچ سروری وصل نمی‌شود
 }
 
+/* ⚠️ `$wpdb` اصلاً وجود نداشت. `cyh_unique_slug()` مستقیم
+   `$wpdb->update()` صدا می‌زند و بدون این، اولین بار که اسلاگ تکراری
+   اصلاح می‌شد، fatal می‌گرفتیم. */
+class CYH_Test_Wpdb {
+	public $posts = 'wp_posts';
+	public $terms = 'wp_terms';
+	public $prefix = 'wp_';
+	public $last_query = '';
+	public function update( $table, $data, $where ) {
+		$GLOBALS['cyh_test_db_updates'][] = [ 'table' => $table, 'data' => $data, 'where' => $where ];
+		return 1;
+	}
+	public function prepare( $q, ...$a ) { $this->last_query = $q; return $q; }
+	public function get_var( $q = null ) { return null; }
+	public function get_results( $q = null, $out = null ) { return []; }
+	public function get_row( $q = null, $out = null ) { return null; }
+}
+$GLOBALS['wpdb'] = new CYH_Test_Wpdb();
+
 class WP_Post {
 	public $post_type;
 	public $post_status;
@@ -151,6 +170,11 @@ class WP_Error {
 		$this->message = $message;
 		$this->data    = $data;
 	}
+	/* ⚠️ این متد فقط روی *مسیر خطا* صدا زده می‌شود — دقیقاً مسیری که تست
+	   کمتر از همه به آن می‌رسد. نبودش یعنی هر بار که وردپرس واقعاً خطا
+	   برمی‌گرداند، به‌جای پیام خطا یک fatal می‌گرفتیم. */
+	public function get_error_message() { return $this->message; }
+	public function get_error_code() { return $this->code; }
 }
 
 // نقطه‌ی خروج هر endpoint REST. تا وقتی هارنس کال‌بک‌های REST را صدا
@@ -173,6 +197,12 @@ class WP_REST_Request {
 	}
 	public function get_param( $key ) {
 		return $this->params[ $key ] ?? null;
+	}
+	/* آپلود عکس در فرم استعلام از این می‌خواند. بدون آن، هر درخواست تماس
+	   fatal می‌دهد — و چون هارنس تا قبل از افزودن آپلود این مسیر را صدا
+	   نمی‌زد، نبودش تا امروز پنهان مانده بود. */
+	public function get_file_params() {
+		return $GLOBALS['cyh_test_files'] ?? [];
 	}
 }
 
@@ -306,7 +336,21 @@ function get_edit_post_link( $id = 0, $ctx = 'display' ) { return 'https://examp
 function get_post_type_object( $t ) { return isset( $GLOBALS['cyh_test_post_types'][ $t ] ) ? (object) [ 'name' => $t, 'label' => $t ] : null; }
 function add_post_type_support( $t, $f ) { $GLOBALS['cyh_test_supports'][ $t ][] = $f; return true; }
 function add_role( $r, $n, $caps = [] ) { $GLOBALS['cyh_test_roles'][ $r ] = $caps; return null; }
-function get_role( $r ) { return isset( $GLOBALS['cyh_test_roles'][ $r ] ) ? (object) [ 'name' => $r ] : null; }
+/* نقش کاربری. پیش‌تر یک stdClass برمی‌گشت که `add_cap()` نداشت — یعنی
+   افزودن دسترسی «پاسخ به پرسش‌ها» در زمان فعال‌سازی افزونه fatal می‌داد. */
+class CYH_Test_Role {
+	public $name;
+	public $capabilities = [];
+	public function __construct( $name ) { $this->name = $name; }
+	public function add_cap( $cap, $grant = true ) { $this->capabilities[ $cap ] = $grant; }
+	public function remove_cap( $cap ) { unset( $this->capabilities[ $cap ] ); }
+	public function has_cap( $cap ) { return ! empty( $this->capabilities[ $cap ] ); }
+}
+function get_role( $r ) {
+	if ( ! isset( $GLOBALS['cyh_test_roles'][ $r ] ) ) { return null; }
+	$GLOBALS['cyh_test_role_objects'][ $r ] ??= new CYH_Test_Role( $r );
+	return $GLOBALS['cyh_test_role_objects'][ $r ];
+}
 
 // ── ترم و تاکسونومی ────────────────────────────────────────────────────────
 function get_term( $t, $tax = '', $out = OBJECT ) { return $GLOBALS['cyh_test_terms'][ is_object( $t ) ? $t->term_id : $t ] ?? null; }
