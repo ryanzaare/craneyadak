@@ -31,24 +31,43 @@ import { type Author } from '../data/trust';
 // متوقف می‌کند. یعنی یک حدس اشتباه درباره‌ی نام enum، کل سایت را از کار
 // می‌انداخت. WPGraphQL خودش کاربران بدون پست منتشرشده را از پاسخ عمومی
 // حذف می‌کند، پس این فیلتر عملاً اضافه بود.
-const AUTHORS_QUERY = `
-  query CraneAuthors($first: Int!) {
-    users(first: $first) {
-      nodes {
-        slug
-        name
-        description
-        avatar(size: 128) { url }
-      }
-    }
-  }
-`;
+/*
+ * ⚠️ دو شکل، چون `authorProfile` یک گروه ACF **تازه** است.
+ *
+ * اگر تک‌شکلی می‌بود، تا لحظه‌ی نصب افزونه‌ی جدید کوئری می‌افتاد و جعبه‌ی
+ * نویسنده از همه‌ی صفحات راهنما محو می‌شد. همان درسی که با `media` و
+ * `supplyStatus` گرفتیم: فیلد تازه، پله‌ی تنزل خودش را می‌خواهد.
+ */
+const USER_CORE = `slug name description avatar(size: 128) { url }`;
+
+const AUTHOR_SHAPES = [
+  {
+    name: 'با پروفایل کارشناس',
+    query: `query CraneAuthors($first: Int!) {
+      users(first: $first) { nodes {
+        ${USER_CORE}
+        authorProfile { jobTitle yearsExperience profileUrl credentials { title } }
+      } }
+    }`,
+  },
+  {
+    name: 'فقط کاربر وردپرس',
+    query: `query CraneAuthors($first: Int!) { users(first: $first) { nodes { ${USER_CORE} } } }`,
+  },
+];
+
 
 interface RawUser {
   slug?: string | null;
   name?: string | null;
   description?: string | null;
   avatar?: { url?: string | null } | null;
+  authorProfile?: {
+    jobTitle?: string | null;
+    yearsExperience?: number | string | null;
+    profileUrl?: string | null;
+    credentials?: { title?: string | null }[] | null;
+  } | null;
 }
 
 function clean(value: unknown): string {
@@ -58,31 +77,61 @@ function clean(value: unknown): string {
 let authorsPromise: Promise<Author[]> | null = null;
 
 async function fetchAuthors(): Promise<Author[]> {
-  try {
-    const data = await wpQueryPublic<{ users?: { nodes?: RawUser[] } }>(AUTHORS_QUERY, { first: 20 });
-    const nodes = data?.users?.nodes ?? [];
+  let nodes: RawUser[] = [];
 
-    return nodes
-      .filter((u) => clean(u.slug) && clean(u.name))
-      .map((u) => ({
+  for (const shape of AUTHOR_SHAPES) {
+    try {
+      const data = await wpQueryPublic<{ users?: { nodes?: RawUser[] } }>(shape.query, { first: 20 });
+      nodes = data?.users?.nodes ?? [];
+      if (shape !== AUTHOR_SHAPES[0]) {
+        console.info('[author] گروه ACF «پروفایل کارشناس» در اسکیما نیست — عنوان شغلی از زندگی‌نامه خوانده می‌شود.');
+      }
+      break;
+    } catch {
+      // شکل بعدی امتحان می‌شود.
+    }
+  }
+
+  const authors = nodes
+    .filter((u) => clean(u.slug) && clean(u.name))
+    .map((u) => {
+      const p = u.authorProfile ?? null;
+      const fallback = splitBio(clean(u.description));
+
+      // فیلد صریح مقدم است؛ قرارداد «—» فقط پشتیبان است.
+      const jobTitle = clean(p?.jobTitle) || fallback.jobTitle;
+      const bio = clean(p?.jobTitle) ? clean(u.description) : fallback.bio;
+
+      const years = Number(p?.yearsExperience ?? NaN);
+      const expertise = (p?.credentials ?? [])
+        .map((c) => clean(c?.title))
+        .filter((t) => t.length > 0);
+
+      return {
         slug: clean(u.slug),
         name: clean(u.name),
-        // وردپرس فیلد «عنوان شغلی» ندارد. قرارداد: خط اول بیوگرافی، اگر
-        // با «—» جدا شده باشد، عنوان شغلی است. ساده، بدون نیاز به افزونه.
-        jobTitle: splitBio(clean(u.description)).jobTitle,
-        bio: splitBio(clean(u.description)).bio,
-        expertise: [],
+        jobTitle,
+        bio,
+        expertise: Number.isFinite(years) && years > 0 ? [...expertise, `${years} سال سابقه`] : expertise,
         image: clean(u.avatar?.url),
-        sameAs: [],
-        // نویسنده‌ی واقعیِ وردپرس تاییدشده است: یک انسان واقعی با حساب
-        // کاربری، نه یک نام جای‌گذار که ما نوشته‌ایم.
+        // ⚠️ فقط آدرس عمومی. اگر مدیر به‌اشتباه آدرس پنل را گذاشته باشد،
+        // منتشر نمی‌شود — آن آدرس نباید در JSON-LD عمومی بیاید.
+        sameAs: (() => {
+          const url = clean(p?.profileUrl);
+          return url && !/admin\.|\/wp-admin/i.test(url) ? [url] : [];
+        })(),
         verified: true,
-      }));
-  } catch {
-    // شکست در واکشی نویسنده نباید کل بیلد را متوقف کند — برخلاف کاتالوگ
-    // محصولات، نبودِ جعبه‌ی نویسنده صفحه را بی‌معنا نمی‌کند.
-    return [];
+      };
+    });
+
+  if (authors.length === 0) {
+    console.warn(
+      '[author] هیچ نویسنده‌ای از وردپرس برنگشت — جعبه‌ی نویسنده و داده‌ی Person رندر نمی‌شود.\n' +
+        '         علت رایج: WPGraphQL کاربرِ بدون نوشته‌ی *منتشرشده* را عمداً پنهان می‌کند.',
+    );
   }
+
+  return authors;
 }
 
 /**

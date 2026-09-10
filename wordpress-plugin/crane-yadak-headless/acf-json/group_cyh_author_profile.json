@@ -1,0 +1,76 @@
+{
+    "key": "group_cyh_author_profile",
+    "title": "پروفایل کارشناس (برای E-E-A-T)",
+    "fields": [
+        {
+            "key": "field_cyh_au_job",
+            "label": "عنوان شغلی",
+            "name": "job_title",
+            "type": "text",
+            "instructions": "مثال: کارشناس ارشد فنی بالابر و مکانیزم حرکت. این عنوان زیر نام شما روی صفحات راهنما و در داده‌ی ساختاریافته‌ی Person می‌آید.",
+            "placeholder": "کارشناس ارشد فنی بالابر",
+            "show_in_graphql": 1,
+            "required": 0
+        },
+        {
+            "key": "field_cyh_au_cred",
+            "label": "تخصص‌ها",
+            "name": "credentials",
+            "type": "repeater",
+            "instructions": "هر ردیف یک حوزه‌ی تخصص. اینها روی صفحه به‌صورت برچسب نمایش داده می‌شوند و مهم‌ترین سیگنال «تخصص» برای گوگل هستند. فقط چیزی بنویسید که واقعاً هست.",
+            "layout": "table",
+            "button_label": "افزودن تخصص",
+            "show_in_graphql": 1,
+            "sub_fields": [
+                {
+                    "key": "field_cyh_au_cred_t",
+                    "label": "تخصص",
+                    "name": "title",
+                    "type": "text",
+                    "show_in_graphql": 1,
+                    "required": 1
+                }
+            ]
+        },
+        {
+            "key": "field_cyh_au_years",
+            "label": "سال‌های سابقه",
+            "name": "years_experience",
+            "type": "number",
+            "instructions": "فقط عدد. اگر خالی بماند نمایش داده نمی‌شود — عدد حدسی ننویسید.",
+            "min": 1,
+            "max": 60,
+            "show_in_graphql": 1,
+            "required": 0
+        },
+        {
+            "key": "field_cyh_au_linkedin",
+            "label": "پروفایل عمومی (لینکدین و مانند آن)",
+            "name": "profile_url",
+            "type": "url",
+            "instructions": "⚠️ آدرس عمومی و قابل بررسی. اینجا آدرس پنل مدیریت را نگذارید — این لینک در داده‌ی ساختاریافته‌ی عمومی سایت منتشر می‌شود.",
+            "show_in_graphql": 1,
+            "required": 0
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "user_form",
+                "operator": "==",
+                "value": "all"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "active": true,
+    "description": "جایگزین قرارداد شکننده‌ی «عنوان — بیوگرافی» در فیلد زندگی‌نامه‌ی وردپرس.",
+    "show_in_graphql": 1,
+    "graphql_field_name": "authorProfile",
+    "map_graphql_types_from_location_rules": 1,
+    "graphql_types": [
+        "User"
+    ]
+}
