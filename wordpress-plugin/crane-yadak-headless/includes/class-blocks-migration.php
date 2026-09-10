@@ -272,17 +272,65 @@ function cyh_bm_run( $dry_run = true ) {
 		}
 	}
 
+	/*
+	 * ⚠️ شمارش از **مسیر اجرا** برداشته می‌شود، نه از روی متن نتیجه.
+	 *
+	 * نسخه‌ی اول خلاصه را با strpos روی جمله‌ی فارسیِ ستون «نتیجه» می‌ساخت.
+	 * نتیجه یک خلاصه‌ی خودمتناقض بود: «۱ مورد منتقل می‌شود — ۱ برند، ۱ دسته»
+	 * چون ردیفِ «رد شد» هم در سطل «منتقل می‌شود» می‌افتاد.
+	 *
+	 * شمارنده‌ای که به عبارت‌بندی یک پیام وابسته باشد، اولین بار که آن پیام
+	 * ویرایش شود بی‌صدا دروغ می‌گوید. اینجا هر شاخه شمارنده‌ی خودش را
+	 * زیاد می‌کند و هیچ رشته‌ای تحلیل نمی‌شود.
+	 */
+	$counts = [
+		'برند' => [ 'written' => 0, 'skipped' => 0, 'empty' => 0 ],
+		'دسته' => [ 'written' => 0, 'skipped' => 0, 'empty' => 0 ],
+	];
+	$skipped_slugs = [];
+
 	foreach ( $targets as list( $kind, $slug, $acf_id, $blocks ) ) {
 		$existing = get_field( 'content_blocks', $acf_id );
 
 		// ⚠️ هرگز روی بلوک موجود نمی‌نویسیم — کار دست انسان مقدم است.
 		if ( is_array( $existing ) && ! empty( $existing ) ) {
 			$skipped++;
-			$report[] = [ $kind, $slug, count( $existing ) . ' بلوک', 'رد شد — از قبل بلوک دارد' ];
+			$counts[ $kind ]['skipped']++;
+			$skipped_slugs[] = $slug;
+
+			/* «۷ بلوک» به تنهایی به یک سؤالِ بازجواب نمی‌دهد: این بلوک‌ها
+			   از کجا آمده‌اند؟ دستِ آدم نوشته یا یک اجرای قبلیِ همین
+			   مهاجرت؟ نوعِ بلوک‌های موجود را کنار هم می‌گذاریم تا با
+			   چیزی که مهاجرت *می‌ساخت* قابل مقایسه باشد. */
+			$have = [];
+			foreach ( $existing as $b ) {
+				$t = is_array( $b ) ? ( $b['block_type'] ?? '?' ) : '?';
+				$have[ $t ] = ( $have[ $t ] ?? 0 ) + 1;
+			}
+			$have_txt = [];
+			foreach ( $have as $t => $n ) {
+				$have_txt[] = "{$t}×{$n}";
+			}
+
+			$would = [];
+			foreach ( (array) $blocks as $b ) {
+				$t = $b['block_type'] ?? '?';
+				$would[ $t ] = ( $would[ $t ] ?? 0 ) + 1;
+			}
+			$same = $have === $would && ! empty( $would );
+
+			$report[] = [
+				$kind,
+				$slug,
+				count( $existing ) . ' بلوک',
+				'رد شد — از قبل بلوک دارد: ' . implode( '، ', $have_txt )
+					. ( $same ? ' (دقیقاً همان چیزی که این مهاجرت می‌ساخت)' : '' ),
+			];
 			continue;
 		}
 
 		if ( empty( $blocks ) ) {
+			$counts[ $kind ]['empty']++;
 			$report[] = [ $kind, $slug, '—', 'چیزی برای انتقال نبود' ];
 			continue;
 		}
@@ -292,6 +340,7 @@ function cyh_bm_run( $dry_run = true ) {
 		}
 
 		$written++;
+		$counts[ $kind ]['written']++;
 		$kinds = [];
 		foreach ( $blocks as $b ) {
 			$kinds[ $b['block_type'] ] = ( $kinds[ $b['block_type'] ] ?? 0 ) + 1;
@@ -311,7 +360,30 @@ function cyh_bm_run( $dry_run = true ) {
 		];
 	}
 
-	return [ 'rows' => $report, 'written' => $written, 'skipped' => $skipped ];
+	return [
+		'rows'          => $report,
+		'written'       => $written,
+		'skipped'       => $skipped,
+		'counts'        => $counts,
+		'skipped_slugs' => $skipped_slugs,
+	];
+}
+
+/**
+ * آیا این درخواست واقعاً می‌خواهد بنویسد؟
+ *
+ * ⚠️ تابع جداست چون تنها راهِ آزمودنش همین است: cyh_bm_handle() ریدایرکت
+ * می‌کند و exit، پس در هارنس قابل صدا زدن نیست. تصمیمی که برگشت‌ناپذیرترین
+ * عملیات افزونه را کنترل می‌کند نباید جایی زندگی کند که تست نمی‌رسد.
+ *
+ * قاعده: فقط «go=1» یعنی بنویس. هر چیز دیگری — رشته‌ی خالی، «0»، «true»،
+ * «yes»، یا اصلاً نبودن پارامتر — یعنی پیش‌نمایش.
+ *
+ * @param array $get معمولاً $_GET.
+ * @return bool
+ */
+function cyh_bm_wants_write( array $get ) {
+	return isset( $get['go'] ) && '1' === (string) $get['go'];
 }
 
 function cyh_bm_handle() {
@@ -320,7 +392,20 @@ function cyh_bm_handle() {
 	}
 	check_admin_referer( 'cyh_blocks_migrate' );
 
-	$dry = ! empty( $_GET['dry'] );
+	/*
+	 * ⚠️ پیش‌فرض وارونه بود و این خطرناک‌ترین سطر کل افزونه بود.
+	 *
+	 * قبلاً:  $dry = ! empty( $_GET['dry'] );
+	 * یعنی حالت **ایمن** آن چیزی بود که به یک پارامتر نیاز داشت، و حالت
+	 * نوشتن، پیش‌فرضِ نبودِ پارامتر. هر اتفاقی که آن query arg را بیندازد —
+	 * لینک کوتاه‌شده، ری‌رایت، یک تب بازیابی‌شده، prefetch مرورگر — به
+	 * نوشتنِ برگشت‌ناپذیر روی محتوای واقعی ختم می‌شد.
+	 *
+	 * حالا وارونه است: نوشتن فقط با go=1 صریح. هر ورودی دیگری، از جمله
+	 * هیچ ورودی، یعنی پیش‌نمایش. ابزار ورود JSON در همین فایل از اول
+	 * درست بود ('preview' پیش‌فرض)؛ این یکی جا مانده بود.
+	 */
+	$dry = ! cyh_bm_wants_write( $_GET );
 	cyh_hub_stash( 'blocks', [ 'result' => cyh_bm_run( $dry ), 'dry' => $dry ] );
 	wp_safe_redirect( cyh_hub_url() );
 	exit;

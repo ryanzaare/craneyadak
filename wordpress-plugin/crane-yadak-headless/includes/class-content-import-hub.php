@@ -371,15 +371,22 @@ function cyh_hub_page() {
 	}
 
 	// ── مهاجرت به بلوک‌های محتوا ────────────────────────────────────────
-	$mig_dry = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_blocks_migrate&dry=1' ), 'cyh_blocks_migrate' );
-	$mig_run = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_blocks_migrate' ), 'cyh_blocks_migrate' );
+	// ⚠️ «go=1» یعنی بنویس. نبودش یعنی پیش‌نمایش — چون پیش‌فرضِ یک عملیات
+	//    برگشت‌ناپذیر باید بی‌خطرترین حالت باشد، نه مخرب‌ترین.
+	$mig_dry = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_blocks_migrate' ), 'cyh_blocks_migrate' );
+	$mig_run = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_blocks_migrate&go=1' ), 'cyh_blocks_migrate' );
 
 	echo '<div class="card" style="max-width:860px;padding:4px 20px 16px;margin-top:20px">';
 	echo '<h2>انتقال به بلوک‌های محتوا</h2>';
 	echo '<p>فیلدهای اختصاصی برند (معرفی، سری‌ها، قطعات، فناوری‌ها، پرسش‌ها…) به <strong>بلوک‌های محتوا</strong> منتقل می‌شوند. از این پس افزودن محتوای تازه به هیچ تغییری در کد نیاز ندارد.</p>';
 	echo '<p><strong>فیلدهای قدیمی پاک نمی‌شوند</strong> — اگر نتیجه را نپسندیدید، بلوک‌ها را حذف کنید و همه‌چیز سر جایش است. برندی که از قبل بلوک دارد، دست‌نخورده می‌ماند.</p>';
 	printf(
-		'<p><a class="button" href="%s">پیش‌نمایش</a> <a class="button button-primary" href="%s">انتقال بده</a></p>',
+		'<p><a class="button" href="%s">پیش‌نمایش</a> ' .
+		// تأیید، چون این لینک یک GET است و GET را می‌شود ناخواسته زد:
+		// بازیابی تب، prefetch، یا یک کلیک اشتباه.
+		'<a class="button button-primary" href="%s" rel="nofollow" ' .
+		'onclick="return confirm(\'بلوک‌های محتوا برای همه‌ی برندها و دسته‌های خالی نوشته می‌شود. این کار برگشت‌ناپذیر است. ادامه؟\')">' .
+		'انتقال بده</a></p>',
 		esc_url( $mig_dry ),
 		esc_url( $mig_run )
 	);
@@ -391,35 +398,36 @@ function cyh_hub_page() {
 		if ( ! empty( $br['error'] ) ) {
 			printf( '<div class="notice notice-error inline"><p>%s</p></div>', esc_html( $br['error'] ) );
 		} else {
-			/* ⚠️ «برند» هاردکد بود، در حالی که این گزارش هم برند دارد هم
-			   دسته. شمارش تفکیک‌شده تا معلوم باشد ۳۱ دسته اصلاً دیده شده‌اند
-			   یا نه. */
-			$per = [ 'برند' => 0, 'دسته' => 0 ];
-			$emp = [ 'برند' => 0, 'دسته' => 0 ];
-			foreach ( $br['rows'] as $row ) {
-				if ( ! is_array( $row ) || count( $row ) < 4 ) {
-					continue; // ردیف خراب در جدول قرمز دیده می‌شود؛ در آمار شرکت نکند.
-				}
-				$k = (string) $row[0];
-				if ( ! isset( $per[ $k ] ) ) {
-					continue;
-				}
-				if ( false !== strpos( (string) ( $row[3] ?? '' ), 'نبود' ) ) {
-					$emp[ $k ]++;
-				} else {
-					$per[ $k ]++;
-				}
-			}
+			/* خلاصه از شمارنده‌های خودِ مهاجرت خوانده می‌شود.
+			   نسخه‌ی قبلی این خلاصه، سطل‌ها را از روی متن فارسی ستون
+			   «نتیجه» می‌ساخت و «رد شد» را هم «منتقل می‌شود» می‌شمرد —
+			   خروجی‌اش «۱ مورد منتقل می‌شود — ۱ برند، ۱ دسته» بود که
+			   با خودش می‌جنگد. */
+			$c  = $br['counts'] ?? [];
+			$bw = $c['برند']['written'] ?? 0;
+			$cw = $c['دسته']['written'] ?? 0;
+			$be = $c['برند']['empty'] ?? 0;
+			$ce = $c['دسته']['empty'] ?? 0;
+			$sk = (array) ( $br['skipped_slugs'] ?? [] );
+
 			printf(
-				'<div class="notice notice-%s inline"><p><strong>%d مورد %s</strong> — %d برند، %d دسته.<br>' .
-				'%d مورد محتوایی برای انتقال نداشت، %d مورد رد شد (از قبل بلوک دارد).</p></div>',
+				'<div class="notice notice-%s inline"><p>' .
+				'<strong>%d مورد %s</strong> — %d برند، %d دسته.<br>' .
+				'%d مورد از قبل بلوک دارد و دست‌نخورده می‌ماند%s<br>' .
+				'%d مورد هیچ محتوای قدیمی برای انتقال نداشت (%d برند، %d دسته).' .
+				'</p></div>',
 				$bdry ? 'warning' : 'success',
-				(int) $br['written'],
-				$bdry ? 'منتقل می‌شود (چیزی ذخیره نشد)' : 'منتقل شد',
-				$per['برند'],
-				$per['دسته'],
-				$emp['برند'] + $emp['دسته'],
-				(int) $br['skipped']
+				$bw + $cw,
+				$bdry ? 'نوشته می‌شود — الان چیزی ذخیره نشد' : 'نوشته شد',
+				$bw,
+				$cw,
+				count( $sk ),
+				// هر اسلاگ جداگانه esc می‌شود؛ اگر کل رشته را esc کنیم،
+				// خودِ تگ‌های <code> هم متن می‌شوند.
+				$sk ? ': <code>' . implode( '</code>، <code>', array_map( 'esc_html', $sk ) ) . '</code>.' : '.',
+				$be + $ce,
+				$be,
+				$ce
 			);
 		}
 
