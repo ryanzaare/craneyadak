@@ -22,6 +22,8 @@ import { getProductsByBrand, computePrice, productJsonLd, type CraneProduct } fr
 import BrandGuide from '../../components/BrandGuide.astro';
 import { getBrandSectionOrder } from '../../lib/section-order';
 import { getBrandCustomSections } from '../../lib/brand-custom-sections';
+import ContentBlocks from '../../components/ContentBlocks.astro';
+import { getBrandBlocks } from '../../lib/content-blocks';
 import { getBrandProfile, type BrandProfile } from '../../lib/brand-profile';
 import { isReviewMode } from '../../lib/category-content';
 
@@ -148,6 +150,13 @@ const contact = await getContact();
 const sectionOrder = await getBrandSectionOrder();
 const customSections = await getBrandCustomSections(brand.slug);
 
+/* ⚠️ گذارِ بی‌وقفه به مدل بلوک.
+   اگر برند بلوک دارد، پالت جدید رندر می‌شود؛ وگرنه ساختار قدیمی سر جایش
+   می‌ماند. یعنی مهاجرت می‌تواند برند به برند انجام شود و هیچ صفحه‌ای در
+   این فاصله خالی نمی‌شود. وقتی هر ۱۹ برند منتقل شدند، BrandGuide و
+   فیلدهای اختصاصی‌اش حذف می‌شوند. */
+const blocks = await getBrandBlocks(brand.slug);
+
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
@@ -247,7 +256,9 @@ const customSections = await getBrandCustomSections(brand.slug);
   )}
 
   {/* ------------------- هاب برند (محتوای عمیق) ------------------- */}
-  <BrandGuide profile={profile} brandName={brand.nameFa} reviewMode={reviewMode} sectionOrder={sectionOrder} customSections={customSections} />
+  {blocks.length > 0
+    ? <ContentBlocks blocks={blocks} title={`صفحه‌ی ${brand.nameFa}`} reviewMode={reviewMode} eyebrow="پروفایل برند" />
+    : <BrandGuide profile={profile} brandName={brand.nameFa} reviewMode={reviewMode} sectionOrder={sectionOrder} customSections={customSections} />}
 
   {/* ---------------------- برندهای هم‌گروه ---------------------- */}
   {siblings.length > 0 && (

@@ -288,6 +288,7 @@ function cyh_hub_page() {
 	$repair_run = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_hub_repair' ), 'cyh_hub_repair' );
 
 	$report = cyh_hub_take( 'report' );
+	$blocks = cyh_hub_take( 'blocks' );
 	$repair = cyh_hub_take( 'repair' );
 	$error  = cyh_hub_take( 'error' );
 
@@ -333,6 +334,51 @@ function cyh_hub_page() {
 					esc_html( $row[1] ),
 					esc_html( $row[2] ),
 					esc_html( $row[3] )
+				);
+			}
+			echo '</tbody></table>';
+		}
+	}
+	echo '</div>';
+
+	// ── مهاجرت به بلوک‌های محتوا ────────────────────────────────────────
+	$mig_dry = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_blocks_migrate&dry=1' ), 'cyh_blocks_migrate' );
+	$mig_run = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_blocks_migrate' ), 'cyh_blocks_migrate' );
+
+	echo '<div class="card" style="max-width:860px;padding:4px 20px 16px;margin-top:20px">';
+	echo '<h2>انتقال به بلوک‌های محتوا</h2>';
+	echo '<p>فیلدهای اختصاصی برند (معرفی، سری‌ها، قطعات، فناوری‌ها، پرسش‌ها…) به <strong>بلوک‌های محتوا</strong> منتقل می‌شوند. از این پس افزودن محتوای تازه به هیچ تغییری در کد نیاز ندارد.</p>';
+	echo '<p><strong>فیلدهای قدیمی پاک نمی‌شوند</strong> — اگر نتیجه را نپسندیدید، بلوک‌ها را حذف کنید و همه‌چیز سر جایش است. برندی که از قبل بلوک دارد، دست‌نخورده می‌ماند.</p>';
+	printf(
+		'<p><a class="button" href="%s">پیش‌نمایش</a> <a class="button button-primary" href="%s">انتقال بده</a></p>',
+		esc_url( $mig_dry ),
+		esc_url( $mig_run )
+	);
+
+	if ( is_array( $blocks ) && is_array( $blocks['result'] ?? null ) ) {
+		$br  = $blocks['result'];
+		$bdry = ! empty( $blocks['dry'] );
+
+		if ( ! empty( $br['error'] ) ) {
+			printf( '<div class="notice notice-error inline"><p>%s</p></div>', esc_html( $br['error'] ) );
+		} else {
+			printf(
+				'<div class="notice notice-%s inline"><p><strong>%d برند %s</strong>، %d برند رد شد.</p></div>',
+				$bdry ? 'warning' : 'success',
+				(int) $br['written'],
+				$bdry ? 'منتقل می‌شود (چیزی ذخیره نشد)' : 'منتقل شد',
+				(int) $br['skipped']
+			);
+		}
+
+		if ( ! empty( $br['rows'] ) ) {
+			echo '<table class="widefat striped" style="margin-top:8px"><thead><tr><th>برند</th><th>حجم</th><th>نتیجه</th></tr></thead><tbody>';
+			foreach ( $br['rows'] as $row ) {
+				printf(
+					'<tr><td><code>%s</code></td><td>%s</td><td>%s</td></tr>',
+					esc_html( $row[0] ),
+					esc_html( $row[1] ),
+					esc_html( $row[2] )
 				);
 			}
 			echo '</tbody></table>';

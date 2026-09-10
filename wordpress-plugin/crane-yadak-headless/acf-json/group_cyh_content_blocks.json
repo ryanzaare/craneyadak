@@ -1,0 +1,440 @@
+{
+    "key": "group_cyh_content_blocks",
+    "title": "بلوک‌های محتوا",
+    "fields": [
+        {
+            "key": "field_cyh_cb_blocks",
+            "label": "بلوک‌های محتوا",
+            "name": "content_blocks",
+            "type": "repeater",
+            "layout": "block",
+            "button_label": "افزودن بلوک",
+            "show_in_graphql": 1,
+            "instructions": "هر ردیف یک بخش کامل روی صفحه می‌سازد. ترتیب ردیف‌ها = ترتیب نمایش. برای محتوای تازه به کد دست نزنید — بلوک اضافه کنید.",
+            "sub_fields": [
+                {
+                    "key": "field_cyh_cb_type",
+                    "label": "نوع بلوک",
+                    "name": "block_type",
+                    "type": "select",
+                    "required": 1,
+                    "show_in_graphql": 1,
+                    "allow_null": 0,
+                    "multiple": 0,
+                    "ui": 0,
+                    "return_format": "value",
+                    "default_value": "text",
+                    "instructions": "نوع بلوک را انتخاب کنید؛ فقط فیلدهای همان نوع نمایش داده می‌شود.",
+                    "choices": {
+                        "text": "متن",
+                        "table": "جدول",
+                        "faq": "پرسش و پاسخ",
+                        "parts": "قطعات مرتبط",
+                        "media": "تصویر و ویدیو"
+                    },
+                    "wrapper": {
+                        "width": "30"
+                    }
+                },
+                {
+                    "key": "field_cyh_cb_heading",
+                    "label": "عنوان بلوک",
+                    "name": "heading",
+                    "type": "text",
+                    "show_in_graphql": 1,
+                    "instructions": "خالی بگذارید تا بلوک بدون سرتیتر بیاید.",
+                    "wrapper": {
+                        "width": "55"
+                    }
+                },
+                {
+                    "key": "field_cyh_cb_review",
+                    "label": "بازبینی",
+                    "name": "needs_review",
+                    "type": "true_false",
+                    "show_in_graphql": 1,
+                    "ui": 1,
+                    "default_value": 0,
+                    "wrapper": {
+                        "width": "15"
+                    }
+                },
+                {
+                    "key": "field_cyh_cb_body",
+                    "label": "متن",
+                    "name": "body",
+                    "type": "wysiwyg",
+                    "show_in_graphql": 1,
+                    "tabs": "all",
+                    "media_upload": 1,
+                    "delay": 0,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "text"
+                            }
+                        ]
+                    ],
+                    "instructions": "تصویر را از «افزودن رسانه» درج کنید تا ابعادش ثبت شود."
+                },
+                {
+                    "key": "field_cyh_cb_intro",
+                    "label": "توضیح زیر عنوان",
+                    "name": "intro",
+                    "type": "text",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "table"
+                            }
+                        ]
+                    ]
+                },
+                {
+                    "key": "field_cyh_cb_col1",
+                    "label": "عنوان ستون 1",
+                    "name": "col1",
+                    "type": "text",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "table"
+                            }
+                        ]
+                    ],
+                    "wrapper": {
+                        "width": "20"
+                    },
+                    "instructions": "خالی = ستون نمایش داده نمی‌شود"
+                },
+                {
+                    "key": "field_cyh_cb_col2",
+                    "label": "عنوان ستون 2",
+                    "name": "col2",
+                    "type": "text",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "table"
+                            }
+                        ]
+                    ],
+                    "wrapper": {
+                        "width": "20"
+                    },
+                    "instructions": ""
+                },
+                {
+                    "key": "field_cyh_cb_col3",
+                    "label": "عنوان ستون 3",
+                    "name": "col3",
+                    "type": "text",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "table"
+                            }
+                        ]
+                    ],
+                    "wrapper": {
+                        "width": "20"
+                    },
+                    "instructions": ""
+                },
+                {
+                    "key": "field_cyh_cb_col4",
+                    "label": "عنوان ستون 4",
+                    "name": "col4",
+                    "type": "text",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "table"
+                            }
+                        ]
+                    ],
+                    "wrapper": {
+                        "width": "20"
+                    },
+                    "instructions": ""
+                },
+                {
+                    "key": "field_cyh_cb_col5",
+                    "label": "عنوان ستون 5",
+                    "name": "col5",
+                    "type": "text",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "table"
+                            }
+                        ]
+                    ],
+                    "wrapper": {
+                        "width": "20"
+                    },
+                    "instructions": ""
+                },
+                {
+                    "key": "field_cyh_cb_rows",
+                    "label": "ردیف‌ها",
+                    "name": "rows",
+                    "type": "repeater",
+                    "layout": "table",
+                    "button_label": "افزودن ردیف",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "table"
+                            }
+                        ]
+                    ],
+                    "sub_fields": [
+                        {
+                            "key": "field_cyh_cb_c1",
+                            "label": "ستون 1",
+                            "name": "c1",
+                            "type": "text",
+                            "show_in_graphql": 1
+                        },
+                        {
+                            "key": "field_cyh_cb_c2",
+                            "label": "ستون 2",
+                            "name": "c2",
+                            "type": "text",
+                            "show_in_graphql": 1
+                        },
+                        {
+                            "key": "field_cyh_cb_c3",
+                            "label": "ستون 3",
+                            "name": "c3",
+                            "type": "text",
+                            "show_in_graphql": 1
+                        },
+                        {
+                            "key": "field_cyh_cb_c4",
+                            "label": "ستون 4",
+                            "name": "c4",
+                            "type": "text",
+                            "show_in_graphql": 1
+                        },
+                        {
+                            "key": "field_cyh_cb_c5",
+                            "label": "ستون 5",
+                            "name": "c5",
+                            "type": "text",
+                            "show_in_graphql": 1
+                        }
+                    ]
+                },
+                {
+                    "key": "field_cyh_cb_faqs",
+                    "label": "پرسش‌ها",
+                    "name": "faqs",
+                    "type": "repeater",
+                    "layout": "row",
+                    "button_label": "افزودن پرسش",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "faq"
+                            }
+                        ]
+                    ],
+                    "sub_fields": [
+                        {
+                            "key": "field_cyh_cb_q",
+                            "label": "پرسش",
+                            "name": "question",
+                            "type": "text",
+                            "show_in_graphql": 1,
+                            "required": 1
+                        },
+                        {
+                            "key": "field_cyh_cb_a",
+                            "label": "پاسخ",
+                            "name": "answer",
+                            "type": "textarea",
+                            "rows": 3,
+                            "show_in_graphql": 1
+                        }
+                    ]
+                },
+                {
+                    "key": "field_cyh_cb_parts",
+                    "label": "قطعات",
+                    "name": "parts",
+                    "type": "repeater",
+                    "layout": "row",
+                    "button_label": "افزودن قطعه",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "parts"
+                            }
+                        ]
+                    ],
+                    "instructions": "هر قطعه به صفحه‌ی دسته‌اش لینک می‌شود — مهم‌ترین لینک داخلی این صفحه.",
+                    "sub_fields": [
+                        {
+                            "key": "field_cyh_cb_p_name",
+                            "label": "نام قطعه",
+                            "name": "part_name",
+                            "type": "text",
+                            "show_in_graphql": 1,
+                            "required": 1
+                        },
+                        {
+                            "key": "field_cyh_cb_p_cat",
+                            "label": "دسته",
+                            "name": "category",
+                            "type": "taxonomy",
+                            "taxonomy": "crane_category",
+                            "field_type": "select",
+                            "allow_null": 1,
+                            "add_term": 0,
+                            "save_terms": 0,
+                            "load_terms": 0,
+                            "return_format": "object",
+                            "show_in_graphql": 1
+                        },
+                        {
+                            "key": "field_cyh_cb_p_why",
+                            "label": "چرا خراب می‌شود",
+                            "name": "failure_reason",
+                            "type": "text",
+                            "show_in_graphql": 1
+                        }
+                    ]
+                },
+                {
+                    "key": "field_cyh_cb_media",
+                    "label": "رسانه",
+                    "name": "media",
+                    "type": "repeater",
+                    "layout": "row",
+                    "button_label": "افزودن رسانه",
+                    "show_in_graphql": 1,
+                    "conditional_logic": [
+                        [
+                            {
+                                "field": "field_cyh_cb_type",
+                                "operator": "==",
+                                "value": "media"
+                            }
+                        ]
+                    ],
+                    "sub_fields": [
+                        {
+                            "key": "field_cyh_cb_m_kind",
+                            "label": "نوع",
+                            "name": "kind",
+                            "type": "select",
+                            "show_in_graphql": 1,
+                            "choices": {
+                                "image": "تصویر",
+                                "diagram": "نمودار/نقشه",
+                                "video": "ویدیو"
+                            },
+                            "default_value": "image"
+                        },
+                        {
+                            "key": "field_cyh_cb_m_asset",
+                            "label": "فایل",
+                            "name": "asset",
+                            "type": "image",
+                            "return_format": "array",
+                            "show_in_graphql": 1
+                        },
+                        {
+                            "key": "field_cyh_cb_m_url",
+                            "label": "آدرس ویدیو",
+                            "name": "video_url",
+                            "type": "url",
+                            "show_in_graphql": 1
+                        },
+                        {
+                            "key": "field_cyh_cb_m_cap",
+                            "label": "زیرنویس",
+                            "name": "caption",
+                            "type": "text",
+                            "show_in_graphql": 1
+                        },
+                        {
+                            "key": "field_cyh_cb_m_alt",
+                            "label": "متن جایگزین",
+                            "name": "alt_text",
+                            "type": "text",
+                            "show_in_graphql": 1
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "brand"
+            }
+        ],
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "product"
+            }
+        ],
+        [
+            {
+                "param": "taxonomy",
+                "operator": "==",
+                "value": "crane_category"
+            }
+        ]
+    ],
+    "menu_order": 5,
+    "position": "normal",
+    "style": "default",
+    "active": true,
+    "description": "یک پالت بلوک برای برند، محصول و دسته — تا افزودن محتوای تازه هرگز نیازمند تغییر کد نباشد.",
+    "show_in_graphql": 1,
+    "graphql_field_name": "contentBlocks",
+    "map_graphql_types_from_location_rules": 1,
+    "graphql_types": [
+        "Brand",
+        "CraneProduct",
+        "CraneCategory"
+    ]
+}

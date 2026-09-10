@@ -1,0 +1,192 @@
+---
+// src/components/ContentBlocks.astro
+// ---------------------------------------------------------------------------
+// رندر پالت بلوک‌ها — یک کامپوننت برای برند، محصول و دسته.
+//
+// این فایل جایگزین بخش‌های اختصاصیِ صفحه‌ی برند می‌شود. هر چیزی که آنجا
+// دستی ساخته شده بود (جدول سری‌ها، قطعات پرتقاضا، پرسش‌های متداول) اینجا
+// یک *نوع بلوک* است که هر موجودیتی می‌تواند استفاده کند.
+//
+// دلیل وجودی‌اش در `src/lib/content-blocks.ts` توضیح داده شده.
+// ---------------------------------------------------------------------------
+
+import SectionNav from './SectionNav.astro';
+import { getImage } from 'astro:assets';
+import { autolinkHtml } from '../lib/autolink';
+import { wrapProseTables, normalizeProseImages, optimizeProseImages, mergeAudit, reportImageAudit, EMPTY_AUDIT } from '../lib/prose-html';
+import { findCategory, categoryPath } from '../data/taxonomy';
+import type { ContentBlock } from '../lib/content-blocks';
+
+export interface Props {
+  blocks: readonly ContentBlock[];
+  /** برای aria-label ناوبری و سرتیتر پنهان. */
+  title: string;
+  reviewMode?: boolean;
+  eyebrow?: string;
+}
+
+const { blocks, title, reviewMode = false, eyebrow = 'در این صفحه' } = Astro.props;
+
+let imgAudit = EMPTY_AUDIT;
+const prose = async (html: string) => {
+  if (!html) return '';
+  const linked = wrapProseTables(autolinkHtml(html, { currentPath: Astro.url.pathname }));
+  const { html: optimised } = await optimizeProseImages(linked, getImage);
+  const { html: out, audit } = normalizeProseImages(optimised);
+  imgAudit = mergeAudit(imgAudit, audit);
+  return out;
+};
+
+// متن‌ها پیش از رندر آماده می‌شوند تا شمارش تصاویر پیش از چاپ کامل شود.
+const bodies = await Promise.all(blocks.map((b) => prose(b.bodyHtml)));
+reportImageAudit(imgAudit, title);
+
+// فقط بلوک‌های عنوان‌دار وارد ناوبری می‌شوند — بلوک بی‌عنوان لنگری برای
+// اشاره ندارد و در فهرست، ردیفِ خالی می‌سازد.
+const nav = blocks
+  .map((b) => ({ id: b.anchor, label: b.heading }))
+  .filter((s) => s.label !== '');
+
+const numbered = blocks.filter((b) => b.heading !== '');
+const numberOf = (b: ContentBlock) => numbered.indexOf(b) + 1;
+
+const flag = (needs: boolean) => (reviewMode && needs ? 'bg-amber-50 ring-1 ring-amber-300' : '');
+const band = (i: number) => (i % 2 === 1 ? 'bg-gray-50' : '');
+---
+
+{blocks.length > 0 && (
+  <>
+    <SectionNav sections={nav} eyebrow={eyebrow} ariaLabel={`بخش‌های ${title}`} />
+
+    <div class="bg-white">
+      {blocks.map((b, i) => (
+        <section
+          id={b.anchor}
+          class={`px-4 py-16 border-t border-gray-100 scroll-mt-32 ${band(i)} ${flag(b.needsReview)}`}
+          aria-labelledby={b.heading ? `${b.anchor}-h` : undefined}
+        >
+          <div class="max-w-7xl mx-auto">
+            {b.heading && (
+              <div class="flex items-start gap-4 mb-8">
+                <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">
+                  {numberOf(b)}
+                </span>
+                <div>
+                  <h2 id={`${b.anchor}-h`} class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">{b.heading}</h2>
+                  {b.type === 'table' && b.intro && <p class="text-steel-600 mt-1">{b.intro}</p>}
+                </div>
+              </div>
+            )}
+
+            {/* ── متن ────────────────────────────────────────────────── */}
+            {b.type === 'text' && (
+              <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={bodies[i]} />
+            )}
+
+            {/* ── جدول ───────────────────────────────────────────────── */}
+            {b.type === 'table' && (
+              <div class="table-scroll bg-white rounded-2xl border border-gray-200">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200">
+                      {b.columns.map((c) => (
+                        <th scope="col" class="text-right font-black text-crane-navy px-5 py-3 whitespace-nowrap">{c}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {b.rows.map((row, r) => (
+                      <tr class={`border-b border-gray-100 last:border-0 transition-colors hover:bg-orange-50/40 ${r % 2 ? 'bg-gray-50/50' : ''}`}>
+                        {row.cells.map((cell, c) => (
+                          c === 0
+                            ? <th scope="row" class="text-right px-5 py-4 font-black text-crane-navy whitespace-nowrap align-top border-r-2 border-crane-orange/30">{cell || '—'}</th>
+                            : <td class="px-5 py-4 text-steel-700 leading-7 align-top">{cell || '—'}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* ── پرسش و پاسخ ────────────────────────────────────────── */}
+            {b.type === 'faq' && (
+              <div class="max-w-3xl space-y-3">
+                {b.faqs.map((f) => (
+                  <details class="group rounded-2xl bg-white border border-gray-200 border-r-4 border-r-transparent open:border-r-crane-orange/60 overflow-hidden transition-colors">
+                    <summary class="cursor-pointer list-none px-6 py-4 font-black text-crane-navy flex items-center justify-between gap-4 hover:bg-orange-50/50 transition-colors">
+                      <span>{f.question}</span>
+                      <span class="shrink-0 w-6 h-6 grid place-items-center rounded-full bg-orange-50 text-crane-orange text-lg leading-none transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+                    </summary>
+                    <div class="px-6 pb-5 text-steel-700 leading-8 whitespace-pre-line">{f.answer}</div>
+                  </details>
+                ))}
+              </div>
+            )}
+
+            {/* ── قطعات مرتبط ────────────────────────────────────────── */}
+            {b.type === 'parts' && (
+              <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="list">
+                {b.parts.map((p) => {
+                  // لینک به مسیر واقعی دسته، نه صفحه‌ی جستجو: ارزش پیوندی
+                  // به سیلو منتقل می‌شود. صفحه‌ی جستجو معمولاً noindex است.
+                  const cat = p.categorySlug ? findCategory(p.categorySlug) : undefined;
+                  return (
+                    <li class="rounded-2xl border border-gray-200 p-5 hover:border-crane-orange transition-colors">
+                      <h3 class="font-black text-crane-navy mb-2">{p.partName}</h3>
+                      {p.failureReason && <p class="text-sm text-steel-600 leading-7 mb-3">{p.failureReason}</p>}
+                      {cat && (
+                        <a href={categoryPath(cat)} class="text-sm font-black text-crane-orange hover:underline">
+                          دیدن {p.categoryName ?? cat.name} ←
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {/* ── رسانه ──────────────────────────────────────────────── */}
+            {b.type === 'media' && (
+              <div class={`grid gap-6 ${b.media.length > 1 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'max-w-3xl'}`}>
+                {b.media.map((m) => (
+                  <figure class="rounded-2xl overflow-hidden border border-gray-200 bg-white">
+                    {m.kind === 'video' && m.videoUrl ? (
+                      /* الگوی facade: هیچ iframeای تا کلیک کاربر ساخته نمی‌شود.
+                         جاسازی مستقیم بیش از ۵۰۰ کیلوبایت به هر بازدید اضافه
+                         می‌کند — یعنی LCP بدتر، نه سئوی بهتر. */
+                      <a href={m.videoUrl} target="_blank" rel="noopener"
+                         class="group block relative aspect-video bg-crane-navy"
+                         aria-label={`پخش ویدیو: ${m.alt || m.caption || 'ویدیو'}`}>
+                        {m.url && (
+                          <img src={m.url} alt={m.alt} width={m.width ?? undefined} height={m.height ?? undefined}
+                               loading="lazy" decoding="async"
+                               class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                        )}
+                        <span class="absolute inset-0 grid place-items-center" aria-hidden="true">
+                          <span class="w-16 h-16 rounded-full bg-white/95 grid place-items-center shadow-lg group-hover:scale-110 transition-transform">
+                            <svg viewBox="0 0 24 24" class="w-7 h-7 translate-x-0.5" fill="currentColor" aria-hidden="true">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </span>
+                        </span>
+                      </a>
+                    ) : (
+                      m.url && (
+                        <img src={m.url} alt={m.alt} width={m.width ?? undefined} height={m.height ?? undefined}
+                             loading="lazy" decoding="async" class="w-full h-auto" />
+                      )
+                    )}
+                    {m.caption && (
+                      <figcaption class="px-4 py-3 text-sm text-steel-600 border-t border-gray-100">{m.caption}</figcaption>
+                    )}
+                  </figure>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      ))}
+    </div>
+  </>
+)}
