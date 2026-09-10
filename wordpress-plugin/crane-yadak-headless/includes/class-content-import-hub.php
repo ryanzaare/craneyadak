@@ -228,6 +228,78 @@ function cyh_hub_import( $payload, $overwrite = false, $dry_run = true ) {
 }
 
 
+/**
+ * تنها مسیر رندرِ جدول گزارش.
+ *
+ * ⚠️ چرا یک تابع، نه HTML دستی در هر نقطه:
+ *
+ * جدول مهاجرت بلوک‌ها **سه** ستون داشت در حالی که هر ردیف **چهار** مقدار
+ * برمی‌گرداند. نتیجه کاملاً بی‌صدا بود:
+ *
+ *     اسلاگ زیر ستون «حجم» می‌نشست،
+ *     حجم زیر ستون «نتیجه»،
+ *     و متن نتیجه — تنها چیزی که کاربر بر اساسش تصمیم می‌گیرد — هرگز چاپ نمی‌شد.
+ *
+ * PHP هیچ شکایتی نمی‌کند وقتی اندیسی از یک آرایه **خوانده نشود**. پس این
+ * دسته خرابی هیچ‌وقت خودش را نشان نمی‌دهد؛ فقط یک جدول آبرومند نشان می‌دهد
+ * که محتوایش دروغ است. بدترین حالت ممکن برای صفحه‌ای که کارفرما پیش از
+ * زدن دکمه‌ی «انتقال بده» به آن نگاه می‌کند.
+ *
+ * حالا تعداد ستون از خودِ ردیف بررسی می‌شود و ناهماهنگی **قرمز** چاپ
+ * می‌شود، به‌جای اینکه ستون‌ها را بلغزاند.
+ *
+ * @param array       $cols     [ برچسب => عرض CSS ]؛ عرض خالی یعنی ستون کشسان.
+ * @param array       $rows     ردیف‌ها؛ هر ردیف باید هم‌اندازه‌ی $cols باشد.
+ * @param array       $code     اندیس ستون‌هایی که با <code> نمایش داده شوند.
+ * @param string|null $dim_when اگر ستون آخر شامل این متن بود، ردیف کم‌رنگ شود.
+ */
+function cyh_hub_table( array $cols, array $rows, array $code = [], $dim_when = null ) {
+	$n = count( $cols );
+
+	echo '<table class="widefat striped" style="max-width:900px;margin-top:8px"><thead><tr>';
+	foreach ( $cols as $label => $width ) {
+		printf(
+			'<th%s>%s</th>',
+			$width ? ' style="width:' . esc_attr( $width ) . '"' : '',
+			esc_html( $label )
+		);
+	}
+	echo '</tr></thead><tbody>';
+
+	foreach ( array_values( $rows ) as $i => $row ) {
+		$row = array_values( (array) $row );
+
+		// ناهماهنگی بلعیده نمی‌شود — همین بلعیدن بود که گزارش را دروغ‌گو کرد.
+		if ( count( $row ) !== $n ) {
+			printf(
+				'<tr style="background:#fcf0f1"><td colspan="%d"><strong>ردیف %d خراب است:</strong> ' .
+				'%d مقدار برای %d ستون — این یک باگ است، نه داده. مقدار خام: <code>%s</code></td></tr>',
+				$n,
+				(int) $i + 1,
+				count( $row ),
+				$n,
+				esc_html( (string) wp_json_encode( $row, JSON_UNESCAPED_UNICODE ) )
+			);
+			continue;
+		}
+
+		$last = (string) $row[ $n - 1 ];
+		echo ( null !== $dim_when && false !== strpos( $last, $dim_when ) )
+			? '<tr style="opacity:.55">'
+			: '<tr>';
+
+		foreach ( $row as $c => $cell ) {
+			printf(
+				in_array( $c, $code, true ) ? '<td><code>%s</code></td>' : '<td>%s</td>',
+				esc_html( (string) $cell )
+			);
+		}
+		echo '</tr>';
+	}
+
+	echo '</tbody></table>';
+}
+
 /** صفحه‌ی ابزار. */
 function cyh_hub_menu() {
 	// زیر منوی «برندها» — جایی که مدیر محتوا دنبالش می‌گردد، نه زیر محصولات.
@@ -319,26 +391,45 @@ function cyh_hub_page() {
 		if ( ! empty( $br['error'] ) ) {
 			printf( '<div class="notice notice-error inline"><p>%s</p></div>', esc_html( $br['error'] ) );
 		} else {
+			/* ⚠️ «برند» هاردکد بود، در حالی که این گزارش هم برند دارد هم
+			   دسته. شمارش تفکیک‌شده تا معلوم باشد ۳۱ دسته اصلاً دیده شده‌اند
+			   یا نه. */
+			$per = [ 'برند' => 0, 'دسته' => 0 ];
+			$emp = [ 'برند' => 0, 'دسته' => 0 ];
+			foreach ( $br['rows'] as $row ) {
+				if ( ! is_array( $row ) || count( $row ) < 4 ) {
+					continue; // ردیف خراب در جدول قرمز دیده می‌شود؛ در آمار شرکت نکند.
+				}
+				$k = (string) $row[0];
+				if ( ! isset( $per[ $k ] ) ) {
+					continue;
+				}
+				if ( false !== strpos( (string) ( $row[3] ?? '' ), 'نبود' ) ) {
+					$emp[ $k ]++;
+				} else {
+					$per[ $k ]++;
+				}
+			}
 			printf(
-				'<div class="notice notice-%s inline"><p><strong>%d برند %s</strong>، %d برند رد شد.</p></div>',
+				'<div class="notice notice-%s inline"><p><strong>%d مورد %s</strong> — %d برند، %d دسته.<br>' .
+				'%d مورد محتوایی برای انتقال نداشت، %d مورد رد شد (از قبل بلوک دارد).</p></div>',
 				$bdry ? 'warning' : 'success',
 				(int) $br['written'],
 				$bdry ? 'منتقل می‌شود (چیزی ذخیره نشد)' : 'منتقل شد',
+				$per['برند'],
+				$per['دسته'],
+				$emp['برند'] + $emp['دسته'],
 				(int) $br['skipped']
 			);
 		}
 
 		if ( ! empty( $br['rows'] ) ) {
-			echo '<table class="widefat striped" style="margin-top:8px"><thead><tr><th>برند</th><th>حجم</th><th>نتیجه</th></tr></thead><tbody>';
-			foreach ( $br['rows'] as $row ) {
-				printf(
-					'<tr><td><code>%s</code></td><td>%s</td><td>%s</td></tr>',
-					esc_html( $row[0] ),
-					esc_html( $row[1] ),
-					esc_html( $row[2] )
-				);
-			}
-			echo '</tbody></table>';
+			cyh_hub_table(
+				[ 'نوع' => '70px', 'شناسه' => '200px', 'حجم' => '90px', 'نتیجه' => '' ],
+				$br['rows'],
+				[ 1 ],
+				'نبود'
+			);
 		}
 	}
 	echo '</div>';
@@ -423,19 +514,11 @@ function cyh_hub_page() {
 		}
 
 		echo '<h2 style="margin-top:24px">گزارش</h2>';
-		echo '<table class="widefat striped" style="max-width:860px"><thead><tr>';
-		echo '<th style="width:80px">نوع</th><th style="width:170px">اسلاگ</th><th style="width:190px">فیلد</th><th>نتیجه</th>';
-		echo '</tr></thead><tbody>';
-		foreach ( (array) ( $r['rows'] ?? [] ) as $row ) {
-			printf(
-				'<tr><td>%s</td><td><code>%s</code></td><td><code>%s</code></td><td>%s</td></tr>',
-				esc_html( $row[0] ),
-				esc_html( $row[1] ),
-				esc_html( $row[2] ),
-				esc_html( $row[3] )
-			);
-		}
-		echo '</tbody></table>';
+		cyh_hub_table(
+			[ 'نوع' => '80px', 'اسلاگ' => '170px', 'فیلد' => '190px', 'نتیجه' => '' ],
+			(array) ( $r['rows'] ?? [] ),
+			[ 1, 2 ]
+		);
 	}
 
 	echo '</div>';
