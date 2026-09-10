@@ -53,7 +53,6 @@ Astro استاتیک (`output: 'static'`) + وردپرس هدلس با WPGraphQL
 npm run check          # بررسی‌های آفلاین — بدون نیاز به شبکه
 npm run check:plugin   # هارنس افزونه‌ی وردپرس (به php نیاز دارد)
 npm run build          # taxonomy + check + astro build
-node scripts/diagnose-brand.mjs demag
 ```
 
 ## دام‌هایی که قبلاً افتادیم

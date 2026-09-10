@@ -47,7 +47,23 @@ const RETIRED = [
   // نسخه‌ی `src/data/` بود.
   { term: 'src/data/category-content.ts', why: 'داده‌ی هاردکد دسته‌ها — حذف شد' },
   { term: 'lib/datasheets', why: 'فیچر دیتاشیت — حذف شد (اعداد ساختگی بود)' },
-  { term: 'diagnose-brands.mjs', why: 'با diagnose-brand.mjs جایگزین شد' },
+  { term: 'diagnose-brands.mjs', why: 'جایگزینش هم بعداً حذف شد — هیچ‌کدام نمانده' },
+
+  // ── بازنویسی مدل محتوا به پالت بلوک (نسخه‌ی ۳.۰.۰) ────────────────────
+  // ⚠️ این نام‌ها ماه‌ها در backlog.md زیر تیتر «فراموش نشود» ماندند در
+  //    حالی که همه‌شان حذف شده بودند. یک فهرست دستی این را نمی‌فهمد؛
+  //    این فهرست خودآزماست و اگر یکی‌شان برگردد خطا می‌دهد.
+  { term: 'BrandGuide.astro', why: 'با ContentBlocks.astro جایگزین شد' },
+  { term: 'CategoryGuide.astro', why: 'با ContentBlocks.astro جایگزین شد' },
+  { term: 'brand-profile.ts', why: 'فیلدهای اختصاصی برند — به بلوک منتقل شد' },
+  { term: 'brand-queries', why: 'شکل‌های کوئری برند — در brands.ts ادغام شد' },
+  { term: 'brand-custom-sections', why: 'بخش‌های دستیِ برند — به بلوک منتقل شد' },
+  { term: 'section-order', why: 'ترتیب حالا ذاتیِ ترتیب ردیف‌های بلوک است' },
+  { term: 'check-brand-shapes.mjs', why: 'نردبان کوئری در brands.ts تست می‌شود' },
+  { term: 'diagnose-brand.mjs', why: 'ابزار عیب‌یابی یک‌باره — حذف شد' },
+  { term: 'lib/capacity.ts', why: 'نمودار ظرفیت — مفهومش غلط بود، کامل حذف شد' },
+  { term: 'brandProfile', why: 'گروه ACF — با contentBlocks جایگزین شد' },
+  { term: 'brand_section_order', why: 'فیلد ACF — حذف شد' },
 ];
 
 const DOCS = [...globSync('docs/**/*.md'), 'CLAUDE.md', 'README.md'].filter((f) => {
@@ -81,6 +97,43 @@ const inRemovalBlock = (lines, i) =>
   lines.slice(Math.max(0, i - 3), i + 1).some((l) => REMOVAL_WORDS.test(l));
 
 /**
+ * آیا این خط زیر تیتری است که خودش اعلام می‌کند دربارهٔ حذف است؟
+ *
+ * ⚠️ پنجره‌ی سه‌خطی بالا برای یک *توضیح* حذف کافی است، ولی برای یک **بخش**
+ * که تمامش فهرست حذف‌شده‌هاست نه. سند معماری بخشی به نام «فهرست حذف — اجرا
+ * شد» دارد که ۳۰ خط جدول و نام فایل زیرش است؛ پنجره‌ی سه‌خطی همه‌ی آن‌ها را
+ * «ارجاع کهنه» می‌شمرد و ابزار برای درست‌ترین بخشِ سند خطا می‌داد.
+ *
+ * وقتی تیتر یک بخش می‌گوید «حذف»، تا تیتر هم‌سطح یا بالاتر بعدی، همه‌ی آن
+ * بخش زمینه‌ی حذف دارد.
+ *
+ * معاوضه‌ای که آگاهانه می‌پذیریم: یک ارجاع واقعاً کهنه که *داخل* بخشی با
+ * تیتر «حذف» پنهان شده باشد دیده نمی‌شود. ولی جای درستِ نام یک چیز
+ * بازنشسته دقیقاً همان‌جاست، پس این معاوضه به نفع ماست.
+ */
+const headingRemovalSections = (lines) => {
+  const flags = new Array(lines.length).fill(false);
+  let depth = 0;      // عمق تیتری که حالت «حذف» را روشن کرده
+  let active = false;
+
+  lines.forEach((line, i) => {
+    const h = /^(#{1,6})\s/.exec(line);
+    if (h) {
+      const level = h[1].length;
+      if (REMOVAL_WORDS.test(line)) {
+        active = true;
+        depth = level;
+      } else if (active && level <= depth) {
+        active = false; // بخش تمام شد
+      }
+    }
+    flags[i] = active;
+  });
+
+  return flags;
+};
+
+/**
  * کامنت‌ها را خنثی می‌کند.
  *
  * ⚠️ تمایزی که نسخه‌ی اول نداشت: «نام بردن» با «استفاده کردن» فرق دارد.
@@ -111,8 +164,9 @@ for (const { term } of RETIRED) {
 // ── ۲) آیا مستندات هنوز از آن‌ها حرف می‌زنند؟ ────────────────────────────
 for (const file of DOCS) {
   const lines = read(file).split('\n');
+  const inRemovalSection = headingRemovalSections(lines);
   lines.forEach((line, i) => {
-    if (inRemovalBlock(lines, i)) return;
+    if (inRemovalBlock(lines, i) || inRemovalSection[i]) return;
     for (const { term, why } of RETIRED) {
       if (line.includes(term)) problems.push(`${file}:${i + 1} — «${term}» (${why})`);
     }
