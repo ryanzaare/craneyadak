@@ -348,6 +348,75 @@ function get_post_field( $f, $p = null, $ctx = 'display' ) { $post = get_post( $
 function get_post_meta( $id, $key = '', $single = false ) { $v = $GLOBALS['cyh_test_meta'][ $id ][ $key ] ?? ( $single ? '' : [] ); return $v; }
 function update_post_meta( $id, $key, $val, $prev = '' ) { $GLOBALS['cyh_test_meta'][ $id ][ $key ] = $val; return true; }
 function delete_post_meta( $id, $key, $val = '' ) { unset( $GLOBALS['cyh_test_meta'][ $id ][ $key ] ); return true; }
+
+/* ── متای ترم ───────────────────────────────────────────────────────────
+   مهاجرت بلوک‌ها محتوای دسته را از متای *ترم* می‌خواند، نه نوشته. جدا
+   نگه‌داشتنشان عمدی است: اگر هر دو در یک آرایه بریزند، شناسه‌ی ۱۲ نوشته
+   و شناسه‌ی ۱۲ ترم روی هم می‌افتند و آزمون بی‌صدا دروغ می‌گوید. */
+function get_term_meta( $id, $key = '', $single = false ) {
+	return $GLOBALS['cyh_test_term_meta'][ $id ][ $key ] ?? ( $single ? '' : [] );
+}
+function update_term_meta( $id, $key, $val, $prev = '' ) {
+	$GLOBALS['cyh_test_term_meta'][ $id ][ $key ] = $val;
+	return true;
+}
+
+/* ── رسانه و آپلود ──────────────────────────────────────────────────────
+   ⚠️ این stubها عمداً *منطق* دارند، نه فقط امضا.
+
+   نقطه‌ی آپلود، بدون احراز هویت است و امنیتش کاملاً به تشخیص نوع فایل
+   وابسته است. اگر `wp_check_filetype_and_ext` اینجا همیشه موفق برگردد،
+   هارنس هرگز نمی‌فهمد که آن منطق شکسته — یعنی دقیقاً همان چیزی را که
+   باید محافظت کند، آزمایش نمی‌کند.
+
+   پس این نسخه واقعاً پسوند را با فهرست mimes می‌سنجد. */
+function wp_check_filetype_and_ext( $file, $filename, $mimes = null ) {
+	$ext = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
+
+	foreach ( (array) $mimes as $pattern => $mime ) {
+		foreach ( explode( '|', $pattern ) as $allowed ) {
+			if ( $allowed === $ext ) {
+				return [ 'ext' => $ext, 'type' => $mime, 'proper_filename' => false ];
+			}
+		}
+	}
+	// پسوند ناشناخته → رد. همان رفتاری که وردپرس واقعی دارد.
+	return [ 'ext' => false, 'type' => false, 'proper_filename' => false ];
+}
+
+function wp_handle_upload( $file, $overrides = [] ) {
+	if ( ! empty( $GLOBALS['cyh_test_upload_fails'] ) ) {
+		return [ 'error' => 'شبیه‌سازی خطای آپلود' ];
+	}
+	$name = $file['name'] ?? 'file.jpg';
+	return [
+		'file' => '/tmp/uploads/' . $name,
+		'url'  => 'https://cms.example.com/wp-content/uploads/' . $name,
+		'type' => $file['type'] ?? 'image/jpeg',
+	];
+}
+
+function wp_insert_attachment( $args, $file = false, $parent = 0, $wp_error = false ) {
+	$id = count( $GLOBALS['cyh_test_attachments'] ?? [] ) + 9000;
+	$GLOBALS['cyh_test_attachments'][ $id ] = [ 'args' => $args, 'file' => $file, 'parent' => $parent ];
+	return $id;
+}
+function wp_generate_attachment_metadata( $id, $file ) { return [ 'file' => $file, 'width' => 800, 'height' => 600 ]; }
+function wp_update_attachment_metadata( $id, $data ) { $GLOBALS['cyh_test_attachment_meta'][ $id ] = $data; return true; }
+function wp_get_attachment_url( $id ) { return 'https://cms.example.com/wp-content/uploads/att-' . (int) $id . '.jpg'; }
+function wp_get_attachment_image( $id, $size = 'thumbnail', $icon = false, $attr = '' ) {
+	return '<img src="' . wp_get_attachment_url( $id ) . '" alt="">';
+}
+function get_attached_media( $type, $post = 0 ) {
+	$id  = is_object( $post ) ? $post->ID : (int) $post;
+	$out = [];
+	foreach ( (array) ( $GLOBALS['cyh_test_attachments'] ?? [] ) as $aid => $a ) {
+		if ( (int) $a['parent'] === $id ) {
+			$out[] = (object) [ 'ID' => $aid ];
+		}
+	}
+	return $out;
+}
 function wp_update_post( $post = [], $wp_error = false, $fire = true ) { return is_array( $post ) ? ( $post['ID'] ?? 1 ) : 1; }
 function wp_unique_post_slug( $slug, $id, $status, $type, $parent ) { return $slug; }
 function clean_post_cache( $p ) { return null; }
