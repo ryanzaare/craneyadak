@@ -94,11 +94,9 @@ const itemList =
       }
     : null;
 
-/* ⚠️ FAQPage دیگر اینجا ساخته نمی‌شود.
-   پرسش‌ها حالا بلوک‌اند و `ContentBlocks.astro` خودش گره FAQPage را تولید
-   می‌کند. اگر اینجا هم ساخته می‌شد، صفحه دو گره FAQPage می‌داشت — سیگنال
-   متناقض برای گوگل و ریسک حذف ریچ‌ریزالت. */
-const faqNode = null;
+/* FAQPage اینجا ساخته نمی‌شود — `ContentBlocks.astro` خودش آن را از بلوک
+   پرسش و پاسخ تولید می‌کند. دو گره FAQPage روی یک صفحه، سیگنال متناقض
+   برای گوگل است. */
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -131,7 +129,6 @@ const jsonLd = {
       inLanguage: SITE.locale,
       ...(itemList ? { mainEntity: itemList } : {}),
     },
-    ...(faqNode ? [faqNode] : []),
   ],
 };
 
