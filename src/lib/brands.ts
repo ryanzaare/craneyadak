@@ -58,29 +58,51 @@ export interface EnrichedBrand extends Brand {
 // می‌بلعد، و همه‌ی برندها بی‌صدا به داده‌ی محلی برمی‌گردند — دقیقاً همان
 // چیزی که روی سایت دیده شد. کوئری بدون آرگومان به‌طور پیش‌فرض فقط
 // محتوای منتشرشده‌ی عمومی را برمی‌گرداند، پس آن آرگومان لازم هم نبود.
-const BRANDS_QUERY = `
-  query CraneBrands($first: Int!) {
-    craneBrands(first: $first) {
-      nodes {
-        databaseId
-        title
-        slug
-        brandFields {
+/*
+ * ⚠️ نردبان دو پله‌ای — و دلیلش یک شکست واقعی است.
+ *
+ * سه فیلد هویتی تازه (`foundedYear`، `headquarters`، `officialUrl`) به یک
+ * کوئری *تک‌شکلی* اضافه شدند. تا لحظه‌ای که افزونه‌ی جدید نصب شود، آن سه
+ * فیلد در اسکیما نبودند — و چون فقط یک شکل وجود داشت، **کل کوئری برند
+ * افتاد**.
+ *
+ * نتیجه روی build واقعی: هر ۱۸ برند به داده‌ی محلی برگشتند (رنگ و
+ * توضیح سئویشان رفت) و **برند «بریما» که فقط در وردپرس وجود داشت،
+ * صفحه‌اش کاملاً ناپدید شد.**
+ *
+ * این دقیقاً همان تله‌ای است که با `media` و `supplyStatus` افتادیم و در
+ * `docs/architecture.md` هم نوشته شده. فیلد تازه، پله‌ی تنزل خودش را
+ * می‌خواهد — بدون استثنا.
+ */
+const CORE_BRAND_FIELDS = `
           nameEn
           logoText
           brandColor
           seoAnchor
           seoDesc
-          foundedYear
-          headquarters
-          officialUrl
           brandClass
           country
-        }
-      }
-    }
-  }
 `;
+
+const BRAND_SHAPES = [
+  {
+    name: 'با فیلدهای هویتی تازه',
+    query: `query CraneBrands($first: Int!) {
+      craneBrands(first: $first) { nodes { databaseId title slug brandFields {
+        ${CORE_BRAND_FIELDS}
+        foundedYear
+        headquarters
+        officialUrl
+      } } }
+    }`,
+  },
+  {
+    name: 'بدون فیلدهای هویتی تازه',
+    query: `query CraneBrands($first: Int!) {
+      craneBrands(first: $first) { nodes { databaseId title slug brandFields { ${CORE_BRAND_FIELDS} } } }
+    }`,
+  },
+];
 
 interface RawBrand {
   databaseId?: number | null;
@@ -149,26 +171,42 @@ async function fetchBrands(): Promise<EnrichedBrand[]> {
   let byslug = new Map<string, RawBrand>();
   let raw: RawBrand[] = [];
 
-  try {
-    const data = await wpQueryPublic<{ craneBrands?: { nodes?: RawBrand[] } }>(BRANDS_QUERY, {
-      first: 100,
-    });
-    raw = data?.craneBrands?.nodes ?? [];
+  const failures: string[] = [];
 
-    for (const node of raw) {
-      for (const key of matchKeys(node)) {
-        // اولین تطبیق برنده است تا یک برند، برند دیگری را بازنویسی نکند.
-        if (!byslug.has(key)) byslug.set(key, node);
+  for (const shape of BRAND_SHAPES) {
+    try {
+      const data = await wpQueryPublic<{ craneBrands?: { nodes?: RawBrand[] } }>(shape.query, {
+        first: 100,
+      });
+      raw = data?.craneBrands?.nodes ?? [];
+
+      for (const node of raw) {
+        for (const key of matchKeys(node)) {
+          // اولین تطبیق برنده است تا یک برند، برند دیگری را بازنویسی نکند.
+          if (!byslug.has(key)) byslug.set(key, node);
+        }
       }
+
+      if (shape !== BRAND_SHAPES[0]) {
+        console.warn(
+          `\n📋 «${shape.name}» استفاده شد — سال تأسیس، دفتر مرکزی و سایت رسمی\n` +
+            `   خوانده نمی‌شوند. علت: ${failures[0] ?? 'نامشخص'}\n` +
+            `   افزونه‌ی کرین یدک ۳.۰.۱ یا بالاتر نصب است؟\n`
+        );
+      }
+      break;
+    } catch (error) {
+      failures.push((error instanceof Error ? error.message : String(error)).slice(0, 160));
     }
-  } catch (error) {
+  }
+
+  if (failures.length === BRAND_SHAPES.length) {
     // همان الگوی «غنی‌سازی اختیاری» بقیه‌ی پروژه: نبود فیلدهای برند
     // نباید کل بیلد را بخواباند. اما ساکت هم نمی‌ماند.
-    const message = error instanceof Error ? error.message : String(error);
     console.warn(
-      `\n📋 فیلدهای برند از وردپرس خوانده نشدند — از ساختار محلی استفاده می‌شود.\n` +
-        `   رنگ اختصاصی و متن سئوی برندها نمایش داده نخواهد شد.\n` +
-        `   جزئیات: ${message.slice(0, 200)}\n`
+      `\n📋 هیچ شکلی از کوئری برند کار نکرد — از ساختار محلی استفاده می‌شود.\n` +
+        `   ⚠️ برندهایی که فقط در وردپرس تعریف شده‌اند، صفحه‌شان ساخته نمی‌شود.\n` +
+        failures.map((f) => `     • ${f}`).join('\n') + `\n`
     );
     byslug = new Map();
   }
