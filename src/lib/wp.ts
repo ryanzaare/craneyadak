@@ -166,7 +166,7 @@ export function isWpConfigured(): boolean {
  * خطای سطح GraphQL (نه شبکه) — یعنی سرور پاسخ داد اما خودِ کوئری را رد کرد.
  * این نوع خطا با تلاش مجدد درست نمی‌شود.
  */
-class WpGraphQLError extends Error {
+export class WpGraphQLError extends Error {
   // عمداً از «parameter property» تایپ‌اسکریپت استفاده نشده: آن سینتکس نیاز
   // به ترنسپایل کامل دارد و در حالت strip-only (مثلاً اجرای مستقیم با Node
   // برای تست) پشتیبانی نمی‌شود. این شکل ساده همه‌جا کار می‌کند.

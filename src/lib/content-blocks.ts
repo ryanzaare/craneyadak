@@ -34,7 +34,7 @@
 // و پایدار** است. زیبایی کمتر، شکنندگی بسیار کمتر.
 // ---------------------------------------------------------------------------
 
-import { isWpConfigured, wpQueryPublic } from './wp';
+import { isWpConfigured, wpQueryPublic, WpGraphQLError } from './wp';
 
 export type BlockType = 'text' | 'table' | 'faq' | 'parts' | 'media' | 'specs' | 'callout';
 export type CalloutTone = 'danger' | 'note' | 'tip';
@@ -223,8 +223,6 @@ export const BLOCK_FIELDS = `
     faqs { question answer }
     specs { label value unit }
     tone calloutBody
-    specs { label value unit }
-    tone calloutBody
     parts { partName failureReason category { nodes { ... on CraneCategory { slug name } } } }
     media { kind videoUrl caption altText asset { node { sourceUrl altText mediaDetails { width height } } } }
   }
@@ -266,25 +264,83 @@ async function fetchBlocks(entity: BlockEntity): Promise<Map<string, ContentBloc
   if (!isWpConfigured()) return map;
   const root = ROOTS[entity];
 
-  // نردبان دو پله‌ای: کامل، بعد امن. غنی‌سازی اختیاری — هرگز throw نمی‌کند.
-  for (const fields of [BLOCK_FIELDS, BLOCK_FIELDS_SAFE]) {
+  /*
+   * ⚠️ این تابع قبلاً «غنی‌سازی اختیاری» بود و در سکوت شکست می‌خورد. آن
+   * الگو برای داده‌ی واقعاً اختیاری درست است — ولی بلوک‌ها دیگر اختیاری
+   * نیستند، **کل مدل محتوا** هستند. وقتی این کوئری می‌افتاد، هر صفحه‌ی
+   * برند و دسته بدون محتوای اصلی‌اش build می‌شد و build سبز می‌ماند.
+   * یعنی راهی وجود داشت که ۷۲ صفحه‌ی «محتوای نازک» بی‌سروصدا منتشر شود.
+   *
+   * دو تفکیک لازم است و هیچ‌کدام قبلاً نبود:
+   *
+   *   • «کوئری موفق شد ولی محتوایی نیست» → طبیعی است (سایت تازه). هشدار.
+   *   • «کوئری شکست خورد» → پیکربندی خراب است. باید build را بیندازد،
+   *     چون بدیلش انتشار یک سایت بی‌محتواست.
+   *
+   * ⚠️ و نکته‌ی مهم‌تر: هر دو پله‌ی این «نردبان» ریشه‌ی یکسان
+   * `contentBlocks` را می‌خواهند. اگر آن نام در اسکیما نباشد، هر دو پله
+   * یکسان می‌افتند — یعنی نردبانی که برای این حالت هیچ محافظتی ندارد.
+   * پس خطای هر پله جداگانه چاپ می‌شود تا معلوم باشد کدام فرض شکسته.
+   */
+  const failures: string[] = [];
+  let schemaBroken = false;
+
+  const rungs: [string, string][] = [
+    ['کامل', BLOCK_FIELDS],
+    ['امن', BLOCK_FIELDS_SAFE],
+  ];
+
+  for (const [rung, fields] of rungs) {
     try {
       const data = await wpQueryPublic<EntityPayload>(
         `query EntityBlocks($first: Int!) { ${root}(first: $first) { nodes { slug ${fields} } } }`,
         { first: 200 },
       );
-      for (const node of data?.[root]?.nodes ?? []) {
+
+      const nodes = data?.[root]?.nodes ?? [];
+      for (const node of nodes) {
         if (!node.slug) continue;
         const blocks = normalizeBlocks(node.contentBlocks);
         if (blocks.length) map.set(node.slug, blocks);
       }
+
       const total = [...map.values()].reduce((n, b) => n + b.length, 0);
-      if (total > 0) console.info(`[blocks] ${entity}: ${total} بلوک روی ${map.size} مورد.`);
+
+      // همیشه گزارش می‌دهد — سکوت همان چیزی بود که اجازه داد این خرابی
+      // یک build کامل را سبز رد کند.
+      if (total > 0) {
+        console.info(`[blocks] ${entity}: ${total} بلوک روی ${map.size} مورد (پله‌ی ${rung}).`);
+      } else {
+        console.warn(
+          `[blocks] ⚠ ${entity}: کوئری جواب داد ولی هیچ بلوکی برنگشت ` +
+            `(${nodes.length} ${root} خوانده شد). یا محتوایی وارد نشده، ` +
+            `یا فیلد ACF «contentBlocks» روی این نوع محتوا فعال نیست.`,
+        );
+      }
       return map;
-    } catch {
-      // پله‌ی بعد
+    } catch (err) {
+      if (err instanceof WpGraphQLError) schemaBroken = true;
+      failures.push(`پله‌ی «${rung}» → ${err instanceof Error ? err.message : String(err)}`);
     }
   }
+
+  const detail = failures.map((f) => `        • ${f}`).join('\n');
+
+  if (schemaBroken) {
+    // شکست اسکیما یعنی پیکربندی، نه شبکه. اجازه نمی‌دهیم سایتِ بی‌محتوا
+    // ساخته شود؛ خالی منتشر کردن از نساختن بدتر است.
+    throw new Error(
+      `[blocks] ❌ «${entity}»: هیچ پله‌ای از نردبان جواب نداد و خطا از نوع اسکیماست.\n` +
+        `        هر صفحه‌ی ${entity} بدون محتوای اصلی‌اش build می‌شد، پس build عمداً متوقف شد.\n` +
+        `${detail}\n` +
+        `        بررسی کنید: گروه ACF «contentBlocks» روی این نوع محتوا فعال است و ` +
+        `«Show in GraphQL» روشن است.`,
+    );
+  }
+
+  console.warn(
+    `[blocks] ⚠ «${entity}»: واکشی نشد (خطای شبکه یا وردپرس در دسترس نبود).\n${detail}`,
+  );
   return map;
 }
 
