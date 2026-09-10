@@ -28,6 +28,78 @@ const phpBlob = PHP.map(read).join('\n');
 
 const problems = [];
 
+/* ═══ ۰) نام تایپ گراف‌کیوال هر گروه ACF ════════════════════════════════
+   ⚠️ این بررسی بعد از یک شکست کامل و بی‌صدا اضافه شد.
+
+   `group_cyh_content_blocks.json` می‌گفت این گروه روی تایپ **`Brand`**
+   ظاهر شود. چنین تایپی در اسکیما وجود ندارد؛ نامش `CraneBrand` است، چون
+   `class-post-types.php` می‌گوید `graphql_single_name => 'craneBrand'`.
+
+   نتیجه: WPGraphQL خطای «Cannot query field contentBlocks on type
+   CraneBrand» می‌داد، `getBlocks()` آن را می‌بلعید، و هر صفحه‌ی برند و
+   دسته **بدون محتوای اصلی‌اش** build می‌شد — در حالی که همین بررسی
+   معماری «✅ سالم» چاپ می‌کرد، چون فقط نوع بلوک‌ها را می‌سنجید و نه
+   اینکه گروه اصلاً به موجودیتی وصل هست یا نه.
+
+   یک حرف اضافه در یک فایل JSON، کل مدل محتوا را قطع کرد و هیچ‌چیز
+   نگفت. پس نام تایپ‌ها دیگر دستی تأیید نمی‌شود: از خود ثبت CPT
+   استخراج و مقایسه می‌شود.
+   ═══════════════════════════════════════════════════════════════════ */
+
+// نگاشت «نام post type / taxonomy» → «تایپ گراف‌کیوال» از روی ثبت واقعی.
+const gqlNames = new Map();
+for (const f of PHP) {
+  const src = read(f);
+  // register_post_type( 'brand', [ ... 'graphql_single_name' => 'craneBrand' ... ] )
+  const re = /register_(?:post_type|taxonomy)\(\s*'([a-z0-9_-]+)'([\s\S]{0,2500}?)\n\s*\);/g;
+  for (const m of src.matchAll(re)) {
+    const single = /'graphql_single_name'\s*=>\s*'([^']+)'/.exec(m[2]);
+    if (single) gqlNames.set(m[1], single[1][0].toUpperCase() + single[1].slice(1));
+  }
+}
+
+for (const f of globSync(`${ACF_DIR}/*.json`)) {
+  let g;
+  try { g = JSON.parse(read(f)); } catch { continue; }
+  const name = path.basename(f);
+  const declared = g.graphql_types ?? [];
+
+  // تایپ‌هایی که *باید* باشند، از روی قواعد مکان گروه.
+  const expected = new Set();
+  let unknown = false;
+  for (const group of g.location ?? []) {
+    for (const rule of group) {
+      if (!['post_type', 'taxonomy'].includes(rule.param)) { unknown = true; continue; }
+      const t = gqlNames.get(rule.value);
+      if (t) expected.add(t);
+      else unknown = true; // مثل user_form یا options_page — قابل استخراج نیست
+    }
+  }
+  if (!expected.size) continue;
+
+  for (const t of expected) {
+    if (!declared.includes(t)) {
+      problems.push(
+        `${name}: قواعد مکان به «${t}» اشاره می‌کنند ولی graphql_types آن را ندارد ` +
+          `(${JSON.stringify(declared)}). این گروه روی آن موجودیت در گراف‌کیوال دیده نمی‌شود.`,
+      );
+    }
+  }
+  if (!unknown) {
+    for (const t of declared) {
+      if (!expected.has(t)) {
+        problems.push(
+          `${name}: graphql_types تایپ «${t}» را اعلام کرده که هیچ قاعده‌ی مکانی به آن نمی‌رسد. ` +
+            `تایپ‌های معتبر: ${[...expected].join('، ')}.`,
+        );
+      }
+    }
+  }
+  if (g.show_in_graphql !== 1 && g.show_in_graphql !== true) {
+    problems.push(`${name}: show_in_graphql خاموش است — فرانت‌اند هرگز این فیلدها را نمی‌بیند.`);
+  }
+}
+
 /* ═══ ۱) فهرست مجاز گروه‌های ACF ═══════════════════════════════════════
    هر گروه تازه باید *عمداً* اینجا اضافه شود. اگر کسی گروهی بسازد و این
    فهرست را به‌روز نکند، build می‌شکند — که دقیقاً هدف است. */

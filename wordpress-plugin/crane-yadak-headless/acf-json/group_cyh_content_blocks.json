@@ -534,9 +534,9 @@
     "description": "یک پالت بلوک برای برند، محصول و دسته — تا افزودن محتوای تازه هرگز نیازمند تغییر کد نباشد.",
     "show_in_graphql": 1,
     "graphql_field_name": "contentBlocks",
-    "map_graphql_types_from_location_rules": 1,
+    "map_graphql_types_from_location_rules": 0,
     "graphql_types": [
-        "Brand",
+        "CraneBrand",
         "CraneProduct",
         "CraneCategory"
     ]
