@@ -165,6 +165,18 @@ function cyh_handle_contact_submission( WP_REST_Request $request ) {
 		return new WP_Error( 'cyh_save_failed', 'ثبت درخواست با خطا مواجه شد. لطفاً دوباره تلاش کنید یا از طریق واتساپ پیام دهید.', [ 'status' => 500 ] );
 	}
 
+	// ---- ۱.۵) عکس‌های پیوست ----
+	//
+	// ⚠️ عمداً *بعد* از ذخیره‌ی لید. اگر پیش از آن بود و آپلود شکست
+	// می‌خورد، کل استعلام از دست می‌رفت — و لید از عکس بسیار مهم‌تر است.
+	// دلیل رد شدن روی خود استعلام ثبت می‌شود تا واحد فروش بداند چرا عکسی
+	// نیست و بتواند دوباره درخواست کند.
+	$photos = cyh_inquiry_attach_photos( $request->get_file_params(), $post_id );
+
+	if ( ! empty( $photos['errors'] ) ) {
+		update_post_meta( $post_id, 'inquiry_upload_errors', implode( ' | ', $photos['errors'] ) );
+	}
+
 	// ---- ۲) تلاش برای ارسال ایمیل — شکست این مرحله نباید باعث خطا به
 	// کاربر شود چون لید همین الان با موفقیت در وردپرس ذخیره شده است.
 	$notify_email = get_option( 'cyh_notification_email', get_option( 'admin_email' ) );
@@ -178,6 +190,7 @@ function cyh_handle_contact_submission( WP_REST_Request $request ) {
 			'شرکت: ' . ( $company ?: 'ندارد' ),
 			'کد فنی: ' . ( $sku ?: 'نامشخص' ),
 			"پیام: {$message}",
+			'عکس ضمیمه: ' . ( $photos['attached'] > 0 ? $photos['attached'] . ' عکس' : 'ندارد' ),
 			'------------------------',
 			'مشاهده در پنل: ' . admin_url( 'post.php?post=' . $post_id . '&action=edit' ),
 		]
