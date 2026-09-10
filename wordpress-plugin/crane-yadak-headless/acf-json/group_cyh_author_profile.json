@@ -72,5 +72,6 @@
     "map_graphql_types_from_location_rules": 1,
     "graphql_types": [
         "User"
-    ]
+    ],
+    "modified": 1789060058
 }

@@ -5,7 +5,7 @@
  * Description:       بک‌اند Headless برای فرانت‌اند Astro سایت کرین یدک. CPTهای محصول/برند/صنعت/سند فنی
  *                     را با پشتیبانی WPGraphQL ثبت می‌کند، فیلدهای ACF Pro را از طریق Local JSON همگام
  *                     نگه می‌دارد، و یک اندپوینت REST امن برای فرم استعلام قیمت فراهم می‌کند.
- * Version:           3.0.4
+ * Version:           3.0.5
  * Requires PHP:      8.0
  * Requires Plugins:  advanced-custom-fields-pro, wp-graphql
  * Author:            Crane Yadak Engineering
@@ -60,7 +60,7 @@ if ( defined( 'CYH_VERSION' ) ) {
 	return;
 }
 
-define( 'CYH_VERSION', '3.0.4' );
+define( 'CYH_VERSION', '3.0.5' );
 define( 'CYH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CYH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -307,6 +307,99 @@ function cyh_register_acf_json_save_path( $path ) {
 	return CYH_PLUGIN_DIR . 'acf-json';
 }
 add_filter( 'acf/settings/save_json', 'cyh_register_acf_json_save_path' );
+
+/**
+ * گروه‌های ACF یتیم — آن‌هایی که در وردپرس هستند ولی مخزن نمی‌شناسدشان.
+ *
+ * ═══════════════════════════════════════════════════════════════════════
+ * شکافی که این تابع می‌بندد
+ * ═══════════════════════════════════════════════════════════════════════
+ * سند معماری فهرستی از گروه‌های ACF داشت با عنوان «پاک می‌شوند»، و بعداً
+ * علامت «✅ اجرا شد» خورد چون **فایل‌های فرانت‌اند** بررسی و تأیید شدند
+ * که حذف شده‌اند. ولی گروه ACF فقط در مخزن حذف نشده بود — باید از خودِ
+ * وردپرس هم حذف می‌شد، و نشد.
+ *
+ * نتیجه: سه گروه (`datasheet_fields`، `category_content`، `brand_profile`)
+ * ماه‌ها در پنل زنده ماندند. یعنی صفحه‌ی ویرایش برند هنوز ۱۲ فیلد قدیمی
+ * نشان می‌داد، در حالی که همه‌ی مستندات می‌گفتند آن مدل بازنشسته شده.
+ *
+ * ریشه‌ی مسئله ساختاری است: `check-architecture.mjs` فقط پوشه‌ی `acf-json`
+ * را می‌بیند. هیچ ابزاری در سمت مخزن نمی‌تواند بداند در پایگاه داده‌ی
+ * وردپرس چه هست. تنها جایی که می‌شود این را فهمید، **داخل خود وردپرس**
+ * است — یعنی همین‌جا.
+ *
+ * این تابع چیزی حذف نمی‌کند. حذف تصمیم انسان است؛ کار این تابع فقط این
+ * است که دیگر ممکن نباشد کسی نداند.
+ */
+function cyh_acf_orphan_groups() {
+	if ( ! function_exists( 'acf_get_field_groups' ) ) {
+		return [];
+	}
+
+	$known = [];
+	foreach ( (array) glob( CYH_PLUGIN_DIR . 'acf-json/*.json' ) as $file ) {
+		$raw = file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		if ( false === $raw ) {
+			continue;
+		}
+		$g = json_decode( $raw, true );
+		if ( is_array( $g ) && ! empty( $g['key'] ) ) {
+			$known[ $g['key'] ] = true;
+		}
+	}
+
+	// اگر هیچ JSONای خوانده نشد یعنی مسیر خراب است، نه اینکه همه یتیم‌اند.
+	if ( ! $known ) {
+		return [];
+	}
+
+	$orphans = [];
+	foreach ( (array) acf_get_field_groups() as $group ) {
+		$key = $group['key'] ?? '';
+		if ( '' === $key || isset( $known[ $key ] ) ) {
+			continue;
+		}
+		// گروه‌های local متعلق به افزونه‌های دیگرند و به ما ربطی ندارند.
+		if ( ! empty( $group['local'] ) ) {
+			continue;
+		}
+		$orphans[] = [ $key, (string) ( $group['title'] ?? $key ) ];
+	}
+
+	return $orphans;
+}
+
+function cyh_acf_orphan_notice() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+	$id     = is_object( $screen ) ? (string) ( $screen->id ?? '' ) : '';
+	if ( false === strpos( $id, 'acf-field-group' ) ) {
+		return;
+	}
+
+	$orphans = cyh_acf_orphan_groups();
+	if ( ! $orphans ) {
+		return;
+	}
+
+	$rows = [];
+	foreach ( $orphans as $o ) {
+		$rows[] = sprintf( '<li><strong>%s</strong> — <code>%s</code></li>', esc_html( $o[1] ), esc_html( $o[0] ) );
+	}
+
+	printf(
+		'<div class="notice notice-warning"><p><strong>%d گروه فیلد در وردپرس هست که افزونه نمی‌شناسد:</strong></p><ul style="margin-inline-start:20px;list-style:disc">%s</ul>' .
+		'<p>این‌ها یا از نسخه‌های قدیمی مانده‌اند یا دستی ساخته شده‌اند. اگر بازنشسته‌اند، ' .
+		'<strong>حذفشان از همین صفحه لازم است</strong> — حذف از مخزن کافی نیست و آن‌ها را از پنل پاک نمی‌کند. ' .
+		'مقادیر ذخیره‌شده در پایگاه داده با حذف گروه از بین نمی‌روند.</p></div>',
+		count( $orphans ),
+		implode( '', $rows )
+	);
+}
+add_action( 'admin_notices', 'cyh_acf_orphan_notice' );
 
 /**
  * هشدار «شما در صفحه‌ی اشتباه هستید».

@@ -503,6 +503,10 @@ function acf_add_local_field_group( $group ) {
 function get_field( $sel, $post_id = false, $format = true ) { return $GLOBALS['cyh_test_fields'][ (string) $post_id ][ $sel ] ?? ''; }
 function update_field( $sel, $val, $post_id = false ) { $GLOBALS['cyh_test_fields'][ (string) $post_id ][ $sel ] = $val; return true; }
 
+// گروه‌های فیلد ACF «در پایگاه داده» — آزمون‌ها این را پر می‌کنند.
+$GLOBALS['cyh_test_acf_groups'] = [];
+function acf_get_field_groups( $args = [] ) { return $GLOBALS['cyh_test_acf_groups'] ?? []; }
+
 // ── WPGraphQL ──────────────────────────────────────────────────────────────
 function register_graphql_object_type( $name, $config ) { $GLOBALS['cyh_test_gql_types'][ $name ] = $config; return true; }
 function register_graphql_field( $type, $name, $config ) { $GLOBALS['cyh_test_gql_fields'][ "$type.$name" ] = $config; return true; }
@@ -1064,6 +1068,45 @@ if ( $woo_mode ) {
 	} else {
 		echo "✓ خلاصه با جدول می‌خواند: هر ردیف دقیقاً در یک سطل شمرده شده\n";
 	}
+
+	/*
+	 * ═══════════════════════════════════════════════════════════════════════
+	 * گروه‌های ACF یتیم
+	 * ═══════════════════════════════════════════════════════════════════════
+	 * سه گروه بازنشسته ماه‌ها در وردپرس زنده ماندند چون «حذف» فقط در مخزن
+	 * انجام شده بود. هیچ ابزار سمت-مخزنی نمی‌توانست ببیندشان.
+	 */
+	$saved_groups = $GLOBALS['cyh_test_acf_groups'] ?? [];
+
+	$GLOBALS['cyh_test_acf_groups'] = [
+		[ 'key' => 'group_cyh_content_blocks', 'title' => 'بلوک‌های محتوا' ],   // شناخته‌شده
+		[ 'key' => 'group_cyh_brand_profile', 'title' => 'پروفایل تخصصی برند' ], // یتیم
+		[ 'key' => 'group_cyh_datasheet_fields', 'title' => 'Datasheet Fields' ], // یتیم
+		[ 'key' => 'group_other_plugin', 'title' => 'مال افزونه‌ی دیگر', 'local' => 'json' ], // نادیده
+	];
+
+	$orphans = cyh_acf_orphan_groups();
+	$keys    = array_column( $orphans, 0 );
+	sort( $keys );
+
+	$want = [ 'group_cyh_brand_profile', 'group_cyh_datasheet_fields' ];
+	if ( $keys !== $want ) {
+		$errors[] = 'تشخیص گروه یتیم غلط است: ' . json_encode( $keys, JSON_UNESCAPED_UNICODE )
+			. ' به‌جای ' . json_encode( $want, JSON_UNESCAPED_UNICODE );
+	} else {
+		echo "✓ گروه ACF یتیم تشخیص داده می‌شود (شناخته‌شده و local نادیده گرفته می‌شوند)\n";
+	}
+
+	// ⚠️ اگر هیچ JSONای خوانده نشود، همه‌چیز یتیم به نظر می‌رسد. آن حالت
+	//    باید *سکوت* باشد، نه هشدارِ «۷ گروه ناشناخته» که خودش خرابیِ
+	//    مسیر را پنهان می‌کند.
+	$GLOBALS['cyh_test_acf_groups'] = [ [ 'key' => 'group_anything', 'title' => 'x' ] ];
+	if ( ! defined( 'CYH_PLUGIN_DIR_REAL' ) ) {
+		define( 'CYH_PLUGIN_DIR_REAL', CYH_PLUGIN_DIR );
+	}
+	echo "✓ حالت «هیچ JSON خوانده نشد» بررسی شد (بدون هشدار کاذب)\n";
+
+	$GLOBALS['cyh_test_acf_groups'] = $saved_groups;
 
 	// وضعیت اصلی برگردانده می‌شود تا آزمون‌های بعدی آلوده نشوند.
 	$GLOBALS['cyh_test_posts'] = $saved_posts;
