@@ -72,6 +72,7 @@ const RETIRED = [
   { term: 'class-blocks-migration', why: 'ابزار مهاجرت یک‌باره — پس از اجرا حذف شد' },
   { term: 'cyh_blocks_migrate', why: 'دکمه‌ی مهاجرت — پس از اجرا حذف شد' },
   { term: 'cyh_bm_run', why: 'اجراکننده‌ی مهاجرت — حذف شد' },
+  { term: 'BLOG_POSTS', why: 'آرایه‌ی هاردکد مقالات — با نوشته‌های وردپرس جایگزین شد' },
 ];
 
 const DOCS = [...globSync('docs/**/*.md'), 'CLAUDE.md', 'README.md'].filter((f) => {

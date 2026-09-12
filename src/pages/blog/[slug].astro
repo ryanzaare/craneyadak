@@ -7,10 +7,10 @@
 import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { SITE } from '../../data/site';
-import { BLOG_POSTS } from '../../data/content';
+import { getPosts, type BlogPost } from '../../lib/posts';
 
-export function getStaticPaths() {
-  return BLOG_POSTS.map((post) => ({
+export async function getStaticPaths() {
+  return (await getPosts()).map((post) => ({
     params: { slug: post.slug },
     props: { post },
   }));
@@ -40,7 +40,7 @@ const jsonLd = {
       headline: post.title,
       description: post.excerpt,
       datePublished: post.isoDate,
-      dateModified: post.isoDate,
+      dateModified: post.isoModified,
       articleSection: post.category,
       inLanguage: SITE.locale,
       image: `${SITE.url}/og-default.jpg`,
@@ -72,9 +72,10 @@ const jsonLd = {
 
   <section class="py-16 px-4 bg-white">
     <article class="max-w-3xl mx-auto text-gray-700 leading-9 text-right text-lg space-y-6">
-      {post.body.map((paragraph) => (
-        <p set:html={paragraph} />
-      ))}
+      {/* ⚠️ بدنه حالا یک HTML واحد از ویرایشگر وردپرس است، نه آرایه‌ی
+          پاراگراف. `prose-crane` همان استایلی است که بلوک‌های متن دارند،
+          پس مقاله و صفحه‌ی برند یک‌شکل دیده می‌شوند. */}
+      <div class="prose-crane" set:html={post.bodyHtml} />
     </article>
 
     <div class="max-w-3xl mx-auto mt-16 bg-crane-light rounded-3xl p-8 md:p-10 border border-gray-200 text-center">

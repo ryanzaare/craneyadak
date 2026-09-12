@@ -3,7 +3,10 @@
 import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { SITE } from '../../data/site';
-import { BLOG_POSTS } from '../../data/content';
+import { getPosts } from '../../lib/posts';
+
+// ⚠️ پیش از اولین استفاده — JSON-LD بالاتر از این خط از `posts` می‌خواند.
+const posts = await getPosts();
 
 const title = `مجله تخصصی و مقالات آموزشی جرثقیل سقفی | ${SITE.name}`;
 const description = 'مقالات تخصصی، آموزش‌های اورهال، راهنمای انتخاب قطعات و اخبار صنعت بالابر. مرجع علمی مهندسین نت برای تعمیر و نگهداری جرثقیل.';
@@ -26,14 +29,13 @@ const jsonLd = {
       name: title,
       description: description,
       isPartOf: { '@id': `${SITE.url}/#website` },
-      blogPost: BLOG_POSTS.map((p) => ({ '@type': 'BlogPosting', '@id': `${SITE.url}/blog/${p.slug}#article`, headline: p.title, url: `${SITE.url}/blog/${p.slug}` })),
+      blogPost: posts.map((p) => ({ '@type': 'BlogPosting', '@id': `${SITE.url}/blog/${p.slug}#article`, headline: p.title, url: `${SITE.url}/blog/${p.slug}` })),
     }
   ]
 };
 
 // تک منبع داده (src/data/content.ts) — همین آرایه در blog/[slug].astro هم
 // استفاده می‌شود تا عنوان/تاریخ هرگز بین لیست و صفحه‌ی مقاله واگرا نشود.
-const posts = BLOG_POSTS;
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
