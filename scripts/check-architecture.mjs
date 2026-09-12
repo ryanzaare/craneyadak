@@ -270,7 +270,7 @@ for (const h of handlers) {
 
    سه جا نوع بلوک را تعریف می‌کنند و هر سه باید یکی باشند:
      • choices در ACF        → مدیر چه چیزی می‌تواند بسازد
-     • TYPES در content-blocks.ts → چه چیزی خوانده می‌شود
+     • TYPES در block-shape.ts  → چه چیزی خوانده می‌شود
      • شاخه‌های ContentBlocks.astro → چه چیزی رندر می‌شود
 
    واگرایی یعنی مدیر بلوکی می‌سازد که روی صفحه هیچ‌وقت ظاهر نمی‌شود — و
@@ -285,7 +285,8 @@ if (cb) {
   if (acfTypes.length === 0) problems.push('فیلد block_type در ACF هیچ گزینه‌ای ندارد.');
 }
 
-const libSrc = read('src/lib/content-blocks.ts');
+// ⚠️ TYPES به block-shape.ts منتقل شد (تبدیل خالص، بدون وابستگی، قابل آزمون).
+const libSrc = read('src/lib/block-shape.ts');
 const libTypes = (/const TYPES: BlockType\[\] = \[([^\]]*)\]/.exec(libSrc)?.[1] ?? '')
   .split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
 
@@ -296,8 +297,8 @@ const cmp = (a, b, an, bn) => {
   for (const x of a) if (!b.includes(x)) problems.push(`نوع بلوک «${x}» در ${an} هست ولی در ${bn} نیست.`);
 };
 if (acfTypes.length && libTypes.length && renderedTypes.length) {
-  cmp(acfTypes, libTypes, 'ACF', 'content-blocks.ts');
-  cmp(libTypes, acfTypes, 'content-blocks.ts', 'ACF');
+  cmp(acfTypes, libTypes, 'ACF', 'block-shape.ts');
+  cmp(libTypes, acfTypes, 'block-shape.ts', 'ACF');
   cmp(acfTypes, renderedTypes, 'ACF', 'ContentBlocks.astro');
   cmp(renderedTypes, acfTypes, 'ContentBlocks.astro', 'ACF');
 } else {

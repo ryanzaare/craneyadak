@@ -36,7 +36,10 @@ const files = globSync('src/**/*.{ts,mts,astro,js,mjs}');
 
 /** ⚠️ بدون لنگر ^ — تورفتگی مجاز است و باید دیده شود. */
 const DECL = /(?:^|\n)\s*export\s+(?:async\s+)?(?:function|const|let|var|class|interface|type|enum)\s+(\w+)/g;
-const LIST = /(?:^|\n)\s*export\s*\{([^}]+)\}/g;
+// ⚠️ `type` اختیاری است: «export type { X } from './y'» هم یک صادرات
+//    واقعی است. بدون این، بازصادرکردنِ تایپ‌ها مثبت کاذب می‌داد — یعنی
+//    ابزار برای الگویی که خودش درست است خطا می‌داد.
+const LIST = /(?:^|\n)\s*export\s+(?:type\s+)?\{([^}]+)\}/g;
 
 const exportsOf = new Map();
 const duplicates = [];
