@@ -6,6 +6,7 @@
 // آموزشی/معنایی (Semantic SEO). این صفحه آن گپ را می‌بندد.
 import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
+import { buildTitle } from '../../lib/seo-meta';
 import { SITE } from '../../data/site';
 import { getPosts, type BlogPost } from '../../lib/posts';
 
@@ -17,7 +18,10 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
-const title = `${post.title} | مجله تخصصی ${SITE.name}`;
+/* ⚠️ این صفحه از قلم افتاده بود: دسته و برند و محصول به عنوانِ قطعه‌ای
+   منتقل شدند ولی مقاله نه. «راهنمای کالیبراسیون…» با دُم کامل ۶۴ کاراکتر
+   می‌شد و بریده می‌شد. حالا قطعه‌ی آخر کنار می‌رود، نه وسط کلمه. */
+const title = buildTitle([post.title, 'مجله تخصصی', SITE.name], `/blog/${post.slug}/`);
 const description = post.excerpt;
 const canonicalPostUrl = `${SITE.url}/blog/${post.slug}`;
 

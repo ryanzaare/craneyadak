@@ -87,6 +87,34 @@ function plainExcerpt(html: unknown): string {
 }
 
 /**
+ * چکیده در حد یک توضیح متا — با مرز **جمله**، نه با شمردن کاراکتر.
+ *
+ * ⚠️ وقتی «چکیده»ی دستی در وردپرس خالی باشد، وردپرس ۵۵ کلمه‌ی اول متن را
+ * خودکار برمی‌دارد. نتیجه برای هر دو مقاله ۳۰۰ کاراکتر شد، که در Layout
+ * به ۱۵۸ بریده می‌شد و وسط جمله با «…» تمام می‌شد.
+ *
+ * پس اینجا به‌جای بریدن، **جمله‌های کامل** برداشته می‌شوند تا جا شود. اگر
+ * حتی جمله‌ی اول بلند باشد، تور ایمنی Layout کار خودش را می‌کند.
+ *
+ * بهترین حالت هنوز این است که نویسنده «چکیده» را خودش بنویسد؛ این فقط
+ * تضمین می‌کند حالت پیش‌فرض هم شکسته نباشد.
+ */
+function metaExcerpt(html: unknown, max = 158): string {
+  const text = plainExcerpt(html);
+  if (text.length <= max) return text;
+
+  // جمله‌ها را نگه می‌داریم، همراه با علامت پایانی‌شان.
+  const parts = text.split(/(?<=[.!؟?])\s+/);
+  let out = '';
+  for (const part of parts) {
+    const next = out ? `${out} ${part}` : part;
+    if (next.length > max) break;
+    out = next;
+  }
+  return out || text;
+}
+
+/**
  * تاریخ شمسی.
  *
  * ⚠️ `timeZone: 'UTC'` عمدی است. بدون آن، تاریخِ ساخته‌شده در ساعت‌های
@@ -117,7 +145,7 @@ function normalizePost(node: RawPost): BlogPost | null {
   return {
     slug,
     title,
-    excerpt: plainExcerpt(node.excerpt),
+    excerpt: metaExcerpt(node.excerpt),
     date: toJalali(iso),
     isoDate: iso ? iso.slice(0, 10) : '',
     isoModified: (acfString(node.modified) ?? iso).slice(0, 10),
