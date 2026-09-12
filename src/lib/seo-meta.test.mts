@@ -53,7 +53,8 @@ ok(kito.includes(SITE), 'وقتی جا هست، نام سایت حفظ می‌ش
 console.log(`       → ${kito}`);
 
 // قطعه‌ی اول اگر خودش بلند باشد، تور ایمنی باید وارد شود.
-const huge = buildTitle(['ا'.repeat(80), SITE]);
+// برچسب دارد تا در خروجی build با هشدار واقعی اشتباه گرفته نشود.
+const huge = buildTitle(['ا'.repeat(80), SITE], '[تست] عمداً بلند');
 ok(huge.length <= TITLE_MAX, `قطعه‌ی اولِ بیش‌ازحد بلند هم مهار می‌شود (${huge.length})`);
 
 console.log('\n── توضیح: بلندترین دمی که جا می‌شود ──');
@@ -87,7 +88,7 @@ const d3 = buildDescription('ب'.repeat(150), ['یک دم خیلی طولانی 
 ok(d3.length === 150 && !d3.endsWith('…'), 'وقتی هیچ دمی جا نشود، متن اصلی دست‌نخورده می‌ماند');
 
 // متن اختصاصیِ بیش‌ازحد بلند → تور ایمنی
-const d4 = buildDescription('پ'.repeat(200), []);
+const d4 = buildDescription('پ'.repeat(200), [], '[تست] عمداً بلند');
 ok(d4.length <= DESC_MAX, `متن اختصاصیِ بیش‌ازحد بلند مهار می‌شود (${d4.length})`);
 
 console.log(failed ? `\n❌ ${failed} آزمون شکست خورد.\n` : '\n✅ همه‌ی آزمون‌های متا گذشت.\n');
