@@ -64,6 +64,14 @@ const RETIRED = [
   { term: 'lib/capacity.ts', why: 'نمودار ظرفیت — مفهومش غلط بود، کامل حذف شد' },
   { term: 'brandProfile', why: 'گروه ACF — با contentBlocks جایگزین شد' },
   { term: 'brand_section_order', why: 'فیلد ACF — حذف شد' },
+
+  // ── ابزار مهاجرت، پس از اجرا (نسخه‌ی ۳.۱.۰) ──────────────────────────
+  // مهاجرت انجام شد: demag ۷ بلوک، rope-guide ۱ بلوک، بقیه محتوای قدیمی
+  // نداشتند. ابزار از ابتدا مهلت‌دار بود و همان کامیتی که اجرایش را تأیید
+  // کرد، حذفش را هم آورد.
+  { term: 'class-blocks-migration', why: 'ابزار مهاجرت یک‌باره — پس از اجرا حذف شد' },
+  { term: 'cyh_blocks_migrate', why: 'دکمه‌ی مهاجرت — پس از اجرا حذف شد' },
+  { term: 'cyh_bm_run', why: 'اجراکننده‌ی مهاجرت — حذف شد' },
 ];
 
 const DOCS = [...globSync('docs/**/*.md'), 'CLAUDE.md', 'README.md'].filter((f) => {

@@ -867,250 +867,73 @@ if ( $woo_mode ) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   مهاجرت بلوک‌ها — پرخطرترین عملیات این پروژه
+   جدول گزارش، و گروه‌های ACF یتیم
    ═══════════════════════════════════════════════════════════════════════════
-   یک‌بار اجرا می‌شود، روی تمام محتوای واقعی کارفرما. اگر بی‌صدا صفر بلوک
-   بسازد، «موفق» به نظر می‌رسد و محتوا ناپدید می‌شود.
-
-   و این دقیقاً نزدیک بود اتفاق بیفتد: نسخه‌ی اول مهاجرت با `get_field()`
-   می‌خواند، در حالی که گروه‌های ACF در همان تغییر حذف شده بودند — یعنی
-   `null` برمی‌گشت و گزارش می‌داد «چیزی برای انتقال نبود».
-
-   پس اینجا با postmeta خام آزموده می‌شود، دقیقاً همان‌طور که در وردپرس
-   واقعی پس از حذف گروه‌ها خواهد بود. */
+   آزمون‌های مهاجرت بلوک‌ها با خودِ ابزار مهاجرت حذف شدند — مهاجرت انجام
+   شد و ابزارش مهلت‌دار بود. ولی این دو آزمون به مهاجرت ربطی نداشتند و
+   هر دو باگ واقعی گرفته‌اند، پس می‌مانند. */
 {
-	/* ⚠️ ایزوله‌سازی عمدی.
-	   `wp_insert_post` در آزمون‌های قبلی، *آرایه* در همین گلوبال ریخته و
-	   `get_posts()` همه‌چیز را برمی‌گرداند. مهاجرت `$p->post_name` می‌خواند؛
-	   روی آرایه این در PHP 8 اخطار می‌دهد و null برمی‌گرداند — یعنی آزمون
-	   روی داده‌ی آلوده اجرا می‌شد و نتیجه‌اش بی‌معنا بود. */
-	$saved_posts = $GLOBALS['cyh_test_posts'];
-	$saved_terms = $GLOBALS['cyh_test_terms'] ?? [];
-	$GLOBALS['cyh_test_posts'] = [];
-	$GLOBALS['cyh_test_terms'] = [];
-
-	$brand_id = 4242;
-	$GLOBALS['cyh_test_posts'][ $brand_id ] = (object) [ 'ID' => $brand_id, 'post_name' => 'demag-test', 'post_type' => 'brand' ];
-
-	// ⚠️ عمداً از طریق meta خام، نه get_field — چون گروه ACF دیگر وجود ندارد.
-	$GLOBALS['cyh_test_meta'][ $brand_id ] = [
-		'intro'                 => '<p>سازنده‌ی آلمانی</p>',
-		'identification_guide'  => '<p>پلاک روی بدنه است</p>',
-		'series'                => 2,
-		'series_0_series_name'  => 'DH', 'series_0_equipment_type' => 'بالابر', 'series_0_capacity_note' => '۳ تا ۳۲ تن',
-		'series_0_supply_status'=> 'supported', 'series_0_notes' => 'قطعه موجود است',
-		'series_1_series_name'  => 'DC', 'series_1_equipment_type' => 'زنجیری', 'series_1_capacity_note' => '۵ تن',
-		'series_1_supply_status'=> 'current', 'series_1_notes' => 'در تولید',
-		'faqs'                  => 1,
-		'faqs_0_question'       => 'قطعه موجود است؟', 'faqs_0_answer' => 'بله.',
-		'common_parts'          => 1,
-		'common_parts_0_part_name' => 'کمربند', 'common_parts_0_category' => 77,
-		'common_parts_0_failure_reason' => 'سایش',
+	/* رندر جدول گزارش.
+	   جدول ورود JSON ردیف‌های چهارتایی می‌دهد و یک بار سه ستون داشت:
+	   ستون‌ها یکی لغزیدند و متن «نتیجه» اصلاً چاپ نشد — یعنی صفحه‌ای که
+	   کارفرما بر اساسش تصمیم می‌گرفت، دروغ می‌گفت. */
+	$cols = [ 'نوع' => '80px', 'اسلاگ' => '170px', 'فیلد' => '190px', 'نتیجه' => '' ];
+	$rows = [
+		[ 'برند', 'demag', 'intro', 'نوشته می‌شود — ۸۴۰ کاراکتر' ],
+		[ 'دسته', 'rope-guide', 'seo_intro', 'رد شد (از قبل پر است)' ],
 	];
-
-	$term_id = 555;
-	$GLOBALS['cyh_test_terms'][ $term_id ] = (object) [ 'term_id' => $term_id, 'slug' => 'rope-guide', 'name' => 'کمربند' ];
-	$GLOBALS['cyh_test_term_meta'][ $term_id ] = [
-		'seo_intro'        => '<p>کمربند چیست</p>',
-		'symptoms'         => 1,
-		'symptoms_0_title' => 'صدای غیرعادی', 'symptoms_0_detail' => 'در حرکت',
-	];
-
-	$result = cyh_bm_run( true ); // dry-run — چیزی نوشته نمی‌شود
-
-	$by_slug = [];
-	foreach ( $result['rows'] as $row ) {
-		$by_slug[ $row[1] ] = $row;
-	}
-
-	if ( ! isset( $by_slug['demag-test'] ) || false === strpos( $by_slug['demag-test'][2], 'بلوک' ) ) {
-		$errors[] = 'مهاجرت برای برند هیچ بلوکی نساخت — دقیقاً همان شکستِ «موفق به نظر می‌رسد»';
-	} else {
-		echo "✓ مهاجرت برند: {$by_slug['demag-test'][2]} از postmeta خام ساخته شد\n";
-	}
-
-	if ( ! isset( $by_slug['rope-guide'] ) || false === strpos( $by_slug['rope-guide'][2], 'بلوک' ) ) {
-		$errors[] = 'مهاجرت برای دسته هیچ بلوکی نساخت — متای ترم خوانده نشد';
-	} else {
-		echo "✓ مهاجرت دسته: {$by_slug['rope-guide'][2]} از متای ترم ساخته شد\n";
-	}
-
-	// نوع بلوک‌ها باید درست نگاشت شده باشند.
-	$blocks = cyh_bm_brand( $brand_id );
-	$types  = array_count_values( array_column( $blocks, 'block_type' ) );
-
-	foreach ( [ 'text' => 2, 'table' => 1, 'faq' => 1, 'parts' => 1 ] as $type => $min ) {
-		if ( ( $types[ $type ] ?? 0 ) < $min ) {
-			$errors[] = "مهاجرت: انتظار حداقل $min بلوک «$type» بود، " . ( $types[ $type ] ?? 0 ) . ' ساخته شد';
-		}
-	}
-	if ( empty( $errors ) ) {
-		echo '✓ نگاشت نوع بلوک درست است: ' . json_encode( $types, JSON_UNESCAPED_UNICODE ) . "\n";
-	}
-
-	// جدول سری‌ها باید ۵ ستون و ۲ ردیف داشته باشد، و وضعیت ترجمه شده باشد.
-	$table = null;
-	foreach ( $blocks as $b ) {
-		if ( 'table' === $b['block_type'] ) { $table = $b; break; }
-	}
-	if ( ! $table || count( $table['rows'] ) !== 2 ) {
-		$errors[] = 'جدول سری‌ها ۲ ردیف نشد — ریپیتر خام درست خوانده نشد';
-	} elseif ( 'قطعه موجود' !== ( $table['rows'][0]['c4'] ?? '' ) ) {
-		$errors[] = 'وضعیت تأمین ترجمه نشد: «' . ( $table['rows'][0]['c4'] ?? '' ) . '» به‌جای «قطعه موجود»';
-	} else {
-		echo "✓ جدول سری‌ها: ۲ ردیف، وضعیت تأمین به فارسی ترجمه شد\n";
-	}
-
-	// ⚠️ اجرای دوم نباید روی بلوک‌های موجود بنویسد.
-	$GLOBALS['cyh_test_fields'][ (string) $brand_id ]['content_blocks'] = [ [ 'block_type' => 'text' ] ];
-	$again = cyh_bm_run( true );
-	$skipped_row = null;
-	foreach ( $again['rows'] as $row ) {
-		if ( 'demag-test' === $row[1] ) { $skipped_row = $row; break; }
-	}
-	if ( ! $skipped_row || false === strpos( $skipped_row[3], 'رد شد' ) ) {
-		$errors[] = 'مهاجرت روی بلوک‌های موجود می‌نویسد — کار دست انسان پاک می‌شود';
-	} else {
-		echo "✓ اجرای دوباره، برندی که از قبل بلوک دارد را دست نمی‌زند\n";
-	}
-
-	/*
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * لایه‌ی نمایش — جایی که باگ واقعی زندگی می‌کرد
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * آزمون‌های بالا همگی سبز بودند و مهاجرت هم درست کار می‌کرد. با این حال
-	 * چیزی که کارفرما روی صفحه دید غلط بود: جدول **سه** ستون داشت و ردیف‌ها
-	 * **چهار** مقدار. ستون‌ها یکی به چپ لغزیدند و متن نتیجه اصلاً چاپ نشد.
-	 *
-	 * درس: تست کردنِ داده کافی نیست وقتی تصمیم انسان بر اساس *رندر* گرفته
-	 * می‌شود. این آزمون همان ردیف‌های واقعیِ بالا را از دل رندر واقعی رد
-	 * می‌کند و می‌پرسد: آیا هر چهار مقدار در خروجی هست؟
-	 */
-	$cols = [ 'نوع' => '70px', 'شناسه' => '200px', 'حجم' => '90px', 'نتیجه' => '' ];
 
 	ob_start();
-	cyh_hub_table( $cols, $again['rows'], [ 1 ], 'نبود' );
+	cyh_hub_table( $cols, $rows, [ 1, 2 ] );
 	$html = ob_get_clean();
 
 	$lost = [];
-	foreach ( $again['rows'] as $row ) {
+	foreach ( $rows as $row ) {
 		foreach ( $row as $cell ) {
-			$cell = trim( (string) $cell );
-			if ( '' !== $cell && '—' !== $cell && false === strpos( $html, esc_html( $cell ) ) ) {
+			if ( false === strpos( $html, esc_html( (string) $cell ) ) ) {
 				$lost[] = $cell;
 			}
 		}
 	}
 	if ( $lost ) {
-		$errors[] = 'جدول گزارش ' . count( $lost ) . ' مقدار را نمی‌نویسد: «'
-			. implode( '»، «', array_slice( array_unique( $lost ), 0, 3 ) ) . '»';
+		$errors[] = 'جدول گزارش ' . count( $lost ) . ' مقدار را نمی‌نویسد: «' . implode( '»، «', $lost ) . '»';
+	} elseif ( substr_count( $html, '<td' ) !== count( $rows ) * count( $cols ) ) {
+		$errors[] = 'جدول گزارش ' . substr_count( $html, '<td' ) . ' خانه دارد ولی باید '
+			. ( count( $rows ) * count( $cols ) ) . ' باشد — ستون‌ها جابه‌جا شده‌اند';
 	} else {
-		echo '✓ جدول گزارش هر چهار مقدار هر ردیف را چاپ می‌کند (' . count( $again['rows'] ) . " ردیف)\n";
+		echo "✓ جدول گزارش هر چهار مقدار هر ردیف را چاپ می‌کند\n";
 	}
 
-	// تعداد <td> باید دقیقاً برابر ردیف × ستون باشد؛ نه کمتر، نه بیشتر.
-	$want = count( $again['rows'] ) * count( $cols );
-	$got  = substr_count( $html, '<td' );
-	if ( $got !== $want ) {
-		$errors[] = "جدول گزارش $got خانه دارد ولی باید $want باشد — ستون‌ها جابه‌جا شده‌اند";
-	}
-
-	// ⚠️ و مهم‌تر: ردیفِ ناهماهنگ باید **فریاد بزند**، نه اینکه بلغزد.
+	// ردیف ناهماهنگ باید فریاد بزند، نه اینکه ستون‌ها را بلغزاند.
 	ob_start();
-	cyh_hub_table( $cols, [ [ 'برند', 'demag', '۷ بلوک' ] ], [ 1 ] ); // ۳ مقدار برای ۴ ستون
+	cyh_hub_table( $cols, [ [ 'برند', 'demag', 'intro' ] ], [ 1 ] );
 	$bad = ob_get_clean();
-
 	if ( false === strpos( $bad, 'خراب است' ) ) {
-		$errors[] = 'ردیف ناهماهنگ بی‌صدا رندر شد — همان باگی که گزارش را دروغ‌گو کرده بود برگشته';
+		$errors[] = 'ردیف ناهماهنگ بی‌صدا رندر شد — باگی که گزارش را دروغ‌گو کرده بود برگشته';
 	} else {
 		echo "✓ ردیف ناهماهنگ به‌جای لغزاندن ستون‌ها، قرمز و صریح گزارش می‌شود\n";
 	}
 
-	/*
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * پیش‌فرضِ ایمن — خطرناک‌ترین سطر افزونه
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * `$dry = ! empty( $_GET['dry'] )` یعنی **نوشتن** پیش‌فرضِ نبودِ پارامتر
-	 * بود. هر چیزی که آن query arg را بیندازد به نوشتن برگشت‌ناپذیر روی
-	 * محتوای واقعی ختم می‌شد. حالا وارونه است و این آزمون نگهش می‌دارد.
-	 */
-	$write_cases = [ [ 'go' => '1' ], [ 'go' => 1 ] ];
-	$safe_cases  = [ [], [ 'go' => '' ], [ 'go' => '0' ], [ 'go' => 'true' ], [ 'go' => 'yes' ], [ 'dry' => '1' ] ];
-
-	foreach ( $write_cases as $g ) {
-		if ( ! cyh_bm_wants_write( $g ) ) {
-			$errors[] = 'دکمه‌ی «انتقال بده» با ' . json_encode( $g ) . ' نمی‌نویسد — دکمه مرده است';
-		}
-	}
-	foreach ( $safe_cases as $g ) {
-		if ( cyh_bm_wants_write( $g ) ) {
-			$errors[] = 'مهاجرت با ' . json_encode( $g ) . ' می‌نویسد — پیش‌فرض باید پیش‌نمایش باشد';
-		}
-	}
-	echo '✓ نوشتن فقط با go=1؛ هر ' . count( $safe_cases ) . " ورودی دیگر پیش‌نمایش می‌ماند\n";
-
-	/*
-	 * شمارنده‌های خلاصه باید با خودِ ردیف‌ها بخوانند. خلاصه و جدول از دو
-	 * مسیر می‌آیند و اگر از هم جدا بیفتند، خلاصه بی‌صدا دروغ می‌گوید —
-	 * همان‌طور که «۱ مورد منتقل می‌شود — ۱ برند، ۱ دسته» دروغ گفت.
-	 */
-	$c = $again['counts'] ?? [];
-	$tot = 0;
-	foreach ( $c as $kind => $b ) {
-		$tot += array_sum( $b );
-	}
-	if ( $tot !== count( $again['rows'] ) ) {
-		$errors[] = "خلاصه $tot مورد می‌شمارد ولی جدول " . count( $again['rows'] ) . ' ردیف دارد';
-	} elseif ( ( $c['برند']['written'] ?? 0 ) + ( $c['دسته']['written'] ?? 0 ) !== (int) $again['written'] ) {
-		$errors[] = 'جمع «نوشته می‌شود»ِ تفکیک‌شده با عدد کل نمی‌خواند';
-	} elseif ( count( (array) ( $again['skipped_slugs'] ?? [] ) ) !== (int) $again['skipped'] ) {
-		$errors[] = 'فهرست اسلاگ‌های ردشده با تعداد ردشده‌ها نمی‌خواند';
-	} else {
-		echo "✓ خلاصه با جدول می‌خواند: هر ردیف دقیقاً در یک سطل شمرده شده\n";
-	}
-
-	/*
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * گروه‌های ACF یتیم
-	 * ═══════════════════════════════════════════════════════════════════════
-	 * سه گروه بازنشسته ماه‌ها در وردپرس زنده ماندند چون «حذف» فقط در مخزن
-	 * انجام شده بود. هیچ ابزار سمت-مخزنی نمی‌توانست ببیندشان.
-	 */
+	/* گروه‌های ACF یتیم — سه گروه بازنشسته ماه‌ها در وردپرس زنده ماندند
+	   چون «حذف» فقط در مخزن انجام شده بود. */
 	$saved_groups = $GLOBALS['cyh_test_acf_groups'] ?? [];
-
 	$GLOBALS['cyh_test_acf_groups'] = [
-		[ 'key' => 'group_cyh_content_blocks', 'title' => 'بلوک‌های محتوا' ],   // شناخته‌شده
-		[ 'key' => 'group_cyh_brand_profile', 'title' => 'پروفایل تخصصی برند' ], // یتیم
-		[ 'key' => 'group_cyh_datasheet_fields', 'title' => 'Datasheet Fields' ], // یتیم
-		[ 'key' => 'group_other_plugin', 'title' => 'مال افزونه‌ی دیگر', 'local' => 'json' ], // نادیده
+		[ 'key' => 'group_cyh_content_blocks', 'title' => 'بلوک‌های محتوا' ],
+		[ 'key' => 'group_cyh_brand_profile', 'title' => 'پروفایل تخصصی برند' ],
+		[ 'key' => 'group_cyh_datasheet_fields', 'title' => 'Datasheet Fields' ],
+		[ 'key' => 'group_other_plugin', 'title' => 'مال افزونه‌ی دیگر', 'local' => 'json' ],
 	];
 
-	$orphans = cyh_acf_orphan_groups();
-	$keys    = array_column( $orphans, 0 );
+	$keys = array_column( cyh_acf_orphan_groups(), 0 );
 	sort( $keys );
-
 	$want = [ 'group_cyh_brand_profile', 'group_cyh_datasheet_fields' ];
 	if ( $keys !== $want ) {
-		$errors[] = 'تشخیص گروه یتیم غلط است: ' . json_encode( $keys, JSON_UNESCAPED_UNICODE )
-			. ' به‌جای ' . json_encode( $want, JSON_UNESCAPED_UNICODE );
+		$errors[] = 'تشخیص گروه یتیم غلط است: ' . json_encode( $keys, JSON_UNESCAPED_UNICODE );
 	} else {
 		echo "✓ گروه ACF یتیم تشخیص داده می‌شود (شناخته‌شده و local نادیده گرفته می‌شوند)\n";
 	}
 
-	// ⚠️ اگر هیچ JSONای خوانده نشود، همه‌چیز یتیم به نظر می‌رسد. آن حالت
-	//    باید *سکوت* باشد، نه هشدارِ «۷ گروه ناشناخته» که خودش خرابیِ
-	//    مسیر را پنهان می‌کند.
-	$GLOBALS['cyh_test_acf_groups'] = [ [ 'key' => 'group_anything', 'title' => 'x' ] ];
-	if ( ! defined( 'CYH_PLUGIN_DIR_REAL' ) ) {
-		define( 'CYH_PLUGIN_DIR_REAL', CYH_PLUGIN_DIR );
-	}
-	echo "✓ حالت «هیچ JSON خوانده نشد» بررسی شد (بدون هشدار کاذب)\n";
-
 	$GLOBALS['cyh_test_acf_groups'] = $saved_groups;
-
-	// وضعیت اصلی برگردانده می‌شود تا آزمون‌های بعدی آلوده نشوند.
-	$GLOBALS['cyh_test_posts'] = $saved_posts;
-	$GLOBALS['cyh_test_terms'] = $saved_terms;
 }
 
 

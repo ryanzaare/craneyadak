@@ -255,7 +255,6 @@ for (const [name, { file }] of Object.entries(groups)) {
    از شش دکمه به دو رسیدیم. مهاجرت هم تاریخ انقضا دارد. */
 const ALLOWED_HANDLERS = {
   cyh_hub_import: 'ورود انبوه محتوا از فایل',
-  cyh_blocks_migrate: '⏳ یک‌بارمصرف — پس از مهاجرت همه‌ی برندها و دسته‌ها حذف شود',
 };
 
 const handlers = [...new Set([...phpBlob.matchAll(/admin_post_([a-z_]+)/g)].map((m) => m[1]))];
