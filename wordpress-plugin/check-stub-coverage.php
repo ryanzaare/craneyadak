@@ -222,4 +222,56 @@ if ( $missing ) {
 	exit( 1 );
 }
 
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * تابعی که هارنس صدا می‌زند ولی هرگز بارگذاری نمی‌شود
+ * ═══════════════════════════════════════════════════════════════════════════
+ * هارنس فقط `includes/*.php` را require می‌کند. اگر آزمونی تابعی را صدا
+ * بزند که در **فایل اصلی افزونه** تعریف شده، آن تابع در وردپرس کاملاً سالم
+ * است ولی هارنس با «Call to undefined function» می‌میرد.
+ *
+ * این دقیقاً رخ داد: `cyh_acf_orphan_groups()` در فایل اصلی نوشته شد و
+ * آزمونش نوشته و **ادعا شد که اجرا شده**، در حالی که اولین اجرای واقعی
+ * fatal داد.
+ *
+ * بررسی زیر همین را می‌گیرد، پیش از اجرا.
+ */
+$harness_dir  = __DIR__ . '/crane-yadak-headless/includes';
+$loadable     = [];
+foreach ( (array) glob( $harness_dir . '/*.php' ) as $f ) {
+	preg_match_all( '/function\s+([a-zA-Z_]\w*)\s*\(/', cyh_blank( file_get_contents( $f ) ), $m );
+	foreach ( $m[1] as $n ) {
+		$loadable[ strtolower( $n ) ] = true;
+	}
+}
+
+// آنچه خودِ هارنس تعریف می‌کند هم در دسترس است.
+preg_match_all( '/^function\s+([a-zA-Z_]\w*)\s*\(/m', $hsrc, $hm2 );
+foreach ( $hm2[1] as $n ) {
+	$loadable[ strtolower( $n ) ] = true;
+}
+
+$unreachable = [];
+foreach ( explode( "\n", cyh_blank( $hsrc ) ) as $n => $line ) {
+	if ( ! preg_match_all( '/(?<![>$:\w])(cyh_\w+)\s*\(/', $line, $calls ) ) {
+		continue;
+	}
+	foreach ( $calls[1] as $name ) {
+		if ( ! isset( $loadable[ strtolower( $name ) ] ) ) {
+			$unreachable[ $name ] ??= $n + 1;
+		}
+	}
+}
+
+if ( $unreachable ) {
+	ksort( $unreachable );
+	fwrite( STDERR, '❌ ' . count( $unreachable ) . " تابع که هارنس صدا می‌زند ولی بارگذاری نمی‌کند:\n\n" );
+	foreach ( $unreachable as $name => $line ) {
+		fwrite( STDERR, sprintf( "   • %-34s wp-stub-harness.php:%d\n", $name . '()', $line ) );
+	}
+	fwrite( STDERR, "\n   هارنس فقط includes/*.php را require می‌کند.\n" );
+	fwrite( STDERR, "   تابع را به includes/ منتقل کنید (نه فایل اصلی افزونه).\n" );
+	exit( 1 );
+}
+
 printf( "✅ هر تابع و متدی stub دارد (%d کال، %d متد) و هیچ درون‌یابی بلعیده‌شده‌ای نیست.\n", count( $called ), count( $methods ) );
