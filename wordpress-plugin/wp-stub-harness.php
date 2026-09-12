@@ -934,6 +934,55 @@ if ( $woo_mode ) {
 	}
 
 	$GLOBALS['cyh_test_acf_groups'] = $saved_groups;
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	   قالب نویسنده → ردیف‌های ACF
+	   ═══════════════════════════════════════════════════════════════════════
+	   ابزار ورود تا امروز روی فیلدهای مدل **قدیمی** می‌نوشت (`seo_intro`،
+	   `symptoms`، `series`…) که گروه‌هایشان در ۳.۰.۰ حذف شده بودند. یعنی
+	   محتوا در postmeta می‌نشست و هیچ‌جا خوانده نمی‌شد — بی‌صدا. */
+	$term_id = 9001;
+	$GLOBALS['cyh_test_terms'][ $term_id ] = (object) [
+		'term_id' => $term_id, 'slug' => 'wire-rope', 'name' => 'سیم‌بکسل',
+	];
+
+	list( $acf, $errs ) = cyh_hub_blocks_to_acf( [
+		[ 'type' => 'text', 'heading' => 'معرفی', 'body' => '<p>متن</p>' ],
+		[ 'type' => 'table', 'heading' => 'جدول', 'columns' => [ 'الف', 'ب' ], 'rows' => [ [ '۱', '۲' ] ] ],
+		[ 'type' => 'faq', 'heading' => 'پرسش‌ها', 'faqs' => [ [ 'q' => 'چرا؟', 'a' => 'چون.' ] ] ],
+		[ 'type' => 'specs', 'heading' => 'مشخصات', 'specs' => [ [ 'label' => 'قطر', 'value' => '۱۰', 'unit' => 'mm' ] ] ],
+		[ 'type' => 'callout', 'tone' => 'danger', 'heading' => 'هشدار', 'body' => 'مراقب باشید.' ],
+		[ 'type' => 'parts', 'heading' => 'قطعات', 'parts' => [ [ 'name' => 'قلاب', 'category' => 'wire-rope', 'reason' => 'سایش' ] ] ],
+	] );
+
+	if ( count( $acf ) !== 6 ) {
+		$errors[] = 'تبدیل قالب نویسنده ' . count( $acf ) . ' بلوک ساخت، نه ۶';
+	} elseif ( 'الف' !== $acf[1]['col1'] || '۲' !== $acf[1]['rows'][0]['c2'] ) {
+		$errors[] = 'جدول: columns/rows به col1..5 و c1..5 نگاشت نشد';
+	} elseif ( 'چرا؟' !== $acf[2]['faqs'][0]['question'] ) {
+		$errors[] = 'پرسش: q/a به question/answer نگاشت نشد';
+	} elseif ( 'danger' !== $acf[4]['tone'] || 'مراقب باشید.' !== $acf[4]['callout_body'] ) {
+		$errors[] = 'هشدار: tone یا callout_body درست نشد';
+	} elseif ( $term_id !== $acf[5]['parts'][0]['category'] ) {
+		$errors[] = 'قطعات: اسلاگ دسته به شناسه‌ی ترم تبدیل نشد (ارجاع شکسته‌ی بی‌صدا)';
+	} elseif ( $errs ) {
+		$errors[] = 'ورودی سالم نباید خطا بدهد: ' . implode( ' | ', $errs );
+	} else {
+		echo "✓ قالب نویسنده به ردیف‌های ACF تبدیل می‌شود (۶ نوع بلوک)\n";
+	}
+
+	// ⚠️ بلوکی که روی سایت دیده نمی‌شود باید **گزارش** شود، نه بی‌صدا رد.
+	list( $bad_acf, $bad_errs ) = cyh_hub_blocks_to_acf( [
+		[ 'type' => 'table', 'heading' => 'بی‌ردیف', 'columns' => [ 'الف' ] ],
+		[ 'type' => 'text', 'heading' => 'بی‌متن' ],
+		[ 'type' => 'chart', 'heading' => 'نوع نامعتبر' ],
+		[ 'type' => 'parts', 'heading' => 'دسته‌ی ناموجود', 'parts' => [ [ 'name' => 'x', 'category' => 'ghost-cat' ] ] ],
+	] );
+	if ( count( $bad_errs ) < 4 ) {
+		$errors[] = 'ورودی خراب فقط ' . count( $bad_errs ) . ' خطا داد — بلوک نامرئی بی‌صدا رد می‌شود';
+	} else {
+		echo '✓ ' . count( $bad_errs ) . " مشکلِ «روی سایت دیده نمی‌شود» گزارش شد به‌جای سکوت\n";
+	}
 }
 
 

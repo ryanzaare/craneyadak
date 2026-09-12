@@ -38,33 +38,199 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /** فیلدهای متنی هر نوع محتوا: نام فیلد => آیا HTML می‌پذیرد؟ */
+/**
+ * فیلدهای *هویتی* هر نوع محتوا: نام فیلد => آیا HTML می‌پذیرد؟
+ *
+ * ⚠️ این نگاشت تا امروز فیلدهای مدل **قدیمی** را داشت — `seo_intro`،
+ * `engineering_guide`، `symptoms`، `series`، `common_parts` و بقیه. آن
+ * فیلدها متعلق به گروه‌های `categoryContent` و `brandProfile` بودند که در
+ * بازنویسی ۳.۰.۰ حذف شدند.
+ *
+ * یعنی این ابزار در سکوت روی فیلدهایی می‌نوشت که هیچ گروه ACF دیگر
+ * نمی‌شناسد: مقدار در postmeta می‌نشست و هیچ‌جا خوانده نمی‌شد. نه خطایی،
+ * نه هشداری — فقط محتوایی که ناپدید می‌شد.
+ *
+ * نقض قاعده‌ی ۲ بود: مدل محتوا عوض شد و ابزارِ نوشتنِ محتوا با آن عوض نشد.
+ *
+ * حالا فقط فیلدهای هویتی اینجا می‌مانند. **نثر از مسیر `blocks` می‌آید.**
+ */
 function cyh_hub_field_map() {
 	return [
 		'brand' => [
 			'simple' => [
-				'hero_claim'          => false,
-				'intro'               => true,
-				'founded_year'        => false,
-				'headquarters'        => false,
-				'identification_guide' => true,
-				'iran_presence'       => true,
+				'name_en'      => false,
+				'logo_text'    => false,
+				'brand_color'  => false,
+				'seo_anchor'   => false,
+				'seo_desc'     => false,
+				'brand_class'  => false,
+				'country'      => false,
+				'founded_year' => false,
+				'headquarters' => false,
+				'official_url' => false,
 			],
-			'repeaters' => [ 'series', 'common_parts', 'technologies', 'faqs', 'sources', 'media' ],
+			'repeaters' => [],
 		],
 		'category' => [
-			'simple' => [
-				'seo_intro'         => true,
-				'engineering_guide' => true,
-				'keyword'           => false,
-				'aka'               => false,
-				'icon_path'         => false,
+			'simple'    => [
+				'keyword'   => false,
+				'aka'       => false,
+				'icon_path' => false,
 			],
-			'repeaters' => [
-				'symptoms', 'causes', 'selection_checklist', 'materials',
-				'inspection', 'faqs', 'standards', 'target_industries',
-			],
+			'repeaters' => [],
 		],
 	];
+}
+
+/** انواع بلوک مجاز — باید با choices در ACF یکی بماند. */
+function cyh_hub_block_types() {
+	return [ 'text', 'table', 'faq', 'parts', 'media', 'specs', 'callout' ];
+}
+
+/**
+ * قالب نویسنده → ردیف‌های ریپیتر ACF.
+ *
+ * ⚠️ عمداً شکل JSON با شکل ACF یکی **نیست**. شکل ACF برای ماشین خوب است
+ * (`col1..col5`، `c1..c5`) ولی برای انسانی که محتوا می‌نویسد فاجعه است.
+ * قالب نویسنده ساده است:
+ *
+ *   { "type": "table", "heading": "…",
+ *     "columns": ["سری", "نوع"], "rows": [["DH", "سیم‌بکسلی"]] }
+ *
+ * و تبدیل، اینجا یک بار انجام می‌شود. اگر نویسنده مجبور باشد به شکل ACF
+ * بنویسد، اولین اشتباهش بی‌صدا یک ستون را خالی می‌گذارد.
+ *
+ * @param array $blocks بلوک‌ها به قالب نویسنده.
+ * @return array{0:array,1:array} [ ردیف‌های ACF، فهرست خطاها ]
+ */
+function cyh_hub_blocks_to_acf( $blocks ) {
+	$rows   = [];
+	$errors = [];
+	$types  = cyh_hub_block_types();
+
+	foreach ( (array) $blocks as $i => $b ) {
+		$n = $i + 1;
+		if ( ! is_array( $b ) ) {
+			$errors[] = "بلوک #$n یک شیء نیست.";
+			continue;
+		}
+
+		$type = sanitize_key( (string) ( $b['type'] ?? '' ) );
+		if ( ! in_array( $type, $types, true ) ) {
+			$errors[] = "بلوک #$n نوع نامعتبر دارد: «" . esc_html( (string) ( $b['type'] ?? '' ) ) . '».';
+			continue;
+		}
+
+		$row = [
+			'block_type'   => $type,
+			'heading'      => cyh_hub_clean( $b['heading'] ?? '', false ),
+			'needs_review' => in_array( $b['needs_review'] ?? false, [ true, 1, '1', 'true' ], true ) ? 1 : 0,
+			'body'         => '',
+			'intro'        => cyh_hub_clean( $b['intro'] ?? '', false ),
+			'col1' => '', 'col2' => '', 'col3' => '', 'col4' => '', 'col5' => '',
+			'rows' => [], 'faqs' => [], 'parts' => [], 'media' => [], 'specs' => [],
+			'tone' => 'note', 'callout_body' => '',
+		];
+
+		if ( 'text' === $type ) {
+			$row['body'] = cyh_hub_clean( $b['body'] ?? '', true );
+			if ( '' === trim( (string) $row['body'] ) ) {
+				$errors[] = "بلوک #$n از نوع text است ولی `body` ندارد — روی سایت دیده نمی‌شود.";
+			}
+		}
+
+		if ( 'table' === $type ) {
+			$cols = array_slice( array_values( (array) ( $b['columns'] ?? [] ) ), 0, 5 );
+			foreach ( $cols as $c => $label ) {
+				$row[ 'col' . ( $c + 1 ) ] = cyh_hub_clean( $label, false );
+			}
+			foreach ( (array) ( $b['rows'] ?? [] ) as $r ) {
+				$cells = array_slice( array_values( (array) $r ), 0, 5 );
+				$out   = [];
+				foreach ( $cells as $c => $cell ) {
+					$out[ 'c' . ( $c + 1 ) ] = cyh_hub_clean( $cell, false );
+				}
+				if ( $out ) {
+					$row['rows'][] = $out;
+				}
+			}
+			if ( ! $cols || ! $row['rows'] ) {
+				$errors[] = "بلوک #$n از نوع table است ولی ستون یا ردیف ندارد — روی سایت دیده نمی‌شود.";
+			}
+		}
+
+		if ( 'faq' === $type ) {
+			foreach ( (array) ( $b['faqs'] ?? [] ) as $f ) {
+				$q = cyh_hub_clean( $f['q'] ?? ( $f['question'] ?? '' ), false );
+				$a = cyh_hub_clean( $f['a'] ?? ( $f['answer'] ?? '' ), false );
+				if ( '' !== $q ) {
+					$row['faqs'][] = [ 'question' => $q, 'answer' => $a ];
+				}
+			}
+			if ( ! $row['faqs'] ) {
+				$errors[] = "بلوک #$n از نوع faq است ولی هیچ پرسشی ندارد.";
+			}
+		}
+
+		if ( 'specs' === $type ) {
+			foreach ( (array) ( $b['specs'] ?? [] ) as $x ) {
+				$label = cyh_hub_clean( $x['label'] ?? '', false );
+				$value = cyh_hub_clean( $x['value'] ?? '', false );
+				if ( '' !== $label && '' !== $value ) {
+					$row['specs'][] = [
+						'label' => $label,
+						'value' => $value,
+						'unit'  => cyh_hub_clean( $x['unit'] ?? '', false ),
+					];
+				}
+			}
+			if ( ! $row['specs'] ) {
+				$errors[] = "بلوک #$n از نوع specs است ولی هیچ مشخصه‌ی کاملی ندارد (هر مشخصه label و value لازم دارد).";
+			}
+		}
+
+		if ( 'callout' === $type ) {
+			$tone         = sanitize_key( (string) ( $b['tone'] ?? 'note' ) );
+			$row['tone']  = in_array( $tone, [ 'danger', 'note', 'tip' ], true ) ? $tone : 'note';
+			$row['callout_body'] = cyh_hub_clean( $b['body'] ?? '', false );
+			if ( '' === trim( (string) $row['callout_body'] ) ) {
+				$errors[] = "بلوک #$n از نوع callout است ولی `body` ندارد.";
+			}
+		}
+
+		if ( 'parts' === $type ) {
+			foreach ( (array) ( $b['parts'] ?? [] ) as $pt ) {
+				$name = cyh_hub_clean( $pt['name'] ?? ( $pt['part_name'] ?? '' ), false );
+				if ( '' === $name ) {
+					continue;
+				}
+				// ⚠️ فیلد taxonomy شناسه‌ی ترم می‌خواهد نه اسلاگ. اسلاگِ خام،
+				//    یک ارجاع شکسته‌ی بی‌صدا می‌سازد.
+				$slug = sanitize_title( (string) ( $pt['category'] ?? '' ) );
+				$term = $slug ? get_term_by( 'slug', $slug, 'crane_category' ) : null;
+				if ( $slug && ( ! $term || is_wp_error( $term ) ) ) {
+					$errors[] = "بلوک #$n: دسته‌ی «" . esc_html( $slug ) . '» پیدا نشد — لینک قطعه خالی می‌ماند.';
+				}
+				$row['parts'][] = [
+					'part_name'      => $name,
+					'category'       => ( $term && ! is_wp_error( $term ) ) ? (int) $term->term_id : '',
+					'failure_reason' => cyh_hub_clean( $pt['reason'] ?? ( $pt['failure_reason'] ?? '' ), false ),
+				];
+			}
+			if ( ! $row['parts'] ) {
+				$errors[] = "بلوک #$n از نوع parts است ولی هیچ قطعه‌ای ندارد.";
+			}
+		}
+
+		if ( 'media' === $type ) {
+			$errors[] = "بلوک #$n از نوع media است. رسانه باید از پنل انتخاب شود، نه از JSON — این بلوک رد شد.";
+			continue;
+		}
+
+		$rows[] = $row;
+	}
+
+	return [ $rows, $errors ];
 }
 
 /**
@@ -194,10 +360,58 @@ function cyh_hub_import( $payload, $overwrite = false, $dry_run = true ) {
 			}
 
 			foreach ( (array) $fields as $name => $raw ) {
+				/* ── بلوک‌های محتوا ───────────────────────────────────────
+				   ⚠️ مسیر جدا دارد چون شکل ورودی‌اش «قالب نویسنده» است، نه
+				   شکل ACF. تبدیل در `cyh_hub_blocks_to_acf()` انجام می‌شود
+				   و هر بلوکی که روی سایت دیده **نمی‌شود** همان‌جا گزارش
+				   می‌گیرد — به‌جای اینکه بی‌صدا خالی بماند. */
+				if ( 'blocks' === $name ) {
+					list( $acf_rows, $block_errors ) = cyh_hub_blocks_to_acf( $raw );
+
+					foreach ( $block_errors as $msg ) {
+						$report[] = [ $kind, $slug, 'blocks', '⚠ ' . $msg ];
+					}
+
+					$current = get_field( 'content_blocks', $target );
+					$has_now = is_array( $current ) && ! empty( $current );
+
+					if ( $has_now && ! $overwrite ) {
+						$skipped++;
+						$report[] = [ $kind, $slug, 'blocks', 'رد شد (از قبل ' . count( $current ) . ' بلوک دارد)' ];
+						continue;
+					}
+					if ( ! $acf_rows ) {
+						$report[] = [ $kind, $slug, 'blocks', 'هیچ بلوک معتبری در فایل نبود' ];
+						continue;
+					}
+
+					if ( ! $dry_run ) {
+						update_field( 'content_blocks', $acf_rows, $target );
+					}
+
+					$written++;
+					$kinds = [];
+					foreach ( $acf_rows as $r ) {
+						$kinds[ $r['block_type'] ] = ( $kinds[ $r['block_type'] ] ?? 0 ) + 1;
+					}
+					$sum = [];
+					foreach ( $kinds as $k => $c ) {
+						$sum[] = "{$k}×{$c}";
+					}
+					$report[] = [
+						$kind,
+						$slug,
+						'blocks',
+						( $dry_run ? 'نوشته می‌شود' : 'نوشته شد' ) . ' — ' . implode( '، ', $sum ),
+					];
+					continue;
+				}
+
 				$is_simple   = array_key_exists( $name, $map[ $kind ]['simple'] );
 				$is_repeater = in_array( $name, $map[ $kind ]['repeaters'], true );
 				if ( ! $is_simple && ! $is_repeater ) {
-					continue; // فیلد ناشناخته — بی‌صدا رد می‌شود، نه اینکه چیزی خراب کند.
+					$report[] = [ $kind, $slug, $name, '⚠ فیلد ناشناخته — نادیده گرفته شد' ];
+					continue;
 				}
 
 				$current = get_field( $name, $target );
