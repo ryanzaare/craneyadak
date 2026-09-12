@@ -19,6 +19,7 @@
 
 import { isWpConfigured, wpQueryPublic } from './wp';
 import { acfString, acfText } from './acf';
+import { metaExcerpt } from './seo-meta';
 import { wrapProseTables, normalizeProseImages } from './prose-html';
 
 export interface BlogPost {
@@ -73,45 +74,6 @@ interface RawPost {
   content?: string | null;
   categories?: { nodes?: { name?: string | null }[] } | null;
   author?: { node?: { name?: string | null } | null } | null;
-}
-
-/** `<p>…</p>` و `&hellip;` که وردپرس دور چکیده می‌پیچد، برای متا بی‌فایده‌اند. */
-function plainExcerpt(html: unknown): string {
-  return acfText(html)
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&hellip;/g, '…')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/**
- * چکیده در حد یک توضیح متا — با مرز **جمله**، نه با شمردن کاراکتر.
- *
- * ⚠️ وقتی «چکیده»ی دستی در وردپرس خالی باشد، وردپرس ۵۵ کلمه‌ی اول متن را
- * خودکار برمی‌دارد. نتیجه برای هر دو مقاله ۳۰۰ کاراکتر شد، که در Layout
- * به ۱۵۸ بریده می‌شد و وسط جمله با «…» تمام می‌شد.
- *
- * پس اینجا به‌جای بریدن، **جمله‌های کامل** برداشته می‌شوند تا جا شود. اگر
- * حتی جمله‌ی اول بلند باشد، تور ایمنی Layout کار خودش را می‌کند.
- *
- * بهترین حالت هنوز این است که نویسنده «چکیده» را خودش بنویسد؛ این فقط
- * تضمین می‌کند حالت پیش‌فرض هم شکسته نباشد.
- */
-function metaExcerpt(html: unknown, max = 158): string {
-  const text = plainExcerpt(html);
-  if (text.length <= max) return text;
-
-  // جمله‌ها را نگه می‌داریم، همراه با علامت پایانی‌شان.
-  const parts = text.split(/(?<=[.!؟?])\s+/);
-  let out = '';
-  for (const part of parts) {
-    const next = out ? `${out} ${part}` : part;
-    if (next.length > max) break;
-    out = next;
-  }
-  return out || text;
 }
 
 /**
