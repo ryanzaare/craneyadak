@@ -21,6 +21,7 @@
 // از این پس وردپرس مرجع است.
 // ---------------------------------------------------------------------------
 
+import { acfString, acfList } from './acf';
 import { wpQueryPublic } from './wp';
 
 export interface SiteFaq {
@@ -82,7 +83,7 @@ export interface SiteOptions {
  */
 const OPTION_FIELDS = `
   faqs { question answer }
-  businessHours { dayOfWeek opens closes }
+  businessHours { days opens closes }
   geoLat
   geoLng
   googleBusinessProfile
@@ -120,7 +121,7 @@ const QUERY_SHAPES: { name: string; query: string; pick: (d: any) => RawOptions 
 
 interface RawOptions {
   faqs?: ({ question?: string | null; answer?: string | null } | null)[] | null;
-  businessHours?: ({ dayOfWeek?: unknown; opens?: string | null; closes?: string | null } | null)[] | null;
+  businessHours?: ({ days?: unknown; opens?: string | null; closes?: string | null } | null)[] | null;
   geoLat?: number | null;
   geoLng?: number | null;
   googleBusinessProfile?: string | null;
@@ -150,11 +151,8 @@ const EMPTY_CONTACT: SiteContact = {
   hasRealContact: false,
 };
 
-function clean(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed === '' ? null : trimmed;
-}
+// از مرز مشترک — نه یک کپی محلی دیگر.
+const clean = acfString;
 
 function cleanUrl(value: unknown): string | null {
   const raw = clean(value);
@@ -223,9 +221,11 @@ async function fetchOptions(): Promise<SiteOptions> {
 
   const hours: SiteHours[] = (raw.businessHours ?? [])
     .map((row) => {
-      const days = Array.isArray(row?.dayOfWeek)
-        ? row!.dayOfWeek.map((d) => String(d)).filter(Boolean)
-        : [];
+      /* ⚠️ این `dayOfWeek` بود، ولی نام فیلد در ACF `days` است. کوئری با
+         «Cannot query field dayOfWeek» می‌افتاد و ساعت کاری **هرگز** وارد
+         JSON-LD نمی‌شد — یعنی openingHoursSpecification در LocalBusiness
+         غایب بود و هیچ‌کس خبر نداشت، چون این واکشی در سکوت تنزل می‌کرد. */
+      const days = acfList(row?.days);
       const opens = clean(row?.opens);
       const closes = clean(row?.closes);
       // ساعت ناقص وارد اسکیما نمی‌شود — گوگل آن را نامعتبر می‌داند.

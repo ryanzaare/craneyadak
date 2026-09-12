@@ -180,33 +180,85 @@ for (const f of globSync(`${ACF_DIR}/*.json`)) {
     return body();
   };
 
-  const blocksFile = read('src/lib/content-blocks.ts');
-  const groupFile = globSync(`${ACF_DIR}/group_cyh_content_blocks.json`)[0];
+  /* ⚠️ این بررسی اول فقط `content-blocks.ts` را می‌دید و همان‌جا بود که
+     محدود بودنش آسیب زد: `site-options.ts` فیلدی به نام `dayOfWeek`
+     می‌خواست که در ACF `days` نام دارد. کوئری با خطا می‌افتاد، واکشی در
+     سکوت تنزل می‌کرد، و **ساعت کاری هرگز وارد JSON-LD نشد**.
 
-  if (blocksFile && groupFile) {
-    let group = null;
-    try { group = JSON.parse(read(groupFile)); } catch { /* گزارش‌شده در بخش دیگر */ }
+     حالا هر گروه ACF و هر کوئری در `src/lib` بررسی می‌شود. */
+  const groups = new Map();
+  for (const gf of globSync(`${ACF_DIR}/*.json`)) {
+    let g = null;
+    try { g = JSON.parse(read(gf)); } catch { continue; }
+    if (g?.fields && g.graphql_field_name) {
+      groups.set(g.graphql_field_name, acfTree(g.fields));
+    }
+  }
 
-    if (group?.fields) {
-      const expected = { [group.graphql_field_name || 'contentBlocks']: acfTree(group.fields) };
+  const walk = (q, e, file, where) => {
+    for (const [k, v] of Object.entries(q)) {
+      if (!(k in e)) {
+        problems.push(`${file}: کوئری «${where}${k}» را می‌خواهد ولی چنین فیلدی در ACF نیست.`);
+        continue;
+      }
+      if (v && e[k]) walk(v, e[k], file, `${where}${k}.`);
+    }
+  };
 
-      const walk = (q, e, where) => {
-        for (const [k, v] of Object.entries(q)) {
-          if (!(k in e)) {
-            problems.push(`content-blocks.ts: کوئری «${where}${k}» را می‌خواهد ولی چنین فیلدی در ACF نیست.`);
-            continue;
-          }
-          if (v && e[k]) walk(v, e[k], `${where}${k}.`);
+  /* ⚠️ نسخه‌ی اول این بررسی `${FRAGMENT}` را **حذف** می‌کرد، و همان باعث شد
+     دو باگ واقعی را نگیرد: قطعه‌های کوئری در این پروژه در ثابت‌های جدا
+     نوشته می‌شوند (`CORE_BRAND_FIELDS`، `OPTION_FIELDS`) و اسم فیلدها آنجا
+     زندگی می‌کنند، نه داخل بلوک گروه. حذف‌کردنشان یعنی نخواندنِ همان جایی
+     که باگ در آن بود.
+
+     پس به‌جای حذف، **باز** می‌شوند. */
+  const expand = (text, consts, depth = 0) =>
+    depth > 6
+      ? text
+      : text.replace(/\$\{\s*(\w+)\s*\}/g, (whole, name) =>
+          consts.has(name) ? expand(consts.get(name), consts, depth + 1) : ' ',
+        );
+
+  for (const file of globSync('src/lib/*.ts')) {
+    const src = read(file);
+
+    // ثابت‌های قطعه‌ی کوئری در همین فایل
+    const consts = new Map();
+    for (const c of src.matchAll(/const\s+(\w+)\s*=\s*`([\s\S]*?)`/g)) {
+      consts.set(c[1], c[2]);
+    }
+    const short = path.basename(file);
+    const done = []; // بازه‌های پردازش‌شده — برای رد کردن تودرتوها
+
+    for (const [groupName, tree] of groups) {
+      const re = new RegExp(`\\b${groupName}\\s*\\{`, 'g');
+      for (const m of src.matchAll(re)) {
+        // ⚠️ `contentBlocks` هم نام گروه است هم نام ریپیتر داخلش. بدون این،
+        //    نسخه‌ی درونی هم «ریشه» حساب می‌شد و همه‌ی فیلدهایش غایب اعلام
+        //    می‌شدند — ۳۶ خطای کاذب روی کدی که کاملاً درست است.
+        if (done.some(([a, b]) => m.index > a && m.index < b)) continue;
+
+        let depth = 0;
+        let i = m.index + m[0].length - 1;
+        const start = i;
+        for (; i < src.length; i++) {
+          if (src[i] === '{') depth++;
+          else if (src[i] === '}') { depth--; if (depth === 0) break; }
         }
-      };
+        if (depth !== 0) continue;
+        done.push([start, i]);
 
-      for (const name of ['BLOCK_FIELDS', 'BLOCK_FIELDS_SAFE']) {
-        const m = new RegExp(`${name}\\s*=\\s*\`([\\s\\S]*?)\``).exec(blocksFile);
-        if (!m) { problems.push(`content-blocks.ts: ${name} پیدا نشد.`); continue; }
-        walk(parseSelection(m[1]), expected, `${name} → `);
+        // ⚠️ درون‌یابی قالب (`${CORE_BRAND_FIELDS}`) در زمان بررسی مقدارش
+        //    معلوم نیست. حذفش می‌شود تا بقیه‌ی انتخاب — که *ادبی* است و
+        //    دقیقاً همان‌جایی که باگ `dayOfWeek` بود — بررسی شود.
+        const body = expand(src.slice(start + 1, i), consts);
+        if (/[=;()]/.test(body.replace(/\.\.\.\s*on\s+\w+/g, ''))) continue;
+
+        walk(parseSelection(body), tree, short, `${groupName}.`);
       }
     }
   }
+
 }
 
 /* ═══ ۱) فهرست مجاز گروه‌های ACF ═══════════════════════════════════════

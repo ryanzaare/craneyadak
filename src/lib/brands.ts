@@ -33,6 +33,7 @@
 // گزارش می‌شود**. فالبک بی‌صدا دقیقاً همان چیزی بود که این باگ را ساخت.
 // ---------------------------------------------------------------------------
 
+import { acfString, acfChoice } from './acf';
 import { wpQueryPublic } from './wp';
 import { BRANDS, type Brand, type BrandClass } from '../data/taxonomy';
 
@@ -122,11 +123,16 @@ interface RawBrand {
   } | null;
 }
 
-function clean(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed === '' ? null : trimmed;
-}
+/* ⚠️ قبلاً اینجا یک `clean` محلی بود که می‌گفت:
+       if (typeof value !== 'string') return null;
+   یعنی `brandClass: ["oem"]` را — که شکل واقعی هر select در ACF است —
+   رد می‌کرد و `null` می‌داد. نتیجه: گروهِ هر برند از فهرست هاردکد خوانده
+   می‌شد و ویرایش کارفرما در پنل **بی‌صدا دور ریخته می‌شد**.
+   حالا از مرز مشترک می‌آید. */
+const clean = acfString;
+
+/** مقادیر مجاز — همان choices در ACF. */
+const BRAND_CLASS_VALUES = ['control', 'electrical', 'oem'] as const;
 
 /**
  * اعتبارسنجی رنگ. فقط HEX معتبر پذیرفته می‌شود.
@@ -234,8 +240,7 @@ async function fetchBrands(): Promise<EnrichedBrand[]> {
 
   /** گروه معتبر یا پیش‌فرض امن. */
   function toBrandClass(value: unknown): BrandClass {
-    const v = clean(value)?.toLowerCase();
-    return v === 'control' || v === 'electrical' || v === 'oem' ? v : 'oem';
+    return acfChoice(acfString(value)?.toLowerCase(), BRAND_CLASS_VALUES, 'oem');
   }
 
   /** اسلاگ لاتین از نام انگلیسی — برای برندی که اسلاگ وردپرسش فارسی است. */
