@@ -214,29 +214,54 @@ export function hasContent(b: ContentBlock): boolean {
 }
 
 /** قطعه‌ی مشترک کوئری — یک بار نوشته، همه‌جا استفاده. */
+/*
+ * قطعه‌ی مشترک کوئری.
+ *
+ * ⚠️ **دو سطح، نه یک سطح.** بیرونی نام *گروه* فیلد است، درونی نام
+ * *ریپیتر* داخل آن.
+ *
+ * این تفاوت یک بار کل مدل محتوا را قطع کرد. گروه `brandFields` دوازده فیلد
+ * مستقیم دارد، پس کوئری‌اش تک‌سطحی است:
+ *
+ *     brandFields { foundedYear headquarters ... }
+ *
+ * ولی گروه `contentBlocks` فقط **یک** فیلد دارد — ریپیتری به نام
+ * `content_blocks`. پس:
+ *
+ *     contentBlocks { contentBlocks { blockType heading ... } }
+ *     └── گروه       └── ریپیتر
+ *
+ * الگوی تک‌سطحی از گروه همسایه کپی شده بود و خطایش این بود:
+ * «Cannot query field "blockType" on type "ContentBlocks"» — یعنی گروه پیدا
+ * شده بود ولی فیلدها یک سطح پایین‌تر بودند.
+ */
 export const BLOCK_FIELDS = `
   contentBlocks {
-    blockType heading needsReview
-    body
-    intro col1 col2 col3 col4 col5
-    rows { c1 c2 c3 c4 c5 }
-    faqs { question answer }
-    specs { label value unit }
-    tone calloutBody
-    parts { partName failureReason category { nodes { ... on CraneCategory { slug name } } } }
-    media { kind videoUrl caption altText asset { node { sourceUrl altText mediaDetails { width height } } } }
+    contentBlocks {
+      blockType heading needsReview
+      body
+      intro col1 col2 col3 col4 col5
+      rows { c1 c2 c3 c4 c5 }
+      faqs { question answer }
+      specs { label value unit }
+      tone calloutBody
+      parts { partName failureReason category { nodes { ... on CraneCategory { slug name } } } }
+      media { kind videoUrl caption altText asset { node { sourceUrl altText mediaDetails { width height } } } }
+    }
   }
 `;
 
 /** همان قطعه، بدون فیلدهایی که بین نسخه‌های افزونه شکل‌شان فرق می‌کند. */
 export const BLOCK_FIELDS_SAFE = `
   contentBlocks {
-    blockType heading needsReview
-    body
-    intro col1 col2 col3 col4 col5
-    rows { c1 c2 c3 c4 c5 }
-    faqs { question answer }
-    parts { partName failureReason }
+    contentBlocks {
+      blockType heading needsReview
+      body
+      intro col1 col2 col3 col4 col5
+      rows { c1 c2 c3 c4 c5 }
+      faqs { question answer }
+      parts { partName failureReason }
+    }
   }
 `;
 
@@ -300,7 +325,12 @@ async function fetchBlocks(entity: BlockEntity): Promise<Map<string, ContentBloc
       const nodes = data?.[root]?.nodes ?? [];
       for (const node of nodes) {
         if (!node.slug) continue;
-        const blocks = normalizeBlocks(node.contentBlocks);
+        // ⚠️ `contentBlocks` بیرونی گروه است، درونی ریپیتر. اگر روزی ساختار
+        //    گروه عوض شود و فیلدها مستقیم بیایند، این هر دو را می‌پذیرد
+        //    به‌جای اینکه بی‌صدا خالی برگردد.
+        const wrapper = node.contentBlocks as { contentBlocks?: unknown } | unknown[] | null;
+        const raw = Array.isArray(wrapper) ? wrapper : (wrapper?.contentBlocks ?? null);
+        const blocks = normalizeBlocks(raw);
         if (blocks.length) map.set(node.slug, blocks);
       }
 

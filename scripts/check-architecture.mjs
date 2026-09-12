@@ -124,6 +124,91 @@ for (const f of globSync(`${ACF_DIR}/*.json`)) {
   }
 }
 
+/* ═══ ۰ج) کوئری گراف‌کیوال در برابر ساختار واقعی ACF ════════════════════
+   ⚠️ سومین شکست پشت سر هم از یک خانواده، و هر سه بار بررسی‌ها سبز بودند.
+
+     ۱. `graphql_types` می‌گفت «Brand»، تایپ واقعی «CraneBrand» بود.
+     ۲. فایل JSON کلید `modified` نداشت، پس اصلاح هرگز منتشر نمی‌شد.
+     ۳. کوئری تک‌سطحی نوشته شده بود، ولی گروه `contentBlocks` فیلدهایش
+        یک سطح پایین‌تر، داخل ریپیتر `content_blocks` است.
+
+   هر سه‌تا **آفلاین و بدون وردپرس** قابل تشخیص بودند، چون ساختار واقعی
+   همین‌جا در `acf-json/` است. تنها دلیلی که تا build پنهان ماندند این بود
+   که هیچ‌کس این دو را با هم مقایسه نمی‌کرد.
+
+   این بخش درخت انتخاب کوئری را از `content-blocks.ts` می‌خواند، درخت
+   واقعی فیلدها را از JSON می‌سازد، و هر نامی را که در کوئری هست و در ACF
+   نیست گزارش می‌دهد — با مسیر کامل.
+
+   ⚠️ فقط داخل *ریپیتر*ها پایین می‌رود. `asset` و `category` فیلدهای برگ
+   ACF‌اند و انتخاب داخلشان مال WPGraphQL است نه ACF؛ پایین رفتن در آن‌ها
+   مثبت کاذب می‌داد.
+   ═══════════════════════════════════════════════════════════════════ */
+{
+  const camel = (n) => n.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+
+  const acfTree = (fields) => {
+    const out = {};
+    for (const f of fields ?? []) {
+      const name = f.graphql_field_name || camel(f.name ?? '');
+      if (!name) continue;
+      out[name] = Array.isArray(f.sub_fields) && f.sub_fields.length ? acfTree(f.sub_fields) : null;
+    }
+    return out;
+  };
+
+  const parseSelection = (src) => {
+    const tokens = src.match(/\{|\}|\.\.\.|[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
+    let i = 0;
+    const body = () => {
+      const node = {};
+      while (i < tokens.length) {
+        const t = tokens[i];
+        if (t === '}') { i++; return node; }
+        if (t === '...') {
+          i++;
+          if (tokens[i] === 'on') i++;
+          if (tokens[i]) i++;
+          if (tokens[i] === '{') { i++; Object.assign(node, body()); }
+          continue;
+        }
+        i++;
+        if (tokens[i] === '{') { i++; node[t] = body(); } else { node[t] = null; }
+      }
+      return node;
+    };
+    return body();
+  };
+
+  const blocksFile = read('src/lib/content-blocks.ts');
+  const groupFile = globSync(`${ACF_DIR}/group_cyh_content_blocks.json`)[0];
+
+  if (blocksFile && groupFile) {
+    let group = null;
+    try { group = JSON.parse(read(groupFile)); } catch { /* گزارش‌شده در بخش دیگر */ }
+
+    if (group?.fields) {
+      const expected = { [group.graphql_field_name || 'contentBlocks']: acfTree(group.fields) };
+
+      const walk = (q, e, where) => {
+        for (const [k, v] of Object.entries(q)) {
+          if (!(k in e)) {
+            problems.push(`content-blocks.ts: کوئری «${where}${k}» را می‌خواهد ولی چنین فیلدی در ACF نیست.`);
+            continue;
+          }
+          if (v && e[k]) walk(v, e[k], `${where}${k}.`);
+        }
+      };
+
+      for (const name of ['BLOCK_FIELDS', 'BLOCK_FIELDS_SAFE']) {
+        const m = new RegExp(`${name}\\s*=\\s*\`([\\s\\S]*?)\``).exec(blocksFile);
+        if (!m) { problems.push(`content-blocks.ts: ${name} پیدا نشد.`); continue; }
+        walk(parseSelection(m[1]), expected, `${name} → `);
+      }
+    }
+  }
+}
+
 /* ═══ ۱) فهرست مجاز گروه‌های ACF ═══════════════════════════════════════
    هر گروه تازه باید *عمداً* اینجا اضافه شود. اگر کسی گروهی بسازد و این
    فهرست را به‌روز نکند، build می‌شکند — که دقیقاً هدف است. */
