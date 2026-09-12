@@ -95,3 +95,69 @@ export function clampTitle(text: string, where = ''): string {
   }
   return value;
 }
+
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ساختن عنوان و توضیح از «قطعه»، نه بریدن از «کاراکتر»
+ * ═══════════════════════════════════════════════════════════════════════════
+ * بریدنِ کاراکتری روی متنی که از قطعه‌های معنادار ساخته شده، همیشه ارزشمندترین
+ * بخش را قربانی می‌کند — چون آن بخش آخر است.
+ *
+ * دو نمونه‌ی واقعی از همین سایت:
+ *
+ *   • عنوان محصول SAGA1-L12 در ۹۱ کاراکتر ساخته می‌شد و به ۵۷ بریده می‌شد.
+ *     چیزی که حذف شد: «| کرین یدک». یعنی نام برند از عنوان نتیجه‌ی جستجو
+ *     افتاد و به‌جایش «…» نشست.
+ *
+ *   • توضیح ۱۸ دسته از ۳۱ دسته، دمِ ثابتِ «تضمین اصالت کالا، بررسی سازگاری
+ *     فنی و صدور فاکتور رسمی» را از دست می‌داد — یعنی دقیقاً سیگنال‌های
+ *     اعتمادی که آن جمله برای همان‌ها نوشته شده بود.
+ *
+ * راه‌حل: قطعه‌ها اولویت دارند. قطعه‌ای که جا نمی‌شود، **کامل** حذف می‌شود
+ * نه نصفه. نتیجه یک عنوان کوتاه‌ترِ تمیز است، نه یک عنوان بلندِ بریده.
+ *
+ * `clampTitle`/`clampDescription` به‌عنوان تور ایمنی سر جایشان می‌مانند.
+ */
+
+/**
+ * عنوان از قطعه‌های اولویت‌دار. قطعه‌ی اول همیشه می‌ماند؛ بقیه فقط اگر جا شوند.
+ *
+ * @param parts قطعه‌ها به ترتیب اهمیت — مهم‌ترین اول.
+ */
+export function buildTitle(parts: readonly (string | null | undefined)[], where = ''): string {
+  const clean = parts.map((p) => (p ?? '').trim()).filter((p) => p !== '');
+  if (!clean.length) return '';
+
+  let out = clean[0];
+  for (const part of clean.slice(1)) {
+    const next = `${out} | ${part}`;
+    if (next.length > TITLE_MAX) break; // این قطعه و هرچه بعدش است حذف
+    out = next;
+  }
+
+  // اگر حتی قطعه‌ی اول بلند بود، تور ایمنی وارد می‌شود.
+  return out.length > TITLE_MAX ? clampTitle(out, where) : out;
+}
+
+/**
+ * توضیح = متن اختصاصی + بلندترین دمِ ثابتی که جا می‌شود.
+ *
+ * @param lead  متن اختصاصی صفحه. هرگز به نفع دم حذف نمی‌شود.
+ * @param tails دم‌ها از بلند به کوتاه. اگر هیچ‌کدام جا نشد، هیچ‌کدام نمی‌آید.
+ */
+export function buildDescription(
+  lead: string,
+  tails: readonly string[] = [],
+  where = '',
+): string {
+  const head = (lead ?? '').trim();
+  if (head.length > DESC_MAX) return clampDescription(head, where);
+
+  for (const tail of tails) {
+    const t = (tail ?? '').trim();
+    if (!t) continue;
+    const joined = `${head} ${t}`;
+    if (joined.length <= DESC_MAX) return joined;
+  }
+  return head;
+}

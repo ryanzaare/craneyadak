@@ -15,6 +15,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import ProductCard from '../../components/ProductCard.astro';
+import { buildTitle } from '../../lib/seo-meta';
 import { SITE } from '../../data/site';
 import { BRAND_CLASSES, categoryPath, findCategory } from '../../data/taxonomy';
 import { getBrands, type EnrichedBrand } from '../../lib/brands';
@@ -47,7 +48,14 @@ const { brand, products } = Astro.props as Props;
 const reviewMode = import.meta.env.CONTENT_REVIEW === '1';
 
 const classMeta = BRAND_CLASSES[brand.brandClass];
-const title = `قطعات ${brand.nameFa} (${brand.nameEn}) | تامین و استعلام قیمت | ${SITE.name}`;
+/* ⚠️ نام انگلیسی برند عمداً قطعه‌ی جداست: برای برندهای بلند مثل
+   «بالکانسکو اکو (BALKANSKO ECHO)» کل عنوان از ۶۰ رد می‌شد و بریدن،
+   «| کرین یدک» را حذف می‌کرد. حالا به‌جای بریدنِ نام برند، قطعه‌ی
+   کم‌اهمیت‌تر کنار می‌رود. */
+const title = buildTitle(
+  [`قطعات ${brand.nameFa} (${brand.nameEn})`, 'تامین و استعلام قیمت', SITE.name],
+  `/brands/${brand.slug}/`,
+);
 // جمله‌ی معرفِ نوشته‌شده در وردپرس بر توضیح تولیدی اولویت دارد — متنی که
 // انسان نوشته، همیشه از متن قالبی بهتر در SERP دیده می‌شود.
 /* ⚠️ توضیح متا از `brandFields.seoDesc` می‌آید، نه از محتوا.

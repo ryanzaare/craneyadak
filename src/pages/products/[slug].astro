@@ -27,6 +27,7 @@ import Community from '../../components/Community.astro';
 import QuoteBasket from '../../components/QuoteBasket.astro';
 import { qaPageJsonLd, aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
 import { autolinkHtml } from '../../lib/autolink';
+import { buildTitle } from '../../lib/seo-meta';
 import { SITE } from '../../data/site';
 import { findCategory, categoryPath, siloPath, findBrand } from '../../data/taxonomy';
 import {
@@ -60,9 +61,13 @@ const price = computePrice(product);
 const primaryCategory = product.categorySlugs.map((s) => findCategory(s)).find(Boolean) ?? null;
 const brand = product.brandSlug ? findBrand(product.brandSlug) : undefined;
 
-const title = product.sku
-  ? `${product.name} | کد ${product.sku} | ${SITE.name}`
-  : `${product.name} | ${SITE.name}`;
+/* ⚠️ نام محصول تنها قطعه‌ی غیرقابل‌حذف است. عنوان SAGA1-L12 در ۹۱
+   کاراکتر ساخته می‌شد و بریده می‌شد به ۵۷ — و چیزی که می‌افتاد «| کرین یدک»
+   بود، یعنی نام برند از SERP حذف می‌شد و «…» جایش می‌نشست. */
+const title = buildTitle(
+  [product.name, product.sku ? `کد ${product.sku}` : null, SITE.name],
+  `/products/${product.slug}/`,
+);
 
 // متا دیسکریپشن از داده‌ی واقعی ساخته می‌شود، نه از یک قالب عمومی.
 const description = [

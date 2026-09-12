@@ -15,6 +15,7 @@ import Breadcrumb from '../../../components/Breadcrumb.astro';
 import ProductCard from '../../../components/ProductCard.astro';
 import CategoryFilters from '../../../components/CategoryFilters.astro';
 import { facetsForCategory, resolveFacets, specValue, hasUsefulFilters } from '../../../data/filters';
+import { buildTitle, buildDescription } from '../../../lib/seo-meta';
 import { SITE } from '../../../data/site';
 import {
   SILOS,
@@ -62,8 +63,23 @@ const displayBlurb = term.blurb;
 const reviewMode = import.meta.env.CONTENT_REVIEW === '1';
 const blocks = await getBlocks('category', category.slug);
 
-const title = `${category.keyword} | خرید و استعلام قیمت | ${SITE.name}`;
-const description = `${category.blurb} تامین ${category.keyword} با تضمین اصالت کالا، بررسی سازگاری فنی و صدور فاکتور رسمی.`;
+/* ⚠️ قطعه‌ای ساخته می‌شود، نه رشته‌ی یک‌تکه. با رشته‌ی یک‌تکه، بریدنِ طول
+   همیشه دُم را می‌خورد — و دُم همان‌جایی است که «فاکتور رسمی» و نام برند
+   نوشته شده. ۱۸ دسته از ۳۱ دسته دقیقاً همین را از دست می‌دادند. */
+const title = buildTitle(
+  [category.keyword, 'خرید و استعلام قیمت', SITE.name],
+  `/categories/${silo.slug}/${category.slug}/`,
+);
+const description = buildDescription(
+  category.blurb,
+  [
+    `تامین ${category.keyword} با تضمین اصالت کالا، بررسی سازگاری فنی و صدور فاکتور رسمی.`,
+    `تامین ${category.keyword} با تضمین اصالت کالا و فاکتور رسمی.`,
+    'تامین با تضمین اصالت کالا و فاکتور رسمی.',
+    'استعلام قیمت و فاکتور رسمی.',
+  ],
+  `/categories/${silo.slug}/${category.slug}/`,
+);
 
 const path = categoryPath({ ...category, silo });
 const canonical = `${SITE.url}${path}`;
