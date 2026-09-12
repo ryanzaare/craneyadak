@@ -27,7 +27,7 @@ import Community from '../../components/Community.astro';
 import QuoteBasket from '../../components/QuoteBasket.astro';
 import { qaPageJsonLd, aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
 import { autolinkHtml } from '../../lib/autolink';
-import { buildTitle } from '../../lib/seo-meta';
+import { buildTitle, buildDescription } from '../../lib/seo-meta';
 import { SITE } from '../../data/site';
 import { findCategory, categoryPath, siloPath, findBrand } from '../../data/taxonomy';
 import {
@@ -69,16 +69,26 @@ const title = buildTitle(
   `/products/${product.slug}/`,
 );
 
-// متا دیسکریپشن از داده‌ی واقعی ساخته می‌شود، نه از یک قالب عمومی.
-const description = [
+/* متا دیسکریپشن از داده‌ی واقعی ساخته می‌شود، نه از یک قالب عمومی.
+   ⚠️ این یکی `join(' — ').slice(0, 300)` بود — یعنی دقیقاً همان «قطعه‌ها را
+   بچسبان بعد با کاراکتر ببر» که در عنوان‌ها اصلاحش کردیم و اینجا از قلم
+   افتاد. خروجی‌اش ۲۴۲ کاراکتر بود و در Layout به ۱۵۸ بریده می‌شد، پس
+   «فاکتور رسمی» همیشه می‌افتاد. */
+const metaBrand = product.brandNameFa ? `برند ${product.brandNameFa}` : null;
+const metaSku = product.sku ? `کد فنی ${product.sku}` : null;
+
+const description = buildDescription(
   product.summary,
-  product.brandNameFa ? `برند ${product.brandNameFa}` : null,
-  product.sku ? `کد فنی ${product.sku}` : null,
-  'بررسی سازگاری فنی، استعلام قیمت و صدور فاکتور رسمی.',
-]
-  .filter(Boolean)
-  .join(' — ')
-  .slice(0, 300);
+  [
+    [metaBrand, metaSku, 'بررسی سازگاری فنی، استعلام قیمت و صدور فاکتور رسمی.']
+      .filter(Boolean)
+      .join(' — '),
+    [metaBrand, metaSku, 'استعلام قیمت و فاکتور رسمی.'].filter(Boolean).join(' — '),
+    [metaSku, 'استعلام قیمت و فاکتور رسمی.'].filter(Boolean).join(' — '),
+    metaSku ?? '',
+  ],
+  `/products/${product.slug}/`,
+);
 
 const breadcrumbItems = [
   { label: 'صفحه اصلی', href: '/' },
