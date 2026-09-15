@@ -349,8 +349,32 @@ function cyh_hub_import( $payload, $overwrite = false, $dry_run = true ) {
 		return [ 'error' => 'ACF فعال نیست.', 'rows' => [], 'written' => 0, 'skipped' => 0, 'missing' => [] ];
 	}
 
-	foreach ( [ 'brand', 'category' ] as $kind ) {
-		foreach ( (array) ( $payload[ $kind . 's' ] ?? [] ) as $slug => $fields ) {
+	/* ⚠️ جمعِ انگلیسی با چسباندن «s» ساخته نمی‌شود.
+	   کد قبلی `$kind . 's'` بود: برای brand می‌شد «brands» و درست بود، ولی
+	   برای category می‌شد **«categorys»** — کلیدی که در هیچ فایلی وجود
+	   ندارد. نتیجه: حلقه هرگز اجرا نمی‌شد، گزارش خالی برمی‌گشت، صفر فیلد
+	   نوشته می‌شد و **هیچ خطایی هم داده نمی‌شد**.
+	   یعنی ورود دسته از این ابزار هیچ‌وقت کار نکرده بود و کسی نفهمید. */
+	$ROOT_KEYS = [ 'brand' => 'brands', 'category' => 'categories' ];
+
+	// کلیدی در فایل که نمی‌شناسیم، باید گفته شود نه بلعیده.
+	foreach ( array_keys( (array) $payload ) as $key ) {
+		if ( '_' === substr( (string) $key, 0, 1 ) ) {
+			continue; // «_راهنما» و مانندش عمداً نادیده گرفته می‌شوند.
+		}
+		if ( ! in_array( $key, $ROOT_KEYS, true ) ) {
+			$report[] = [
+				'—',
+				'—',
+				(string) $key,
+				'⚠ کلید ناشناخته در فایل — نادیده گرفته شد. کلیدهای معتبر: '
+					. implode( '، ', $ROOT_KEYS ),
+			];
+		}
+	}
+
+	foreach ( $ROOT_KEYS as $kind => $root ) {
+		foreach ( (array) ( $payload[ $root ] ?? [] ) as $slug => $fields ) {
 			$slug   = sanitize_title( (string) $slug );
 			$target = cyh_hub_locate( $kind, $slug );
 
@@ -436,6 +460,18 @@ function cyh_hub_import( $payload, $overwrite = false, $dry_run = true ) {
 				$report[] = [ $kind, $slug, $name, ( $dry_run ? 'نوشته می‌شود' : 'نوشته شد' ) . " — $size" ];
 			}
 		}
+	}
+
+	// گزارش خالی یعنی «هیچ موجودیتی در فایل نبود» — و باید همین را بگوید،
+	// نه اینکه یک جدول بی‌ردیف نشان بدهد و کاربر حدس بزند.
+	if ( ! $report ) {
+		$report[] = [
+			'—',
+			'—',
+			'—',
+			'هیچ برند یا دسته‌ای در فایل پیدا نشد. ساختار فایل باید '
+				. '{"categories": {"اسلاگ": {...}}} یا {"brands": {...}} باشد.',
+		];
 	}
 
 	return [ 'rows' => $report, 'written' => $written, 'skipped' => $skipped, 'missing' => $missing ];
@@ -570,6 +606,17 @@ function cyh_hub_take( $key ) {
 
 function cyh_hub_page() {
 	$import_url = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_hub_import' ), 'cyh_hub_import' );
+
+	/* ⚠️ این خطا stash می‌شد ولی **هیچ‌وقت خوانده نمی‌شد**. یعنی اگر فایلی
+	   انتخاب نمی‌شد یا JSON خراب بود، کاربر هیچ پیامی نمی‌دید و صفحه
+	   بی‌تفاوت بارگذاری می‌شد. */
+	$fatal = cyh_hub_take( 'error' );
+	if ( $fatal ) {
+		printf(
+			'<div class="notice notice-error"><p><strong>ورود انجام نشد:</strong> %s</p></div>',
+			esc_html( (string) $fatal )
+		);
+	}
 
 	$report = cyh_hub_take( 'report' );
 	// ── ورود از فایل ────────────────────────────────────────────────────

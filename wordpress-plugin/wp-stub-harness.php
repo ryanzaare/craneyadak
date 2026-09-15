@@ -983,6 +983,56 @@ if ( $woo_mode ) {
 	} else {
 		echo '✓ ' . count( $bad_errs ) . " مشکلِ «روی سایت دیده نمی‌شود» گزارش شد به‌جای سکوت\n";
 	}
+
+	/* ═══════════════════════════════════════════════════════════════════════
+	   کلید ریشه‌ی فایل ورود
+	   ═══════════════════════════════════════════════════════════════════════
+	   `$kind . 's'` برای category می‌شد «categorys» — کلیدی که وجود ندارد.
+	   پس ورود دسته هیچ‌وقت کار نکرده بود، و چون گزارش خالی برمی‌گشت و هیچ
+	   خطایی نمی‌داد، کسی نفهمید. */
+	$tid = 7701;
+	$GLOBALS['cyh_test_terms'][ $tid ] = (object) [ 'term_id' => $tid, 'slug' => 'wire-rope', 'name' => 'سیم‌بکسل' ];
+
+	$res = cyh_hub_import(
+		[
+			'_راهنما'    => [ 'هر' => 'چیزی' ],
+			'categories' => [
+				'wire-rope' => [
+					'keyword' => 'سیم‌بکسل جرثقیل',
+					'blocks'  => [
+						[ 'type' => 'text', 'heading' => 'معرفی', 'body' => '<p>متن</p>' ],
+						[ 'type' => 'faq', 'heading' => 'پرسش', 'faqs' => [ [ 'q' => 'چرا؟', 'a' => 'چون.' ] ] ],
+					],
+				],
+			],
+		],
+		false,
+		true
+	);
+
+	$fields_seen = array_column( $res['rows'], 2 );
+	if ( ! in_array( 'blocks', $fields_seen, true ) ) {
+		$errors[] = 'کلید «categories» خوانده نشد — همان باگی که ورود دسته را بی‌صدا از کار انداخته بود';
+	} elseif ( ! in_array( 'keyword', $fields_seen, true ) ) {
+		$errors[] = 'فیلد هویتی «keyword» در کنار بلوک‌ها نوشته نشد';
+	} else {
+		echo "✓ کلید «categories» خوانده می‌شود و بلوک‌ها به ردیف ACF تبدیل می‌شوند\n";
+	}
+
+	// کلید ریشه‌ی غلط باید گزارش شود، نه بلعیده.
+	$noisy = cyh_hub_import( [ 'categorys' => [ 'wire-rope' => [ 'keyword' => 'x' ] ] ], false, true );
+	if ( false === strpos( implode( ' ', array_column( $noisy['rows'], 3 ) ), 'کلید ناشناخته' ) ) {
+		$errors[] = 'کلید ریشه‌ی غلط («categorys») بی‌صدا نادیده گرفته شد';
+	} else {
+		echo "✓ کلید ریشه‌ی ناشناخته گزارش می‌شود به‌جای سکوت\n";
+	}
+
+	// فایل بدون هیچ موجودیتی هم باید دلیلش را بگوید.
+	if ( ! cyh_hub_import( [], false, true )['rows'] ) {
+		$errors[] = 'فایل خالی یک جدول بی‌ردیف می‌دهد — کاربر باید حدس بزند چه شد';
+	} else {
+		echo "✓ فایل بدون برند و دسته، دلیلش را می‌گوید\n";
+	}
 }
 
 
