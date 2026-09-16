@@ -318,6 +318,11 @@ function add_menu_page( $page_title, $menu_title, $cap, $slug, $cb = null, $icon
 	return $slug;
 }
 
+function add_management_page( $page_title, $menu_title, $cap, $slug, $cb = '' ) {
+	$GLOBALS['cyh_test_menus'][] = [ 'parent' => 'tools.php', 'slug' => $slug, 'cb' => $cb ];
+	return $slug;
+}
+
 function add_submenu_page( $parent, $page_title, $menu_title, $cap, $slug, $cb = null, $pos = null ) {
 	if ( '' === (string) $slug ) { throw new Exception( 'add_submenu_page: empty slug' ); }
 	if ( $cb !== null && ! is_callable( $cb ) ) {

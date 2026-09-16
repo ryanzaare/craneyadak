@@ -63,7 +63,12 @@ function cyh_register_quote_cpt() {
 			],
 			'public'          => false,
 			'show_ui'         => true,
-			'show_in_menu'    => 'edit.php?post_type=product',
+			/* ⚠️ قبلاً زیر «محصولات» بود. درخواست خرید مشتری، محصول نیست —
+			   مهم‌ترین صندوق ورودی کسب‌وکار است و نباید زیر یک منوی دیگر
+			   پنهان شود. منوی مستقل با نشان زنگوله. */
+			'show_in_menu'    => true,
+			'menu_icon'       => 'dashicons-bell',
+			'menu_position'   => 27,
 			'show_in_graphql' => false,
 			'supports'        => [ 'title' ],
 			'capability_type' => 'post',

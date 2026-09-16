@@ -1,0 +1,472 @@
+{
+  "_راهنما": {
+    "این_فایل_چیست": "فیلترهای فنی ۲۱ دسته، استخراج‌شده از کد. پس از ورود این فایل، هیچ دسته‌ای برای داشتن فیلتر به تغییر کد نیاز ندارد.",
+    "نحوه_ورود": "پنل وردپرس ← ابزارها ← ورود محتوای برند و دسته",
+    "توجه": "این‌ها همان مقادیری‌اند که همین حالا روی سایت کار می‌کنند — هیچ‌چیز تازه‌ای ساخته نشده و هیچ‌چیز حدس زده نشده."
+  },
+  "categories": {
+    "rope-guide": {
+      "facets": [
+        {
+          "label": "قطر سیم‌بکسل",
+          "spec_label": "قطر سیم بکسل",
+          "kind": "range",
+          "unit": "mm",
+          "hint": "کمربند باید دقیقاً با قطر سیم‌بکسل دستگاه هم‌خوان باشد؛ اختلاف چند دهم میلی‌متر باعث گیرکردن یا لغزش می‌شود."
+        },
+        {
+          "label": "گام شیار درام",
+          "spec_label": "گام شیار درام",
+          "kind": "range",
+          "unit": "mm",
+          "hint": "گام اشتباه یعنی سیم‌بکسل روی درام مرتب جمع نمی‌شود و لایه‌ها روی هم می‌افتند."
+        },
+        {
+          "label": "قطر درام",
+          "spec_label": "قطر درام",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "جنس بدنه",
+          "spec_label": "جنس بدنه",
+          "kind": "checkbox",
+          "hint": "چدن مقاومت بالاتر، تفلون اصطکاک کمتر و حرکت نرم‌تر."
+        }
+      ]
+    },
+    "crane-drum": {
+      "facets": [
+        {
+          "label": "قطر درام",
+          "spec_label": "قطر درام",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "طول درام",
+          "spec_label": "طول درام",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "نوع شیار",
+          "spec_label": "نوع شیار",
+          "kind": "checkbox",
+          "hint": "ساده یا شیاردار — روی عمر سیم‌بکسل اثر مستقیم دارد."
+        }
+      ]
+    },
+    "crane-coupling": {
+      "facets": [
+        {
+          "label": "قطر داخلی",
+          "spec_label": "قطر داخلی",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "گشتاور مجاز",
+          "spec_label": "گشتاور مجاز",
+          "kind": "range",
+          "unit": "N·m",
+          "hint": "گشتاور کمتر از نیاز، در راه‌اندازی زیر بار می‌شکند."
+        },
+        {
+          "label": "نوع کوپلینگ",
+          "spec_label": "نوع کوپلینگ",
+          "kind": "checkbox"
+        }
+      ]
+    },
+    "busbar-power-line": {
+      "facets": [
+        {
+          "label": "آمپراژ",
+          "spec_label": "آمپراژ",
+          "kind": "range",
+          "unit": "A",
+          "hint": "آمپراژ کمتر از مصرف، باعث گرم‌شدن شین و افت ولتاژ انتهای مسیر می‌شود."
+        },
+        {
+          "label": "تعداد شین (قطب)",
+          "spec_label": "تعداد قطب",
+          "kind": "checkbox",
+          "hint": "معمولاً ۴ شینه (سه فاز + ارت). سیستم‌های کنترلی ممکن است بیشتر بخواهند."
+        },
+        {
+          "label": "طول شاخه",
+          "spec_label": "طول شاخه",
+          "kind": "range",
+          "unit": "m"
+        }
+      ]
+    },
+    "current-collector": {
+      "facets": [
+        {
+          "label": "آمپراژ",
+          "spec_label": "آمپراژ",
+          "kind": "range",
+          "unit": "A"
+        },
+        {
+          "label": "جنس زغال",
+          "spec_label": "جنس زغال",
+          "kind": "checkbox",
+          "hint": "جنس زغال باید با جنس شین هم‌خوان باشد وگرنه یکی دیگری را می‌ساید."
+        },
+        {
+          "label": "تعداد قطب",
+          "spec_label": "تعداد قطب",
+          "kind": "checkbox"
+        }
+      ]
+    },
+    "wire-and-cable": {
+      "facets": [
+        {
+          "label": "سطح مقطع",
+          "spec_label": "سطح مقطع",
+          "kind": "range",
+          "unit": "mm²"
+        },
+        {
+          "label": "تعداد رشته",
+          "spec_label": "تعداد رشته",
+          "kind": "checkbox"
+        }
+      ]
+    },
+    "remote-control": {
+      "facets": [
+        {
+          "label": "تعداد کانال",
+          "spec_label": "تعداد کانال",
+          "kind": "checkbox",
+          "hint": "هر حرکت (بالا/پایین، چپ/راست، جلو/عقب) یک جفت کانال می‌خواهد."
+        },
+        {
+          "label": "فرکانس کاری",
+          "spec_label": "فرکانس کاری",
+          "kind": "checkbox"
+        },
+        {
+          "label": "درجه حفاظت",
+          "spec_label": "درجه حفاظت",
+          "kind": "checkbox",
+          "unit": "IP",
+          "hint": "محیط غبارآلود یا مرطوب حداقل IP65 می‌خواهد."
+        }
+      ]
+    },
+    "inverter": {
+      "facets": [
+        {
+          "label": "توان",
+          "spec_label": "توان",
+          "kind": "range",
+          "unit": "kW"
+        },
+        {
+          "label": "ولتاژ ورودی",
+          "spec_label": "ولتاژ ورودی",
+          "kind": "checkbox"
+        },
+        {
+          "label": "فاز",
+          "spec_label": "فاز",
+          "kind": "checkbox"
+        }
+      ]
+    },
+    "contactor": {
+      "facets": [
+        {
+          "label": "جریان نامی",
+          "spec_label": "جریان نامی",
+          "kind": "range",
+          "unit": "A"
+        },
+        {
+          "label": "کلاس کاری",
+          "spec_label": "کلاس کاری",
+          "kind": "checkbox",
+          "hint": "AC-3 برای بار عادی، AC-4 برای قطع و وصل پرتکرار زیر بار — در جرثقیل اغلب AC-4."
+        },
+        {
+          "label": "ولتاژ بوبین",
+          "spec_label": "ولتاژ بوبین",
+          "kind": "checkbox"
+        }
+      ]
+    },
+    "microswitch": {
+      "facets": [
+        {
+          "label": "نوع اهرم",
+          "spec_label": "نوع اهرم",
+          "kind": "checkbox"
+        },
+        {
+          "label": "تعداد کنتاکت",
+          "spec_label": "تعداد کنتاکت",
+          "kind": "checkbox"
+        },
+        {
+          "label": "درجه حفاظت",
+          "spec_label": "درجه حفاظت",
+          "kind": "checkbox"
+        }
+      ]
+    },
+    "brake-wheel-disc": {
+      "facets": [
+        {
+          "label": "قطر دیسک",
+          "spec_label": "قطر دیسک",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "گشتاور ترمز",
+          "spec_label": "گشتاور ترمز",
+          "kind": "range",
+          "unit": "N·m",
+          "hint": "گشتاور ناکافی یعنی بار در توقف سُر می‌خورد — بحرانی‌ترین پارامتر ایمنی این قطعه."
+        },
+        {
+          "label": "جنس لنت",
+          "spec_label": "جنس لنت",
+          "kind": "checkbox"
+        }
+      ]
+    },
+    "brake-magnet": {
+      "facets": [
+        {
+          "label": "ولتاژ بوبین",
+          "spec_label": "ولتاژ بوبین",
+          "kind": "checkbox"
+        },
+        {
+          "label": "نیروی کششی",
+          "spec_label": "نیروی کششی",
+          "kind": "range",
+          "unit": "N"
+        },
+        {
+          "label": "دوره کاری",
+          "spec_label": "دوره کاری",
+          "kind": "checkbox",
+          "unit": "%ED"
+        }
+      ]
+    },
+    "rectifier": {
+      "facets": [
+        {
+          "label": "ولتاژ ورودی",
+          "spec_label": "ولتاژ ورودی",
+          "kind": "checkbox"
+        },
+        {
+          "label": "ولتاژ خروجی",
+          "spec_label": "ولتاژ خروجی",
+          "kind": "checkbox"
+        },
+        {
+          "label": "جریان خروجی",
+          "spec_label": "جریان خروجی",
+          "kind": "range",
+          "unit": "A"
+        }
+      ]
+    },
+    "gearbox-motor": {
+      "facets": [
+        {
+          "label": "نسبت تبدیل",
+          "spec_label": "نسبت تبدیل",
+          "kind": "checkbox",
+          "hint": "نسبت اشتباه یعنی سرعت حرکت با طراحی جرثقیل نمی‌خواند."
+        },
+        {
+          "label": "توان موتور",
+          "spec_label": "توان موتور",
+          "kind": "range",
+          "unit": "kW"
+        },
+        {
+          "label": "دور خروجی",
+          "spec_label": "دور خروجی",
+          "kind": "range",
+          "unit": "rpm"
+        },
+        {
+          "label": "نوع نصب",
+          "spec_label": "نوع نصب",
+          "kind": "checkbox",
+          "hint": "فلنجی، پایه‌دار یا شفت‌توخالی — تعیین‌کننده‌ی امکان نصب روی همان جای قبلی."
+        },
+        {
+          "label": "ترمز داخلی",
+          "spec_label": "ترمز داخلی",
+          "kind": "checkbox"
+        }
+      ]
+    },
+    "crane-wheel": {
+      "facets": [
+        {
+          "label": "قطر چرخ",
+          "spec_label": "قطر چرخ",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "عرض سطح تماس",
+          "spec_label": "عرض سطح تماس",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "نوع فلنج",
+          "spec_label": "نوع فلنج",
+          "kind": "checkbox",
+          "hint": "یک‌طرفه یا دوطرفه — با پروفیل ریل دستگاه باید بخواند."
+        },
+        {
+          "label": "بار مجاز چرخ",
+          "spec_label": "بار مجاز چرخ",
+          "kind": "range",
+          "unit": "kg"
+        }
+      ]
+    },
+    "bearing": {
+      "facets": [
+        {
+          "label": "قطر داخلی",
+          "spec_label": "قطر داخلی",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "قطر خارجی",
+          "spec_label": "قطر خارجی",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "عرض",
+          "spec_label": "عرض",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "نوع بیرینگ",
+          "spec_label": "نوع بیرینگ",
+          "kind": "checkbox"
+        }
+      ]
+    },
+    "crane-hook": {
+      "facets": [
+        {
+          "label": "ظرفیت نامی",
+          "spec_label": "ظرفیت نامی",
+          "kind": "range",
+          "unit": "ton",
+          "hint": "ظرفیت قلاب هرگز نباید کمتر از ظرفیت نامی جرثقیل انتخاب شود."
+        },
+        {
+          "label": "کلاس مقاومت",
+          "spec_label": "کلاس مقاومت",
+          "kind": "checkbox"
+        },
+        {
+          "label": "نوع اتصال",
+          "spec_label": "نوع اتصال",
+          "kind": "checkbox",
+          "hint": "شفتی یا چشمی — باید با مکانیزم بالابر موجود بخواند."
+        }
+      ]
+    },
+    "wire-rope": {
+      "facets": [
+        {
+          "label": "قطر",
+          "spec_label": "قطر",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "ساختار بافت",
+          "spec_label": "ساختار بافت",
+          "kind": "checkbox"
+        },
+        {
+          "label": "جنس مغزی",
+          "spec_label": "جنس مغزی",
+          "kind": "checkbox",
+          "hint": "مغز فولادی مقاومت بالاتر، مغز کنفی انعطاف بیشتر."
+        },
+        {
+          "label": "حداقل بار پارگی",
+          "spec_label": "حداقل بار پارگی",
+          "kind": "range",
+          "unit": "kN"
+        }
+      ]
+    },
+    "crane-rail": {
+      "facets": [
+        {
+          "label": "پروفیل ریل",
+          "spec_label": "پروفیل ریل",
+          "kind": "checkbox",
+          "hint": "پروفیل ریل تعیین‌کننده‌ی انتخاب چرخ است؛ این دو همیشه با هم انتخاب می‌شوند."
+        },
+        {
+          "label": "عرض سر ریل",
+          "spec_label": "عرض سر ریل",
+          "kind": "range",
+          "unit": "mm"
+        }
+      ]
+    },
+    "end-carriage": {
+      "facets": [
+        {
+          "label": "فاصله چرخ‌ها",
+          "spec_label": "فاصله چرخ ها",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "ظرفیت",
+          "spec_label": "ظرفیت",
+          "kind": "range",
+          "unit": "ton"
+        }
+      ]
+    },
+    "shock-absorber": {
+      "facets": [
+        {
+          "label": "کورس",
+          "spec_label": "کورس",
+          "kind": "range",
+          "unit": "mm"
+        },
+        {
+          "label": "انرژی جذب‌شده",
+          "spec_label": "انرژی جذب شده",
+          "kind": "range",
+          "unit": "J"
+        }
+      ]
+    }
+  }
+}

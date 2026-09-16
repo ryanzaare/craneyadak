@@ -11,7 +11,8 @@
 // محصولی ثبت نشده باشد، آن فیلتر اصلاً رندر نمی‌شود — نوار کناری فقط
 // چیزی را نشان می‌دهد که واقعاً قابل فیلتر کردن است.
 // ---------------------------------------------------------------------------
-import { facetsForCategory, resolveFacets, specValue } from '../data/filters';
+import { resolveFacets, specValue } from '../data/filters';
+import { getCategoryFacets } from '../lib/category-facets';
 import { BRANDS } from '../data/taxonomy';
 import { computePrice, type CraneProduct } from '../lib/wp';
 
@@ -23,7 +24,8 @@ interface Props {
 
 const { products, categorySlug, class: className = '' } = Astro.props;
 
-const specFacets = resolveFacets(products, facetsForCategory(categorySlug));
+// فیلترها از وردپرس می‌آیند (categoryMeta.spec_facets)، نه از نقشه‌ی کد.
+const specFacets = resolveFacets(products, await getCategoryFacets(categorySlug));
 
 const brandCounts = new Map<string, number>();
 for (const p of products) {

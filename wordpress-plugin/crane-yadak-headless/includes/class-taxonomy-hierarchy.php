@@ -255,123 +255,6 @@ function cyh_build_taxonomy_hierarchy() {
 		'failed'         => $failed,
 	];
 }
-
-
-/** صفحه‌ی ابزار. */
-function cyh_hierarchy_menu() {
-	add_submenu_page(
-		'edit.php?post_type=product',
-		'ساختار دسته‌بندی',
-		'ساختار دسته‌بندی',
-		'manage_options',
-		'cyh-hierarchy',
-		'cyh_hierarchy_page'
-	);
-}
-add_action( 'admin_menu', 'cyh_hierarchy_menu' );
-
-function cyh_hierarchy_page() {
-	$silos = cyh_silo_blueprint();
-	$url   = wp_nonce_url( admin_url( 'admin-post.php?action=cyh_build_hierarchy' ), 'cyh_build_hierarchy' );
-
-	// وضعیت فعلی.
-	$missing_silos = 0;
-	$rooted        = 0;
-	foreach ( $silos as $slug => $info ) {
-		$t = get_term_by( 'slug', $slug, 'crane_category' );
-		if ( ! $t || is_wp_error( $t ) ) {
-			$missing_silos++;
-		}
-	}
-	$all = get_terms( [ 'taxonomy' => 'crane_category', 'hide_empty' => false ] );
-	if ( ! is_wp_error( $all ) ) {
-		foreach ( $all as $t ) {
-			if ( 0 === (int) $t->parent && ! isset( $silos[ $t->slug ] ) ) {
-				$rooted++;
-			}
-		}
-	}
-
-	echo '<div class="wrap">';
-	echo '<h1>ساختار دسته‌بندی قطعات</h1>';
-
-	if ( isset( $_GET['cyh_h_done'] ) ) {
-		printf(
-			'<div class="notice notice-success is-dismissible"><p><strong>%d سیلو ساخته شد</strong> (%d از قبل بود) و <strong>%d دسته زیر والد خود منتقل شد</strong> (%d از قبل درست بود).<br>' .
-			'<strong>%d دسته</strong> عبارت کلیدی، توضیح و آیکون خود را از ساختار قبلی دریافت کرد.</p></div>',
-			(int) ( $_GET['cyh_h_created'] ?? 0 ),
-			(int) ( $_GET['cyh_h_existing'] ?? 0 ),
-			(int) ( $_GET['cyh_h_moved'] ?? 0 ),
-			(int) ( $_GET['cyh_h_already'] ?? 0 ),
-			(int) ( $_GET['cyh_h_meta'] ?? 0 )
-		);
-	}
-
-	echo '<div style="background:#f6f7f7;border:1px solid #dcdcde;padding:12px 16px;margin:16px 0;max-width:880px">';
-	echo '<p style="margin:0 0 8px"><strong>این ابزار یک‌بار اجرا می‌شود.</strong> هفت «گروه فنی» را به‌عنوان دستهٔ مادرِ واقعی می‌سازد و ۳۱ دستهٔ موجود را زیر والد درستشان می‌برد.</p>';
-	echo '<p style="margin:0">پس از اجرا، افزودن دستهٔ جدید کاملاً از همین پنل انجام می‌شود: <strong>نام + نامک لاتین + انتخاب دستهٔ مادر</strong>. سایت در build بعدی خودش صفحه و آدرس آن را می‌سازد. دیگر هیچ کدی لازم نیست.</p>';
-	echo '</div>';
-
-	if ( $missing_silos > 0 || $rooted > 0 ) {
-		printf(
-			'<p><a class="button button-primary button-hero" href="%s">ساخت %d سیلو و مرتب‌سازی %d دسته</a></p>',
-			esc_url( $url ),
-			$missing_silos,
-			$rooted
-		);
-	} else {
-		echo '<div class="notice notice-success"><p><strong>✓ ساختار درست است.</strong> هر ۷ سیلو موجودند و هیچ دسته‌ای بدون والد نمانده.</p></div>';
-		printf( '<p><a class="button" href="%s">اجرای دوباره (بی‌خطر)</a></p>', esc_url( $url ) );
-	}
-
-	// درخت فعلی.
-	echo '<h2 style="margin-top:28px">ساختار فعلی در وردپرس</h2>';
-	echo '<table class="wp-list-table widefat fixed striped" style="max-width:880px"><thead><tr>';
-	echo '<th style="width:44%">دسته</th><th style="width:210px">نامک</th><th style="width:120px">محصول</th><th>وضعیت</th>';
-	echo '</tr></thead><tbody>';
-
-	if ( ! is_wp_error( $all ) ) {
-		$children = [];
-		$roots    = [];
-		foreach ( $all as $t ) {
-			if ( 0 === (int) $t->parent ) {
-				$roots[] = $t;
-			} else {
-				$children[ (int) $t->parent ][] = $t;
-			}
-		}
-
-		foreach ( $roots as $root ) {
-			$is_silo = isset( $silos[ $root->slug ] );
-			printf(
-				'<tr><td><strong>%s</strong></td><td><code>%s</code></td><td style="text-align:center">%d</td><td>%s</td></tr>',
-				esc_html( $root->name ),
-				esc_html( $root->slug ),
-				(int) $root->count,
-				$is_silo
-					? '<span style="color:#00a32a;font-weight:700">سیلو</span>'
-					: '<span style="color:#d63638;font-weight:700">⚠ بدون والد</span>'
-			);
-
-			foreach ( $children[ (int) $root->term_id ] ?? [] as $child ) {
-				printf(
-					'<tr><td style="padding-inline-start:34px">↳ %s</td><td><code>%s</code></td><td style="text-align:center">%d</td><td>%s</td></tr>',
-					esc_html( $child->name ),
-					esc_html( $child->slug ),
-					(int) $child->count,
-					preg_match( '/^[a-z0-9-]+$/', $child->slug )
-						? '<span style="color:#00a32a">✓</span>'
-						: '<span style="color:#d63638;font-weight:700">⚠ نامک لاتین نیست</span>'
-				);
-			}
-		}
-	}
-	echo '</tbody></table>';
-
-	echo '<p class="description" style="max-width:880px;margin-top:16px"><strong>دستهٔ «بدون والد»</strong> روی سایت ساخته نمی‌شود، چون آدرسش <code>/categories/[سیلو]/[دسته]</code> است و بدون سیلو آدرسی ندارد. build با پیام روشن هشدار می‌دهد.</p>';
-	echo '</div>';
-}
-
 /** هندلر. */
 
 
@@ -682,14 +565,9 @@ function cyh_category_menu() {
 		'edit-tags.php?taxonomy=crane_category&post_type=product'
 	);
 
-	add_submenu_page(
-		'edit-tags.php?taxonomy=crane_category&post_type=product',
-		'ساختار دسته‌بندی',
-		'ساختار دسته‌بندی',
-		'manage_options',
-		'cyh-hierarchy',
-		'cyh_hierarchy_page'
-	);
+	/* ⚠️ زیرمنوی «ساختار دسته‌بندی» اینجا بود و حذف شد — ابزار مهاجرت
+	   یک‌باره‌ای که کارش تمام شده (۷ سیلو و ۳۱ دسته ساخته شده) و دکمه‌اش
+	   هم مرده بود: به `cyh_build_hierarchy` اشاره می‌کرد بدون هیچ هندلر. */
 }
 add_action( 'admin_menu', 'cyh_category_menu' );
 

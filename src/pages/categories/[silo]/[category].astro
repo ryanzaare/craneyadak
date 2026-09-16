@@ -14,7 +14,8 @@ import Layout from '../../../layouts/Layout.astro';
 import Breadcrumb from '../../../components/Breadcrumb.astro';
 import ProductCard from '../../../components/ProductCard.astro';
 import CategoryFilters from '../../../components/CategoryFilters.astro';
-import { facetsForCategory, resolveFacets, specValue, hasUsefulFilters } from '../../../data/filters';
+import { resolveFacets, specValue, hasUsefulFilters } from '../../../data/filters';
+import { getCategoryFacets } from '../../../lib/category-facets';
 import { buildTitle, buildDescription } from '../../../lib/seo-meta';
 import { SITE } from '../../../data/site';
 import {
@@ -149,12 +150,13 @@ const jsonLd = {
 };
 
 // فیلترهای تخصصی همین دسته — مقادیر از خودِ محصولات استخراج می‌شوند.
-const catFacets = resolveFacets(products, facetsForCategory(category.slug));
+const categoryFacets = await getCategoryFacets(category.slug);
+const catFacets = resolveFacets(products, categoryFacets);
 
 /* ⚠️ چیدمان باید بداند نوار فیلتر می‌آید یا نه.
    بدون این، وقتی هیچ فیلتری رندر نشود، شبکه‌ی محصولات در ستون ۱۵rem
    له می‌شود. (توضیح کامل در hasUsefulFilters) */
-const showFilters = hasUsefulFilters(products, category.slug);
+const showFilters = hasUsefulFilters(products, categoryFacets);
 
 /** صفت‌های داده روی هر کارت تا فیلتر سمت کلاینت بتواند بخواندشان. */
 function catAttrs(product: typeof products[number]) {

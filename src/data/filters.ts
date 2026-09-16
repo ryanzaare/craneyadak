@@ -357,7 +357,11 @@ export function validateFilterLabels(products: CraneProduct[]): void {
    آن تصمیم است و هر دو طرف از آن استفاده می‌کنند — تا دوباره از هم
    واگرا نشوند.
    ═══════════════════════════════════════════════════════════════════════ */
-export function hasUsefulFilters(products: CraneProduct[], categorySlug: string): boolean {
+/* ⚠️ امضا از «اسلاگ» به «فیلترهای آماده» عوض شد: فیلترها دیگر از نقشه‌ی
+   کد نمی‌آیند بلکه از وردپرس، و آن واکشی async است. گرفتن اسلاگ یعنی این
+   تابع هم باید async می‌شد و همه‌ی مصرف‌کننده‌ها با آن. گرفتن نتیجه‌ی
+   آماده، تابع را خالص نگه می‌دارد. */
+export function hasUsefulFilters(products: CraneProduct[], facets: SpecFacet[]): boolean {
   if (products.length === 0) return false;
 
   /** گزینه‌ای که همه یا هیچ‌کدام را می‌گیرد، چیزی را باریک نمی‌کند. */
@@ -373,7 +377,7 @@ export function hasUsefulFilters(products: CraneProduct[], categorySlug: string)
   const brands = new Set(products.map((p) => p.brandSlug).filter(Boolean));
   if (brands.size >= 2) return true;
 
-  return resolveFacets(products, facetsForCategory(categorySlug)).some((f) =>
+  return resolveFacets(products, facets).some((f) =>
     f.kind === 'range' ? f.min !== f.max : f.values.length >= 2
   );
 }

@@ -41,6 +41,19 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = resolve(ROOT, 'src/data/taxonomy.generated.ts');
 const ALLOW_STALE = process.argv.includes('--allow-stale');
 
+/* ⚠️ هشدار بلند — ایراد درستِ ممیزی بیرونی.
+   بدون این، برنامه‌نویس می‌تواند ساعت‌ها روی تاکسونومی کهنه کار کند و
+   نفهمد چرا دسته‌ی تازه‌اش ظاهر نمی‌شود. */
+if (ALLOW_STALE) {
+  console.warn(
+    '\n' + '━'.repeat(64) +
+    '\n⚠️  حالت --allow-stale فعال است: تاکسونومی از فایل قبلی خوانده می‌شود' +
+    '\n   و با وردپرس هم‌گام نیست. دسته‌ی تازه‌ای که در پنل ساخته‌اید' +
+    '\n   اینجا دیده نمی‌شود. این حالت فقط برای `npm run dev` است.' +
+    '\n' + '━'.repeat(64) + '\n',
+  );
+}
+
 // ── خواندن .env بدون وابستگی بیرونی ─────────────────────────────────────────
 function loadEnv() {
   const file = resolve(ROOT, '.env');

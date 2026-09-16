@@ -263,6 +263,55 @@ function cyh_hub_clean( $value, $allow_html ) {
 }
 
 /**
+ * فیلترهای فنی دسته: قالب نویسنده → ردیف‌های ریپیتر ACF.
+ *
+ * ⚠️ این‌ها تا امروز در `src/data/filters.ts` هاردکد بودند و افزودن دسته
+ * تغییر کد می‌خواست. حالا در `categoryMeta.spec_facets` زندگی می‌کنند.
+ *
+ * ⚠️ `spec_label` باید مو‌به‌مو با برچسب مشخصات فنی محصول یکی باشد. اگر
+ * نباشد، فیلتر ساخته می‌شود ولی همیشه خالی می‌ماند — یک خرابی بی‌صدای
+ * دیگر. پس برچسب خالی گزارش می‌شود، نه رد.
+ *
+ * @return array{0:array,1:array} [ ردیف‌های ACF، خطاها ]
+ */
+function cyh_hub_facets_to_acf( $facets ) {
+	$rows   = [];
+	$errors = [];
+
+	foreach ( (array) $facets as $i => $f ) {
+		$n = $i + 1;
+		if ( ! is_array( $f ) ) {
+			$errors[] = "فیلتر #$n یک شیء نیست.";
+			continue;
+		}
+
+		$label = cyh_hub_clean( $f['label'] ?? '', false );
+		$spec  = cyh_hub_clean( $f['spec_label'] ?? ( $f['specLabel'] ?? '' ), false );
+
+		if ( '' === $label || '' === $spec ) {
+			$errors[] = "فیلتر #$n بدون «عنوان» یا «برچسب مشخصه» است — ساخته نمی‌شود.";
+			continue;
+		}
+
+		$kind = sanitize_key( (string) ( $f['kind'] ?? 'checkbox' ) );
+		if ( ! in_array( $kind, [ 'checkbox', 'range' ], true ) ) {
+			$errors[] = "فیلتر #$n نوع نامعتبر دارد («" . esc_html( $kind ) . "») — «انتخابی» در نظر گرفته شد.";
+			$kind = 'checkbox';
+		}
+
+		$rows[] = [
+			'label'      => $label,
+			'spec_label' => $spec,
+			'kind'       => $kind,
+			'unit'       => cyh_hub_clean( $f['unit'] ?? '', false ),
+			'hint'       => cyh_hub_clean( $f['hint'] ?? '', false ),
+		];
+	}
+
+	return [ $rows, $errors ];
+}
+
+/**
  * پاک‌سازی ردیف‌های یک ریپیتر.
  *
  * ⚠️ زیرفیلدهای خاص، نگاشت خاص لازم دارند:
@@ -431,6 +480,44 @@ function cyh_hub_import( $payload, $overwrite = false, $dry_run = true ) {
 					continue;
 				}
 
+				/* ── فیلترهای فنی دسته ───────────────────────────────── */
+				if ( 'facets' === $name ) {
+					if ( 'category' !== $kind ) {
+						$report[] = [ $kind, $slug, 'facets', '⚠ فیلتر فنی فقط برای دسته معنا دارد — نادیده گرفته شد' ];
+						continue;
+					}
+
+					list( $facet_rows, $facet_errors ) = cyh_hub_facets_to_acf( $raw );
+					foreach ( $facet_errors as $msg ) {
+						$report[] = [ $kind, $slug, 'facets', '⚠ ' . $msg ];
+					}
+
+					$current = get_field( 'spec_facets', $target );
+					$has_now = is_array( $current ) && ! empty( $current );
+
+					if ( $has_now && ! $overwrite ) {
+						$skipped++;
+						$report[] = [ $kind, $slug, 'facets', 'رد شد (از قبل ' . count( $current ) . ' فیلتر دارد)' ];
+						continue;
+					}
+					if ( ! $facet_rows ) {
+						$report[] = [ $kind, $slug, 'facets', 'هیچ فیلتر معتبری در فایل نبود' ];
+						continue;
+					}
+
+					if ( ! $dry_run ) {
+						update_field( 'spec_facets', $facet_rows, $target );
+					}
+					$written++;
+					$report[] = [
+						$kind,
+						$slug,
+						'facets',
+						( $dry_run ? 'نوشته می‌شود' : 'نوشته شد' ) . ' — ' . count( $facet_rows ) . ' فیلتر',
+					];
+					continue;
+				}
+
 				$is_simple   = array_key_exists( $name, $map[ $kind ]['simple'] );
 				$is_repeater = in_array( $name, $map[ $kind ]['repeaters'], true );
 				if ( ! $is_simple && ! $is_repeater ) {
@@ -552,11 +639,14 @@ function cyh_hub_table( array $cols, array $rows, array $code = [], $dim_when = 
 
 /** صفحه‌ی ابزار. */
 function cyh_hub_menu() {
-	// زیر منوی «برندها» — جایی که مدیر محتوا دنبالش می‌گردد، نه زیر محصولات.
-	add_submenu_page(
-		'edit.php?post_type=brand',
-		'ورود محتوا از فایل',
-		'ورود محتوا از فایل',
+	/* ⚠️ قبلاً زیر «برندها» بود، با این استدلال که «مدیر محتوا آنجا دنبالش
+	   می‌گردد». آن استدلال وقتی نوشته شد که این ابزار فقط برند وارد می‌کرد.
+	   حالا برند و دسته را با هم وارد می‌کند، پس نشستن زیر «برندها» گمراه‌کننده
+	   است. «ابزارها» جای استاندارد ابزار ورود در وردپرس است و نسبت به هر دو
+	   موجودیت بی‌طرف. */
+	add_management_page(
+		'ورود محتوای برند و دسته',
+		'ورود محتوای برند و دسته',
 		'manage_options',
 		'cyh-hub-import',
 		'cyh_hub_page'
@@ -565,10 +655,18 @@ function cyh_hub_menu() {
 add_action( 'admin_menu', 'cyh_hub_menu' );
 
 /** آدرس صفحه‌ی ابزار — یک جا، تا با ثبت منو واگرا نشود. */
+/**
+ * ⚠️ این تابع باید با محل واقعی منو بخواند.
+ *
+ * منو از `edit.php?post_type=brand` به «ابزارها» منتقل شد. اگر این آدرس
+ * به‌روز نمی‌شد، الگوی POST→redirect→GET کاربر را بعد از هر ورود به صفحه‌ای
+ * می‌فرستاد که دیگر وجود ندارد — و گزارش، که در transient نشسته، هرگز
+ * دیده نمی‌شد. یک خرابی بی‌صدای دیگر، از همان خانواده.
+ */
 function cyh_hub_url( $args = [] ) {
 	return add_query_arg(
-		array_merge( [ 'post_type' => 'brand', 'page' => 'cyh-hub-import' ], $args ),
-		admin_url( 'edit.php' )
+		array_merge( [ 'page' => 'cyh-hub-import' ], $args ),
+		admin_url( 'tools.php' )
 	);
 }
 
