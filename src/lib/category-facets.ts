@@ -17,21 +17,15 @@
 // `technical_specs` موجود محصول کار می‌کنند؛ هر ردیف فقط می‌گوید «کدام
 // برچسب مشخصه قابل فیلتر است».
 //
-// ═══════════════════════════════════════════════════════════════════════════
-// پلِ موقت
-// ═══════════════════════════════════════════════════════════════════════════
-// تا وقتی `content/category-facets.json` در پنل وارد نشود، وردپرس برای این
-// دسته‌ها چیزی برنمی‌گرداند. برای اینکه فیلترهای فعلی سایت از بین نروند،
-// این ماژول در آن حالت به نقشه‌ی کد برمی‌گردد — ولی **با نام بردن از هر
-// دسته در خروجی build**.
-//
-// این پل عمداً پر سر و صداست و تاریخ انقضا دارد: کامیتی که ورود فایل را
-// تأیید کند، `CATEGORY_FACETS` و این پل را با هم حذف می‌کند.
+// ⚠️ یک پلِ موقت اینجا بود که تا پیش از ورود فایل به نقشه‌ی کد برمی‌گشت.
+// ورود تأیید شد («۶۵ فیلتر روی ۲۱ دسته») و پل در همان کامیت حذف شد.
+// حالا وردپرس تنها منبع است: اگر دسته‌ای فیلتر نداشته باشد، فقط فیلترهای
+// عمومی نشان داده می‌شوند — که رفتار درست است، نه نقص.
 // ---------------------------------------------------------------------------
 
 import { isWpConfigured, wpQueryPublic } from './wp';
 import { acfRows, acfString, acfChoice } from './acf';
-import { CATEGORY_FACETS, type SpecFacet, type FacetKind } from '../data/filters';
+import type { SpecFacet, FacetKind } from '../data/filters';
 
 const FACET_KINDS: FacetKind[] = ['checkbox', 'range'];
 
@@ -138,36 +132,14 @@ async function fetchFacets(): Promise<Map<string, SpecFacet[]>> {
   }
 
   console.warn(
-    '[facets] ⚠ خواندن فیلترها از وردپرس شکست خورد؛ فعلاً از نقشه‌ی کد استفاده می‌شود.\n' +
+    '[facets] ⚠ خواندن فیلترها از وردپرس شکست خورد. صفحه‌های دسته فقط فیلتر عمومی نشان می‌دهند.\n' +
       failures.map((f) => `        • ${f}`).join('\n'),
   );
   return map;
 }
 
-const pending = new Set<string>();
-
-/**
- * فیلترهای یک دسته. اول وردپرس، و تا وقتی فایل وارد نشده، نقشه‌ی کد.
- *
- * هر دسته‌ای که هنوز روی پل است، یک بار در خروجی build نامش می‌آید.
- */
+/** فیلترهای یک دسته. تنها منبع: وردپرس. */
 export async function getCategoryFacets(slug: string): Promise<SpecFacet[]> {
   cache ??= fetchFacets();
-  const fromWp = (await cache).get(slug);
-  if (fromWp?.length) return fromWp;
-
-  const fallback = CATEGORY_FACETS[slug];
-  if (fallback?.length && !pending.has(slug)) {
-    pending.add(slug);
-    console.warn(
-      `[facets] ⏳ «${slug}» هنوز از نقشه‌ی کد می‌آید. ` +
-        'پس از ورود content/category-facets.json در پنل، این پیام محو می‌شود.',
-    );
-  }
-  return fallback ?? [];
-}
-
-/** چند دسته هنوز روی پل‌اند — برای گزارش پایان build. */
-export function pendingFacetMigrations(): string[] {
-  return [...pending];
+  return (await cache).get(slug) ?? [];
 }

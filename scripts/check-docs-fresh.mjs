@@ -73,6 +73,9 @@ const RETIRED = [
   { term: 'cyh_blocks_migrate', why: 'دکمه‌ی مهاجرت — پس از اجرا حذف شد' },
   { term: 'cyh_bm_run', why: 'اجراکننده‌ی مهاجرت — حذف شد' },
   { term: 'BLOG_POSTS', why: 'آرایه‌ی هاردکد مقالات — با نوشته‌های وردپرس جایگزین شد' },
+  { term: 'CATEGORY_FACETS', why: 'نقشه‌ی هاردکد فیلترها — به categoryMeta.spec_facets منتقل شد' },
+  { term: 'facetsForCategory', why: 'با getCategoryFacets (async، از وردپرس) جایگزین شد' },
+  { term: 'validateFilterLabels', why: 'نگهبان خواب — هیچ‌جا صدا زده نمی‌شد؛ بررسی به ابزار ورود منتقل شد' },
 ];
 
 const DOCS = [...globSync('docs/**/*.md'), 'CLAUDE.md', 'README.md'].filter((f) => {
