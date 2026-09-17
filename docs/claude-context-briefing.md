@@ -41,8 +41,10 @@ regenerated from WordPress on every build — never edit it by hand.
   is an enquiry. No number is guessed.
 - **Catalog is nearly empty**: the user deleted every product except
   `saga1-l12`. This is deliberate — the others were not written to L12 standard.
-- Category SEO content written for `crane-coupling` and `rope-guide`, staged in
-  `content-imports/category-content-batch-01.md`, not yet entered in WordPress.
+- Category content now lives in WordPress as content blocks. Staged import
+  files sit in `content/` (see `content/category-wire-rope.json` for the
+  reference depth). The old `content-imports/` folder was deleted: it targeted
+  the pre-3.0.0 field model and an import page that no longer exists.
 
 ## Non-negotiable rules
 

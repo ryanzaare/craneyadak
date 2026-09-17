@@ -34,6 +34,8 @@ export interface BlogPost {
   isoModified: string;
   category: string;
   bodyHtml: string;
+  /** نام نویسنده از وردپرس. با پروفایل `authors.ts` تطبیق داده می‌شود. */
+  authorName: string | null;
 }
 
 const CORE_POST_FIELDS = `
@@ -113,6 +115,11 @@ function normalizePost(node: RawPost): BlogPost | null {
     isoModified: (acfString(node.modified) ?? iso).slice(0, 10),
     category: acfString(node.categories?.nodes?.[0]?.name) ?? 'مقاله',
     bodyHtml: body,
+    /* ⚠️ این تا امروز واکشی می‌شد و همین‌جا دور ریخته می‌شد: کوئری
+       `author { node { name } }` را می‌خواست ولی `normalizePost` آن را
+       برنمی‌داشت، و صفحه‌ی مقاله به‌جایش «تیم مهندسی» را هاردکد چاپ
+       می‌کرد. یعنی سیگنال E-E-A-T داشتیم و مصرفش نمی‌کردیم. */
+    authorName: acfString(node.author?.node?.name),
   };
 }
 

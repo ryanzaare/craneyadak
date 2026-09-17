@@ -184,7 +184,9 @@ export interface Author {
  *   وردپرس ← کاربران ← افزودن کاربر واقعی ← نام و «توضیحات زیستی» را
  *   با این قالب پر کنید:  «عنوان شغلی — بیوگرافی»
  */
-export const AUTHORS: Record<string, Author> = {};
+/* ⚠️ `AUTHORS` یک شیء **خالی** بود و حذف شد. نویسنده‌ها از وردپرس می‌آیند
+   (`src/lib/authors.ts`)، و این شیء خالی فقط باعث می‌شد حلقه‌ی پایین روی
+   هیچ بچرخد — یعنی ظاهرِ بررسی بدون خودِ بررسی. */
 
 
 /* -------------------------------------------------------------------------
@@ -210,7 +212,8 @@ export function unverifiedTrustItems(): UnverifiedItem[] {
   for (const b of TRUST_BADGES) {
     if (!b.verified) out.push({ group: 'نشان‌های اعتماد', id: b.id, detail: b.title });
   }
-  for (const a of Object.values(AUTHORS)) {
+  /* نویسنده‌ها دیگر اینجا نیستند؛ از وردپرس می‌آیند و تأییدشان آنجاست. */
+  for (const a of [] as Author[]) {
     if (!a.verified) out.push({ group: 'نویسندگان', id: a.slug, detail: `${a.name} — ${a.jobTitle}` });
   }
 

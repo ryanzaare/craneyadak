@@ -185,6 +185,46 @@ for (const file of DOCS) {
   });
 }
 
+// ── ۲ب) مسیرهایی که سند به آن‌ها ارجاع می‌دهد، واقعاً وجود دارند؟ ────────
+// ⚠️ این بررسی سه ارجاع شکسته پیدا کرد که هیچ‌کدام دیده نشده بودند:
+//   • `wordpress-plugin/crane-yadak-headless-1.4.0.zip` — شماره‌ی نسخه در
+//     دستور نصب هاردکد بود و ده‌ها نسخه عقب افتاده.
+//   • `content-imports/category-content-batch-01.md` — کل پوشه حذف شده بود.
+//   • `src/lib/category-content.ts` — ماه‌ها پیش حذف شده بود.
+//
+// سندی که به فایل ناموجود ارجاع می‌دهد، خواننده را به بن‌بست می‌فرستد و
+// دقیقاً همان‌جایی است که اعتماد به مستندات از بین می‌رود.
+{
+  const PATH = /`((?:src|scripts|docs|wordpress-plugin|content|public)\/[\w./[\]-]+)`/g;
+  const broken = [];
+
+  for (const file of DOCS) {
+    const lines = read(file).split('\n');
+    const inRemovalSection = headingRemovalSections(lines);
+
+    lines.forEach((line, i) => {
+      // مسیرِ خط‌خورده یعنی «این حذف شد» — همان چیزی که می‌خواهیم بماند.
+      if (/~~.*~~/.test(line)) return;
+      if (inRemovalBlock(lines, i) || inRemovalSection[i]) return;
+
+      for (const m of line.matchAll(PATH)) {
+        const p = m[1];
+        if (p.includes('*')) continue; // الگو، نه مسیر مشخص
+        try { statSync(p); } catch { broken.push(`${file}:${i + 1} — ${p}`); }
+      }
+    });
+  }
+
+  if (broken.length) {
+    console.error(
+      `❌ ${broken.length} مسیر در مستندات به فایلی اشاره می‌کند که وجود ندارد:`,
+    );
+    for (const b of broken) console.error(`   • ${b}`);
+    console.error('   یا مسیر را اصلاح کنید، یا اگر عمداً حذف شده با ~~خط‌خورده~~ علامت بزنید.');
+    process.exit(1);
+  }
+}
+
 // ── ۳) آیا backlog از کد عقب افتاده؟ ─────────────────────────────────────
 const DAYS = 45;
 const mtime = (f) => { try { return statSync(f).mtimeMs; } catch { return 0; } };

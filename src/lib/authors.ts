@@ -177,3 +177,17 @@ export async function getPrimaryAuthor(): Promise<Author | null> {
 }
 
 /** یافتن نویسنده با اسلاگ — برای صفحات اختصاصی نویسنده در آینده. */
+
+/**
+ * نویسنده بر اساس نامی که وردپرس روی نوشته گذاشته.
+ *
+ * ⚠️ تطبیق روی **نام** است نه اسلاگ، چون چیزی که `posts` برمی‌گرداند نام
+ * نمایشی است. اگر پیدا نشد `null` می‌دهد و صفحه بدون جعبه‌ی نویسنده رندر
+ * می‌شود — بهتر از نسبت‌دادن مقاله به آدم اشتباه.
+ */
+export async function getAuthorByName(name: string | null): Promise<Author | null> {
+  if (!name) return null;
+  const needle = name.trim();
+  if (!needle) return null;
+  return (await getAuthors()).find((a) => a.name.trim() === needle) ?? null;
+}

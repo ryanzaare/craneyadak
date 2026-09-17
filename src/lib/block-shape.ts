@@ -72,55 +72,28 @@ export interface ContentBlock {
   calloutBody: string;
 }
 
-/**
- * ⚠️ فیلد `select` در ACF حتی وقتی `multiple = 0` است، از WPGraphQL به شکل
- * **آرایه** برمی‌گردد: `"blockType": ["text"]`.
- *
- * این یک تفاوت کوچک نبود. `str()` برای آرایه رشته‌ی خالی برمی‌گرداند، پس
- * `TYPES.includes('')` رد می‌شد و **هر بلوکی** به `text` تنزل پیدا می‌کرد.
- * بعد `hasContent` از بلوک متنی «بدنه» می‌خواست، و جدول و قطعات و پرسش‌ها
- * بدنه ندارند — پس بی‌صدا دور ریخته می‌شدند.
- *
- * نتیجه روی سایت دماگ: از ۷ بلوک فقط ۳ تا رندر شد و هیچ خطایی نبود. داده
- * در وردپرس کامل و سالم بود؛ فقط یک جفت براکت آن را نامرئی کرده بود.
- *
- * پس هر مقدار تک‌عضویِ آرایه‌ای، همان عضوش خوانده می‌شود. این برای
- * `blockType`، `tone` و `kind` لازم است و برای بقیه بی‌ضرر.
- */
-const str = (v: unknown): string => {
-  if (Array.isArray(v)) return v.length ? str(v[0]) : '';
-  if (typeof v === 'string') return v.trim();
-  if (typeof v === 'number') return String(v);
-  return '';
-};
-const bool = (v: unknown) => v === true || v === 1 || v === '1';
-const num = (v: unknown): number | null => {
-  const n = typeof v === 'number' ? v : Number(str(v));
-  return Number.isFinite(n) && n > 0 ? n : null;
-};
+/* ⚠️ اینجا قبلاً `str`، `bool`، `num`، `unwrap`، `firstTerm` و `arr` کپی
+   شده بودند — یعنی **دومین** لایه‌ی تبدیلِ مقادیر ACF در همین مخزن.
 
-/** فیلد Image در ACF: v2 پوسته‌ی `node` دارد، v1 ندارد. */
-const unwrap = (v: unknown): Record<string, unknown> | null => {
-  if (!v || typeof v !== 'object') return null;
-  const o = v as Record<string, unknown>;
-  return o.node && typeof o.node === 'object' ? (o.node as Record<string, unknown>) : o;
-};
+   `src/lib/acf.ts` دقیقاً برای پایان دادن به همین ساخته شد: «هر ماژول
+   تبدیل خودش را نوشت و فقط یکی از شش‌تا درست بود». بعد همان فایل ساخته
+   شد و بزرگ‌ترین مصرف‌کننده‌اش — همین ماژول — روی کپی خودش ماند. اگر
+   روزی رفتار `acf.ts` عوض می‌شد، بلوک‌ها از آن بی‌خبر می‌ماندند.
 
-/** فیلد Taxonomy: گاهی connection، گاهی شیء مستقیم. */
-function firstTerm(v: unknown): { slug: string | null; name: string | null } {
-  const list = Array.isArray(v)
-    ? v
-    : v && typeof v === 'object' && Array.isArray((v as { nodes?: unknown[] }).nodes)
-      ? (v as { nodes: unknown[] }).nodes
-      : v && typeof v === 'object'
-        ? [v]
-        : [];
-  const t = list.find((x): x is Record<string, unknown> => Boolean(x) && typeof x === 'object');
-  return { slug: t ? str(t.slug) || null : null, name: t ? str(t.name) || null : null };
-}
+   `acf.ts` هم هیچ وابستگی ندارد، پس این import آزمون‌پذیریِ این فایل را
+   خراب نمی‌کند — همان دلیلی که این ماژول برایش جدا شد.
 
-const arr = (v: unknown): Record<string, unknown>[] =>
-  (Array.isArray(v) ? v : []).filter((r): r is Record<string, unknown> => Boolean(r) && typeof r === 'object');
+   ⚠️ پسوند `.ts` عمدی است. این ماژول باید مستقیم با `node` قابل اجرا باشد
+   (آزمونش همین کار را می‌کند) و node بدون پسوند resolve نمی‌کند. قاعده‌ی
+   پروژه: **هر ماژولی که آزمونِ مستقیم دارد، importهایش پسوند می‌گیرند.** */
+import {
+  acfText as str,
+  acfBool as bool,
+  acfNumber as num,
+  acfNode as unwrap,
+  acfFirstTerm as firstTerm,
+  acfRows as arr,
+} from './acf.ts';
 
 /** ⚠️ این آرایه باید با choices در ACF و شاخه‌های ContentBlocks.astro یکی
  *  بماند. `check-architecture.mjs` واگرایی هر سه را می‌شکند. */

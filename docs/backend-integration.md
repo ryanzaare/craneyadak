@@ -132,7 +132,13 @@ query AllProducts($first: Int!, $after: String) {
 |---|---|
 | `src/lib/wp.ts` | واکشی محصولات، کش build، preflight |
 | `src/lib/categories.ts` | نام/توضیح دسته از وردپرس |
-| `src/lib/category-content.ts` | محتوای سئوی دسته (`categoryContent`) |
+| ~~`src/lib/category-content.ts`~~ | حذف شد — گروه `categoryContent` با پالت بلوک جایگزین شد |
+| `src/lib/content-blocks.ts` | بلوک‌های محتوا برای برند و دسته |
+| `src/lib/block-shape.ts` | نرمال‌سازی خالص بلوک‌ها (بدون وابستگی، آزمون‌پذیر) |
+| `src/lib/acf.ts` | تنها مرز تبدیل مقادیر ACF |
+| `src/lib/category-facets.ts` | فیلترهای فنی دسته از `categoryMeta.spec_facets` |
+| `src/lib/posts.ts` | مقالات مجله از نوشته‌های وردپرس |
+| `src/lib/authors.ts` | نویسندگان از کاربران وردپرس (E-E-A-T) |
 | `src/lib/brands.ts` | اجتماع برندهای وردپرس و تاکسونومی |
 | `src/lib/site-options.ts` | تماس، ساعت کاری، پرسش‌های متداول |
 | `src/lib/search-index.ts` | فهرست جستجو، دو لایه |

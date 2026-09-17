@@ -9,6 +9,8 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 import { buildTitle } from '../../lib/seo-meta';
 import { SITE } from '../../data/site';
 import { getPosts, type BlogPost } from '../../lib/posts';
+import { getAuthorByName } from '../../lib/authors';
+import AuthorBox from '../../components/AuthorBox.astro';
 
 export async function getStaticPaths() {
   return (await getPosts()).map((post) => ({
@@ -24,6 +26,11 @@ const { post } = Astro.props;
 const title = buildTitle([post.title, 'مجله تخصصی', SITE.name], `/blog/${post.slug}/`);
 const description = post.excerpt;
 const canonicalPostUrl = `${SITE.url}/blog/${post.slug}`;
+
+/* ⚠️ نویسنده‌ی واقعی از وردپرس. اگر پروفایلش پیدا نشود `null` می‌ماند و
+   جعبه‌ی نویسنده رندر نمی‌شود — بهتر از نسبت‌دادن مقاله به آدم اشتباه یا
+   چاپ یک نام هاردکد. */
+const author = await getAuthorByName(post.authorName);
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -48,7 +55,18 @@ const jsonLd = {
       articleSection: post.category,
       inLanguage: SITE.locale,
       image: `${SITE.url}/og-default.jpg`,
-      author: { '@type': 'Organization', '@id': `${SITE.url}/#organization`, name: SITE.name },
+      /* ⚠️ نویسنده‌ی واقعی، نه سازمان. در دسته‌ی YMYL (قطعه‌ای که بار
+         چندتنی را نگه می‌دارد)، نویسنده‌ی قابل‌شناسایی یک سیگنال E-E-A-T
+         است و «Organization» آن را خنثی می‌کرد. */
+      author: author
+        ? {
+            '@type': 'Person',
+            name: author.name,
+            ...(author.jobTitle ? { jobTitle: author.jobTitle } : {}),
+            ...(author.expertise.length ? { knowsAbout: author.expertise } : {}),
+            ...(author.bio ? { description: author.bio } : {}),
+          }
+        : { '@type': 'Organization', '@id': `${SITE.url}/#organization`, name: SITE.name },
       publisher: { '@id': `${SITE.url}/#organization` },
     },
     {
@@ -70,7 +88,9 @@ const jsonLd = {
       <Breadcrumb items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'مجله تخصصی', href: '/blog' }, { label: post.title }]} />
       <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-gray-300 text-xs font-black tracking-widest mb-4 uppercase border border-white/20">{post.category}</span>
       <h1 class="text-3xl md:text-4xl font-black mb-4 tracking-tight leading-tight drop-shadow-md">{post.title}</h1>
-      <time datetime={post.isoDate} class="text-sm text-gray-400 font-bold">{post.date} — تیم مهندسی {SITE.name}</time>
+      <time datetime={post.isoDate} class="text-sm text-gray-400 font-bold">
+        {post.date}{author ? ` — ${author.name}` : ''}
+      </time>
     </div>
   </section>
 
@@ -80,6 +100,9 @@ const jsonLd = {
           پاراگراف. `prose-crane` همان استایلی است که بلوک‌های متن دارند،
           پس مقاله و صفحه‌ی برند یک‌شکل دیده می‌شوند. */}
       <div class="prose-crane" set:html={post.bodyHtml} />
+
+      {/* جعبه‌ی نویسنده — ساخته شده بود و هیچ صفحه‌ای استفاده‌اش نمی‌کرد. */}
+      {author && <AuthorBox author={author} reviewedAt={post.isoModified} class="mt-12" />}
     </article>
 
     <div class="max-w-3xl mx-auto mt-16 bg-crane-light rounded-3xl p-8 md:p-10 border border-gray-200 text-center">

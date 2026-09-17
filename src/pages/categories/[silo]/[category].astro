@@ -27,7 +27,7 @@ import {
 } from '../../../data/taxonomy';
 import ContentBlocks from '../../../components/ContentBlocks.astro';
 import { getProductsByCategory, computePrice, productJsonLd, type CraneProduct } from '../../../lib/wp';
-import { getBlocks } from '../../../lib/content-blocks';
+import { getBlocks, specsToJsonLd } from '../../../lib/content-blocks';
 import { resolveCategoryTerm, type CategoryTerm } from '../../../lib/categories';
 
 export async function getStaticPaths() {
@@ -63,6 +63,7 @@ const displayName = term.name;
 const displayBlurb = term.blurb;
 const reviewMode = import.meta.env.CONTENT_REVIEW === '1';
 const blocks = await getBlocks('category', category.slug);
+const specJsonLd = specsToJsonLd(blocks);
 
 /* ⚠️ قطعه‌ای ساخته می‌شود، نه رشته‌ی یک‌تکه. با رشته‌ی یک‌تکه، بریدنِ طول
    همیشه دُم را می‌خورد — و دُم همان‌جایی است که «فاکتور رسمی» و نام برند
@@ -145,6 +146,22 @@ const jsonLd = {
       isPartOf: { '@id': `${SITE.url}/#website` },
       inLanguage: SITE.locale,
       ...(itemList ? { mainEntity: itemList } : {}),
+      /* ⚠️ `specsToJsonLd()` ساخته شده بود و **هیچ‌جا صدا زده نمی‌شد** —
+         یعنی بلوک «مشخصات فنی» روی صفحه دیده می‌شد ولی هیچ داده‌ی
+         ساختاریافته‌ای تولید نمی‌کرد. برای یک کاتالوگ قطعه‌ی صنعتی، مشخصه‌ها
+         دقیقاً همان چیزی‌اند که باید ساختاریافته باشند.
+
+         روی `about` می‌نشیند نه خود CollectionPage، چون `additionalProperty`
+         خاصیت `Thing` است نه `WebPage`. */
+      ...(specJsonLd.length
+        ? {
+            about: {
+              '@type': 'Thing',
+              name: category.keyword,
+              additionalProperty: specJsonLd,
+            },
+          }
+        : {}),
     },
   ],
 };
