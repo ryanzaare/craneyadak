@@ -52,9 +52,28 @@ export interface BlockMedia {
 export interface ContentBlock {
   type: BlockType;
   heading: string;
+  /**
+   * برچسب کوتاه برای نوار ناوبری چسبان.
+   *
+   * ⚠️ چرا فیلد جداست و از `heading` جدا شده: یک رشته نمی‌تواند هم‌زمان دو
+   * نیازِ متضاد را برآورده کند. `H2` باید بلند، پرسش‌محور و کلیدواژه‌دار
+   * باشد چون گوگل می‌خواندش؛ برچسب ناوبری باید دو-سه کلمه باشد چون کنار
+   * هفت برچسب دیگر در یک نوار می‌نشیند. تا امروز `SectionNav` مستقیم
+   * `heading` را می‌گرفت و نتیجه نواری بود که با یک عنوان پر می‌شد.
+   */
+  navLabel: string;
   needsReview: boolean;
   /** شناسه‌ی لنگر برای ناوبری درون‌صفحه‌ای — از جایگاه ساخته می‌شود. */
   anchor: string;
+  /**
+   * یادداشت ستون کناری — محتوای کوتاهِ *نوشته‌شده*، نه تکرار خودکار متن.
+   *
+   * ⚠️ چرا فیلد است و تولید خودکار نیست: اگر این ستون را با متنِ قالبی پر
+   * کنیم، همان چند جمله روی ۳۱ صفحه‌ی دسته تکرار می‌شود و نسبت محتوای
+   * یکتای هر صفحه را پایین می‌آورد — یعنی دقیقاً برعکس چیزی که ستون
+   * برایش ساخته شده.
+   */
+  asideHtml: string;
   // متن
   bodyHtml: string;
   // جدول
@@ -100,6 +119,62 @@ import {
 const TYPES: BlockType[] = ['text', 'table', 'faq', 'parts', 'media', 'specs', 'callout'];
 const TONES: CalloutTone[] = ['danger', 'note', 'tip'];
 
+/**
+ * بیشینه‌ی طول برچسب ناوبری.
+ *
+ * عدد از عرض واقعی نوار می‌آید، نه از سلیقه: هشت قرصِ ۲۴ کاراکتری در
+ * ۱۲۸۰ پیکسل جا می‌شوند بدون اسکرول افقی. بلندتر از این یعنی نوار روی
+ * دسکتاپ هم اسکرول‌دار می‌شود و فایده‌ی «یک نگاه، کل صفحه» از بین می‌رود.
+ */
+export const NAV_LABEL_MAX = 24;
+
+/*
+ * جداکننده‌ها به ترتیب اولویت.
+ *
+ * ⚠️ خط تیره‌ی ساده (-) عمداً **نیست**. در فارسی داخل کدهای فنی و اسلاگ‌ها
+ * می‌آید (`6×36WS-IWRC`) و بریدن روی آن، کد را نصف می‌کند. نیم‌فاصله هم
+ * جداکننده نیست؛ داخل خود کلمه است («سیم‌بکسل»).
+ */
+const NAV_SEPARATORS = ['：', ':', '—', '–', '؛', '،'];
+
+/**
+ * برچسب ناوبری: یا آنچه نویسنده نوشته، یا کوتاه‌شده‌ی هوشمندِ عنوان.
+ *
+ * تابع خالص و بدون وابستگی است تا آزمون مستقیم داشته باشد — چون رفتارش
+ * روی هر صفحه‌ی دسته و برند دیده می‌شود و «تقریباً درست» کافی نیست.
+ *
+ * ترتیب تصمیم:
+ *   ۱) اگر نویسنده `nav_label` نوشته → همان، بی‌چون‌وچرا.
+ *   ۲) اگر عنوان خودش کوتاه است → دست‌نخورده.
+ *   ۳) برش روی نخستین جداکننده‌ای که سمت چپش طول معقولی دارد.
+ *   ۴) در نهایت، برش روی مرز کلمه — هرگز وسط کلمه.
+ */
+export function deriveNavLabel(heading: string, explicit = ''): string {
+  const set = explicit.trim();
+  if (set) return set;
+
+  const h = heading.trim();
+  if (!h || h.length <= NAV_LABEL_MAX) return h;
+
+  for (const sep of NAV_SEPARATORS) {
+    const at = h.indexOf(sep);
+    if (at < 0) continue;
+    const left = h.slice(0, at).trim();
+    // کوتاه‌تر از ۳ کاراکتر یعنی جداکننده در ابتدای عنوان بوده؛ آن برش
+    // برچسبی بی‌معنا می‌سازد و باید جداکننده‌ی بعدی امتحان شود.
+    if (left.length >= 3 && left.length <= NAV_LABEL_MAX) return left;
+  }
+
+  let out = '';
+  for (const word of h.split(/\s+/)) {
+    const next = out ? `${out} ${word}` : word;
+    if (next.length > NAV_LABEL_MAX) break;
+    out = next;
+  }
+  // تنها حالتی که به اینجا می‌رسد: نخستین کلمه خودش بلندتر از سقف است.
+  return out || h.slice(0, NAV_LABEL_MAX);
+}
+
 export function normalizeBlocks(raw: unknown, label = ''): ContentBlock[] {
   const all = arr(raw)
     .map((r, i): ContentBlock => {
@@ -116,11 +191,15 @@ export function normalizeBlocks(raw: unknown, label = ''): ContentBlock[] {
         .map((row) => ({ cells: keep.map((n) => str(row[`c${n + 1}`])) }))
         .filter((row) => row.cells.some((c) => c !== ''));
 
+      const heading = str(r.heading);
+
       return {
         type,
-        heading: str(r.heading),
+        heading,
+        navLabel: deriveNavLabel(heading, str(r.navLabel)),
         needsReview: bool(r.needsReview),
         anchor: `block-${i + 1}`,
+        asideHtml: str(r.aside),
         bodyHtml: str(r.body),
         intro: str(r.intro),
         columns: keep.map((n) => rawCols[n]),

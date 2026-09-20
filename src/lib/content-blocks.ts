@@ -78,10 +78,23 @@ import type { ContentBlock } from './block-shape';
  * «Cannot query field "blockType" on type "ContentBlocks"» — یعنی گروه پیدا
  * شده بود ولی فیلدها یک سطح پایین‌تر بودند.
  */
+/*
+ * ⚠️ نردبان کوئری — `navLabel` و `aside` عمداً فقط در این پله هستند.
+ *
+ * هر دو در افزونه‌ی ۳.۴.۰ اضافه شده‌اند. اگر سایت با افزونه‌ی قدیمی‌تر
+ * build شود، این پله با «Cannot query field» می‌افتد و پله‌ی SAFE
+ * می‌گیردش — به‌جای اینکه تمام بلوک‌ها ناپدید شوند، دقیقاً همان اتفاقی
+ * که سه بار در این پروژه افتاد.
+ *
+ * و چون `deriveNavLabel` برچسب را از خود `heading` می‌سازد، حتی روی پله‌ی
+ * SAFE هم نوار ناوبری کوتاه می‌ماند. یعنی افت این فیلد، افت *کیفیت* است
+ * نه افت *کارکرد*.
+ */
 export const BLOCK_FIELDS = `
   contentBlocks {
     contentBlocks {
-      blockType heading needsReview
+      blockType heading navLabel needsReview
+      aside
       body
       intro col1 col2 col3 col4 col5
       rows { c1 c2 c3 c4 c5 }

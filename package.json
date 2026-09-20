@@ -8,13 +8,14 @@
   "scripts": {
     "dev": "node scripts/generate-taxonomy.mjs --allow-stale && astro dev",
     "build": "npm run taxonomy && npm run check && astro build",
-    "postbuild": "pagefind --site dist",
+    "postbuild": "pagefind --site dist && npm run check:pagefind",
     "preview": "astro preview",
     "astro": "astro",
     "check": "node scripts/check-architecture.mjs && node scripts/check-docs-fresh.mjs && node scripts/check-imports.mjs && node scripts/check-wp-hooks.mjs && node scripts/check-braces.mjs src/lib/*.ts src/data/*.ts && node scripts/check-astro-tags.mjs src/components/*.astro src/pages/**/*.astro && npm run test:blocks && npm run test:seo",
     "taxonomy": "node scripts/generate-taxonomy.mjs",
     "test:taxonomy": "node scripts/generate-taxonomy.test.mjs",
     "check:hooks": "node scripts/check-wp-hooks.mjs",
+    "check:pagefind": "node scripts/check-pagefind.mjs",
     "check:plugin": "php wordpress-plugin/check-stub-names.php && php wordpress-plugin/check-stub-coverage.php && php wordpress-plugin/wp-stub-harness.php",
     "test:blocks": "node --experimental-strip-types --no-warnings src/lib/content-blocks.test.mts",
     "test:seo": "node --experimental-strip-types --no-warnings src/lib/seo-meta.test.mts"

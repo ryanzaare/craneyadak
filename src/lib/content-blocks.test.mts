@@ -22,7 +22,7 @@
 // اجرا:  npm run test:blocks
 // ---------------------------------------------------------------------------
 
-import { normalizeBlocks, hasContent } from './block-shape.ts';
+import { normalizeBlocks, hasContent, deriveNavLabel, NAV_LABEL_MAX } from './block-shape.ts';
 
 let failed = 0;
 const ok = (cond: unknown, msg: string) => {
@@ -88,6 +88,71 @@ console.log('\n── بلوک خالی همچنان باید حذف شود ─�
 const empty = normalizeBlocks([{ blockType: ['table'], heading: 'بی‌داده', rows: null, col1: null }]);
 ok(empty.length === 0, 'جدول بدون ردیف و ستون رندر نمی‌شود');
 ok(hasContent({ ...blocks[1] }) === true, 'hasContent برای جدول پر، درست است');
+
+/* ═══════════════════════════════════════════════════════════════════════
+   برچسب ناوبری
+   ═══════════════════════════════════════════════════════════════════════
+   چرا آزمون دارد: تا پیش از این، `SectionNav` مستقیم `heading` را
+   می‌گرفت و یک عنوان پانزده‌کلمه‌ای تمام نوار را اشغال می‌کرد. برش
+   خودکار باید روی عنوان‌های **واقعیِ** این پروژه درست کار کند، نه روی
+   نمونه‌های ساختگیِ دوستانه — پس ورودی‌های زیر عیناً از
+   `content/category-wire-rope.json` برداشته شده‌اند. */
+console.log('\n── برچسب ناوبری ──');
+
+ok(deriveNavLabel('هرچه', 'دستی') === 'دستی', 'برچسب دستی همیشه برنده است');
+ok(deriveNavLabel('عیب‌یابی') === 'عیب‌یابی', 'عنوان کوتاه دست‌نخورده می‌ماند');
+ok(deriveNavLabel('') === '', 'عنوان خالی، برچسب خالی');
+
+const REAL_HEADINGS: [string, string][] = [
+  ['سیم‌بکسل جرثقیل: چرا انتخاب آن با «قطر» تمام نمی‌شود', 'سیم‌بکسل جرثقیل'],
+  ['رمزگشایی کد سیم‌بکسل — بخش به بخش', 'رمزگشایی کد سیم‌بکسل'],
+  ['عیب‌یابی: نشانه‌ای که می‌بینید، علتی که احتمالاً دارد', 'عیب‌یابی'],
+  ['پیش از استعلام، این‌ها را آماده کنید', 'پیش از استعلام'],
+];
+for (const [heading, want] of REAL_HEADINGS) {
+  const got = deriveNavLabel(heading);
+  ok(got === want, `«${heading.slice(0, 22)}…» → «${got}»`);
+}
+
+// هیچ عنوانی نباید برچسبی بلندتر از سقف بسازد — این همان چیزی است که
+// نوار را می‌شکست.
+const LONG = [
+  'چهار پارامتری که واقعاً انتخاب را تعیین می‌کنند',
+  'پرسش‌های متداول درباره‌ی سیم‌بکسل جرثقیل',
+  'قطعاتی که با سیم‌بکسل بررسی می‌شوند',
+  'کد روی سیم‌بکسل را چطور بخوانیم',
+  'ساختارهای رایج و رفتار هرکدام',
+];
+// ⚠️ `LONG.map(deriveNavLabel)` ننویسید: map آرگومان دوم را هم می‌فرستد و
+// اندیسِ عددی در جای `explicit` می‌نشیند. همین اشتباه همین‌جا رخ داد و
+// آزمون با TypeError گرفتش — که دقیقاً رفتار درست است.
+const over = LONG.map((h) => deriveNavLabel(h)).filter((l) => l.length > NAV_LABEL_MAX);
+ok(over.length === 0, `هیچ برچسبی از ${NAV_LABEL_MAX} کاراکتر بلندتر نیست`);
+// و هیچ‌کدام نباید وسط کلمه بریده شده باشند.
+const midWord = LONG.filter((h) => {
+  const l = deriveNavLabel(h);
+  return l.length < h.length && !/[\s:—–؛،]/.test(h.charAt(l.length));
+});
+ok(midWord.length === 0, 'هیچ برچسبی وسط کلمه بریده نشده است');
+
+// ── nav_label و aside از مسیر نرمال‌سازی عبور می‌کنند ────────────────────
+console.log('\n── عبور nav_label و aside از normalizeBlocks ──');
+const withExtras = normalizeBlocks([
+  {
+    blockType: ['text'],
+    heading: 'سیم‌بکسل جرثقیل: چرا انتخاب آن با «قطر» تمام نمی‌شود',
+    navLabel: null,
+    aside: '<p>قطر اسمی را با کولیس روی تاج‌ها بسنجید.</p>',
+    body: '<p>متن</p>',
+  },
+  { blockType: ['text'], heading: 'یک', navLabel: ['دستی'], aside: null, body: '<p>م</p>' },
+]);
+ok(withExtras[0].navLabel === 'سیم‌بکسل جرثقیل', 'برچسب از عنوان ساخته شد');
+ok(withExtras[0].asideHtml.includes('کولیس'), 'یادداشت کناری منتقل شد');
+ok(withExtras[1].asideHtml === '', 'aside خالی به رشته‌ی خالی تبدیل می‌شود');
+// ⚠️ ACF فیلد text را هم گاهی داخل آرایه می‌دهد — همان باگی که blockType را
+// شکست. برچسب ناوبری نباید دوباره روی همان تله برود.
+ok(withExtras[1].navLabel === 'دستی', 'navLabel داخل آرایه هم خوانده می‌شود');
 
 console.log(
   failed ? `\n❌ ${failed} آزمون شکست خورد.\n` : '\n✅ همه‌ی آزمون‌های بلوک گذشت.\n',

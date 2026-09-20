@@ -24,7 +24,9 @@ import ProductGallery from '../../components/ProductGallery.astro';
 import PartNumber from '../../components/PartNumber.astro';
 import TrustBadges from '../../components/TrustBadges.astro';
 import Community from '../../components/Community.astro';
+import ContentBlocks from '../../components/ContentBlocks.astro';
 import QuoteBasket from '../../components/QuoteBasket.astro';
+import { getBlocks } from '../../lib/content-blocks';
 import { qaPageJsonLd, aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
 import { autolinkHtml } from '../../lib/autolink';
 import { buildTitle, buildDescription } from '../../lib/seo-meta';
@@ -57,6 +59,10 @@ interface Props {
 
 const { product, related } = Astro.props as Props;
 const price = computePrice(product);
+
+/* بلوک‌های محتوای اختیاری این محصول. برند و دسته از همان ابتدا این را
+   داشتند؛ محصول فقط هرگز صدا زده نشده بود. */
+const blocks = await getBlocks('product', product.slug);
 
 const primaryCategory = product.categorySlugs.map((s) => findCategory(s)).find(Boolean) ?? null;
 const brand = product.brandSlug ? findBrand(product.brandSlug) : undefined;
@@ -486,6 +492,19 @@ const contact = await getContact();
       </div>
     </section>
   )}
+
+  {/* ===================== بلوک‌های محتوا ===================== */}
+  {/* ⚠️ این بخش تا امروز وجود نداشت و نبودش یک **تناقض سند با کد** بود:
+      `ROOTS` در `content-blocks.ts` از ابتدا `product` را داشت، گروه ACF
+      هم روی post type محصول ثبت شده بود و در پنل دیده می‌شد — ولی هیچ
+      صفحه‌ای `getBlocks('product')` را صدا نمی‌زد. یعنی مدیر محتوا
+      می‌توانست برای یک محصول ده بلوک بنویسد، ذخیره کند، و هیچ‌وقت
+      نفهمد چرا روی سایت نیست. همان الگوی «شکست بی‌صدا»، این بار از سمت
+      پنل.
+
+      جای این بخش عمدی است: بعد از توضیحات ویرایشگر و **پیش از** پرسش و
+      پاسخ. محتوای تخصصی باید قبل از محتوای کاربر بیاید. */}
+  <ContentBlocks blocks={blocks} title={product.name} eyebrow="در این صفحه" />
 
   {/* ===================== پرسش، پاسخ و تجربه‌ی کاربران ===================== */}
   {/* ⚠️ باگی که اینجا رفع شد — علت «نبودن بخش نظرات» روی سایت:

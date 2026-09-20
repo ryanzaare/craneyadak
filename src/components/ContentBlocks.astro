@@ -39,12 +39,19 @@ const prose = async (html: string) => {
 
 // متن‌ها پیش از رندر آماده می‌شوند تا شمارش تصاویر پیش از چاپ کامل شود.
 const bodies = await Promise.all(blocks.map((b) => prose(b.bodyHtml)));
+// یادداشت کناری از همان مسیر عبور می‌کند تا لینک‌های داخلی خودکار در آن
+// هم کار کنند — ستون کناری یکی از بهترین جاهای لینک‌دهی داخلی است.
+const asides = await Promise.all(blocks.map((b) => prose(b.asideHtml)));
 reportImageAudit(imgAudit, title);
 
-// فقط بلوک‌های عنوان‌دار وارد ناوبری می‌شوند — بلوک بی‌عنوان لنگری برای
-// اشاره ندارد و در فهرست، ردیفِ خالی می‌سازد.
+/* فقط بلوک‌های عنوان‌دار وارد ناوبری می‌شوند — بلوک بی‌عنوان لنگری برای
+   اشاره ندارد و در فهرست، ردیفِ خالی می‌سازد.
+
+   ⚠️ `navLabel` و نه `heading`. تا پیش از این، عنوان کاملِ H2 مستقیم داخل
+   نوار می‌رفت و یک جمله‌ی پانزده‌کلمه‌ای تمام عرض نوار را می‌گرفت. مدل
+   بلوک حالا هر دو را دارد: عنوان بلند برای گوگل، برچسب کوتاه برای چشم. */
 const nav = blocks
-  .map((b) => ({ id: b.anchor, label: b.heading }))
+  .map((b) => ({ id: b.anchor, label: b.navLabel }))
   .filter((s) => s.label !== '');
 
 const numbered = blocks.filter((b) => b.heading !== '');
@@ -87,6 +94,33 @@ const TONE = {
 
 const flag = (needs: boolean) => (reviewMode && needs ? 'bg-amber-50 ring-1 ring-amber-300' : '');
 const band = (i: number) => (i % 2 === 1 ? 'bg-gray-50' : '');
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ستون کناری
+   ═══════════════════════════════════════════════════════════════════════
+   مسئله: ستون متن عمداً روی ~۷۰ کاراکتر بسته است (قاعده‌ی خوانایی) ولی
+   داخل ظرفی با عرض ۱۲۸۰ پیکسل می‌نشست. نتیجه روی دسکتاپ، نیمی از پهنای
+   پنجره سفیدِ بلااستفاده بود.
+
+   ⚠️ راه‌حلِ غلط، پهن‌کردن متن است. طول سطر بلند خوانایی را واقعاً خراب
+   می‌کند و این صفحات برای خوانده‌شدن نوشته شده‌اند. پس عرض متن دست‌نخورده
+   می‌ماند و *فضای خالی پر می‌شود*، نه ستون متن.
+
+   `justify-center` عمدی است: جفتِ «متن + ستون» با هم وسط‌چین می‌شوند،
+   وگرنه همان فضای خالی فقط از یک سمت به سمت دیگر منتقل می‌شد.
+
+   شبکه فقط از `xl` فعال است؛ پایین‌تر از آن، یادداشت زیر متن جریان پیدا
+   می‌کند — روی موبایل ستون کناری یعنی دو ستون باریکِ ناخوانا. */
+/* ⚠️ کلاس‌ها **کامل و ثابت** نوشته شده‌اند، نه ساخته‌شده با درون‌یابی.
+   Tailwind سورس را متنی اسکن می‌کند؛ `xl:grid-cols-[${cols}_18rem]` هرگز
+   به‌عنوان یک کلاس دیده نمی‌شود، پس CSSاش تولید نمی‌شود و چیدمان بی‌هیچ
+   خطایی از هم می‌پاشد — یک «شکست بی‌صدا»ی تمام‌عیار. */
+const RAIL_BASE = 'xl:grid xl:gap-12 xl:items-start xl:justify-center';
+const RAIL_TEXT = 'xl:grid-cols-[minmax(0,70ch)_18rem]';
+const RAIL_WIDE = 'xl:grid-cols-[minmax(0,1fr)_18rem]';
+
+const rail = (b: ContentBlock): string =>
+  b.asideHtml === '' ? '' : `${RAIL_BASE} ${b.type === 'text' ? RAIL_TEXT : RAIL_WIDE}`;
 ---
 
 {blocks.length > 0 && (
@@ -116,6 +150,9 @@ const band = (i: number) => (i % 2 === 1 ? 'bg-gray-50' : '');
                 </div>
               </div>
             )}
+
+            <div class={rail(b)}>
+            <div class="min-w-0">
 
             {/* ── متن ────────────────────────────────────────────────── */}
             {b.type === 'text' && (
@@ -254,6 +291,20 @@ const band = (i: number) => (i % 2 === 1 ? 'bg-gray-50' : '');
                 ))}
               </div>
             )}
+
+            </div>
+
+            {/* ── ستون کناری ─────────────────────────────────────────── */}
+            {b.asideHtml !== '' && (
+              <aside class="mt-8 xl:mt-0 xl:sticky xl:top-32 rounded-2xl bg-white xl:bg-gray-50/70 border border-gray-200 p-5">
+                <p class="flex items-center gap-2 text-xs font-black text-crane-orange mb-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-crane-orange" aria-hidden="true"></span>
+                  نکته
+                </p>
+                <div class="prose-aside text-sm text-steel-600 leading-7" set:html={asides[i]} />
+              </aside>
+            )}
+            </div>
           </div>
         </section>
       ))}

@@ -408,6 +408,82 @@ if (!existsSync('docs/architecture.md')) {
   problems.push('docs/architecture.md وجود ندارد — قرارداد معماری گم شده است.');
 }
 
+/* ═══ ۶) واگرایی ریدایرکت‌ها ═══════════════════════════════════════════
+   دو فهرست از یک واقعیت وجود دارد و هر دو دستی نوشته می‌شوند:
+
+     • `astro.config.mjs` → صفحه‌ی meta-refresh در خروجی استاتیک
+     • `public/_redirects` → ۳۰۱ واقعیِ سمت سرور
+
+   هیچ‌کدام دیگری را تولید نمی‌کند (کامنت داخل astro.config یک زمان ادعا
+   می‌کرد «تولید شده» — نمی‌شد، و همان ادعا اصلاح شد). پس افزودن یک قاعده
+   به یکی و فراموش‌کردن دیگری، دقیقاً همان «شکست بی‌صدا»یی است که این
+   پروژه بارها خورده — با این تفاوت که قربانی‌اش ارزش لینک آدرس‌های
+   منتشرشده است و هیچ‌جا خطایی چاپ نمی‌شود.
+
+   ⚠️ قواعد وایلدکارت (`/industries/*`) فقط در `_redirects` معنا دارند؛
+   خروجی استاتیک نمی‌تواند برای الگو صفحه بسازد. پس «اضافه‌بودن» آن‌ها
+   نقض نیست، ولی مقصدشان باید با قاعده‌ی پایه بخواند.
+   ═══════════════════════════════════════════════════════════════════ */
+const REDIRECTS_FILE = 'public/_redirects';
+const astroConfig = read('astro.config.mjs');
+const redirectsTxt = read(REDIRECTS_FILE);
+
+if (!astroConfig || !redirectsTxt) {
+  problems.push(`${!astroConfig ? 'astro.config.mjs' : REDIRECTS_FILE} خوانده نشد — بررسی ریدایرکت بی‌اعتبار است.`);
+} else {
+  // ── astro.config.mjs ──
+  // ⚠️ نام ثابت `legacyCategoryRedirects` است — الگوی حساس‌به‌حروفِ
+  // `redirects =` آن را نمی‌گرفت. `const` هم لازم است تا سطرِ ارجاعِ
+  // داخل defineConfig (`redirects: legacy…`) به‌اشتباه گرفته نشود.
+  const objMatch = /const\s+\w*[Rr]edirects\w*\s*=\s*\{([\s\S]*?)\n\};/.exec(astroConfig);
+  const fromConfig = new Map();
+  if (!objMatch) {
+    problems.push('شیء ریدایرکت در astro.config.mjs پیدا نشد — الگوی استخراج شکسته است.');
+  } else {
+    // کامنت‌ها اول حذف می‌شوند تا نقل‌قول داخلشان به‌اشتباه قاعده خوانده نشود.
+    const body = objMatch[1].replace(/\/\/[^\n]*/g, '');
+    for (const m of body.matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)) {
+      fromConfig.set(m[1].replace(/\/$/, ''), m[2].replace(/\/$/, ''));
+    }
+  }
+
+  // ── public/_redirects ──
+  const fromFile = new Map();
+  const wildcards = new Map();
+  for (const line of redirectsTxt.split('\n')) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const [from, to] = t.split(/\s+/);
+    if (!from || !to) continue;
+    const key = from.replace(/\/$/, '');
+    (key.includes('*') ? wildcards : fromFile).set(key, to.replace(/\/$/, ''));
+  }
+
+  if (fromConfig.size === 0 || fromFile.size === 0) {
+    problems.push('یکی از دو فهرست ریدایرکت خالی خوانده شد — بررسی بی‌اعتبار است.');
+  } else {
+    for (const [from, to] of fromConfig) {
+      if (!fromFile.has(from)) {
+        problems.push(`ریدایرکت «${from}» در astro.config.mjs هست ولی در ${REDIRECTS_FILE} نیست (۳۰۱ واقعی ندارد).`);
+      } else if (fromFile.get(from) !== to) {
+        problems.push(`ریدایرکت «${from}» در دو فایل به دو مقصد می‌رود: «${to}» در astro.config، «${fromFile.get(from)}» در ${REDIRECTS_FILE}.`);
+      }
+    }
+    for (const from of fromFile.keys()) {
+      if (!fromConfig.has(from)) {
+        problems.push(`ریدایرکت «${from}» در ${REDIRECTS_FILE} هست ولی در astro.config.mjs نیست (روی هاست بدون پشتیبانی ۳۰۱، ۴۰۴ می‌دهد).`);
+      }
+    }
+    // قاعده‌ی وایلدکارت باید مقصدش با قاعده‌ی پایه‌ی خودش یکی باشد.
+    for (const [pattern, to] of wildcards) {
+      const base = pattern.replace(/\/?\*+$/, '');
+      if (fromFile.has(base) && fromFile.get(base) !== to) {
+        problems.push(`وایلدکارت «${pattern}» به «${to}» می‌رود ولی قاعده‌ی پایه‌اش «${base}» به «${fromFile.get(base)}».`);
+      }
+    }
+  }
+}
+
 // ═══ گزارش ══════════════════════════════════════════════════════════════
 if (problems.length) {
   console.error(`❌ ${problems.length} نقض معماری (docs/architecture.md):`);

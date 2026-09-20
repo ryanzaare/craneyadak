@@ -79,6 +79,16 @@ function cyh_hub_field_map() {
 			],
 			'repeaters' => [],
 		],
+		/* ⚠️ محصول عمداً هیچ فیلد ساده‌ای اینجا ندارد — و این یک نقص نیست.
+		   `sku`، `price`، `stock_status` و `buy_mode` داده‌ی هویتی و
+		   تجاری‌اند: قیمت غلط یعنی فاکتور غلط. این‌ها باید در پنل و با
+		   چشمِ انسان ثبت شوند، نه از یک فایل JSON که کسی سطر به سطرش را
+		   نخوانده. چیزی که از این مسیر وارد می‌شود فقط **نثر** است:
+		   کلید `blocks`، دقیقاً مثل برند و دسته. */
+		'product'  => [
+			'simple'    => [],
+			'repeaters' => [],
+		],
 	];
 }
 
@@ -124,6 +134,11 @@ function cyh_hub_blocks_to_acf( $blocks ) {
 		$row = [
 			'block_type'   => $type,
 			'heading'      => cyh_hub_clean( $b['heading'] ?? '', false ),
+			/* هر دو اختیاری‌اند و خالی‌ماندنشان نقص نیست:
+			   `nav_label` خالی یعنی از روی عنوان ساخته شود (`deriveNavLabel`)،
+			   و `aside` خالی یعنی آن بخش ستون کناری ندارد. */
+			'nav_label'    => cyh_hub_clean( $b['nav_label'] ?? '', false ),
+			'aside'        => cyh_hub_clean( $b['aside'] ?? '', true ),
 			'needs_review' => in_array( $b['needs_review'] ?? false, [ true, 1, '1', 'true' ], true ) ? 1 : 0,
 			'body'         => '',
 			'intro'        => cyh_hub_clean( $b['intro'] ?? '', false ),
@@ -365,18 +380,28 @@ function cyh_hub_rows( $rows ) {
 
 /** یافتن هدف: برند (نوشته) یا دسته (ترم). هرگز نمی‌سازد. */
 function cyh_hub_locate( $kind, $slug ) {
-	if ( 'brand' === $kind ) {
-		$posts = get_posts( [
-			'post_type'      => 'brand',
-			'name'           => $slug,
-			'post_status'    => [ 'publish', 'draft', 'pending' ],
-			'posts_per_page' => 1,
-		] );
-		return $posts ? (int) $posts[0]->ID : 0;
+	/* ⚠️ ساختار عمداً `switch` است و نه «اگر برند … وگرنه دسته».
+	   شکل قبلی هر نوعِ ناشناخته‌ای را به شاخه‌ی تاکسونومی می‌انداخت. تا
+	   وقتی فقط دو نوع وجود داشت بی‌ضرر بود، ولی با افزوده‌شدن «محصول»
+	   تبدیل می‌شد به: دنبال محصول در میان دسته‌ها بگرد، پیدا نکن، و
+	   «یافت نشد» گزارش کن — یعنی خطای درست با دلیل کاملاً گمراه‌کننده. */
+	switch ( $kind ) {
+		case 'brand':
+		case 'product':
+			$posts = get_posts( [
+				'post_type'      => $kind,
+				'name'           => $slug,
+				'post_status'    => [ 'publish', 'draft', 'pending' ],
+				'posts_per_page' => 1,
+			] );
+			return $posts ? (int) $posts[0]->ID : 0;
+
+		case 'category':
+			$term = get_term_by( 'slug', $slug, 'crane_category' );
+			return ( $term && ! is_wp_error( $term ) ) ? 'crane_category_' . $term->term_id : 0;
 	}
 
-	$term = get_term_by( 'slug', $slug, 'crane_category' );
-	return ( $term && ! is_wp_error( $term ) ) ? 'crane_category_' . $term->term_id : 0;
+	return 0;
 }
 
 /**
@@ -404,7 +429,7 @@ function cyh_hub_import( $payload, $overwrite = false, $dry_run = true ) {
 	   ندارد. نتیجه: حلقه هرگز اجرا نمی‌شد، گزارش خالی برمی‌گشت، صفر فیلد
 	   نوشته می‌شد و **هیچ خطایی هم داده نمی‌شد**.
 	   یعنی ورود دسته از این ابزار هیچ‌وقت کار نکرده بود و کسی نفهمید. */
-	$ROOT_KEYS = [ 'brand' => 'brands', 'category' => 'categories' ];
+	$ROOT_KEYS = [ 'brand' => 'brands', 'category' => 'categories', 'product' => 'products' ];
 
 	// کلیدی در فایل که نمی‌شناسیم، باید گفته شود نه بلعیده.
 	foreach ( array_keys( (array) $payload ) as $key ) {

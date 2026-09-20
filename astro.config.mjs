@@ -15,7 +15,17 @@ import sitemap from '@astrojs/sitemap';
 // ⚠️ محدودیت خروجی استاتیک: Astro در حالت static برای این‌ها صفحه‌ی
 // meta-refresh می‌سازد، نه پاسخ 301 واقعی. گوگل آن را دنبال می‌کند اما
 // 301 سمت سرور به‌مراتب تمیزتر است — به همین دلیل `public/_redirects` هم
-// تولید شده و قوانین معادل nginx/apache در docs/deployment-guide.md آمده.
+// وجود دارد و قوانین معادل nginx/apache در docs/deployment-guide.md آمده.
+//
+// ⚠️ `public/_redirects` **از روی این فایل تولید نمی‌شود.** کامنت پیشین
+// می‌گفت «تولید شده» و این نادرست بود: هیچ اسکریپتی نمی‌سازدش. هر دو
+// فهرست دستی نوشته می‌شوند، پس افزودن یک قاعده یعنی **دو** ویرایش.
+// همگام‌ماندنشان را `scripts/check-architecture.mjs` (بررسی ۶) تضمین
+// می‌کند و واگرایی، build را می‌شکند.
+//
+// ⚠️ صفحه‌های ریدایرکت عمداً از ایندکس جستجوی داخلی بیرون‌اند؛ هشدار
+// Pagefind درباره‌ی «صفحه بدون <html>» مربوط به همین‌هاست و
+// `scripts/check-pagefind.mjs` تعدادشان را با همین فهرست تطبیق می‌دهد.
 // ---------------------------------------------------------------------------
 const legacyCategoryRedirects = {
   '/categories/remote-control': '/categories/control-safety/remote-control',

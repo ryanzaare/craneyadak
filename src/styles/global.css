@@ -202,6 +202,31 @@
 .prose-crane ol { list-style: decimal; }
 .prose-crane li + li { margin-top: 0.5em; }
 
+/* ---------------------------------------------------------
+   یادداشت ستون کناری
+   عمداً *خیلی* کم‌استایل‌تر از `prose-crane`. ستون کناری باید همراهِ متن
+   دیده شود، نه مقاله‌ی دوم: اگر عنوان لنگردار و فهرست پررنگ بگیرد، با
+   ستون اصلی بر سر توجه رقابت می‌کند و همان بی‌نظمی‌ای را می‌سازد که قرار
+   بود فضای خالی را با آن پر نکنیم.
+   هیچ قاعده‌ای برای h2/h3 نوشته نشده چون نوار ابزار ویرایشگرِ این فیلد
+   روی «basic» بسته شده و عنوان تولید نمی‌کند.
+--------------------------------------------------------- */
+.prose-aside > * + * { margin-top: 0.75em; }
+
+.prose-aside a {
+  color: var(--color-crane-orange);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-aside ul,
+.prose-aside ol { padding-inline-start: 1.15rem; }
+.prose-aside ul { list-style: disc; }
+.prose-aside ol { list-style: decimal; }
+.prose-aside li + li { margin-top: 0.35em; }
+.prose-aside strong { color: var(--color-crane-navy); font-weight: 800; }
+
 .prose-crane strong { color: var(--color-crane-navy); font-weight: 800; }
 
 .prose-crane img {

@@ -35,7 +35,7 @@
                         "callout": "هشدار / نکته"
                     },
                     "wrapper": {
-                        "width": "30"
+                        "width": "25"
                     }
                 },
                 {
@@ -46,7 +46,19 @@
                     "show_in_graphql": 1,
                     "instructions": "خالی بگذارید تا بلوک بدون سرتیتر بیاید.",
                     "wrapper": {
-                        "width": "55"
+                        "width": "40"
+                    }
+                },
+                {
+                    "key": "field_cyh_cb_nav_label",
+                    "label": "برچسب ناوبری",
+                    "name": "nav_label",
+                    "type": "text",
+                    "show_in_graphql": 1,
+                    "maxlength": 24,
+                    "instructions": "خالی بگذارید تا از روی عنوان ساخته شود (تا نخستین «:» یا «—»). فقط وقتی پر کنید که برشِ خودکار بی‌معنا شده باشد.",
+                    "wrapper": {
+                        "width": "22"
                     }
                 },
                 {
@@ -58,7 +70,7 @@
                     "ui": 1,
                     "default_value": 0,
                     "wrapper": {
-                        "width": "15"
+                        "width": "13"
                     }
                 },
                 {
@@ -80,6 +92,18 @@
                         ]
                     ],
                     "instructions": "تصویر را از «افزودن رسانه» درج کنید تا ابعادش ثبت شود."
+                },
+                {
+                    "key": "field_cyh_cb_aside",
+                    "label": "یادداشت ستون کناری",
+                    "name": "aside",
+                    "type": "wysiwyg",
+                    "show_in_graphql": 1,
+                    "tabs": "visual",
+                    "toolbar": "basic",
+                    "media_upload": 0,
+                    "delay": 0,
+                    "instructions": "یک تا سه جمله که کنار متن این بخش می‌نشیند: نکته‌ی کلیدی، هشدار کوتاه یا لینک مرتبط. روی موبایل زیر متن می‌آید. ⚠️ تکرار متن اصلی نباشد و در صفحات مختلف یکسان نوشته نشود — متن قالبیِ تکراری ارزش سئوی صفحه را پایین می‌آورد."
                 },
                 {
                     "key": "field_cyh_cb_intro",
@@ -540,5 +564,5 @@
         "CraneProduct",
         "CraneCategory"
     ],
-    "modified": 1789060058
+    "modified": 1789902312
 }
