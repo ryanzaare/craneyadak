@@ -1,43 +1,99 @@
-# Astro Starter Kit: Minimal
+# کرین یدک — craneyadak.com
+
+کاتالوگ B2B قطعات یدکی جرثقیل سقفی برای بازار ایران.
+
+**Astro (خروجی استاتیک) + وردپرس هدلس** — وردپرس فقط پنل محتواست و
+بازدیدکننده هرگز به آن وصل نمی‌شود. هر صفحه در زمان build ساخته می‌شود.
+
+---
+
+## شروع سریع
 
 ```sh
-npm create astro@latest -- --template minimal
+nvm use                 # v22.23.2 — پایین‌تر از ۲۲.۱۲ کار نمی‌کند
+npm ci                  # نه `npm install`: قفل زیروابستگی‌ها باید دست‌نخورده بماند
+npm run dev             # توسعه (تاکسونومی کهنه را می‌پذیرد)
+npm run build           # تاکسونومی → بررسی‌ها → build → pagefind → بررسی جستجو
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+`npm run build` بدون دسترسی به `admin.craneyadak.com` کامل نمی‌شود:
+تاکسونومی، برندها، دسته‌ها، بلوک‌های محتوا و تصاویر همه از آنجا می‌آیند.
 
-## 🚀 Project Structure
+---
 
-Inside of your Astro project, you'll see the following folders and files:
+## نقشه‌ی پروژه
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+| مسیر | چیست |
+|---|---|
+| `src/pages/` | مسیرها. سیلوی دسته‌ها تودرتوست: `/categories/[silo]/[category]` |
+| `src/lib/` | واکشی و نرمال‌سازی داده‌ی وردپرس — هر فایل یک مرز مشخص |
+| `src/data/` | داده‌ی ساکن + `taxonomy.generated.ts` (تولیدشده، دستی ویرایش نشود) |
+| `src/components/` | کامپوننت‌های Astro |
+| `wordpress-plugin/crane-yadak-headless/` | افزونه: CPTها، فیلدهای ACF، REST، ابزار ورود محتوا |
+| `content/` | محتوای آماده به شکل JSON برای ورود گروهی از پنل |
+| `scripts/` | نگهبان‌های build |
+| `docs/` | تصمیم‌های معماری و کارهای باقی‌مانده |
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+---
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+## قاعده‌های این مخزن
 
-Any static assets, like images, can be placed in the `public/` directory.
+این‌ها سلیقه نیستند؛ هرکدام از یک شکست واقعی در همین پروژه بیرون آمده‌اند.
+شرحشان در `docs/architecture.md` است.
 
-## 🧞 Commands
+1. **پالت بلوک بسته است.** هفت نوع بلوک، در هر سه لایه یکسان:
+   ACF ↔ `block-shape.ts` ↔ `ContentBlocks.astro`. واگرایی، build را
+   می‌شکند.
+2. **هر افزوده، حذفش را با خودش می‌آورد.** نسخه‌ی تازه یعنی نسخه‌ی قبلی
+   پاک می‌شود — نه اینکه کنارش بماند.
+3. **build روی آشغال می‌شکند.** `npm run check` ده نگهبان را اجرا می‌کند
+   و هرکدام یک شکست واقعیِ گذشته را رمزگذاری می‌کنند.
+4. **شکست بی‌صدا ممنوع.** پرتکرارترین باگ این پروژه هرگز خطا نداده:
+   محتوا ذخیره می‌شد و نامرئی می‌ماند. کدِ تازه یا کار می‌کند یا
+   **بلند** شکایت می‌کند.
+5. **هیچ داده‌ای جعل نمی‌شود.** کد فنی، مشخصات، قیمت، آمار اعتماد و
+   ادعای نمایندگی — تا وقتی تأیید نشده‌اند منتشر نمی‌شوند. `trust.ts`
+   با `verified: false` عمداً چیزی نشان نمی‌دهد.
+6. **بدون WooCommerce.** تصمیم دائمی. مدل فروش B2B است: استعلام و
+   پیش‌فاکتور، به‌علاوه‌ی پرداخت مستقیم از طریق درگاه.
 
-All commands are run from the root of the project, from a terminal:
+---
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+## نگهبان‌های build
 
-## 👀 Want to learn more?
+| اسکریپت | جلوی چه چیزی را می‌گیرد |
+|---|---|
+| `check-architecture.mjs` | نام تایپ گراف‌کیوال، کلید `modified` در ACF، اعتبار فیلدهای کوئری، دکمه‌ی مرده‌ی پنل، واگرایی دو فهرست ریدایرکت |
+| `check-docs-fresh.mjs` | ارجاع به فیچر بازنشسته، مسیر سندِ ناموجود، backlog کهنه |
+| `check-imports.mjs` | importی که به export واقعی نمی‌رسد |
+| `check-wp-hooks.mjs` | کال‌بک هوکی که با امضای وردپرس نمی‌خواند |
+| `check-braces.mjs` / `check-astro-tags.mjs` | ساختار نامتوازن |
+| `check-pagefind.mjs` | صفحه‌ی شکسته‌ای که به بهانه‌ی «هشدار ریدایرکت» نادیده بماند |
+| `test:blocks` / `test:seo` | نرمال‌سازی بلوک و مهار طول متا |
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+افزونه بررسی‌های خودش را دارد: `npm run check:plugin` (نیازمند PHP).
+
+---
+
+## دیپلوی
+
+`dist/` را روی ریشه‌ی سند منتشر کنید. جزئیات در
+`docs/deployment-guide.md`.
+
+⚠️ **ریدایرکت‌ها نیاز به تنظیم سرور دارند.** خروجی استاتیک برای مسیرهای
+قدیمی صفحه‌ی meta-refresh می‌سازد (کد ۲۰۰)، نه ۳۰۱ واقعی.
+`public/_redirects` را Netlify و Cloudflare Pages مستقیم می‌خوانند؛ روی
+nginx/Apache/ArvanCloud باید معادلش دستی اعمال شود. نگهبان معماری فقط
+**یکسان‌بودن دو فهرست** را تضمین می‌کند، نه پاسخ واقعی سرور را — آن را
+بعد از دیپلوی با `curl -I` بسنجید.
+
+---
+
+## سندها
+
+- `docs/architecture.md` — قرارداد معماری و دلیل هر قاعده
+- `docs/backlog.md` — **حافظه‌ی پروژه**: هر ایده، تصمیم و کار معلق
+- `docs/backend-integration.md` — وردپرس، ACF، WPGraphQL
+- `docs/taxonomy-ssot.md` — سیلوها و دسته‌ها
+- `docs/deployment-guide.md` — انتشار و تنظیم سرور
+- `CLAUDE.md` / `AGENTS.md` — دستورکار برای همکار هوش مصنوعی

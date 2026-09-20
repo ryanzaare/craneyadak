@@ -148,7 +148,18 @@ add_action( 'rest_api_init', 'cyh_register_community_routes' );
  *   ب) محدودیت نرخ بر اساس IP
  *   ج) پاک‌سازی سخت‌گیرانه‌ی همه‌ی فیلدها
  */
-function cyh_validate_submission( $request ) {
+/**
+ * @param WP_REST_Request $request
+ * @param bool $require_post آیا ارسال باید به یک *نوشته* بچسبد؟
+ *        پرسشِ دسته به **ترم تاکسونومی** می‌چسبد و نوشته‌ای ندارد؛
+ *        `class-category-questions.php` با `false` صدایش می‌زند و خودش
+ *        ترم را اعتبارسنجی می‌کند.
+ *
+ *        ⚠️ این پارامتر عمداً اضافه شد تا آن فایل مجبور نشود سه لایه‌ی
+ *        دفاعی را کپی کند. دو نسخه‌ی اعتبارسنجی یعنی روزی یکی در برابر
+ *        یک سوءاستفاده‌ی تازه وصله می‌شود و آن یکی باز می‌ماند.
+ */
+function cyh_validate_submission( $request, $require_post = true ) {
 	// الف) هانی‌پات
 	if ( '' !== trim( (string) $request->get_param( 'website' ) ) ) {
 		return new WP_Error( 'cyh_spam', 'ارسال نامعتبر.', [ 'status' => 400 ] );
@@ -161,7 +172,7 @@ function cyh_validate_submission( $request ) {
 	}
 
 	$post_id = (int) $request->get_param( 'post_id' );
-	if ( $post_id < 1 || ! get_post( $post_id ) ) {
+	if ( $require_post && ( $post_id < 1 || ! get_post( $post_id ) ) ) {
 		return new WP_Error( 'cyh_bad_post', 'محصول مورد نظر پیدا نشد.', [ 'status' => 404 ] );
 	}
 

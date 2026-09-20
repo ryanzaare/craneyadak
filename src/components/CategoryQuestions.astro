@@ -1,0 +1,212 @@
+---
+// src/components/CategoryQuestions.astro
+// ---------------------------------------------------------------------------
+// پرسش و پاسخ فنی روی صفحه‌ی دسته.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// چرا این بخش ارزش دارد (و چرا فقط روی دسته است)
+// ═══════════════════════════════════════════════════════════════════════════
+// هر پرسش، یک عبارت جستجوی long-tail واقعی است با کلمات خود خریدار —
+// متنی که هیچ کپی‌رایتری تولید نمی‌کند: «آیا سیم‌بکسل ۱۲ میلی‌متری روی
+// درام دماگ می‌خورد؟».
+//
+// روی **برند** عمداً نیست: پرسش زیر صفحه‌ی دماگ یعنی پرسش گارانتی برای
+// سازنده‌ای که نمایندگی‌اش را نداریم؛ پاسخ‌دادن به آن رابطه‌ای را تلویحاً
+// ادعا می‌کند که وجود ندارد.
+//
+// ⚠️ فرم حتی وقتی هیچ پرسشی ثبت نشده هم نمایش داده می‌شود. این همان باگی
+// بود که یک بار در صفحه‌ی محصول رخ داد: بخش اجتماعی داخل شرط «محصول
+// مرتبط دارد» رفته بود و روی سایتِ تازه هرگز دیده نمی‌شد — یعنی جایی که
+// باید *اولین* پرسش ثبت شود، هیچ فرمی نبود.
+// ---------------------------------------------------------------------------
+
+import type { CategoryQuestion } from '../lib/category-questions';
+
+export interface Props {
+  questions: CategoryQuestion[];
+  categorySlug: string;
+  categoryName: string;
+  wpBase: string | null;
+}
+
+const { questions, categorySlug, categoryName, wpBase } = Astro.props;
+const canSubmit = Boolean(wpBase && categorySlug);
+
+const faDate = (iso: string) => {
+  if (!iso) return '';
+  try {
+    return new Intl.DateTimeFormat('fa-IR', {
+      year: 'numeric', month: 'long', timeZone: 'UTC',
+    }).format(new Date(iso));
+  } catch {
+    return '';
+  }
+};
+---
+
+<section
+  id="category-qa"
+  class="bg-white px-4 py-14 border-t border-gray-100 print:hidden"
+  aria-labelledby="qa-heading"
+>
+  <div class="max-w-7xl mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12 lg:items-start">
+    <div class="min-w-0">
+      <h2 id="qa-heading" class="text-2xl md:text-3xl font-black text-crane-navy mb-2">
+        پرسش‌های فنی درباره‌ی {categoryName}
+      </h2>
+      <p class="text-steel-600 leading-8 mb-8">
+        پرسش شما را کارشناس فنی پاسخ می‌دهد و پاسخ روی همین صفحه منتشر می‌شود،
+        تا خریدار بعدی هم آن را ببیند.
+      </p>
+
+      {questions.length === 0 ? (
+        <p class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-steel-600 leading-8">
+          هنوز پرسشی درباره‌ی این دسته ثبت نشده است. اگر دستگاه یا کد فنی مشخصی
+          دارید، همین‌جا بپرسید — پاسخ کارشناس روی همین صفحه می‌آید.
+        </p>
+      ) : (
+        <ul class="space-y-4" role="list">
+          {questions.map((q) => (
+            <li class="rounded-2xl border border-gray-200 border-r-4 border-r-crane-orange/50 overflow-hidden">
+              <div class="px-6 pt-5">
+                <h3 class="font-black text-crane-navy leading-8">{q.question}</h3>
+                <p class="text-xs text-steel-500 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {q.askerName && <span>پرسش از {q.askerName}</span>}
+                  {q.craneModel && (
+                    <span class="rounded-full bg-gray-100 px-2 py-0.5 font-bold text-steel-600">
+                      {q.craneModel}
+                    </span>
+                  )}
+                  {q.isoDate && <time datetime={q.isoDate}>{faDate(q.isoDate)}</time>}
+                </p>
+              </div>
+              {/* پاسخ همیشه هست: هم نگهبان افزونه و هم لایه‌ی واکشی،
+                  پرسش بی‌پاسخ را کنار می‌گذارند. */}
+              <div class="px-6 py-4 mt-3 bg-gray-50 border-t border-gray-100">
+                <p class="text-xs font-black text-crane-orange mb-2">پاسخ کارشناس فنی</p>
+                <div class="prose-aside text-steel-700 leading-8" set:html={q.answerHtml} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+
+    {/* ── فرم ثبت پرسش ──────────────────────────────────────────────── */}
+    <aside class="mt-10 lg:mt-0 lg:sticky lg:top-32">
+      {canSubmit ? (
+        <form
+          id="qa-form"
+          class="rounded-2xl border border-gray-200 bg-gray-50/70 p-6"
+          data-wp-base={wpBase}
+          data-category={categorySlug}
+          novalidate
+        >
+          <h3 class="font-black text-crane-navy mb-1">پرسش خود را بپرسید</h3>
+          <p class="text-sm text-steel-600 leading-7 mb-5">
+            هرچه مدل دستگاه دقیق‌تر باشد، پاسخ دقیق‌تر است.
+          </p>
+
+          <label class="block text-sm font-bold text-steel-700 mb-1" for="qa-name">نام</label>
+          <input
+            id="qa-name" name="name" type="text" required minlength="2" autocomplete="name"
+            class="w-full rounded-xl border border-gray-300 px-4 py-2.5 mb-4 focus:outline-none focus:ring-2 focus:ring-crane-orange"
+          />
+
+          <label class="block text-sm font-bold text-steel-700 mb-1" for="qa-model">
+            مدل یا برند جرثقیل <span class="font-normal text-steel-500">(اختیاری)</span>
+          </label>
+          <input
+            id="qa-model" name="crane_model" type="text"
+            class="w-full rounded-xl border border-gray-300 px-4 py-2.5 mb-4 focus:outline-none focus:ring-2 focus:ring-crane-orange"
+          />
+
+          <label class="block text-sm font-bold text-steel-700 mb-1" for="qa-email">
+            ایمیل <span class="font-normal text-steel-500">(اختیاری — برای اطلاع از پاسخ)</span>
+          </label>
+          <input
+            id="qa-email" name="email" type="email" autocomplete="email"
+            class="w-full rounded-xl border border-gray-300 px-4 py-2.5 mb-4 focus:outline-none focus:ring-2 focus:ring-crane-orange"
+          />
+
+          <label class="block text-sm font-bold text-steel-700 mb-1" for="qa-body">پرسش</label>
+          <textarea
+            id="qa-body" name="body" rows="4" required minlength="10"
+            class="w-full rounded-xl border border-gray-300 px-4 py-2.5 mb-4 leading-7 focus:outline-none focus:ring-2 focus:ring-crane-orange"
+          ></textarea>
+
+          {/* هانی‌پات — کاربر واقعی هرگز نمی‌بیندش. `hidden` نیست تا ربات
+              پرش کند؛ از دید صفحه‌خوان هم با aria-hidden پنهان است. */}
+          <div class="absolute w-px h-px overflow-hidden -m-px" aria-hidden="true">
+            <label for="qa-website">وب‌سایت</label>
+            <input id="qa-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <button
+            type="submit"
+            class="w-full bg-crane-orange text-white font-black rounded-xl py-3 min-h-[48px] hover:brightness-95 transition focus:outline-none focus:ring-4 focus:ring-crane-orange/40 disabled:opacity-60"
+          >
+            ثبت پرسش
+          </button>
+
+          <p id="qa-status" class="text-sm leading-7 mt-3" role="status" aria-live="polite"></p>
+        </form>
+      ) : (
+        <div class="rounded-2xl border border-dashed border-gray-300 p-6 text-sm text-steel-600 leading-7">
+          فرم ثبت پرسش در این نسخه‌ی build غیرفعال است
+          <span class="block mt-1 text-steel-500">(آدرس وردپرس تنظیم نشده)</span>
+        </div>
+      )}
+    </aside>
+  </div>
+</section>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('#qa-form');
+  if (form) {
+    const status = document.querySelector<HTMLElement>('#qa-status')!;
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      // اعتبارسنجی مرورگر پیش از رفتن روی شبکه — پیام خطای بومی و فارسی.
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      const base = form.dataset.wpBase ?? '';
+      // WP_GRAPHQL_URL به `/graphql` ختم می‌شود؛ ریشه‌ی REST یک سطح بالاتر است.
+      const endpoint = `${base.replace(/\/graphql\/?$/, '')}/wp-json/crane-yadak/v1/category-question`;
+
+      const payload = new FormData(form);
+      payload.set('category_slug', form.dataset.category ?? '');
+
+      button.disabled = true;
+      status.textContent = 'در حال ارسال…';
+      status.className = 'text-sm leading-7 mt-3 text-steel-600';
+
+      try {
+        const res = await fetch(endpoint, { method: 'POST', body: payload });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data?.ok) {
+          form.reset();
+          status.textContent = data.message ?? 'پرسش شما ثبت شد.';
+          status.className = 'text-sm leading-7 mt-3 text-emerald-700 font-bold';
+        } else {
+          // ⚠️ پیام خطای سرور نمایش داده می‌شود، نه یک «خطایی رخ داد» عمومی.
+          // کاربر باید بداند نامش کوتاه بوده یا متن پرسش.
+          status.textContent = data?.message ?? 'ثبت انجام نشد. دوباره تلاش کنید.';
+          status.className = 'text-sm leading-7 mt-3 text-red-700 font-bold';
+        }
+      } catch {
+        status.textContent = 'ارتباط برقرار نشد. اتصال اینترنت را بررسی کنید.';
+        status.className = 'text-sm leading-7 mt-3 text-red-700 font-bold';
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+</script>

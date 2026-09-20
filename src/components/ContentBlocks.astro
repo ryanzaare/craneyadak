@@ -109,15 +109,25 @@ const band = (i: number) => (i % 2 === 1 ? 'bg-gray-50' : '');
    `justify-center` عمدی است: جفتِ «متن + ستون» با هم وسط‌چین می‌شوند،
    وگرنه همان فضای خالی فقط از یک سمت به سمت دیگر منتقل می‌شد.
 
-   شبکه فقط از `xl` فعال است؛ پایین‌تر از آن، یادداشت زیر متن جریان پیدا
-   می‌کند — روی موبایل ستون کناری یعنی دو ستون باریکِ ناخوانا. */
+   ⚠️ نقطه‌ی شکست `lg` (۱۰۲۴px) است و نه `xl` (۱۲۸۰px). نسخه‌ی اول روی
+   `xl` بود و این یک اشتباه واقعی بود: پنجره‌ی مرورگر روی مک‌بوک معمولاً
+   باریک‌تر از ۱۲۸۰ است، پس ستون کناری برای کسی که سفارشش را داده بود
+   **هرگز فعال نمی‌شد** — فیچر ساخته و نامرئی. CSS تولید شده بود، کلاس
+   روی عنصر بود، و باز هیچ‌چیز دیده نمی‌شد.
+
+   در ۱۰۲۴px حساب سر جایش است: ۹۹۲ پیکسل محتوا منهای ۲۸۸ (ستون) و ۴۸
+   (فاصله) یعنی ۶۵۶ پیکسل برای متن. `minmax(0,70ch)` اجازه می‌دهد ستون
+   متن کمی جمع شود به‌جای اینکه شبکه سرریز کند.
+
+   پایین‌تر از `lg`، یادداشت زیر متن جریان پیدا می‌کند — روی موبایل ستون
+   کناری یعنی دو ستون باریکِ ناخوانا. */
 /* ⚠️ کلاس‌ها **کامل و ثابت** نوشته شده‌اند، نه ساخته‌شده با درون‌یابی.
    Tailwind سورس را متنی اسکن می‌کند؛ `xl:grid-cols-[${cols}_18rem]` هرگز
    به‌عنوان یک کلاس دیده نمی‌شود، پس CSSاش تولید نمی‌شود و چیدمان بی‌هیچ
    خطایی از هم می‌پاشد — یک «شکست بی‌صدا»ی تمام‌عیار. */
-const RAIL_BASE = 'xl:grid xl:gap-12 xl:items-start xl:justify-center';
-const RAIL_TEXT = 'xl:grid-cols-[minmax(0,70ch)_18rem]';
-const RAIL_WIDE = 'xl:grid-cols-[minmax(0,1fr)_18rem]';
+const RAIL_BASE = 'lg:grid lg:gap-12 lg:items-start lg:justify-center';
+const RAIL_TEXT = 'lg:grid-cols-[minmax(0,70ch)_18rem]';
+const RAIL_WIDE = 'lg:grid-cols-[minmax(0,1fr)_18rem]';
 
 const rail = (b: ContentBlock): string =>
   b.asideHtml === '' ? '' : `${RAIL_BASE} ${b.type === 'text' ? RAIL_TEXT : RAIL_WIDE}`;
@@ -296,7 +306,7 @@ const rail = (b: ContentBlock): string =>
 
             {/* ── ستون کناری ─────────────────────────────────────────── */}
             {b.asideHtml !== '' && (
-              <aside class="mt-8 xl:mt-0 xl:sticky xl:top-32 rounded-2xl bg-white xl:bg-gray-50/70 border border-gray-200 p-5">
+              <aside class="mt-8 lg:mt-0 lg:sticky lg:top-32 rounded-2xl bg-white lg:bg-gray-50/70 border border-gray-200 p-5">
                 <p class="flex items-center gap-2 text-xs font-black text-crane-orange mb-2">
                   <span class="w-1.5 h-1.5 rounded-full bg-crane-orange" aria-hidden="true"></span>
                   نکته

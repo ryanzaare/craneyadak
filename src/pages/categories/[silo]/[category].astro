@@ -26,6 +26,8 @@ import {
   type Silo,
 } from '../../../data/taxonomy';
 import ContentBlocks from '../../../components/ContentBlocks.astro';
+import CategoryQuestions from '../../../components/CategoryQuestions.astro';
+import { getCategoryQuestions, questionsJsonLd } from '../../../lib/category-questions';
 import { getProductsByCategory, computePrice, productJsonLd, type CraneProduct } from '../../../lib/wp';
 import { getBlocks, specsToJsonLd } from '../../../lib/content-blocks';
 import { resolveCategoryTerm, type CategoryTerm } from '../../../lib/categories';
@@ -64,6 +66,12 @@ const displayBlurb = term.blurb;
 const reviewMode = import.meta.env.CONTENT_REVIEW === '1';
 const blocks = await getBlocks('category', category.slug);
 const specJsonLd = specsToJsonLd(blocks);
+
+/* پرسش‌های کاربران — فقط آن‌هایی که کارشناس پاسخ داده است.
+   ⚠️ روی برند عمداً وجود ندارد: پاسخ‌دادن به پرسش گارانتیِ یک سازنده،
+   رابطه‌ای را تلویحاً ادعا می‌کند که مستندی برایش نداریم. */
+const questions = await getCategoryQuestions(category.slug);
+const wpBase = (import.meta.env.WP_GRAPHQL_URL as string | undefined)?.replace(/\/+$/, '') ?? null;
 
 /* ⚠️ قطعه‌ای ساخته می‌شود، نه رشته‌ی یک‌تکه. با رشته‌ی یک‌تکه، بریدنِ طول
    همیشه دُم را می‌خورد — و دُم همان‌جایی است که «فاکتور رسمی» و نام برند
@@ -163,6 +171,15 @@ const jsonLd = {
           }
         : {}),
     },
+    /* ⚠️ `QAPage` و نه `FAQPage`. تفاوتشان در *منشأ* است، نه در شکل:
+       FAQPage برای پرسشی است که خود سایت نوشته (بلوک پرسش‌های متداول،
+       که `ContentBlocks.astro` تولیدش می‌کند)، و QAPage برای پرسشی که
+       کاربر پرسیده و پاسخ گرفته. جابه‌جا استفاده‌کردنشان نقض راهنمای
+       گوگل است.
+
+       این دو روی یک صفحه تداخل ندارند چون موجودیت‌های متفاوتی را توصیف
+       می‌کنند — برخلاف دو گره FAQPage که سیگنال متناقض می‌دهد. */
+    ...(questionsJsonLd(questions, canonical) ? [questionsJsonLd(questions, canonical)!] : []),
   ],
 };
 
@@ -297,6 +314,17 @@ const contact = await getContact();
 
   {/* ------------------ راهنمای فنی (محتوای وردپرس) ------------------ */}
   <ContentBlocks blocks={blocks} title={displayName} reviewMode={reviewMode} eyebrow="راهنمای فنی" />
+
+  {/* ------------------ پرسش و پاسخ کاربران ------------------ */}
+  {/* جایش عمدی است: **بعد از** راهنمای فنی. محتوای تخصصیِ ما اول، محتوای
+      کاربر بعد — هم برای خواننده منطقی‌تر است و هم سیگنال تخصص صفحه را
+      بالای صفحه نگه می‌دارد. */}
+  <CategoryQuestions
+    questions={questions}
+    categorySlug={category.slug}
+    categoryName={displayName}
+    wpBase={wpBase}
+  />
 
   {/* --------------------- لینک‌سازی داخلی درون سیلو --------------------- */}
   {siblings.length > 0 && (
