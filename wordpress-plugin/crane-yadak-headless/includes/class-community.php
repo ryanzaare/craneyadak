@@ -1,31 +1,33 @@
 <?php
 /**
- * انجمن: پرسش‌وپاسخ فنی، نظر خریداران، و گزارش نصب.
+ * انجمن: گزارش نصب و نظر خریداران.
  *
  * ---------------------------------------------------------------------------
- * تصمیم معماری: چرا «پرسش‌وپاسخ» مقدم بر «نظر» است
+ * ⚠️ این فایل قبلاً «پرسش فنی» را هم داشت. از ۳.۶.۰ ندارد.
  *
- * در فروش B2B صنعتی، الگوی «امتیاز ۵ ستاره» تقریباً بی‌معناست. کسی درباره‌ی
- * یک لنت ترمز نظر احساسی نمی‌نویسد. سوال واقعی خریدار همیشه یکی است:
- * «آیا این قطعه روی دستگاه من می‌خورد؟»
+ * چرا جدا شد: پرسش فنی باید روی **دسته** هم کار می‌کرد، و دیدگاه وردپرس
+ * فقط به *نوشته* می‌چسبد — دسته ترم تاکسونومی است. نتیجه یک دوره‌ی کوتاه
+ * دو-سامانه‌ای بود (دیدگاه برای محصول، CPT برای دسته) که کارفرما درست
+ * تشخیص داد باید فوراً بسته شود: هزینه‌ی یکی‌کردن وقتی هنوز هیچ پرسش
+ * واقعی ثبت نشده، صفر است.
  *
- * بنابراین سه نوع محتوای کاربر با اولویت متفاوت پیاده شده است:
+ * حالا هر پرسش فنی — محصول یا دسته — روی CPT `cyh_question` است
+ * (`class-questions.php`). کارشناس رسمی از پنل پاسخ می‌دهد و نامش زیر
+ * پاسخ می‌آید؛ همان سیگنال E-E-A-T که هدف بود.
+ * ---------------------------------------------------------------------------
  *
- *   ۱) پرسش فنی (اصلی) — خریدار می‌پرسد، کارشناس *ما* پاسخ می‌دهد.
- *      هر پرسش یک عبارت جستجوی طولانی واقعی است؛ این بهترین منبع
- *      long-tail برای این صنعت است.
- *   ۲) گزارش نصب (ابتکاری) — خریدار می‌گوید این قطعه روی چه دستگاهی
- *      نصب شده و چقدر کار کرده. برای خریدار بعدی از هر امتیازی معتبرتر
- *      است و دقیقاً همان سوال سازگاری را جواب می‌دهد.
- *   ۳) نظر و امتیاز (فرعی) — پشتیبانی می‌شود اما ستون اصلی نیست.
+ * آنچه اینجا ماند، و چرا:
  *
- * هر سه روی سیستم «دیدگاه» وردپرس سوارند، نه یک جدول سفارشی. دلیل:
- * تعدیل (moderation)، ضداسپم، اعلان ایمیلی و مدیریت کاربر از قبل ساخته
- * شده‌اند و امتحان پس داده‌اند. ساختن جدول سفارشی یعنی بازنویسی همه‌ی
- * این‌ها با کیفیت کمتر.
+ *   ۱) گزارش نصب — خریدار می‌گوید این قطعه روی چه دستگاهی نصب شده و
+ *      چقدر کار کرده. برای خریدار بعدی از هر امتیازی معتبرتر است.
+ *   ۲) نظر و امتیاز — پشتیبانی می‌شود اما ستون اصلی نیست. در فروش B2B
+ *      صنعتی کسی درباره‌ی یک لنت ترمز نظر احساسی نمی‌نویسد.
  *
- * ⚠️ همه‌ی ورودی‌های کاربر پیش‌فرض «در انتظار تایید» هستند. هیچ محتوای
- * کاربری بدون تایید انسانی روی سایت نمی‌رود.
+ * هر دو **تجربه‌ی یک خریدار از یک محصول مشخص**‌اند: ذاتاً به یک نوشته
+ * می‌چسبند و ذاتاً دیدگاه‌اند. تعدیل، ضداسپم و اعلان ایمیلی وردپرس از
+ * قبل برایشان ساخته شده و امتحان پس داده.
+ *
+ * ⚠️ همه‌ی ورودی‌های کاربر پیش‌فرض «در انتظار تایید» هستند.
  * ---------------------------------------------------------------------------
  *
  * @package CraneYadakHeadless
@@ -35,7 +37,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-const CYH_CT_QUESTION = 'cyh_question';
+/* ⚠️ `CYH_CT_QUESTION` حذف شد (۳.۶.۰). پرسش فنی دیگر دیدگاه نیست؛ روی
+   CPT `cyh_question` زندگی می‌کند — `class-questions.php`.
+   این فایل از این پس فقط «گزارش نصب» و «نظر خریدار» را نگه می‌دارد:
+   هر دو تجربه‌ی یک خریدار از یک محصول‌اند و ذاتاً دیدگاه‌اند. */
 const CYH_CT_ANSWER   = 'cyh_answer';
 const CYH_CT_FITMENT  = 'cyh_fitment';
 const CYH_CT_REVIEW   = 'cyh_review';
@@ -117,7 +122,7 @@ add_action( 'init', 'cyh_enable_product_comments', 20 );
  * از نوع درست. این تابع نوع دیدگاه را در همان لحظه‌ی درج تثبیت می‌کند.
  */
 function cyh_default_comment_pending( $approved, $commentdata ) {
-	$ours = [ CYH_CT_QUESTION, CYH_CT_FITMENT, CYH_CT_REVIEW ];
+	$ours = [ CYH_CT_FITMENT, CYH_CT_REVIEW ];
 	if ( isset( $commentdata['comment_type'] ) && in_array( $commentdata['comment_type'], $ours, true ) ) {
 		return 0; // همیشه در انتظار تایید
 	}
@@ -134,7 +139,8 @@ function cyh_register_community_routes() {
 		'permission_callback' => '__return_true', // عمومی؛ امنیت پایین‌تر اعمال می‌شود
 	];
 
-	register_rest_route( 'crane-yadak/v1', '/question', array_merge( $common, [ 'callback' => 'cyh_rest_submit_question' ] ) );
+	/* مسیر `/question` اینجا نیست — به `class-questions.php` منتقل شد و حالا
+	   هم پرسش دسته و هم پرسش محصول را می‌گیرد. */
 	register_rest_route( 'crane-yadak/v1', '/fitment', array_merge( $common, [ 'callback' => 'cyh_rest_submit_fitment' ] ) );
 	register_rest_route( 'crane-yadak/v1', '/review', array_merge( $common, [ 'callback' => 'cyh_rest_submit_review' ] ) );
 }
@@ -147,12 +153,11 @@ add_action( 'rest_api_init', 'cyh_register_community_routes' );
  *   الف) هانی‌پات — ربات ساده آن را پر می‌کند
  *   ب) محدودیت نرخ بر اساس IP
  *   ج) پاک‌سازی سخت‌گیرانه‌ی همه‌ی فیلدها
- */
-/**
+ *
  * @param WP_REST_Request $request
  * @param bool $require_post آیا ارسال باید به یک *نوشته* بچسبد؟
  *        پرسشِ دسته به **ترم تاکسونومی** می‌چسبد و نوشته‌ای ندارد؛
- *        `class-category-questions.php` با `false` صدایش می‌زند و خودش
+ *        `class-questions.php` با `false` صدایش می‌زند و خودش
  *        ترم را اعتبارسنجی می‌کند.
  *
  *        ⚠️ این پارامتر عمداً اضافه شد تا آن فایل مجبور نشود سه لایه‌ی
@@ -226,26 +231,6 @@ function cyh_insert_community_comment( $data, $type, $meta = [] ) {
 	}
 
 	return $comment_id;
-}
-
-function cyh_rest_submit_question( $request ) {
-	$data = cyh_validate_submission( $request );
-	if ( is_wp_error( $data ) ) {
-		return $data;
-	}
-
-	$result = cyh_insert_community_comment( $data, CYH_CT_QUESTION, [
-		'cyh_crane_model' => sanitize_text_field( (string) $request->get_param( 'crane_model' ) ),
-	] );
-
-	if ( is_wp_error( $result ) ) {
-		return $result;
-	}
-
-	return rest_ensure_response( [
-		'ok'      => true,
-		'message' => 'پرسش شما ثبت شد. پس از پاسخ کارشناس فنی، روی همین صفحه منتشر می‌شود.',
-	] );
 }
 
 function cyh_rest_submit_fitment( $request ) {
@@ -327,12 +312,12 @@ function cyh_register_community_graphql() {
 
 	register_graphql_field( 'CraneProduct', 'community', [
 		'type'        => [ 'list_of' => 'CraneCommunityEntry' ],
-		'description' => 'پرسش‌ها، گزارش‌های نصب و نظرهای تاییدشده.',
+		'description' => 'گزارش‌های نصب و نظرهای تاییدشده. پرسش فنی روی CraneQuestion است.',
 		'resolve'     => function ( $post ) {
 			$comments = get_comments( [
 				'post_id' => $post->ID,
 				'status'  => 'approve',
-				'type__in' => [ CYH_CT_QUESTION, CYH_CT_FITMENT, CYH_CT_REVIEW ],
+				'type__in' => [ CYH_CT_FITMENT, CYH_CT_REVIEW ],
 				'parent'  => 0,
 				'order'   => 'ASC',
 			] );
@@ -384,7 +369,6 @@ function cyh_comment_type_column_content( $column, $comment_id ) {
 
 	$comment = get_comment( $comment_id );
 	$labels  = [
-		CYH_CT_QUESTION => [ 'پرسش فنی', '#2271b1' ],
 		CYH_CT_FITMENT  => [ 'گزارش نصب', '#00a32a' ],
 		CYH_CT_REVIEW   => [ 'نظر خریدار', '#dba617' ],
 	];

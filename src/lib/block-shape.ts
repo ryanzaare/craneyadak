@@ -63,7 +63,23 @@ export interface ContentBlock {
    */
   navLabel: string;
   needsReview: boolean;
-  /** شناسه‌ی لنگر برای ناوبری درون‌صفحه‌ای — از جایگاه ساخته می‌شود. */
+  /**
+   * شناسه‌ی لنگر برای ناوبری درون‌صفحه‌ای — از **عنوان** ساخته می‌شود.
+   *
+   * ⚠️ پیش از این `block-${i+1}` بود، یعنی از *جایگاه*. دو ایراد داشت و
+   * دومی جدی است:
+   *
+   *   ۱) `#block-5` برای انسان هیچ معنایی ندارد. لینکی که در واتساپ
+   *      فرستاده می‌شود باید بگوید کجا می‌رود.
+   *   ۲) **ناپایدار بود.** جابه‌جا کردن یک بلوک در پنل، لنگرِ *همه‌ی*
+   *      بلوک‌های بعدی را عوض می‌کرد — یعنی هر لینک ذخیره‌شده، هر لینک
+   *      داخلی و هر «پرش به بخش» که گوگل نشان می‌دهد، می‌شکست. بی‌صدا.
+   *
+   * این دقیقاً همان اشتباهی است که در `category-facets.ts` گرفته شد و
+   * آنجا نوشته شد «شناسه از `spec_label` ساخته می‌شود، نه از شماره‌ی
+   * ردیف» — و بعد همین‌جا تکرار شد. قاعده یکی است: **شناسه‌ی پایدار از
+   * محتوا می‌آید، نه از ترتیب.**
+   */
   anchor: string;
   /**
    * یادداشت ستون کناری — محتوای کوتاهِ *نوشته‌شده*، نه تکرار خودکار متن.
@@ -175,7 +191,52 @@ export function deriveNavLabel(heading: string, explicit = ''): string {
   return out || h.slice(0, NAV_LABEL_MAX);
 }
 
+/**
+ * عنوان → لنگر URL.
+ *
+ * ⚠️ خروجی **فارسی** است و این عمدی است. جایگزین‌ها بدترند: حرف‌نویسی به
+ * لاتین هم پرخطاست هم برای خواننده‌ی فارسی بی‌معنا، و هش کوتاه (`#s-a3f2`)
+ * پایدار هست ولی باز هم چیزی به آدم نمی‌گوید. مرورگر فارسی را در نوار
+ * آدرس درست نشان می‌دهد.
+ *
+ * ⚠️ نیم‌فاصله (U+200C) به خط تیره تبدیل می‌شود، نه اینکه بماند: کاراکتر
+ * نامرئی داخل URL یعنی لینکی که کپی می‌شود و بعد کسی نمی‌فهمد چرا کار
+ * نمی‌کند.
+ */
+/* ⚠️ نشانه‌گذاری و اعرابِ فارسی **داخل** بازه‌ی حروف (U+0600–U+06FF)
+   زندگی می‌کنند، پس یک فهرست سفیدِ ساده‌ی «بازه‌ی فارسی» آن‌ها را نگه
+   می‌دارد. نسخه‌ی اول همین کار را کرد و «قطر-چیست؟» ساخت — علامت سوال
+   داخل URL. آزمون گرفتش.
+
+   جدا حذف می‌شوند:
+     • U+0600–U+0605، U+06DD  نشانه‌های قرآنی/متنی
+     • U+060C ،   U+061B ؛   U+061E ؎   U+061F ؟
+     • U+0610–U+061A، U+064B–U+065F، U+0670، U+06D6–U+06ED  اعراب
+       (نامرئی‌اند؛ داخل لنگر یعنی لینکی که کپی می‌شود و کار نمی‌کند)
+     • U+066A–U+066D ٪٫٬٭   U+06D4 ۔ */
+const FA_PUNCT_AND_MARKS =
+  /[؀-؅،؍؛؞؟٪-٭۔۝ؐ-ًؚ-ٰٟۖ-ۭ]/g;
+
+export function slugifyAnchor(heading: string): string {
+  return heading
+    .trim()
+    .toLowerCase()
+    .replace(FA_PUNCT_AND_MARKS, '')
+    .replace(/[‌\s_/]+/g, '-')
+    // باقی‌مانده: حروف فارسی/عربی، ارقام (لاتین و فارسی)، لاتین، خط تیره.
+    .replace(/[^؀-ۿ0-9a-z-]/g, '')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50)
+    .replace(/-+$/, '');
+}
+
 export function normalizeBlocks(raw: unknown, label = ''): ContentBlock[] {
+  /* شمارنده‌ی لنگرهای تکراری. دو بلوک با عنوان یکسان در یک صفحه نادر است
+     ولی ممکن — و دو `id` یکسان یعنی مرورگر همیشه به اولی می‌پرد و
+     HTML نامعتبر می‌شود. */
+  const usedAnchors = new Map<string, number>();
+
   const all = arr(raw)
     .map((r, i): ContentBlock => {
       const t = str(r.blockType) as BlockType;
@@ -193,12 +254,24 @@ export function normalizeBlocks(raw: unknown, label = ''): ContentBlock[] {
 
       const heading = str(r.heading);
 
+      /* بلوک بی‌عنوان لنگر معناداری ندارد؛ فقط برای آن به جایگاه برمی‌گردیم
+         — و چون در نوار ناوبری هم نمی‌آید، ناپایداری‌اش کسی را نمی‌شکند. */
+      const slug = slugifyAnchor(heading);
+      let anchor: string;
+      if (slug === '') {
+        anchor = `block-${i + 1}`;
+      } else {
+        const seen = (usedAnchors.get(slug) ?? 0) + 1;
+        usedAnchors.set(slug, seen);
+        anchor = seen === 1 ? slug : `${slug}-${seen}`;
+      }
+
       return {
         type,
         heading,
         navLabel: deriveNavLabel(heading, str(r.navLabel)),
         needsReview: bool(r.needsReview),
-        anchor: `block-${i + 1}`,
+        anchor,
         asideHtml: str(r.aside),
         bodyHtml: str(r.body),
         intro: str(r.intro),

@@ -158,9 +158,22 @@ function cyh_register_taxonomies() {
 	// Taxonomy: crane_category — معادل CATEGORIES در src/data/site.ts
 	// روی CPT محصول (سلسله‌مراتبی، مثل دسته‌بندی پیش‌فرض وردپرس)
 	// ---------------------------------------------------------------
+	/* ⚠️ `cyh_question` عمداً همین‌جا در آرایه‌ی object_type است و نه با
+	   `register_taxonomy_for_object_type()` در فایل خودش.
+
+	   نسخه‌ی اول همان کار را می‌کرد و **بی‌صدا شکست خورد**: آن فایل روی
+	   `init` با اولویت ۵ اجرا می‌شود و این تابع روی اولویت پیش‌فرض ۱۰ —
+	   یعنی وصل‌کردن تاکسونومی *پیش از ساخته‌شدن خودش* صدا زده می‌شد.
+	   `register_taxonomy_for_object_type()` در این حالت فقط `false`
+	   برمی‌گرداند و هیچ خطایی نمی‌دهد. نتیجه روی سایت:
+	   «Cannot query field "craneCategories" on type "CraneQuestion"» و
+	   کل بخش پرسش و پاسخ، خاموش.
+
+	   ثبت در همین آرایه به ترتیب اجرای هوک‌ها وابسته نیست. CPT روی
+	   اولویت ۵ ساخته می‌شود و این تابع روی ۱۰ آن را می‌بیند. */
 	register_taxonomy(
 		'crane_category',
-		[ 'product' ],
+		[ 'product', 'cyh_question' ],
 		[
 			'labels'              => [
 				'name'          => 'دسته‌بندی قطعات',

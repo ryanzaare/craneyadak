@@ -22,7 +22,9 @@
 // اجرا:  npm run test:blocks
 // ---------------------------------------------------------------------------
 
-import { normalizeBlocks, hasContent, deriveNavLabel, NAV_LABEL_MAX } from './block-shape.ts';
+import {
+  normalizeBlocks, hasContent, deriveNavLabel, NAV_LABEL_MAX, slugifyAnchor,
+} from './block-shape.ts';
 
 let failed = 0;
 const ok = (cond: unknown, msg: string) => {
@@ -153,6 +155,52 @@ ok(withExtras[1].asideHtml === '', 'aside خالی به رشته‌ی خالی �
 // ⚠️ ACF فیلد text را هم گاهی داخل آرایه می‌دهد — همان باگی که blockType را
 // شکست. برچسب ناوبری نباید دوباره روی همان تله برود.
 ok(withExtras[1].navLabel === 'دستی', 'navLabel داخل آرایه هم خوانده می‌شود');
+
+/* ═══════════════════════════════════════════════════════════════════════
+   لنگر پایدار
+   ═══════════════════════════════════════════════════════════════════════
+   ویژگیِ اصلی که آزموده می‌شود «خوشگل‌بودن» نیست، **پایداری** است:
+   جابه‌جا کردن بلوک‌ها نباید هیچ لنگری را عوض کند. نسخه‌ی قبلی
+   (`block-${i+1}`) دقیقاً در همین می‌شکست و هر لینک ذخیره‌شده را
+   بی‌صدا خراب می‌کرد. */
+console.log('\n── لنگر پایدار ──');
+
+ok(slugifyAnchor('عیب‌یابی') === 'عیب-یابی', 'نیم‌فاصله به خط تیره تبدیل می‌شود');
+ok(!slugifyAnchor('عیب‌یابی').includes('‌'), 'هیچ کاراکتر نامرئی در لنگر نمی‌ماند');
+ok(slugifyAnchor('رمزگشایی کد سیم‌بکسل — بخش به بخش') === 'رمزگشایی-کد-سیم-بکسل-بخش-به-بخش', 'نشانه‌گذاری حذف می‌شود');
+ok(slugifyAnchor('زاویه‌ی انحراف طناب (Fleet Angle)') === 'زاویه-ی-انحراف-طناب-fleet-angle', 'عنوان دوزبانه هم کار می‌کند');
+ok(slugifyAnchor('«قطر» چیست؟') === 'قطر-چیست', 'گیومه و علامت سوال حذف می‌شوند');
+ok(slugifyAnchor('   ') === '', 'عنوان خالی لنگر نمی‌سازد');
+ok(slugifyAnchor('a'.repeat(80)).length <= 50, 'طول لنگر مهار می‌شود');
+
+const HEADINGS = [
+  'سیم‌بکسل جرثقیل: چرا انتخاب آن با «قطر» تمام نمی‌شود',
+  'کد روی سیم‌بکسل را چطور بخوانیم',
+  'رمزگشایی کد سیم‌بکسل — بخش به بخش',
+];
+const mk = (order: number[]) =>
+  normalizeBlocks(order.map((n) => ({ blockType: ['text'], heading: HEADINGS[n], body: '<p>م</p>' })));
+
+const natural = mk([0, 1, 2]);
+const shuffled = mk([2, 0, 1]);
+
+// همان عنوان، جایگاه متفاوت → همان لنگر. این تمام هدف این تغییر است.
+ok(
+  natural[0].anchor === shuffled[1].anchor && natural[2].anchor === shuffled[0].anchor,
+  'جابه‌جا کردن بلوک‌ها هیچ لنگری را عوض نمی‌کند',
+);
+ok(natural[0].anchor === 'سیم-بکسل-جرثقیل-چرا-انتخاب-آن-با-قطر-تمام-نمی-شود', `لنگر خوانا است: ${natural[0].anchor}`);
+
+// عنوان تکراری نباید دو id یکسان بسازد.
+const dupes = normalizeBlocks([
+  { blockType: ['text'], heading: 'عیب‌یابی', body: '<p>یک</p>' },
+  { blockType: ['text'], heading: 'عیب‌یابی', body: '<p>دو</p>' },
+]);
+ok(dupes[0].anchor !== dupes[1].anchor, `عنوان تکراری → لنگر یکتا (${dupes[1].anchor})`);
+
+// بلوک بی‌عنوان هنوز به جایگاه برمی‌گردد — و در نوار ناوبری هم نمی‌آید.
+const noHeading = normalizeBlocks([{ blockType: ['text'], heading: '', body: '<p>م</p>' }]);
+ok(noHeading[0].anchor === 'block-1', 'بلوک بی‌عنوان لنگر جایگاهی می‌گیرد');
 
 console.log(
   failed ? `\n❌ ${failed} آزمون شکست خورد.\n` : '\n✅ همه‌ی آزمون‌های بلوک گذشت.\n',

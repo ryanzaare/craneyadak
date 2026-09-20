@@ -27,7 +27,9 @@ import Community from '../../components/Community.astro';
 import ContentBlocks from '../../components/ContentBlocks.astro';
 import QuoteBasket from '../../components/QuoteBasket.astro';
 import { getBlocks } from '../../lib/content-blocks';
-import { qaPageJsonLd, aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
+import { aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
+import Questions from '../../components/Questions.astro';
+import { getQuestions, questionsJsonLd } from '../../lib/questions';
 import { autolinkHtml } from '../../lib/autolink';
 import { buildTitle, buildDescription } from '../../lib/seo-meta';
 import { SITE } from '../../data/site';
@@ -114,7 +116,9 @@ const canonical = `${SITE.url}${productPath(product)}`;
 // برمی‌گردانند؛ هیچ امتیاز یا پرسشی اختراع نمی‌شود.
 const wpBase = (import.meta.env.WP_GRAPHQL_URL as string | undefined)?.replace(/\/+$/, '') ?? null;
 const pageUrl = `${SITE.url}/products/${product.slug}`;
-const qaSchema = qaPageJsonLd(product.community, pageUrl);
+/* پرسش‌های این محصول — از همان CPT که صفحه‌ی دسته می‌خواند. */
+const questions = await getQuestions('product', product.slug);
+const qaSchema = questionsJsonLd(questions, pageUrl);
 const ratingSchema = aggregateRatingJsonLd(product.community);
 const reviewSchema = reviewsJsonLd(product.community);
 
@@ -505,6 +509,16 @@ const contact = await getContact();
       جای این بخش عمدی است: بعد از توضیحات ویرایشگر و **پیش از** پرسش و
       پاسخ. محتوای تخصصی باید قبل از محتوای کاربر بیاید. */}
   <ContentBlocks blocks={blocks} title={product.name} eyebrow="در این صفحه" />
+
+  {/* ===================== پرسش و پاسخ فنی ===================== */}
+  <Questions
+    questions={questions}
+    entity="product"
+    entitySlug={product.slug}
+    productId={product.wpId}
+    entityName={product.name}
+    wpBase={wpBase}
+  />
 
   {/* ===================== پرسش، پاسخ و تجربه‌ی کاربران ===================== */}
   {/* ⚠️ باگی که اینجا رفع شد — علت «نبودن بخش نظرات» روی سایت:

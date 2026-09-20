@@ -14,7 +14,10 @@
 // داده‌ی ساختاریافته‌ی ناقص و بی‌ارزش می‌سازد.
 // ---------------------------------------------------------------------------
 
-export type CommunityType = 'question' | 'fitment' | 'review';
+/* ⚠️ `'question'` از این اتحادیه حذف شد (۳.۶.۰). پرسش فنی دیگر دیدگاه
+   نیست؛ روی CPT است و `src/lib/questions.ts` می‌خواندش. اینجا فقط
+   تجربه‌ی خریدار از یک محصول مشخص می‌ماند. */
+export type CommunityType = 'fitment' | 'review';
 
 export interface CommunityEntry {
   id: number;
@@ -32,7 +35,6 @@ export interface CommunityEntry {
 
 /** نگاشت نوع دیدگاه وردپرس به نوع داخلی. */
 const TYPE_MAP: Record<string, CommunityType> = {
-  cyh_question: 'question',
   cyh_fitment: 'fitment',
   cyh_review: 'review',
 };
@@ -83,39 +85,10 @@ export function normalizeCommunity(raw: unknown): CommunityEntry[] {
     .filter((e): e is CommunityEntry => e !== null);
 }
 
-/**
- * اسکیمای QAPage — فقط پرسش‌های *پاسخ‌داده‌شده*.
- *
- * چرا پرسش بی‌پاسخ حذف می‌شود: در اسکیمای Question، فیلد `acceptedAnswer`
- * یا `suggestedAnswer` اجباری است. ارسال پرسش بدون پاسخ یعنی داده‌ی
- * ناقص که گوگل نادیده می‌گیرد و در بهترین حالت بی‌اثر است.
- */
-export function qaPageJsonLd(
-  entries: CommunityEntry[],
-  pageUrl: string
-): Record<string, unknown> | undefined {
-  const answered = entries.filter((e) => e.type === 'question' && e.answer);
-  if (answered.length === 0) return undefined;
+/* ⚠️ `qaPageJsonLd()` اینجا بود و حذف شد. اسکیمای QAPage حالا در
+   `src/lib/questions.ts` ساخته می‌شود، کنار همان داده‌ای که توصیفش
+   می‌کند — وگرنه دو جا باید هم‌گام می‌ماندند. */
 
-  return {
-    '@type': 'QAPage',
-    '@id': `${pageUrl}#qa`,
-    mainEntity: answered.map((q) => ({
-      '@type': 'Question',
-      name: q.content.slice(0, 300),
-      text: q.content,
-      answerCount: 1,
-      ...(q.date ? { dateCreated: q.date } : {}),
-      author: { '@type': 'Person', name: q.author },
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: q.answer!,
-        ...(q.answerDate ? { dateCreated: q.answerDate } : {}),
-        ...(q.answerAuthor ? { author: { '@type': 'Person', name: q.answerAuthor } } : {}),
-      },
-    })),
-  };
-}
 
 /**
  * `AggregateRating` — فقط با نظر واقعیِ دارای امتیاز.

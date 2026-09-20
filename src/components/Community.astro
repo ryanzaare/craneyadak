@@ -33,15 +33,13 @@ interface Props {
 
 const { entries, productId, productName, wpBase, class: className = '' } = Astro.props;
 
-const questions = entries.filter((e) => e.type === 'question');
 const fitments = entries.filter((e) => e.type === 'fitment');
 const reviews = entries.filter((e) => e.type === 'review');
 
-const answered = questions.filter((q) => q.answer);
 const canSubmit = Boolean(wpBase && productId);
 
 /** هیچ محتوایی هنوز ثبت نشده — حالت پیش‌فرض هر محصول تازه. */
-const isEmpty = questions.length === 0 && fitments.length === 0 && reviews.length === 0;
+const isEmpty = fitments.length === 0 && reviews.length === 0;
 
 const faDate = (iso: string | null) => {
   if (!iso) return '';
@@ -75,57 +73,11 @@ const faDate = (iso: string | null) => {
       isEmpty ? 'max-w-xl mx-auto' : 'grid lg:grid-cols-[minmax(0,1fr)_22rem]',
     ]}>
       <div class:list={['min-w-0 space-y-8', isEmpty && 'hidden']}>
-        {/* ───────────────── پرسش و پاسخ فنی ───────────────── */}
-        <div>
-          <h3 class="text-lg font-black text-steel-900 mb-3 flex items-center gap-2">
-            پرسش فنی
-            {questions.length > 0 && (
-              <span class="text-xs font-bold text-steel-600 bg-steel-100 rounded px-2 py-0.5 tabular-nums">
-                {questions.length}
-              </span>
-            )}
-          </h3>
-
-          {questions.length === 0 ? (
-            <p class="text-sm text-steel-600 leading-7 bg-steel-50 border border-steel-300 rounded-lg p-4">
-              هنوز پرسشی ثبت نشده. اگر درباره‌ی سازگاری این قطعه با دستگاه خود تردید دارید،
-              اولین پرسش را شما بپرسید — کارشناس فنی پاسخ می‌دهد.
-            </p>
-          ) : (
-            <ul role="list" class="space-y-3">
-              {questions.map((q) => (
-                <li class="border border-steel-300 rounded-lg overflow-hidden">
-                  <div class="p-4 bg-white">
-                    <div class="flex items-baseline justify-between gap-3 mb-1.5">
-                      <span class="font-black text-steel-900 text-sm">{q.author}</span>
-                      <span class="text-xs text-steel-600 shrink-0">{faDate(q.date)}</span>
-                    </div>
-                    {q.craneModel && (
-                      <p class="text-xs text-accent-ink font-bold mb-1.5">دستگاه: {q.craneModel}</p>
-                    )}
-                    <p class="text-steel-700 leading-7 text-sm">{q.content}</p>
-                  </div>
-
-                  {q.answer ? (
-                    <div class="p-4 bg-accent-soft border-t border-accent/25">
-                      <p class="text-xs font-black text-accent-ink mb-1.5 flex items-center gap-1.5">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        پاسخ کارشناس فنی{q.answerAuthor ? ` — ${q.answerAuthor}` : ''}
-                      </p>
-                      <p class="text-steel-800 leading-7 text-sm">{q.answer}</p>
-                    </div>
-                  ) : (
-                    <p class="px-4 py-2 bg-steel-50 border-t border-steel-100 text-xs text-steel-600">
-                      در انتظار پاسخ کارشناس فنی
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {/* ⚠️ بخش «پرسش و پاسخ فنی» اینجا بود و حذف شد (۳.۶.۰).
+            پرسش فنی حالا روی CPT است و کامپوننت `Questions.astro`
+            رندرش می‌کند — روی صفحه‌ی محصول *و* صفحه‌ی دسته، با یک
+            پیاده‌سازی. آنچه اینجا ماند، تجربه‌ی خریدار از همین محصول
+            است. */}
 
         {/* ───────────────── گزارش نصب ─────────────────
             این بخش در خواسته‌ی اولیه نبود. اضافه شد چون در خرید قطعه‌ی
@@ -216,9 +168,8 @@ const faDate = (iso: string | null) => {
                 است و صفحه‌خوان گروه را درست اعلام می‌کند. */}
             <fieldset class="mb-3">
               <legend class="sr-only">نوع مشارکت</legend>
-              <div class="grid grid-cols-3 gap-1 bg-white border border-steel-300 rounded-md p-1">
+              <div class="grid grid-cols-2 gap-1 bg-white border border-steel-300 rounded-md p-1">
                 {[
-                  { v: 'question', label: 'پرسش فنی' },
                   { v: 'fitment', label: 'تجربه‌ی نصب' },
                   { v: 'review', label: 'نظر کلی' },
                 ].map((opt, i) => (
@@ -304,7 +255,7 @@ const faDate = (iso: string | null) => {
       const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
       // اندپوینت از روی نیتِ انتخاب‌شده ساخته می‌شود، نه از یک صفت ثابت.
       const base = form.dataset.endpointBase;
-      const intent = form.querySelector<HTMLInputElement>('input[name="intent"]:checked')?.value ?? 'question';
+      const intent = form.querySelector<HTMLInputElement>('input[name="intent"]:checked')?.value ?? 'fitment';
       const endpoint = base ? `${base}/${intent}` : null;
       if (!endpoint || !msg || !button) return;
 
@@ -361,13 +312,6 @@ const faDate = (iso: string | null) => {
     show: string[];
     requireMachine: boolean;
   }> = {
-    question: {
-      hint: 'کارشناس فنی پاسخ می‌دهد و پرسش و پاسخ روی همین صفحه منتشر می‌شود.',
-      placeholder: 'پرسش فنی خود را بنویسید…',
-      submit: 'ارسال پرسش',
-      show: ['machine'],
-      requireMachine: false,
-    },
     fitment: {
       hint: 'ثبت مدل دستگاه و مدت کارکرد، برای خریدار بعدی از هر توضیحی مفیدتر است.',
       placeholder: 'تجربه‌ی نصب و کارکرد…',
@@ -391,7 +335,7 @@ const faDate = (iso: string | null) => {
     const machine = form.querySelector<HTMLInputElement>('[data-field="machine"]');
 
     function apply() {
-      const value = form.querySelector<HTMLInputElement>('input[name="intent"]:checked')?.value ?? 'question';
+      const value = form.querySelector<HTMLInputElement>('input[name="intent"]:checked')?.value ?? 'fitment';
       const config = INTENTS[value];
       if (!config) return;
 

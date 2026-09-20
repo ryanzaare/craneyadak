@@ -1,7 +1,7 @@
 ---
-// src/components/CategoryQuestions.astro
+// src/components/Questions.astro
 // ---------------------------------------------------------------------------
-// پرسش و پاسخ فنی روی صفحه‌ی دسته.
+// پرسش و پاسخ فنی — روی صفحه‌ی دسته و صفحه‌ی محصول.
 //
 // ═══════════════════════════════════════════════════════════════════════════
 // چرا این بخش ارزش دارد (و چرا فقط روی دسته است)
@@ -20,17 +20,27 @@
 // باید *اولین* پرسش ثبت شود، هیچ فرمی نبود.
 // ---------------------------------------------------------------------------
 
-import type { CategoryQuestion } from '../lib/category-questions';
+import type { CategoryQuestion, QuestionEntity } from '../lib/questions';
 
 export interface Props {
   questions: CategoryQuestion[];
-  categorySlug: string;
-  categoryName: string;
+  /** دسته یا محصول — تعیین می‌کند فرم کدام فیلد مقصد را بفرستد. */
+  entity: QuestionEntity;
+  /** اسلاگ دسته. برای محصول نادیده گرفته می‌شود. */
+  entitySlug: string;
+  /** شناسه‌ی نوشته‌ی محصول. برای دسته `null`. */
+  productId?: number | null;
+  entityName: string;
   wpBase: string | null;
 }
 
-const { questions, categorySlug, categoryName, wpBase } = Astro.props;
-const canSubmit = Boolean(wpBase && categorySlug);
+const { questions, entity, entitySlug, productId = null, entityName, wpBase } = Astro.props;
+
+/* ⚠️ مقصد باید *واقعاً* مشخص باشد، وگرنه فرم نمایش داده نمی‌شود.
+   پرسشی که مقصد ندارد در پنل ثبت می‌شود و روی هیچ صفحه‌ای دیده نمی‌شود —
+   یعنی کاربر فکر می‌کند پرسیده و هرگز پاسخی نمی‌گیرد. */
+const hasTarget = entity === 'category' ? Boolean(entitySlug) : (productId ?? 0) > 0;
+const canSubmit = Boolean(wpBase) && hasTarget;
 
 const faDate = (iso: string) => {
   if (!iso) return '';
@@ -52,7 +62,7 @@ const faDate = (iso: string) => {
   <div class="max-w-7xl mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12 lg:items-start">
     <div class="min-w-0">
       <h2 id="qa-heading" class="text-2xl md:text-3xl font-black text-crane-navy mb-2">
-        پرسش‌های فنی درباره‌ی {categoryName}
+        پرسش‌های فنی درباره‌ی {entityName}
       </h2>
       <p class="text-steel-600 leading-8 mb-8">
         پرسش شما را کارشناس فنی پاسخ می‌دهد و پاسخ روی همین صفحه منتشر می‌شود،
@@ -61,7 +71,7 @@ const faDate = (iso: string) => {
 
       {questions.length === 0 ? (
         <p class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-steel-600 leading-8">
-          هنوز پرسشی درباره‌ی این دسته ثبت نشده است. اگر دستگاه یا کد فنی مشخصی
+          هنوز پرسشی درباره‌ی این {entity === 'category' ? 'دسته' : 'محصول'} ثبت نشده است. اگر دستگاه یا کد فنی مشخصی
           دارید، همین‌جا بپرسید — پاسخ کارشناس روی همین صفحه می‌آید.
         </p>
       ) : (
@@ -99,7 +109,9 @@ const faDate = (iso: string) => {
           id="qa-form"
           class="rounded-2xl border border-gray-200 bg-gray-50/70 p-6"
           data-wp-base={wpBase}
-          data-category={categorySlug}
+          data-entity={entity}
+          data-category={entity === 'category' ? entitySlug : ''}
+          data-product={productId ?? ''}
           novalidate
         >
           <h3 class="font-black text-crane-navy mb-1">پرسش خود را بپرسید</h3>
@@ -178,10 +190,15 @@ const faDate = (iso: string) => {
 
       const base = form.dataset.wpBase ?? '';
       // WP_GRAPHQL_URL به `/graphql` ختم می‌شود؛ ریشه‌ی REST یک سطح بالاتر است.
-      const endpoint = `${base.replace(/\/graphql\/?$/, '')}/wp-json/crane-yadak/v1/category-question`;
+      const endpoint = `${base.replace(/\/graphql\/?$/, '')}/wp-json/crane-yadak/v1/question`;
 
       const payload = new FormData(form);
-      payload.set('category_slug', form.dataset.category ?? '');
+      // یک اندپوینت، دو مقصد ممکن — فقط یکی فرستاده می‌شود.
+      if (form.dataset.entity === 'product') {
+        payload.set('product_id', form.dataset.product ?? '');
+      } else {
+        payload.set('category_slug', form.dataset.category ?? '');
+      }
 
       button.disabled = true;
       status.textContent = 'در حال ارسال…';

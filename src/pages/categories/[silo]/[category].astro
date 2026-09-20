@@ -26,8 +26,8 @@ import {
   type Silo,
 } from '../../../data/taxonomy';
 import ContentBlocks from '../../../components/ContentBlocks.astro';
-import CategoryQuestions from '../../../components/CategoryQuestions.astro';
-import { getCategoryQuestions, questionsJsonLd } from '../../../lib/category-questions';
+import Questions from '../../../components/Questions.astro';
+import { getQuestions, questionsJsonLd } from '../../../lib/questions';
 import { getProductsByCategory, computePrice, productJsonLd, type CraneProduct } from '../../../lib/wp';
 import { getBlocks, specsToJsonLd } from '../../../lib/content-blocks';
 import { resolveCategoryTerm, type CategoryTerm } from '../../../lib/categories';
@@ -70,7 +70,7 @@ const specJsonLd = specsToJsonLd(blocks);
 /* پرسش‌های کاربران — فقط آن‌هایی که کارشناس پاسخ داده است.
    ⚠️ روی برند عمداً وجود ندارد: پاسخ‌دادن به پرسش گارانتیِ یک سازنده،
    رابطه‌ای را تلویحاً ادعا می‌کند که مستندی برایش نداریم. */
-const questions = await getCategoryQuestions(category.slug);
+const questions = await getQuestions('category', category.slug);
 const wpBase = (import.meta.env.WP_GRAPHQL_URL as string | undefined)?.replace(/\/+$/, '') ?? null;
 
 /* ⚠️ قطعه‌ای ساخته می‌شود، نه رشته‌ی یک‌تکه. با رشته‌ی یک‌تکه، بریدنِ طول
@@ -319,10 +319,11 @@ const contact = await getContact();
   {/* جایش عمدی است: **بعد از** راهنمای فنی. محتوای تخصصیِ ما اول، محتوای
       کاربر بعد — هم برای خواننده منطقی‌تر است و هم سیگنال تخصص صفحه را
       بالای صفحه نگه می‌دارد. */}
-  <CategoryQuestions
+  <Questions
     questions={questions}
-    categorySlug={category.slug}
-    categoryName={displayName}
+    entity="category"
+    entitySlug={category.slug}
+    entityName={displayName}
     wpBase={wpBase}
   />
 

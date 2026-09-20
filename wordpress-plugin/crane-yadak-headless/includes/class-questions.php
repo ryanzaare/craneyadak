@@ -88,12 +88,47 @@ function cyh_register_question_cpt() {
 		]
 	);
 
-	/* ⚠️ همان تاکسونومی `crane_category`، نه یک تاکسونومی تازه. اگر برای
-	   پرسش‌ها دسته‌بندی جدا می‌ساختیم، دو درخت دسته می‌داشتیم که باید
-	   دستی هم‌گام می‌ماندند — همان اشتباهی که با دو فهرست ریدایرکت شد. */
-	register_taxonomy_for_object_type( 'crane_category', CYH_QUESTION_CPT );
+	/* ⚠️ اتصال به تاکسونومی `crane_category` اینجا **نیست**، در آرایه‌ی
+	   object_type خودِ `register_taxonomy()` در `class-post-types.php`
+	   است.
+
+	   نسخه‌ی اول اینجا `register_taxonomy_for_object_type()` را صدا
+	   می‌زد و بی‌صدا شکست می‌خورد: این تابع روی اولویت ۵ اجرا می‌شود و
+	   تاکسونومی روی ۱۰ ساخته می‌شود، پس مقصد هنوز وجود نداشت. تابع در
+	   این حالت `false` برمی‌گرداند و چیزی نمی‌گوید. نگهبان پایین همین
+	   فایل حالا دقیقاً همین حالت را فریاد می‌زند. */
 }
 add_action( 'init', 'cyh_register_question_cpt', 5 );
+
+/**
+ * نگهبان: آیا پرسش واقعاً به دسته وصل است؟
+ *
+ * ⚠️ بدون این، تنها نشانه‌ی خرابی یک خطای گراف‌کیوال در لاگِ build است که
+ * نردبان کوئری آن را می‌بلعد و صفحه بدون بخش پرسش ساخته می‌شود. مدیر
+ * سایت در پنل هیچ‌چیز غیرعادی نمی‌بیند: فرم هست، پرسش ثبت می‌شود، و
+ * هیچ‌وقت روی سایت نمی‌آید. پس خرابی باید در همان پنل دیده شود.
+ */
+function cyh_question_check_taxonomy() {
+	if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	if ( is_object_in_taxonomy( CYH_QUESTION_CPT, 'crane_category' ) ) {
+		return;
+	}
+	add_action(
+		'admin_notices',
+		static function () {
+			echo '<div class="notice notice-error"><p><strong>کرین یدک:</strong> '
+				. 'نوع محتوای «پرسش» به تاکسونومی «دسته‌بندی قطعات» وصل نیست. '
+				. 'تا رفع این مشکل، پرسش‌ها روی سایت نمایش داده نمی‌شوند و خطای '
+				. '<code>Cannot query field "craneCategories" on type "CraneQuestion"</code> '
+				. 'در زمان build ظاهر می‌شود. معمولاً یعنی افزونه ناقص به‌روزرسانی شده — '
+				. 'نسخه‌ی کامل را دوباره نصب کنید.'
+				. '</p></div>';
+		}
+	);
+}
+add_action( 'admin_init', 'cyh_question_check_taxonomy' );
 
 /* =========================================================================
    ۲) فیلدهای متا — و نمایششان در گراف‌کیوال
@@ -138,6 +173,25 @@ function cyh_question_graphql_fields() {
 		'description' => 'مدل جرثقیلی که پرسش درباره‌ی آن است، اگر گفته شده باشد.',
 		'resolve'     => static function ( $post ) {
 			return get_post_meta( $post->ID, 'cyh_crane_model', true ) ?: null;
+		},
+	] );
+
+	/* پرسشِ محصول. دسته از طریق تاکسونومی وصل است ولی محصول یک *نوشته*
+	   است، پس ارجاعش متاست.
+
+	   ⚠️ اسلاگ برگردانده می‌شود و نه شناسه: فرانت‌اند استاتیک است و
+	   صفحه‌ها را با اسلاگ می‌شناسد. برگرداندن شناسه یعنی یک کوئری دوم
+	   برای ترجمه‌ی هر شناسه به اسلاگ. */
+	register_graphql_field( 'CraneQuestion', 'productSlug', [
+		'type'        => 'String',
+		'description' => 'اسلاگ محصولی که پرسش روی آن ثبت شده — برای پرسش دسته، خالی.',
+		'resolve'     => static function ( $post ) {
+			$pid = (int) get_post_meta( $post->ID, 'cyh_product_id', true );
+			if ( $pid < 1 ) {
+				return null;
+			}
+			$product = get_post( $pid );
+			return ( $product && 'product' === $product->post_type ) ? $product->post_name : null;
 		},
 	] );
 }
@@ -194,14 +248,22 @@ add_action( 'manage_' . CYH_QUESTION_CPT . '_posts_custom_column', 'cyh_question
 /* =========================================================================
    ۴) اندپوینت REST
    ========================================================================= */
+/**
+ * ⚠️ مسیر `/question` است و نه `/category-question`.
+ *
+ * تا نسخه‌ی ۳.۵.۰ یک `/question` دیگر هم وجود داشت که پرسش محصول را روی
+ * *دیدگاه* ثبت می‌کرد. آن مسیر حذف شد و این یکی جایش را گرفت: یک اندپوینت
+ * برای هر پرسشِ فنی سایت، چه روی دسته چه روی محصول. دو مسیر برای یک
+ * مفهوم، همان بدهی‌ای بود که کارفرما خواست همین حالا بسته شود.
+ */
 function cyh_register_question_routes() {
 	register_rest_route(
 		'crane-yadak/v1',
-		'/category-question',
+		'/question',
 		[
 			'methods'             => 'POST',
 			'permission_callback' => '__return_true', // عمومی؛ دفاع پایین‌تر اعمال می‌شود
-			'callback'            => 'cyh_rest_submit_category_question',
+			'callback'            => 'cyh_rest_submit_question',
 		]
 	);
 }
@@ -212,21 +274,39 @@ add_action( 'rest_api_init', 'cyh_register_question_routes' );
  * **نمی‌شود**. سه لایه‌ی دفاعی (هانی‌پات، محدودیت نرخ، پاک‌سازی) باید یک
  * پیاده‌سازی داشته باشند؛ دو نسخه یعنی روزی یکی وصله می‌شود و آن یکی نه.
  */
-function cyh_rest_submit_category_question( $request ) {
+function cyh_rest_submit_question( $request ) {
 	if ( ! function_exists( 'cyh_validate_submission' ) ) {
 		return new WP_Error( 'cyh_no_validator', 'سرویس در دسترس نیست.', [ 'status' => 500 ] );
 	}
 
-	// `false` یعنی «نوشته‌ی مقصد لازم نیست» — مقصد اینجا یک ترم است.
+	/* `false` یعنی «نوشته‌ی مقصد اجباری نیست». مقصد یا یک ترم است (دسته)
+	   یا یک نوشته (محصول)؛ کدام‌یک، پایین تعیین می‌شود. */
 	$data = cyh_validate_submission( $request, false );
 	if ( is_wp_error( $data ) ) {
 		return $data;
 	}
 
-	$slug = sanitize_title( (string) $request->get_param( 'category_slug' ) );
-	$term = $slug ? get_term_by( 'slug', $slug, 'crane_category' ) : null;
-	if ( ! $term || is_wp_error( $term ) ) {
-		return new WP_Error( 'cyh_bad_category', 'دسته‌ی مورد نظر پیدا نشد.', [ 'status' => 404 ] );
+	$cat_slug = sanitize_title( (string) $request->get_param( 'category_slug' ) );
+	$prod_id  = (int) $request->get_param( 'product_id' );
+
+	$term    = null;
+	$product = null;
+
+	if ( $cat_slug ) {
+		$term = get_term_by( 'slug', $cat_slug, 'crane_category' );
+		if ( ! $term || is_wp_error( $term ) ) {
+			return new WP_Error( 'cyh_bad_category', 'دسته‌ی مورد نظر پیدا نشد.', [ 'status' => 404 ] );
+		}
+	} elseif ( $prod_id > 0 ) {
+		$product = get_post( $prod_id );
+		if ( ! $product || 'product' !== $product->post_type ) {
+			return new WP_Error( 'cyh_bad_product', 'محصول مورد نظر پیدا نشد.', [ 'status' => 404 ] );
+		}
+	} else {
+		/* ⚠️ پرسشِ بی‌مقصد در پنل ثبت می‌شود و روی هیچ صفحه‌ای دیده
+		   نمی‌شود — یعنی کاربر فکر می‌کند پرسیده و هیچ‌وقت پاسخی
+		   نمی‌گیرد. رد کردنش بهتر از بلعیدنش است. */
+		return new WP_Error( 'cyh_no_target', 'مقصد پرسش مشخص نیست.', [ 'status' => 400 ] );
 	}
 
 	/* عنوان = پرسش. علامت سوال اگر نبود اضافه می‌شود: عنوانِ پرسشی هم در
@@ -250,9 +330,22 @@ function cyh_rest_submit_category_question( $request ) {
 		return new WP_Error( 'cyh_insert_failed', 'ثبت انجام نشد. دوباره تلاش کنید.', [ 'status' => 500 ] );
 	}
 
-	wp_set_object_terms( $post_id, (int) $term->term_id, 'crane_category' );
+	if ( $term ) {
+		wp_set_object_terms( $post_id, (int) $term->term_id, 'crane_category' );
+		update_post_meta( $post_id, 'cyh_entity_type', 'category' );
+	} else {
+		update_post_meta( $post_id, 'cyh_product_id', (int) $product->ID );
+		update_post_meta( $post_id, 'cyh_entity_type', 'product' );
 
-	update_post_meta( $post_id, 'cyh_entity_type', 'category' );
+		/* ⚠️ دسته‌ی محصول عمداً به پرسش داده **نمی‌شود**.
+		   وسوسه‌اش هست: «پرسشِ ریموت ساگا برای خریدارِ دسته‌ی ریموت هم
+		   مفید است، پس در هر دو صفحه نشانش بدهیم.» ولی نتیجه‌اش یک متن
+		   یکسان روی دو آدرس است، با دو `QAPage` که همان پرسش را ادعا
+		   می‌کنند. این محتوای تکراری است، نه پوشش بیشتر — دقیقاً همان
+		   چیزی که ستون کناری را «نوشتنی» نگه داشتیم تا از آن پرهیز کنیم.
+		   پرسشِ محصول روی صفحه‌ی محصول می‌ماند. */
+	}
+
 	update_post_meta( $post_id, 'cyh_asker', $data['name'] );
 	if ( '' !== $data['email'] ) {
 		update_post_meta( $post_id, 'cyh_asker_email', $data['email'] );
