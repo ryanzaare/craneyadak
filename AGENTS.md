@@ -1,22 +1,26 @@
-## Development
+# کرین یدک — دستورکار دستیار
 
-When starting the dev server, use background mode:
+**`CLAUDE.md` را بخوان.** قواعد کاری، وضعیت فاز و انجماد کد آنجاست.
+سپس `docs/backlog.md` — حافظه‌ی پروژه.
 
+---
+
+⚠️ این فایل قبلاً متن پیش‌فرض Astro بود و به راهنماهای React، Vue، Svelte،
+i18n و Content Collections لینک می‌داد. **هیچ‌کدام در این پروژه استفاده
+نمی‌شوند** — نه فریمورک کامپوننتی هست، نه Content Collections (محتوا از
+وردپرس می‌آید)، نه چندزبانگی. یعنی سندی که راهنما بود، به بیراهه می‌برد.
+
+در مخزنی که قاعده‌اش «سند نادرست باقی نماند» است، متن پیش‌فرضِ
+بی‌ارتباط هم سند نادرست است.
+
+---
+
+## کارهای روزمره
+
+```sh
+npm run dev       # توسعه
+npm run check     # نگهبان‌ها — پیش از هر کامیت
+npm run build     # تاکسونومی → نگهبان‌ها → build → pagefind
 ```
-astro dev --background
-```
 
-Manage the background server with `astro dev stop`, `astro dev status`, and `astro dev logs`.
-
-## Documentation
-
-Full documentation: https://docs.astro.build
-
-Consult these guides before working on related tasks:
-
-- [Adding pages, dynamic routes, or middleware](https://docs.astro.build/en/guides/routing/)
-- [Working with Astro components](https://docs.astro.build/en/basics/astro-components/)
-- [Using React, Vue, Svelte, or other framework components](https://docs.astro.build/en/guides/framework-components/)
-- [Adding or managing content](https://docs.astro.build/en/guides/content-collections/)
-- [Adding styles or using Tailwind](https://docs.astro.build/en/guides/styling/)
-- [Supporting multiple languages](https://docs.astro.build/en/guides/internationalization/)
+بقیه در `README.md`.

@@ -232,6 +232,37 @@ const backlog = mtime('docs/backlog.md');
 const newestCode = Math.max(...CODE.map(mtime));
 const staleDays = Math.floor((newestCode - backlog) / 86_400_000);
 
+/* ═══ ارجاع به دستورهای npm ═════════════════════════════════════════════
+   سندها `npm run …` را نقل می‌کنند و آن دستور ممکن است حذف شده باشد.
+
+   ⚠️ این بررسی بعد از یک مورد واقعی اضافه شد: اسکریپت آپلود رسانه با
+   چرخش تصمیم کارفرما حذف شد، ولی `docs/backlog.md` همچنان
+   `npm run media:upload` را توصیه می‌کرد. دستی پیدایش کردم — و هر چیزی
+   که دستی پیدا شود، دفعه‌ی بعد پیدا نمی‌شود.
+
+   مسیرِ سند و نامِ فیچرِ بازنشسته از قبل نگهبان داشتند؛ این سومین شکلِ
+   همان دروغ است: دستوری که وجود ندارد.
+   ═══════════════════════════════════════════════════════════════════ */
+let npmScripts = null;
+try {
+  npmScripts = JSON.parse(readFileSync('package.json', 'utf8')).scripts ?? {};
+} catch {
+  problems.push('package.json خوانده نشد — بررسی ارجاع دستورها بی‌اعتبار است.');
+}
+
+if (npmScripts) {
+  for (const doc of DOCS) {
+    const body = readFileSync(doc, 'utf8');
+    // کامنت/کدبلاک خنثی نمی‌شود: در یک سند، *همه‌ی* ذکرها ادعا هستند.
+    for (const m of body.matchAll(/npm run ([a-z0-9:_-]+)/g)) {
+      const name = m[1];
+      if (!(name in npmScripts)) {
+        problems.push(`${doc}: «npm run ${name}» در package.json نیست.`);
+      }
+    }
+  }
+}
+
 // ── گزارش ──────────────────────────────────────────────────────────────────
 if (selfCheck.length) {
   console.error('❌ فهرست بازنشسته‌ها خودش کهنه است:');

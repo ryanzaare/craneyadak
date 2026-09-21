@@ -1,53 +1,83 @@
 <?php
 /**
- * کلید و اثرانگشت رسانه — برای ورود گروهی تصویر.
+ * کلید رسانه — آدرس پایدار برای ارجاع به تصویر از داخل محتوا.
  *
  * ═══════════════════════════════════════════════════════════════════════════
- * دو مسئله‌ای که این فایل حل می‌کند
+ * مسئله
  * ═══════════════════════════════════════════════════════════════════════════
- * کارفرما هزار تصویر آماده دارد و دو ایراد درست به طرح اولیه گرفت:
+ * بلوک «رسانه» باید بتواند از داخل یک فایل JSON محتوا به یک تصویر مشخص
+ * اشاره کند. با شناسه‌ی عددیِ پیوست نمی‌شود: آن عدد در هر نصب وردپرس
+ * فرق می‌کند، و یک فایل محتوا باید روی استیجینگ و پروداکشن یکسان کار کند.
  *
- *   ۱) «اسکریپت از کجا بداند این نقشهٔ برش مالِ کدام بلوک است؟»
- *      نمی‌داند و **نباید بداند**. جای این تصمیم، متنِ محتواست.
+ * پس هر پیوست یک **کلید** می‌گیرد — رشته‌ای پایدار و خوانا که از نام
+ * فایل ساخته می‌شود و در هر نصبی یکی است:
  *
- *   ۲) «ماه بعد سه تصویر تازه اضافه می‌کنم؛ چطور تکراری آپلود نشود؟»
- *      با نامِ فایل نمی‌شود فهمید. با *محتوای* فایل می‌شود.
+ *     { "type": "media",
+ *       "media": [ { "key": "wire-rope-cutaway", "alt": "برش عرضی" } ] }
  *
- * پاسخ این فایل به هر دو، یک ایده است: **تصویر آدرس‌پذیر شود.**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ⚠️ این فایل یک بار بزرگ‌تر بود و کوچک شد
+ * ═══════════════════════════════════════════════════════════════════════════
+ * نسخه‌ی اول، هشِ SHA-256 و اندپوینت `/media-lookup` را هم داشت. هر دو
+ * فقط یک مصرف‌کننده داشتند: اسکریپت آپلود گروهیِ عکس‌های تامین‌کننده.
+ * کارفرما آن مسیر را کنار گذاشت (تصاویر از این پس سفارشی و با هویت
+ * بصری خودِ برند ساخته می‌شوند، نه از پوشه‌ی عکس تامین‌کننده) و اسکریپت
+ * حذف شد.
  *
- * ─── تفکیک مسئولیت ───────────────────────────────────────────────────────
- *   اسکریپت آپلود  → فقط *حمل*: فایل را به کتابخانه‌ی رسانه می‌برد و یک
- *                     «کلید» پایدار رویش می‌گذارد. هیچ تصمیمی درباره‌ی
- *                     جایگاه نمی‌گیرد.
- *   فایل JSON محتوا → *جایگاه*: نویسنده‌ای که متن را می‌نویسد و می‌داند
- *                     نقشهٔ برش وسط بخش «ساختار» می‌نشیند، همان‌جا
- *                     می‌نویسد `"key": "wire-rope-cutaway"`.
+ * طبق قاعده‌ی ۲ («هر افزوده، حذفش را با خودش می‌آورد») هش و اندپوینت هم
+ * با همان کامیت رفتند. چیزی که ماند، تنها بخشی است که هنوز مصرف‌کننده
+ * دارد: تبدیل کلید به شناسه، که `class-content-import-hub.php` صدایش
+ * می‌زند.
  *
- * تصویرِ گالری استثنا نیست، فقط قاعده‌اش ساده‌تر است: نامِ فایل که با
- * الگوی `{کد فنی}-{شماره}` بخواند، خودکار به گالری همان محصول می‌چسبد،
- * چون آنجا جایگاه از خود نام پیداست.
- *
- * ─── چرا هش و نه نام فایل ────────────────────────────────────────────────
- * `_cyh_hash` اثرانگشت SHA-256 خود فایل است. اجرای دوباره‌ی اسکریپت،
- * تغییر نام فایل، یا کپی‌شدن یک تصویر با نام دیگر — هر سه با هش تشخیص
- * داده می‌شوند. نامِ فایل هیچ‌کدام را نمی‌گیرد.
+ * ⚠️ و یک شکافِ تازه بسته شد: تا وقتی اسکریپت وجود داشت، *او* کلید را
+ * روی پیوست می‌نوشت. بدون او هیچ‌چیز نمی‌نوشت — یعنی ابزار ورود با کلید
+ * جستجو می‌کرد، ستون پنل کلید نشان می‌داد، و هیچ کلیدی هرگز ساخته
+ * نمی‌شد. نیمه‌فیچرِ بی‌صدا. حالا `add_attachment` خودش کلید را از نام
+ * فایل می‌سازد و در صفحه‌ی ویرایش پیوست قابل تغییر است.
  *
  * @package CraneYadakHeadless
  */
 
 defined( 'ABSPATH' ) || exit;
 
-const CYH_MEDIA_KEY  = '_cyh_key';
-const CYH_MEDIA_HASH = '_cyh_hash';
+const CYH_MEDIA_KEY = '_cyh_key';
+
+/**
+ * نام فایل → کلید.
+ *
+ * ⚠️ نیم‌فاصله به خط تیره تبدیل می‌شود و حذف نمی‌شود. حذفش «سیم‌بکسل» را
+ * به «سیمبکسل» می‌چسباند — همان باگی که یک بار در لنگرهای صفحه و یک بار
+ * در اسکریپت آپلود تکرار شد. نشانه‌گذاری و اعراب فارسی هم داخل بازه‌ی
+ * U+0600–U+06FF‌اند و باید جداگانه حذف شوند.
+ */
+function cyh_media_make_key( $filename ) {
+	$name = pathinfo( (string) $filename, PATHINFO_FILENAME );
+	$name = mb_strtolower( $name, 'UTF-8' );
+
+	// نشانه‌گذاری و اعراب فارسی/عربی
+	$name = preg_replace(
+		'/[\x{0600}-\x{0605}\x{060C}\x{060D}\x{061B}\x{061E}\x{061F}'
+		. '\x{066A}-\x{066D}\x{06D4}\x{06DD}\x{0610}-\x{061A}'
+		. '\x{064B}-\x{065F}\x{0670}\x{06D6}-\x{06ED}]/u',
+		'',
+		$name
+	);
+
+	$name = preg_replace( '/[\x{200C}\s_\/]+/u', '-', $name );
+	$name = preg_replace( '/[^\x{0600}-\x{06FF}0-9a-z-]/u', '', $name );
+	$name = preg_replace( '/-{2,}/', '-', $name );
+	$name = trim( (string) $name, '-' );
+
+	return mb_substr( $name, 0, 50, 'UTF-8' );
+}
 
 /**
  * پیوست را با کلیدش پیدا کن.
  *
- * @param string $key کلید پایدار (معمولاً ریشه‌ی نام فایل).
- * @return int شناسه‌ی پیوست، یا ۰.
+ * @return int شناسه‌ی پیوست، یا ۰ اگر نبود.
  */
 function cyh_media_by_key( $key ) {
-	$key = sanitize_title( (string) $key );
+	$key = cyh_media_make_key( $key );
 	if ( '' === $key ) {
 		return 0;
 	}
@@ -67,84 +97,85 @@ function cyh_media_by_key( $key ) {
 	return $found ? (int) $found[0] : 0;
 }
 
-/**
- * پیوست را با اثرانگشت محتوایش پیدا کن.
- *
- * ⚠️ این تابع قلبِ «همگام‌سازی افزایشی» است. بدون آن، هر بار اجرای
- * اسکریپت یعنی هزار فایل تکراری در کتابخانه‌ی رسانه.
- */
-function cyh_media_by_hash( $hash ) {
-	$hash = preg_replace( '/[^a-f0-9]/', '', strtolower( (string) $hash ) );
-	if ( 64 !== strlen( (string) $hash ) ) {
-		return 0;
-	}
-
-	$found = get_posts(
-		[
-			'post_type'        => 'attachment',
-			'post_status'      => 'inherit',
-			'posts_per_page'   => 1,
-			'fields'           => 'ids',
-			'meta_key'         => CYH_MEDIA_HASH, // phpcs:ignore WordPress.DB.SlowDBQuery
-			'meta_value'       => $hash,          // phpcs:ignore WordPress.DB.SlowDBQuery
-			'suppress_filters' => false,
-		]
-	);
-
-	return $found ? (int) $found[0] : 0;
-}
-
 /* =========================================================================
-   اندپوینت REST — «این فایل را قبلاً دارید؟»
-   =========================================================================
-   اسکریپت پیش از هر آپلود این را می‌پرسد. یک درخواست کوچک به‌جای یک
-   آپلود چندمگابایتی؛ برای هزار فایل، تفاوتِ چند دقیقه و چند ساعت است.
+   کلید خودکار هنگام آپلود
    ========================================================================= */
-function cyh_register_media_routes() {
-	register_rest_route(
-		'crane-yadak/v1',
-		'/media-lookup',
-		[
-			'methods'             => 'GET',
-			// ⚠️ عمومی نیست. این اندپوینت می‌گوید چه چیزی در کتابخانه هست؛
-			// برای کسی که حق ویرایش ندارد، هیچ کاری ندارد.
-			'permission_callback' => static function () {
-				return current_user_can( 'upload_files' );
-			},
-			'callback'            => 'cyh_rest_media_lookup',
-			'args'                => [
-				'hash' => [ 'type' => 'string', 'required' => false ],
-				'key'  => [ 'type' => 'string', 'required' => false ],
-			],
-		]
-	);
-}
-add_action( 'rest_api_init', 'cyh_register_media_routes' );
-
-function cyh_rest_media_lookup( $request ) {
-	$hash = (string) $request->get_param( 'hash' );
-	$key  = (string) $request->get_param( 'key' );
-
-	$id = $hash ? cyh_media_by_hash( $hash ) : 0;
-	if ( ! $id && $key ) {
-		$id = cyh_media_by_key( $key );
+/**
+ * ⚠️ فقط وقتی کلید خالی است نوشته می‌شود. اگر مدیر محتوا کلید را دستی
+ * عوض کرده باشد و بعد تصویر را جایگزین کند، بازنویسیِ خودکار همه‌ی
+ * ارجاع‌های JSON به آن کلید را بی‌صدا می‌شکست.
+ */
+function cyh_media_autokey( $attachment_id ) {
+	if ( get_post_meta( $attachment_id, CYH_MEDIA_KEY, true ) ) {
+		return;
 	}
 
-	return rest_ensure_response(
-		[
-			'found' => $id > 0,
-			'id'    => $id,
-			'url'   => $id ? wp_get_attachment_url( $id ) : null,
-			'key'   => $id ? get_post_meta( $id, CYH_MEDIA_KEY, true ) : null,
-		]
-	);
+	$file = get_post_meta( $attachment_id, '_wp_attached_file', true );
+	$key  = cyh_media_make_key( $file ? basename( $file ) : get_the_title( $attachment_id ) );
+	if ( '' === $key ) {
+		return;
+	}
+
+	/* کلید تکراری یعنی دو تصویر با یک آدرس — ارجاعِ JSON همیشه به اولی
+	   می‌رسد و دومی نامرئی می‌ماند. پس شماره می‌گیرد. */
+	$base = $key;
+	$n    = 2;
+	while ( cyh_media_by_key( $key ) ) {
+		$key = $base . '-' . $n;
+		$n++;
+		if ( $n > 99 ) {
+			return; // چیزی عجیب است؛ بی‌کلید بهتر از حلقه‌ی بی‌پایان است.
+		}
+	}
+
+	update_post_meta( $attachment_id, CYH_MEDIA_KEY, $key );
 }
+add_action( 'add_attachment', 'cyh_media_autokey' );
 
 /* =========================================================================
-   ستون «کلید» در کتابخانه‌ی رسانه
+   ویرایش کلید در صفحه‌ی پیوست
+   ========================================================================= */
+function cyh_media_key_field( $fields, $post ) {
+	$fields['cyh_key'] = [
+		'label' => 'کلید محتوا',
+		'input' => 'text',
+		'value' => get_post_meta( $post->ID, CYH_MEDIA_KEY, true ),
+		'helps' => 'برای ارجاع از داخل فایل JSON محتوا: <code>"key": "…"</code>. '
+			. 'از نام فایل ساخته می‌شود؛ تغییرش ارجاع‌های موجود را می‌شکند.',
+	];
+	return $fields;
+}
+add_filter( 'attachment_fields_to_edit', 'cyh_media_key_field', 10, 2 );
+
+function cyh_media_key_save( $post, $attachment ) {
+	if ( ! isset( $attachment['cyh_key'] ) ) {
+		return $post;
+	}
+
+	$key = cyh_media_make_key( $attachment['cyh_key'] );
+	if ( '' === $key ) {
+		delete_post_meta( $post['ID'], CYH_MEDIA_KEY );
+		return $post;
+	}
+
+	// کلیدِ گرفته‌شده توسط پیوست دیگر پذیرفته نمی‌شود.
+	$owner = cyh_media_by_key( $key );
+	if ( $owner && (int) $owner !== (int) $post['ID'] ) {
+		$post['errors']['cyh_key']['errors'][] =
+			'این کلید قبلاً برای پیوست #' . (int) $owner . ' ثبت شده است.';
+		return $post;
+	}
+
+	update_post_meta( $post['ID'], CYH_MEDIA_KEY, $key );
+	return $post;
+}
+add_filter( 'attachment_fields_to_save', 'cyh_media_key_save', 10, 2 );
+
+/* =========================================================================
+   ستون «کلید محتوا» در کتابخانه‌ی رسانه
    =========================================================================
    بدون این، کلیدها نامرئی‌اند: نویسنده‌ی محتوا باید حدس بزند کلیدِ یک
-   تصویر چیست، و حدسِ اشتباه یعنی بلوکی که بی‌صدا خالی می‌ماند.
+   تصویر چیست، و حدسِ اشتباه یعنی بلوکی که روی سایت خالی می‌ماند.
    ========================================================================= */
 function cyh_media_key_column( $cols ) {
 	$cols['cyh_key'] = 'کلید محتوا';
@@ -158,38 +189,10 @@ function cyh_media_key_column_body( $col, $id ) {
 	}
 	$key = get_post_meta( $id, CYH_MEDIA_KEY, true );
 	if ( $key ) {
-		// قابل انتخاب با دوبار کلیک — برای کپی‌کردن داخل فایل JSON.
+		// با یک کلیک کامل انتخاب می‌شود — برای کپی داخل فایل JSON.
 		echo '<code style="user-select:all">' . esc_html( $key ) . '</code>';
 	} else {
 		echo '<span style="color:#787c82">—</span>';
 	}
 }
 add_action( 'manage_media_custom_column', 'cyh_media_key_column_body', 10, 2 );
-
-/**
- * کلید و هش را روی پیوست ثبت کن.
- *
- * از اندپوینت آپلودِ خود وردپرس (`/wp/v2/media`) استفاده می‌شود، پس
- * اسکریپت بعد از آپلود فقط این دو متا را می‌فرستد. ثبت با
- * `register_post_meta` انجام شده تا REST اجازه‌ی نوشتن بدهد.
- */
-function cyh_register_media_meta() {
-	$auth = static function () {
-		return current_user_can( 'upload_files' );
-	};
-
-	register_post_meta( 'attachment', CYH_MEDIA_KEY, [
-		'type'          => 'string',
-		'single'        => true,
-		'show_in_rest'  => true,
-		'auth_callback' => $auth,
-	] );
-
-	register_post_meta( 'attachment', CYH_MEDIA_HASH, [
-		'type'          => 'string',
-		'single'        => true,
-		'show_in_rest'  => true,
-		'auth_callback' => $auth,
-	] );
-}
-add_action( 'init', 'cyh_register_media_meta' );
