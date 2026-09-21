@@ -16,6 +16,7 @@
     "test:taxonomy": "node scripts/generate-taxonomy.test.mjs",
     "check:hooks": "node scripts/check-wp-hooks.mjs",
     "check:pagefind": "node scripts/check-pagefind.mjs",
+    "media:upload": "node --experimental-strip-types --no-warnings scripts/upload-media.mjs",
     "check:plugin": "php wordpress-plugin/check-stub-names.php && php wordpress-plugin/check-stub-coverage.php && php wordpress-plugin/wp-stub-harness.php",
     "test:blocks": "node --experimental-strip-types --no-warnings src/lib/content-blocks.test.mts",
     "test:seo": "node --experimental-strip-types --no-warnings src/lib/seo-meta.test.mts"
