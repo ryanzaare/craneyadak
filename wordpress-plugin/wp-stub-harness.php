@@ -80,6 +80,13 @@ function register_taxonomy( $slug, $obj_type, $args ) {
 		throw new Exception( "register_taxonomy($slug): invalid args" );
 	}
 	$GLOBALS['cyh_test_taxonomies'][ $slug ] = $args;
+	// ⚠️ $obj_type قبلاً دور ریخته می‌شد. بدون نگه‌داشتنش،
+	// is_object_in_taxonomy() نمی‌توانست همان تصادم اولویت هوک را که این
+	// پروژه دو بار سوزاند (تاکسونومی روی ۱۰، اتصال CPT روی ۵) آزمایش کند.
+	$GLOBALS['cyh_test_tax_object_types'][ $slug ] = (array) $obj_type;
+}
+function is_object_in_taxonomy( $object_type, $taxonomy ) {
+	return in_array( $object_type, $GLOBALS['cyh_test_tax_object_types'][ $taxonomy ] ?? [], true );
 }
 function register_rest_route( $namespace, $route, $args ) {
 	if ( ! is_callable( $args['callback'] ) && ! function_exists( $args['callback'] ) ) {
@@ -108,6 +115,7 @@ function register_setting( ...$args ) {}
 function settings_fields( $group ) {}
 function submit_button( $label = '' ) { echo $label; }
 function current_user_can( $cap ) { return true; }
+function is_admin() { return $GLOBALS['cyh_test_is_admin'] ?? false; }
 function admin_url( $path = '' ) { return 'https://cms.example.com/wp-admin/' . $path; }
 function status_header( $code ) {}
 function get_transient( $key ) { return $GLOBALS['cyh_test_transients'][ $key ] ?? false; }
@@ -379,6 +387,17 @@ function get_term_by( $field, $value, $tax = '', $out = OBJECT ) {
 	return false;
 }
 function get_terms( $args = [] ) { return array_values( $GLOBALS['cyh_test_terms'] ?? [] ); }
+function get_the_terms( $post, $taxonomy ) {
+	$id       = is_object( $post ) ? $post->ID : (int) $post;
+	$assigned = $GLOBALS['cyh_test_object_terms'][ $id ][ $taxonomy ] ?? [];
+	$out      = [];
+	foreach ( (array) $assigned as $t ) {
+		$out[] = is_object( $t ) ? $t : ( $GLOBALS['cyh_test_terms'][ $t ] ?? null );
+	}
+	$out = array_filter( $out );
+	// مثل وردپرس واقعی: بدون ترم، false برمی‌گردد نه آرایه‌ی خالی.
+	return $out ? array_values( $out ) : false;
+}
 function term_exists( $term, $tax = '', $parent = null ) {
 	foreach ( $GLOBALS['cyh_test_terms'] ?? [] as $t ) { if ( $t->slug === $term || $t->name === $term ) { return [ 'term_id' => $t->term_id ]; } }
 	return null;
@@ -409,9 +428,18 @@ function get_post( $p = null, $out = OBJECT ) { return $GLOBALS['cyh_test_posts'
 function get_posts( $args = [] ) { return array_values( $GLOBALS['cyh_test_posts'] ?? [] ); }
 function get_page_by_path( $path, $out = OBJECT, $type = 'page' ) { return null; }
 function get_post_field( $f, $p = null, $ctx = 'display' ) { $post = get_post( $p ); return $post->$f ?? ''; }
+function get_post_status( $post = null ) { $p = get_post( $post ); return $p->post_status ?? false; }
+function get_the_title( $post = 0 ) { $p = get_post( $post ); return $p->post_title ?? ''; }
 function get_post_meta( $id, $key = '', $single = false ) { $v = $GLOBALS['cyh_test_meta'][ $id ][ $key ] ?? ( $single ? '' : [] ); return $v; }
 function update_post_meta( $id, $key, $val, $prev = '' ) { $GLOBALS['cyh_test_meta'][ $id ][ $key ] = $val; return true; }
 function delete_post_meta( $id, $key, $val = '' ) { unset( $GLOBALS['cyh_test_meta'][ $id ][ $key ] ); return true; }
+function register_post_meta( $object_type, $meta_key, $args = [] ) {
+	if ( isset( $args['auth_callback'] ) && ! is_callable( $args['auth_callback'] ) ) {
+		throw new Exception( "register_post_meta($object_type,$meta_key): auth_callback غیرقابل‌فراخوانی" );
+	}
+	$GLOBALS['cyh_test_registered_meta'][ $object_type ][ $meta_key ] = $args;
+	return true;
+}
 
 /* ── متای ترم ───────────────────────────────────────────────────────────
    مهاجرت بلوک‌ها محتوای دسته را از متای *ترم* می‌خواند، نه نوشته. جدا
@@ -522,6 +550,31 @@ function is_email( $e ) { return (bool) filter_var( $e, FILTER_VALIDATE_EMAIL );
 function wp_json_encode( $d, $flags = 0, $depth = 512 ) { return json_encode( $d, $flags | JSON_UNESCAPED_UNICODE, $depth ); }
 function wp_kses( $str, $allowed = [], $protocols = [] ) { return strip_tags( (string) $str, array_map( fn( $t ) => "<$t>", array_keys( (array) $allowed ) ) ); }
 function wp_strip_all_tags( $str, $break = false ) { return trim( strip_tags( (string) $str ) ); }
+function wp_list_pluck( $list, $field, $index_key = null ) {
+	$out = [];
+	foreach ( (array) $list as $key => $item ) {
+		$value = is_object( $item ) ? ( $item->$field ?? null ) : ( $item[ $field ] ?? null );
+		if ( null === $index_key ) {
+			$out[ $key ] = $value;
+			continue;
+		}
+		$index = is_object( $item ) ? ( $item->$index_key ?? null ) : ( $item[ $index_key ] ?? null );
+		if ( null === $index ) {
+			$out[] = $value;
+		} else {
+			$out[ $index ] = $value;
+		}
+	}
+	return $out;
+}
+function wp_trim_words( $text, $num_words = 55, $more = null ) {
+	$more  = null === $more ? '…' : $more;
+	$words = preg_split( '/[\n\r\t ]+/', trim( wp_strip_all_tags( (string) $text ) ), -1, PREG_SPLIT_NO_EMPTY );
+	if ( count( $words ) <= $num_words ) {
+		return implode( ' ', $words );
+	}
+	return implode( ' ', array_slice( $words, 0, $num_words ) ) . $more;
+}
 function wp_rand( $min = 0, $max = 0 ) { return $max > $min ? random_int( $min, $max ) : random_int( 0, PHP_INT_MAX ); }
 function trailingslashit( $s ) { return rtrim( (string) $s, '/\\' ) . '/'; }
 function rest_get_url_prefix() { return 'wp-json'; }

@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "node scripts/generate-taxonomy.mjs --allow-stale && astro dev",
-    "build": "npm run taxonomy && npm run check && astro build",
+    "build": "npm run taxonomy && npm run check && npm run check:plugin && astro build",
     "postbuild": "pagefind --site dist && npm run check:pagefind",
     "preview": "astro preview",
     "astro": "astro",
