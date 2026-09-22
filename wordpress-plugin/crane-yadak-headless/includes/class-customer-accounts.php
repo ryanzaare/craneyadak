@@ -1,0 +1,412 @@
+<?php
+/**
+ * حساب کاربری مشتری — ایست ۶ در docs/backlog.md.
+ *
+ * ---------------------------------------------------------------------------
+ * چرا کاربران بومی وردپرس، نه CPT سفارشی
+ *
+ * هش رمز عبور، جدول کاربران و گردش «فراموشی رمز» را خودِ وردپرس امن و
+ * تست‌شده می‌دهد. ساختن این‌ها از نو دقیقاً همان «فنجان یک‌بارمصرف»ای است
+ * که این پروژه همیشه از آن پرهیز کرده. فقط لایه‌ی روی آن — صدور توکن
+ * برای فرانت‌اند استاتیک — مال ما است.
+ *
+ * چرا توکن سفارشی، نه یک افزونه‌ی JWT
+ *
+ * سایت استاتیک است، پس session سمت سرور وجود ندارد و فرانت‌اند باید
+ * ورودش را با چیزی جدا از کوکی نگه دارد. یک افزونه‌ی JWT این را می‌دهد،
+ * ولی یک وابستگی تازه است برای کاری که دو تابع کوچک حل می‌کند: توکن
+ * تصادفی، هش‌شده در متای کاربر، با انقضا. همان فلسفه‌ی «دو
+ * wp_remote_post() کافی است» در ایست ۲.
+ *
+ * چرا هش توکن در *نام* متا، نه در مقدارش
+ *
+ * برگرداندن کاربر از روی توکن باید سریع باشد. جدول wp_usermeta روی
+ * meta_key ایندکس دارد، نه meta_value؛ پس اگر هش را کلید متا کنیم
+ * (`_cyh_token_<hash>`)، پیداکردن صاحب توکن یک get_users با meta_key
+ * دقیق است — همان الگویی که Application Passwords خودِ وردپرس هم
+ * استفاده می‌کند. اگر هش را مقدار می‌گذاشتیم، هر بررسی توکن یک اسکن
+ * کامل جدول متا می‌شد.
+ * ---------------------------------------------------------------------------
+ *
+ * @package CraneYadakHeadless
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+const CYH_CUSTOMER_ROLE       = 'crane_customer';
+const CYH_TOKEN_TTL           = 30 * DAY_IN_SECONDS;
+const CYH_PASSWORD_RESET_TTL  = HOUR_IN_SECONDS;
+const CYH_TOKEN_META_PREFIX   = '_cyh_token_';
+const CYH_RESET_HASH_META     = '_cyh_pwreset_hash';
+const CYH_RESET_EXPIRY_META   = '_cyh_pwreset_expires';
+
+/* =========================================================================
+   ۰) نقش
+   ========================================================================= */
+/**
+ * ⚠️ `add_role` فقط هنگام فعال‌سازی افزونه اجرا می‌شود (کامنت بالای
+ * `cyh_activate()` در فایل اصلی). یعنی نصب‌های از قبل فعال — مثل همین
+ * سایت در لحظه‌ی نوشتن این کد — این نقش تازه را با overwrite صرف فایل‌ها
+ * نمی‌گیرند. `cyh_maybe_reregister_roles()` پایین همین فایل این را با
+ * یک نگهبان نسخه روی `admin_init` جبران می‌کند.
+ */
+function cyh_register_customer_role() {
+	add_role(
+		CYH_CUSTOMER_ROLE,
+		'مشتری',
+		[
+			'read' => true,
+		]
+	);
+}
+
+/**
+ * نگهبان ارتقا — نقش‌ها را برای نصب‌های موجود هم به‌روز نگه می‌دارد.
+ *
+ * ⚠️ بدون این، افزودن هر نقش تازه در نسخه‌های بعدی فقط روی نصب‌های
+ * *تازه* اثر می‌کرد، نه روی سایتی که از نسخه‌ی قبل‌تر فعال بوده — دقیقاً
+ * همان «شکست بی‌صدا» که این پروژه چند بار به آن برخورده: کد درست است،
+ * ولی هیچ‌وقت روی سایت واقعی اجرا نمی‌شود.
+ */
+function cyh_maybe_reregister_roles() {
+	if ( get_option( 'cyh_roles_version' ) === CYH_VERSION ) {
+		return;
+	}
+	cyh_register_customer_role();
+	if ( function_exists( 'cyh_register_roles' ) ) {
+		cyh_register_roles(); // نقش‌های سازمانی — class-community.php
+	}
+	update_option( 'cyh_roles_version', CYH_VERSION );
+}
+add_action( 'admin_init', 'cyh_maybe_reregister_roles' );
+
+/* =========================================================================
+   ۱) توکن — صدور، تأیید، ابطال
+   ========================================================================= */
+
+/** توکن خام را برای مشتری صادر می‌کند و هش آن را در متای کاربر ذخیره می‌کند. */
+function cyh_customer_issue_token( $user_id ) {
+	$token = bin2hex( wp_generate_password( 64, false, false ) );
+	// ⚠️ wp_generate_password طول را به‌صورت *کاراکتر* می‌گیرد، نه بایت؛
+	// hex کردنش تصادفی‌بودن را کم نمی‌کند چون خودِ کاراکترها از یک
+	// الفبای گسترده‌اند، فقط طول رشته را دو برابر می‌کند. طول واقعی
+	// اهمیتی ندارد — فقط باید به‌اندازه‌ی کافی حدس‌ناپذیر باشد.
+	$hash = hash( 'sha256', $token );
+	update_user_meta( $user_id, CYH_TOKEN_META_PREFIX . $hash, time() + CYH_TOKEN_TTL );
+	return $token;
+}
+
+/** توکن خام از هدر → شناسه‌ی کاربر، یا false اگر نامعتبر/منقضی. */
+function cyh_customer_verify_token( $token ) {
+	$token = trim( (string) $token );
+	if ( '' === $token ) {
+		return false;
+	}
+	$hash  = hash( 'sha256', $token );
+	$users = get_users(
+		[
+			'meta_key'   => CYH_TOKEN_META_PREFIX . $hash,
+			'number'     => 1,
+			'fields'     => 'ID',
+		]
+	);
+	if ( empty( $users ) ) {
+		return false;
+	}
+	$user_id = (int) $users[0];
+	$expires = (int) get_user_meta( $user_id, CYH_TOKEN_META_PREFIX . $hash, true );
+	if ( $expires < time() ) {
+		delete_user_meta( $user_id, CYH_TOKEN_META_PREFIX . $hash );
+		return false;
+	}
+	return $user_id;
+}
+
+/** فقط همین توکن (یک دستگاه/نشست) را باطل می‌کند — بقیه دست‌نخورده می‌مانند. */
+function cyh_customer_revoke_token( $token ) {
+	$user_id = cyh_customer_verify_token( $token );
+	if ( ! $user_id ) {
+		return;
+	}
+	delete_user_meta( $user_id, CYH_TOKEN_META_PREFIX . hash( 'sha256', trim( (string) $token ) ) );
+}
+
+/**
+ * همه‌ی توکن‌های یک کاربر را باطل می‌کند — بعد از تغییر رمز.
+ *
+ * ⚠️ بدون این، تغییر رمز فقط رمز را عوض می‌کرد ولی نشست‌های باز (مثلاً
+ * روی دستگاهی که گم شده) همچنان معتبر می‌ماندند. تغییر رمز باید یعنی
+ * «همه‌جا خارج شو»، نه فقط «از این به بعد رمز تازه لازم است».
+ */
+function cyh_customer_revoke_all_tokens( $user_id ) {
+	foreach ( get_user_meta( $user_id ) as $key => $value ) {
+		if ( str_starts_with( $key, CYH_TOKEN_META_PREFIX ) ) {
+			delete_user_meta( $user_id, $key );
+		}
+	}
+}
+
+/** هدر Authorization: Bearer <token> را می‌خواند و کاربر را برمی‌گرداند. */
+function cyh_customer_authenticate_request( $request ) {
+	$header = (string) $request->get_header( 'authorization' );
+	if ( ! preg_match( '/^Bearer\s+(.+)$/i', trim( $header ), $m ) ) {
+		return new WP_Error( 'cyh_no_token', 'وارد نشده‌اید.', [ 'status' => 401 ] );
+	}
+	$user_id = cyh_customer_verify_token( $m[1] );
+	if ( ! $user_id ) {
+		return new WP_Error( 'cyh_bad_token', 'نشست منقضی شده — دوباره وارد شوید.', [ 'status' => 401 ] );
+	}
+	return $user_id;
+}
+
+/* =========================================================================
+   ۲) کمک‌کننده‌های اعتبارسنجی
+   ========================================================================= */
+
+/** همان الگوی موبایل ایران که فرم تماس استفاده می‌کند (class-rest-contact.php). */
+function cyh_customer_valid_phone( $digits ) {
+	return (bool) preg_match( '/^(0)?9\d{9}$/', $digits );
+}
+
+function cyh_customer_profile( $user ) {
+	return [
+		'id'      => (int) $user->ID,
+		'name'    => $user->display_name,
+		'email'   => $user->user_email,
+		'phone'   => get_user_meta( $user->ID, 'cyh_phone', true ) ?: null,
+		'company' => get_user_meta( $user->ID, 'cyh_company', true ) ?: null,
+	];
+}
+
+/* =========================================================================
+   ۳) اندپوینت‌های REST
+   ========================================================================= */
+function cyh_register_customer_routes() {
+	$public = [ 'methods' => 'POST', 'permission_callback' => '__return_true' ];
+
+	register_rest_route( 'crane-yadak/v1', '/account/register', array_merge( $public, [ 'callback' => 'cyh_rest_account_register' ] ) );
+	register_rest_route( 'crane-yadak/v1', '/account/login', array_merge( $public, [ 'callback' => 'cyh_rest_account_login' ] ) );
+	register_rest_route( 'crane-yadak/v1', '/account/logout', array_merge( $public, [ 'callback' => 'cyh_rest_account_logout' ] ) );
+	register_rest_route( 'crane-yadak/v1', '/account/forgot-password', array_merge( $public, [ 'callback' => 'cyh_rest_account_forgot_password' ] ) );
+	register_rest_route( 'crane-yadak/v1', '/account/reset-password', array_merge( $public, [ 'callback' => 'cyh_rest_account_reset_password' ] ) );
+	register_rest_route(
+		'crane-yadak/v1',
+		'/account/me',
+		[ 'methods' => 'GET', 'permission_callback' => '__return_true', 'callback' => 'cyh_rest_account_me' ]
+	);
+}
+add_action( 'rest_api_init', 'cyh_register_customer_routes' );
+
+/**
+ * ثبت‌نام.
+ *
+ * ⚠️ ایمیل **اجباری** است، حتی اگر شماره هم داده شود — تصمیم صریح
+ * کارفرما (docs/backlog.md، ایست ۶). بدون سرویس پیامک، ایمیل تنها
+ * کانالی است که «فراموشی رمز» می‌تواند از آن عبور کند؛ حساب فقط-شماره
+ * یعنی حسابی که هرگز نمی‌تواند رمزش را بازیابی کند.
+ */
+function cyh_rest_account_register( $request ) {
+	$ip = cyh_client_ip();
+	if ( '' !== trim( (string) $request->get_param( 'website' ) ) ) {
+		return new WP_Error( 'cyh_spam', 'ارسال نامعتبر.', [ 'status' => 400 ] );
+	}
+	if ( cyh_is_rate_limited( $ip ) ) {
+		return new WP_Error( 'cyh_rate_limited', 'تعداد درخواست‌ها زیاد است. کمی بعد دوباره تلاش کنید.', [ 'status' => 429 ] );
+	}
+
+	$name  = sanitize_text_field( (string) $request->get_param( 'name' ) );
+	$email = sanitize_email( (string) $request->get_param( 'email' ) );
+	$pass  = (string) $request->get_param( 'password' );
+	$phone = cyh_to_latin_digits( sanitize_text_field( (string) $request->get_param( 'phone' ) ) );
+	$org   = sanitize_text_field( (string) $request->get_param( 'company' ) );
+
+	if ( mb_strlen( $name ) < 2 ) {
+		return new WP_Error( 'cyh_bad_name', 'نام را کامل وارد کنید.', [ 'status' => 400 ] );
+	}
+	if ( ! is_email( $email ) ) {
+		return new WP_Error( 'cyh_bad_email', 'ایمیل معتبر نیست.', [ 'status' => 400 ] );
+	}
+	if ( email_exists( $email ) ) {
+		return new WP_Error( 'cyh_email_taken', 'حسابی با این ایمیل قبلاً ساخته شده — وارد شوید.', [ 'status' => 409 ] );
+	}
+	if ( strlen( $pass ) < 8 ) {
+		return new WP_Error( 'cyh_weak_password', 'رمز عبور باید حداقل ۸ کاراکتر باشد.', [ 'status' => 400 ] );
+	}
+	if ( '' !== $phone && ! cyh_customer_valid_phone( $phone ) ) {
+		return new WP_Error( 'cyh_bad_phone', 'شماره موبایل معتبر نیست.', [ 'status' => 400 ] );
+	}
+
+	$user_id = wp_insert_user(
+		[
+			'user_login'   => $email,
+			'user_email'   => $email,
+			'user_pass'    => $pass,
+			'display_name' => $name,
+			'role'         => CYH_CUSTOMER_ROLE,
+		]
+	);
+	if ( is_wp_error( $user_id ) ) {
+		return new WP_Error( 'cyh_register_failed', 'ثبت‌نام انجام نشد. دوباره تلاش کنید.', [ 'status' => 500 ] );
+	}
+
+	if ( '' !== $phone ) {
+		update_user_meta( $user_id, 'cyh_phone', $phone );
+	}
+	if ( '' !== $org ) {
+		update_user_meta( $user_id, 'cyh_company', $org );
+	}
+
+	$token = cyh_customer_issue_token( $user_id );
+	return rest_ensure_response(
+		[
+			'success' => true,
+			'token'   => $token,
+			'profile' => cyh_customer_profile( get_userdata( $user_id ) ),
+		]
+	);
+}
+
+function cyh_rest_account_login( $request ) {
+	$ip = cyh_client_ip();
+	if ( cyh_is_rate_limited( $ip ) ) {
+		return new WP_Error( 'cyh_rate_limited', 'تعداد تلاش‌ها زیاد است. کمی بعد دوباره تلاش کنید.', [ 'status' => 429 ] );
+	}
+
+	$email = sanitize_email( (string) $request->get_param( 'email' ) );
+	$pass  = (string) $request->get_param( 'password' );
+
+	$user = wp_authenticate( $email, $pass );
+	if ( is_wp_error( $user ) ) {
+		// ⚠️ پیام عمداً مبهم است — نمی‌گوید کدام فیلد اشتباه بود، تا
+		// حدس‌زدن ایمیل‌های ثبت‌شده روی سایت ممکن نشود.
+		return new WP_Error( 'cyh_bad_login', 'ایمیل یا رمز عبور اشتباه است.', [ 'status' => 401 ] );
+	}
+
+	$token = cyh_customer_issue_token( $user->ID );
+	return rest_ensure_response(
+		[
+			'success' => true,
+			'token'   => $token,
+			'profile' => cyh_customer_profile( $user ),
+		]
+	);
+}
+
+function cyh_rest_account_logout( $request ) {
+	$header = (string) $request->get_header( 'authorization' );
+	if ( preg_match( '/^Bearer\s+(.+)$/i', trim( $header ), $m ) ) {
+		cyh_customer_revoke_token( $m[1] );
+	}
+	return rest_ensure_response( [ 'success' => true ] );
+}
+
+/**
+ * ⚠️ همیشه پاسخ موفق برمی‌گرداند — چه ایمیل وجود داشته باشد چه نه.
+ *
+ * برگرداندن خطای «این ایمیل ثبت نیست» یعنی هر کسی می‌تواند با امتحان‌
+ * کردن ایمیل‌ها بفهمد کدام‌ها روی سایت حساب دارند (User Enumeration).
+ * همان دلیلی که هانی‌پات این پروژه هم به ربات پاسخ موفق جعلی می‌دهد.
+ */
+function cyh_rest_account_forgot_password( $request ) {
+	$ip = cyh_client_ip();
+	if ( cyh_is_rate_limited( $ip ) ) {
+		return new WP_Error( 'cyh_rate_limited', 'تعداد درخواست‌ها زیاد است. کمی بعد دوباره تلاش کنید.', [ 'status' => 429 ] );
+	}
+
+	$email = sanitize_email( (string) $request->get_param( 'email' ) );
+	$user  = is_email( $email ) ? get_user_by( 'email', $email ) : false;
+
+	if ( $user ) {
+		$token = bin2hex( wp_generate_password( 64, false, false ) );
+		update_user_meta( $user->ID, CYH_RESET_HASH_META, hash( 'sha256', $token ) );
+		update_user_meta( $user->ID, CYH_RESET_EXPIRY_META, time() + CYH_PASSWORD_RESET_TTL );
+
+		$reset_url = trailingslashit( cyh_get_frontend_url() ) . 'account/reset-password?email=' . rawurlencode( $email ) . '&token=' . $token;
+		wp_mail(
+			$email,
+			'بازیابی رمز عبور — کرین یدک',
+			"برای تعیین رمز تازه، روی لینک زیر بزنید (تا یک ساعت معتبر است):\n\n{$reset_url}\n\nاگر این درخواست را شما نفرستاده‌اید، این پیام را نادیده بگیرید."
+		);
+	}
+
+	return rest_ensure_response( [ 'success' => true ] );
+}
+
+function cyh_rest_account_reset_password( $request ) {
+	$ip = cyh_client_ip();
+	if ( cyh_is_rate_limited( $ip ) ) {
+		return new WP_Error( 'cyh_rate_limited', 'تعداد تلاش‌ها زیاد است. کمی بعد دوباره تلاش کنید.', [ 'status' => 429 ] );
+	}
+
+	$email = sanitize_email( (string) $request->get_param( 'email' ) );
+	$token = (string) $request->get_param( 'token' );
+	$pass  = (string) $request->get_param( 'password' );
+
+	$user = is_email( $email ) ? get_user_by( 'email', $email ) : false;
+	if ( ! $user ) {
+		return new WP_Error( 'cyh_bad_reset', 'لینک نامعتبر یا منقضی است.', [ 'status' => 400 ] );
+	}
+
+	$stored_hash = get_user_meta( $user->ID, CYH_RESET_HASH_META, true );
+	$expires     = (int) get_user_meta( $user->ID, CYH_RESET_EXPIRY_META, true );
+
+	if ( '' === $stored_hash || $expires < time() || ! hash_equals( $stored_hash, hash( 'sha256', $token ) ) ) {
+		return new WP_Error( 'cyh_bad_reset', 'لینک نامعتبر یا منقضی است.', [ 'status' => 400 ] );
+	}
+	if ( strlen( $pass ) < 8 ) {
+		return new WP_Error( 'cyh_weak_password', 'رمز عبور باید حداقل ۸ کاراکتر باشد.', [ 'status' => 400 ] );
+	}
+
+	wp_set_password( $pass, $user->ID );
+	delete_user_meta( $user->ID, CYH_RESET_HASH_META );
+	delete_user_meta( $user->ID, CYH_RESET_EXPIRY_META );
+	// ⚠️ تغییر رمز یعنی «همه‌جا خارج شو» — نشست‌های قبلی باطل می‌شوند.
+	cyh_customer_revoke_all_tokens( $user->ID );
+
+	return rest_ensure_response( [ 'success' => true ] );
+}
+
+function cyh_rest_account_me( $request ) {
+	$user_id = cyh_customer_authenticate_request( $request );
+	if ( is_wp_error( $user_id ) ) {
+		return $user_id;
+	}
+
+	/* ⚠️ سفارش‌ها هنوز به حساب وصل نمی‌شوند — ایست ۲ (درگاه پرداخت) که این
+	   اتصال را می‌سازد هنوز نوشته نشده. لیست خالی صادقانه است؛ ساختن یک
+	   اتصال حدسی (مثلاً تطبیق با شماره تلفن) دقیقاً همان داده‌ی ساختگی‌ای
+	   است که قاعده‌ی ۲ پروژه ممنوعش می‌کند. */
+	$orders = get_posts(
+		[
+			'post_type'   => 'cyh_quote',
+			'author'      => $user_id,
+			'post_status' => 'publish',
+			'numberposts' => 50,
+		]
+	);
+
+	return rest_ensure_response(
+		[
+			'profile' => cyh_customer_profile( get_userdata( $user_id ) ),
+			'orders'  => array_map(
+				static function ( $post ) {
+					return [
+						'code'   => get_post_meta( $post->ID, 'cyh_code', true ),
+						'kind'   => get_post_meta( $post->ID, 'cyh_kind', true ) ?: 'quote',
+						'status' => get_post_meta( $post->ID, 'cyh_status', true ) ?: 'new',
+						'date'   => get_the_date( 'Y-m-d', $post ),
+					];
+				},
+				$orders
+			),
+		]
+	);
+}
+
+/** آدرس فرانت‌اند Astro — برای ساختن لینک بازیابی رمز در ایمیل. */
+function cyh_get_frontend_url() {
+	$origins = function_exists( 'cyh_get_allowed_origins' ) ? cyh_get_allowed_origins() : [];
+	return $origins[0] ?? 'https://craneyadak.com';
+}

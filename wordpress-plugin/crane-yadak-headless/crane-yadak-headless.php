@@ -5,7 +5,7 @@
  * Description:       بک‌اند Headless برای فرانت‌اند Astro سایت کرین یدک. CPTهای محصول/برند/صنعت/سند فنی
  *                     را با پشتیبانی WPGraphQL ثبت می‌کند، فیلدهای ACF Pro را از طریق Local JSON همگام
  *                     نگه می‌دارد، و یک اندپوینت REST امن برای فرم استعلام قیمت فراهم می‌کند.
- * Version:           3.9.0
+ * Version:           3.10.0
  * Requires PHP:      8.0
  * Requires Plugins:  advanced-custom-fields-pro, wp-graphql
  * Author:            Crane Yadak Engineering
@@ -60,7 +60,7 @@ if ( defined( 'CYH_VERSION' ) ) {
 	return;
 }
 
-define( 'CYH_VERSION', '3.9.0' );
+define( 'CYH_VERSION', '3.10.0' );
 define( 'CYH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CYH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -385,6 +385,7 @@ require_once CYH_PLUGIN_DIR . 'includes/class-legacy-cleanup.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-quote-requests.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-site-options-graphql.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-inquiry-uploads.php';
+require_once CYH_PLUGIN_DIR . 'includes/class-customer-accounts.php';
 
 /**
  * فلاش‌کردن Rewrite Rules هنگام فعال/غیرفعال‌سازی — بدون این، اسلاگ‌های
@@ -397,6 +398,8 @@ function cyh_activate() {
 	// نقش‌های سازمانی (کارشناس فنی، سردبیر، فروش) — فقط یک‌بار هنگام
 	// فعال‌سازی ثبت می‌شوند؛ add_role در اجراهای بعدی بی‌اثر است.
 	cyh_register_roles();
+	cyh_register_customer_role();
+	update_option( 'cyh_roles_version', CYH_VERSION );
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'cyh_activate' );

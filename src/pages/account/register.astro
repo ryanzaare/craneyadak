@@ -1,0 +1,138 @@
+---
+// src/pages/account/register.astro
+// ثبت‌نام مشتری — ایست ۶ در docs/backlog.md.
+//
+// ⚠️ ایمیل اجباری است، حتی اگر شماره هم داده شود — تصمیم صریح کارفرما.
+// بدون سرویس پیامک، ایمیل تنها کانالی است که «فراموشی رمز» می‌تواند از
+// آن عبور کند؛ نبودش یعنی حسابی که هرگز نمی‌تواند رمزش را بازیابی کند.
+// همین قید سمت سرور (class-customer-accounts.php) هم اعمال می‌شود —
+// این فرم فقط همان قانون را زودتر، قبل از رفت‌وبرگشت به سرور، نشان می‌دهد.
+import Layout from '../../layouts/Layout.astro';
+import { SITE } from '../../data/site';
+
+const wpBase = (import.meta.env.WP_GRAPHQL_URL as string | undefined)?.replace(/\/+$/, '') ?? null;
+const title = `ثبت‌نام | ${SITE.name}`;
+const description = 'ساخت حساب کاربری برای پیگیری سفارش‌ها و استعلام‌های خود.';
+---
+
+<Layout title={title} description={description} noindex>
+  <section class="bg-steel-900 text-white px-4 py-10">
+    <div class="max-w-md mx-auto">
+      <h1 class="text-2xl md:text-3xl font-black mb-2">ساخت حساب کاربری</h1>
+      <p class="text-steel-300 leading-8">برای پیگیری سفارش‌ها از یک‌جا.</p>
+    </div>
+  </section>
+
+  <section class="bg-white px-4 py-10">
+    <div class="max-w-md mx-auto">
+      <form id="register-form" class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+        <div>
+          <label for="reg-name" class="block text-sm font-bold text-steel-900 mb-1">نام و نام خانوادگی</label>
+          <input id="reg-name" name="name" required class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+        </div>
+        <div>
+          <label for="reg-email" class="block text-sm font-bold text-steel-900 mb-1">ایمیل</label>
+          <input id="reg-email" name="email" type="email" required dir="ltr" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+          <p class="text-xs text-steel-600 mt-1">برای بازیابی رمز عبور لازم است — بدون آن نمی‌توانید رمز فراموش‌شده را بازیابی کنید.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label for="reg-phone" class="block text-sm font-bold text-steel-900 mb-1">شماره موبایل (اختیاری)</label>
+            <input id="reg-phone" name="phone" type="tel" inputmode="tel" dir="ltr" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+          </div>
+          <div>
+            <label for="reg-company" class="block text-sm font-bold text-steel-900 mb-1">نام شرکت (اختیاری)</label>
+            <input id="reg-company" name="company" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+          </div>
+        </div>
+        <div>
+          <label for="reg-password" class="block text-sm font-bold text-steel-900 mb-1">رمز عبور</label>
+          <input id="reg-password" name="password" type="password" required minlength="8" dir="ltr" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+          <p class="text-xs text-steel-600 mt-1">حداقل ۸ کاراکتر.</p>
+        </div>
+
+        {/* هانی‌پات — ربات‌ساده پر می‌کند، کاربر واقعی نمی‌بیند. */}
+        <input type="text" name="website" tabindex="-1" autocomplete="off" class="absolute -left-[9999px] w-px h-px" aria-hidden="true" />
+
+        <button type="submit" id="register-submit" class="w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+          ساخت حساب
+        </button>
+        <p id="register-msg" class="text-sm leading-7" role="status" aria-live="polite"></p>
+      </form>
+
+      <p class="text-sm text-steel-600 leading-7 mt-6 text-center">
+        حساب دارید؟ <a href="/account/login" class="text-accent-ink font-bold hover:underline">ورود</a>
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ wpBase }}>
+  (function () {
+    const TOKEN_KEY = 'cy-account-token-v1';
+    const form = document.getElementById('register-form');
+    const msg = document.getElementById('register-msg');
+    const button = document.getElementById('register-submit');
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!wpBase) {
+        if (msg) {
+          msg.className = 'text-sm leading-7 text-red-700 font-bold';
+          msg.textContent = 'ثبت‌نام آنلاین در دسترس نیست. لطفاً تماس بگیرید.';
+        }
+        return;
+      }
+
+      const data = new FormData(form);
+      const payload = {
+        name: String(data.get('name') || ''),
+        email: String(data.get('email') || ''),
+        phone: String(data.get('phone') || ''),
+        company: String(data.get('company') || ''),
+        password: String(data.get('password') || ''),
+        website: String(data.get('website') || ''),
+      };
+
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'در حال ساخت حساب…';
+      }
+      if (msg) msg.textContent = '';
+
+      try {
+        const res = await fetch(`${wpBase}/wp-json/crane-yadak/v1/account/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+
+        if (res.ok && json.success && json.token) {
+          try {
+            localStorage.setItem(TOKEN_KEY, json.token);
+          } catch {
+            /* بدون localStorage هم ثبت‌نام انجام شده — فقط ورود خودکار رخ نمی‌دهد. */
+          }
+          location.href = '/account';
+          return;
+        }
+
+        if (msg) {
+          msg.className = 'text-sm leading-7 text-red-700 font-bold';
+          msg.textContent = json.message || 'ثبت‌نام انجام نشد. دوباره تلاش کنید.';
+        }
+      } catch {
+        if (msg) {
+          msg.className = 'text-sm leading-7 text-red-700 font-bold';
+          msg.textContent = 'ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.';
+        }
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'ساخت حساب';
+        }
+      }
+    });
+  })();
+</script>

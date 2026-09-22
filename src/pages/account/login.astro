@@ -1,0 +1,113 @@
+---
+// src/pages/account/login.astro
+import Layout from '../../layouts/Layout.astro';
+import { SITE } from '../../data/site';
+
+const wpBase = (import.meta.env.WP_GRAPHQL_URL as string | undefined)?.replace(/\/+$/, '') ?? null;
+const title = `ورود | ${SITE.name}`;
+const description = 'ورود به حساب کاربری برای پیگیری سفارش‌ها و استعلام‌ها.';
+---
+
+<Layout title={title} description={description} noindex>
+  <section class="bg-steel-900 text-white px-4 py-10">
+    <div class="max-w-md mx-auto">
+      <h1 class="text-2xl md:text-3xl font-black mb-2">ورود به حساب کاربری</h1>
+    </div>
+  </section>
+
+  <section class="bg-white px-4 py-10">
+    <div class="max-w-md mx-auto">
+      <form id="login-form" class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+        <div>
+          <label for="login-email" class="block text-sm font-bold text-steel-900 mb-1">ایمیل</label>
+          <input id="login-email" name="email" type="email" required dir="ltr" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+        </div>
+        <div>
+          <label for="login-password" class="block text-sm font-bold text-steel-900 mb-1">رمز عبور</label>
+          <input id="login-password" name="password" type="password" required dir="ltr" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+        </div>
+
+        <button type="submit" id="login-submit" class="w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+          ورود
+        </button>
+        <p id="login-msg" class="text-sm leading-7" role="status" aria-live="polite"></p>
+      </form>
+
+      <div class="flex items-center justify-between mt-4 text-sm">
+        <a href="/account/forgot-password" class="text-accent-ink font-bold hover:underline">رمز عبور را فراموش کرده‌اید؟</a>
+        <a href="/account/register" class="text-steel-600 hover:underline">ساخت حساب تازه</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ wpBase }}>
+  (function () {
+    const TOKEN_KEY = 'cy-account-token-v1';
+    const form = document.getElementById('login-form');
+    const msg = document.getElementById('login-msg');
+    const button = document.getElementById('login-submit');
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!wpBase) {
+        if (msg) {
+          msg.className = 'text-sm leading-7 text-red-700 font-bold';
+          msg.textContent = 'ورود آنلاین در دسترس نیست. لطفاً تماس بگیرید.';
+        }
+        return;
+      }
+
+      const data = new FormData(form);
+      const payload = {
+        email: String(data.get('email') || ''),
+        password: String(data.get('password') || ''),
+      };
+
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'در حال ورود…';
+      }
+      if (msg) msg.textContent = '';
+
+      try {
+        const res = await fetch(`${wpBase}/wp-json/crane-yadak/v1/account/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json().catch(() => ({}));
+
+        if (res.ok && json.success && json.token) {
+          try {
+            localStorage.setItem(TOKEN_KEY, json.token);
+          } catch {
+            if (msg) {
+              msg.className = 'text-sm leading-7 text-red-700 font-bold';
+              msg.textContent = 'ورود موفق بود ولی مرورگر اجازه‌ی ذخیره‌ی نشست را نداد.';
+            }
+            return;
+          }
+          const back = new URLSearchParams(location.search).get('next');
+          location.href = back && back.startsWith('/') ? back : '/account';
+          return;
+        }
+
+        if (msg) {
+          msg.className = 'text-sm leading-7 text-red-700 font-bold';
+          msg.textContent = json.message || 'ایمیل یا رمز عبور اشتباه است.';
+        }
+      } catch {
+        if (msg) {
+          msg.className = 'text-sm leading-7 text-red-700 font-bold';
+          msg.textContent = 'ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.';
+        }
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'ورود';
+        }
+      }
+    });
+  })();
+</script>

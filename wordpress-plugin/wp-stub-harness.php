@@ -130,7 +130,11 @@ function wp_insert_post( $args ) {
 	return $id;
 }
 function is_wp_error( $thing ) { return $thing instanceof WP_Error; }
-function wp_mail( $to, $subject, $body ) { return true; }
+$GLOBALS['cyh_test_mail_calls'] = [];
+function wp_mail( $to, $subject, $body ) {
+	$GLOBALS['cyh_test_mail_calls'][] = [ 'to' => $to, 'subject' => $subject, 'body' => $body ];
+	return true;
+}
 function get_post_type( $id ) { return $GLOBALS['cyh_test_posts'][ $id ]['post_type'] ?? false; }
 function wp_get_upload_dir() { return [ 'baseurl' => 'https://cms.example.com/wp-content/uploads', 'basedir' => '/tmp/uploads' ]; }
 function function_exists_acf_stub() { return false; }
@@ -198,6 +202,7 @@ class WP_Error {
 	   برمی‌گرداند، به‌جای پیام خطا یک fatal می‌گرفتیم. */
 	public function get_error_message() { return $this->message; }
 	public function get_error_code() { return $this->code; }
+	public function get_error_data() { return $this->data; }
 }
 
 // نقطه‌ی خروج هر endpoint REST. تا وقتی هارنس کال‌بک‌های REST را صدا
@@ -226,6 +231,12 @@ class WP_REST_Request {
 	   نمی‌زد، نبودش تا امروز پنهان مانده بود. */
 	public function get_file_params() {
 		return $GLOBALS['cyh_test_files'] ?? [];
+	}
+	/* حساب کاربری از این برای Authorization: Bearer <token> می‌خواند.
+	   تست‌ها آن را در $GLOBALS['cyh_test_headers'] می‌گذارند. */
+	public function get_header( $name ) {
+		$key = strtolower( (string) $name );
+		return $GLOBALS['cyh_test_headers'][ $key ] ?? '';
 	}
 }
 
@@ -425,7 +436,73 @@ function sanitize_title( $t, $fallback = '', $ctx = 'save' ) {
 
 // ── پست و متا ──────────────────────────────────────────────────────────────
 function get_post( $p = null, $out = OBJECT ) { return $GLOBALS['cyh_test_posts'][ is_object( $p ) ? $p->ID : (int) $p ] ?? null; }
-function get_posts( $args = [] ) { return array_values( $GLOBALS['cyh_test_posts'] ?? [] ); }
+/**
+ * ⚠️ نسخه‌ی قبلی این stub همیشه *همه‌ی* نوشته‌ها را برمی‌گرداند، بدون
+ * فیلتر — و همیشه به‌شکل آرایه‌ی خام (نه شیءِ WP_Post). هیچ‌کدام از
+ * ۳۰ بررسیِ قبلی get_posts را واقعاً صدا نمی‌زدند، پس این خرابی سال‌ها
+ * پنهان ماند تا اضافه‌شدن `/account/me` (که سفارش‌های کاربر را با
+ * get_posts می‌خواند) به آن رسید: «Attempt to read property "ID" on
+ * array» — همان کد واقعی (`class-quote-requests.php`،
+ * `cyh_rest_quote_status`) هم دقیقاً همین‌طور `$post->ID` می‌خواند و
+ * دقیقاً همین‌طور با آرایه‌ی خام می‌شکست؛ فقط تا امروز هیچ تستی به آن
+ * مسیر نمی‌رسید.
+ *
+ * حالا: فیلتر واقعی (نوع، وضعیت، نویسنده، اسلاگ، متا) و شکل خروجی
+ * وابسته به `fields` — درست مثل وردپرس واقعی: `fields => 'ids'` عدد
+ * خام می‌دهد (class-media-keys.php این را می‌خواهد)، وگرنه شیء با
+ * `->ID` (بقیه‌ی فراخوان‌ها این را می‌خواهند).
+ */
+function get_posts( $args = [] ) {
+	$all      = $GLOBALS['cyh_test_posts'] ?? [];
+	$types    = (array) ( $args['post_type'] ?? 'post' );
+	$statuses = (array) ( $args['post_status'] ?? 'publish' );
+	$author   = isset( $args['author'] ) ? (int) $args['author'] : null;
+	$name     = $args['name'] ?? null;
+
+	$matches = [];
+	foreach ( $all as $id => $data ) {
+		if ( ! in_array( $data['post_type'] ?? 'post', $types, true ) ) { continue; }
+		if ( ! in_array( $data['post_status'] ?? 'publish', $statuses, true ) ) { continue; }
+		if ( null !== $author && (int) ( $data['post_author'] ?? 0 ) !== $author ) { continue; }
+		if ( null !== $name ) {
+			$slug = $data['post_name'] ?? sanitize_title( $data['post_title'] ?? '' );
+			if ( $slug !== $name ) { continue; }
+		}
+		if ( isset( $args['meta_key'] ) ) {
+			$mval = $GLOBALS['cyh_test_meta'][ $id ][ $args['meta_key'] ] ?? null;
+			if ( null === $mval ) { continue; }
+			if ( isset( $args['meta_value'] ) && (string) $mval !== (string) $args['meta_value'] ) { continue; }
+		}
+		if ( isset( $args['meta_query'] ) && is_array( $args['meta_query'] ) ) {
+			$ok = true;
+			foreach ( $args['meta_query'] as $clause ) {
+				if ( ! is_array( $clause ) || ! isset( $clause['key'] ) ) { continue; }
+				$mval = $GLOBALS['cyh_test_meta'][ $id ][ $clause['key'] ] ?? null;
+				if ( (string) $mval !== (string) ( $clause['value'] ?? '' ) ) { $ok = false; break; }
+			}
+			if ( ! $ok ) { continue; }
+		}
+		$matches[] = $id;
+	}
+
+	$limit = (int) ( $args['posts_per_page'] ?? $args['numberposts'] ?? 5 );
+	if ( -1 !== $limit ) { $matches = array_slice( $matches, 0, $limit ); }
+
+	if ( 'ids' === ( $args['fields'] ?? '' ) ) {
+		return $matches;
+	}
+
+	return array_map(
+		static function ( $id ) use ( $all ) {
+			return (object) array_merge(
+				[ 'post_type' => 'post', 'post_status' => 'publish', 'post_title' => '', 'post_name' => '', 'post_author' => 0 ],
+				$all[ $id ],
+				[ 'ID' => $id ]
+			);
+		},
+		$matches
+	);
+}
 function get_page_by_path( $path, $out = OBJECT, $type = 'page' ) { return null; }
 function get_post_field( $f, $p = null, $ctx = 'display' ) { $post = get_post( $p ); return $post->$f ?? ''; }
 function get_post_status( $post = null ) { $p = get_post( $post ); return $p->post_status ?? false; }
@@ -450,6 +527,139 @@ function get_term_meta( $id, $key = '', $single = false ) {
 }
 function update_term_meta( $id, $key, $val, $prev = '' ) {
 	$GLOBALS['cyh_test_term_meta'][ $id ][ $key ] = $val;
+	return true;
+}
+
+/* ── کاربر — حساب مشتری (ایست ۶) ───────────────────────────────────────
+   ⚠️ این stubها عمداً *منطق* دارند، نه فقط امضا — دقیقاً همان دلیلی که
+   بالای بخش «رسانه و آپلود» نوشته شده: نقطه‌ی ثبت‌نام/ورود بدون احراز
+   هویتِ قبلی است و امنیتش کاملاً به همین منطق (یکتایی ایمیل، تطبیق رمز،
+   انقضای توکن) وابسته است. اگر اینجا همیشه موفق برگردد، هارنس دقیقاً
+   همان چیزی را که باید محافظت کند آزمایش نمی‌کند. */
+$GLOBALS['cyh_test_users']      = [];
+$GLOBALS['cyh_test_user_meta']  = [];
+$GLOBALS['cyh_test_next_uid']   = 1;
+
+class CYH_Test_WP_User {
+	public $ID;
+	public $user_login;
+	public $user_email;
+	public $user_pass;
+	public $display_name;
+	public $roles = [];
+	public function __construct( $data ) {
+		foreach ( $data as $k => $v ) { $this->$k = $v; }
+	}
+}
+
+function wp_generate_password( $length = 12, $special_chars = true, $extra_special_chars = false ) {
+	$chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+	if ( $special_chars ) { $chars .= '!@#$%^&*()'; }
+	$out = '';
+	for ( $i = 0; $i < $length; $i++ ) { $out .= $chars[ random_int( 0, strlen( $chars ) - 1 ) ]; }
+	return $out;
+}
+
+function email_exists( $email ) {
+	foreach ( $GLOBALS['cyh_test_users'] as $u ) {
+		if ( $u->user_email === $email ) { return $u->ID; }
+	}
+	return false;
+}
+
+function get_user_by( $field, $value ) {
+	$attr = [ 'id' => 'ID', 'email' => 'user_email', 'login' => 'user_login' ][ $field ] ?? null;
+	if ( ! $attr ) { return false; }
+	foreach ( $GLOBALS['cyh_test_users'] as $u ) {
+		if ( (string) $u->$attr === (string) $value ) { return $u; }
+	}
+	return false;
+}
+
+function get_userdata( $user_id ) {
+	return get_user_by( 'id', $user_id );
+}
+
+function wp_insert_user( $data ) {
+	$email = isset( $data['user_email'] ) ? trim( (string) $data['user_email'] ) : '';
+	if ( '' === $email || ! is_email( $email ) ) {
+		return new WP_Error( 'invalid_email', 'ایمیل نامعتبر است.' );
+	}
+	if ( email_exists( $email ) ) {
+		return new WP_Error( 'existing_user_email', 'این ایمیل قبلاً ثبت شده.' );
+	}
+	$id = $GLOBALS['cyh_test_next_uid']++;
+	$GLOBALS['cyh_test_users'][ $id ] = new CYH_Test_WP_User(
+		[
+			'ID'           => $id,
+			'user_login'   => $data['user_login'] ?? $email,
+			'user_email'   => $email,
+			// ⚠️ در هارنس عمداً متن ساده است — این یک شبیه‌سازی امنیتی
+			// نیست، فقط باید بتواند در wp_authenticate با همین مقدار
+			// مقایسه شود. وردپرس واقعی با phpass هش می‌کند.
+			'user_pass'    => (string) ( $data['user_pass'] ?? '' ),
+			'display_name' => $data['display_name'] ?? '',
+			'roles'        => [ $data['role'] ?? 'subscriber' ],
+		]
+	);
+	return $id;
+}
+
+function wp_set_password( $password, $user_id ) {
+	if ( isset( $GLOBALS['cyh_test_users'][ $user_id ] ) ) {
+		$GLOBALS['cyh_test_users'][ $user_id ]->user_pass = (string) $password;
+	}
+}
+
+/**
+ * ⚠️ پیام خطا عمداً یکسان است چه ایمیل پیدا نشود چه رمز غلط باشد — دقیقاً
+ * همان چیزی که `cyh_rest_account_login()` هم می‌خواهد (کد واقعی، نه
+ * این stub، پیام را یکسان می‌کند)؛ اینجا فقط کد خطای متفاوت لازم است تا
+ * تست بتواند دو حالت را از هم تشخیص بدهد.
+ */
+function wp_authenticate( $username, $password ) {
+	$user = get_user_by( 'email', $username );
+	if ( ! $user ) { $user = get_user_by( 'login', $username ); }
+	if ( ! $user ) {
+		return new WP_Error( 'invalid_username', 'کاربری با این مشخصات پیدا نشد.' );
+	}
+	if ( $user->user_pass !== (string) $password ) {
+		return new WP_Error( 'incorrect_password', 'رمز عبور اشتباه است.' );
+	}
+	return $user;
+}
+
+function get_users( $args = [] ) {
+	$out = [];
+	foreach ( $GLOBALS['cyh_test_users'] as $u ) {
+		if ( isset( $args['meta_key'] ) ) {
+			$meta = $GLOBALS['cyh_test_user_meta'][ $u->ID ] ?? [];
+			if ( ! array_key_exists( $args['meta_key'], $meta ) ) { continue; }
+		}
+		$out[] = ( 'ID' === ( $args['fields'] ?? '' ) ) ? $u->ID : $u;
+		if ( isset( $args['number'] ) && count( $out ) >= (int) $args['number'] ) { break; }
+	}
+	return $out;
+}
+
+function get_user_meta( $user_id, $key = '', $single = false ) {
+	$all = $GLOBALS['cyh_test_user_meta'][ $user_id ] ?? [];
+	if ( '' === $key ) {
+		// ⚠️ شکل واقعی وردپرس: هر کلید به آرایه‌ای از مقادیر نگاشت می‌شود
+		// (متا می‌تواند چندمقداری باشد). cyh_customer_revoke_all_tokens
+		// فقط به کلیدها نیاز دارد، ولی شکل درست نگه داشته می‌شود.
+		$out = [];
+		foreach ( $all as $k => $v ) { $out[ $k ] = [ $v ]; }
+		return $out;
+	}
+	return $all[ $key ] ?? ( $single ? '' : [] );
+}
+function update_user_meta( $user_id, $key, $val, $prev = '' ) {
+	$GLOBALS['cyh_test_user_meta'][ $user_id ][ $key ] = $val;
+	return true;
+}
+function delete_user_meta( $user_id, $key ) {
+	unset( $GLOBALS['cyh_test_user_meta'][ $user_id ][ $key ] );
 	return true;
 }
 
@@ -809,6 +1019,198 @@ if ( empty( $GLOBALS['cyh_test_remote_post_calls'] ) ) {
 	$errors[] = 'وبهوک به آدرس اشتباهی فراخوانی شد';
 } else {
 	echo "✓ اجرای وبهوک به‌درستی به آدرس تنظیم‌شده POST می‌زند\n";
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// بررسی ۱۷ تا ۲۷: حساب کاربری مشتری (ایست ۶)
+// ═══════════════════════════════════════════════════════════════════════════
+// هر بار قبل از فراخوانی‌ای که rate-limit دارد، bucket مشترکِ IP تستی
+// ریست می‌شود — همان دلیلِ بررسی ۸ بالا: بدون این، بررسی‌های پشت‌سرهم
+// این بخش به‌جای آزمودن منطق واقعی، فقط به «Rate Limited» می‌خوردند.
+$reset_rl = static function () {
+	delete_transient( 'cyh_rl_' . md5( '0.0.0.0' ) );
+};
+
+$reset_rl();
+$reg_request = new WP_REST_Request(
+	[
+		'name'     => 'مهندس کریمی',
+		'email'    => 'karimi@example.com',
+		'password' => 'رمزعبور۱۲۳۴',
+		'phone'    => '09121234567',
+		'company'  => 'فولاد کویر',
+		'website'  => '',
+	]
+);
+$reg_result = cyh_rest_account_register( $reg_request );
+if ( is_wp_error( $reg_result ) ) {
+	$errors[] = 'ثبت‌نام معتبر رد شد: ' . $reg_result->get_error_message();
+} elseif ( empty( $reg_result['success'] ) || empty( $reg_result['token'] ) ) {
+	$errors[] = 'ثبت‌نام موفق token برنگرداند';
+} else {
+	echo "✓ ثبت‌نام مشتری با موفقیت انجام شد و توکن صادر شد\n";
+}
+$customer_token = $reg_result['token'] ?? '';
+
+// بررسی ۱۸: نقش crane_customer واقعاً به کاربر تازه اختصاص یافته
+$new_user = get_user_by( 'email', 'karimi@example.com' );
+if ( ! $new_user || ! in_array( CYH_CUSTOMER_ROLE, $new_user->roles, true ) ) {
+	$errors[] = 'کاربر تازه نقش crane_customer نگرفت';
+} else {
+	echo "✓ کاربر تازه نقش crane_customer را گرفت\n";
+}
+
+// بررسی ۱۹: ایمیل تکراری رد می‌شود
+$reset_rl();
+$dup_result = cyh_rest_account_register(
+	new WP_REST_Request( [ 'name' => 'دیگری', 'email' => 'karimi@example.com', 'password' => 'یک‌رمز‌دیگر', 'website' => '' ] )
+);
+if ( ! is_wp_error( $dup_result ) || 'cyh_email_taken' !== $dup_result->get_error_code() ) {
+	$errors[] = 'ثبت‌نام با ایمیل تکراری باید رد شود اما نشد';
+} else {
+	echo "✓ ثبت‌نام با ایمیل تکراری به‌درستی رد شد\n";
+}
+
+// بررسی ۲۰: رمز کوتاه‌تر از ۸ کاراکتر رد می‌شود
+$reset_rl();
+$weak_pw = cyh_rest_account_register(
+	new WP_REST_Request( [ 'name' => 'تست', 'email' => 'weak@example.com', 'password' => '۱۲۳', 'website' => '' ] )
+);
+if ( ! is_wp_error( $weak_pw ) || 'cyh_weak_password' !== $weak_pw->get_error_code() ) {
+	$errors[] = 'رمز عبور کوتاه باید رد شود اما نشد';
+} else {
+	echo "✓ رمز عبور کوتاه‌تر از ۸ کاراکتر به‌درستی رد شد\n";
+}
+
+// بررسی ۲۱: شماره موبایل نامعتبر رد می‌شود (اگر داده شده باشد)
+$reset_rl();
+$bad_phone = cyh_rest_account_register(
+	new WP_REST_Request( [ 'name' => 'تست', 'email' => 'badphone@example.com', 'password' => 'رمزعبور۱۲۳۴', 'phone' => '12345', 'website' => '' ] )
+);
+if ( ! is_wp_error( $bad_phone ) || 'cyh_bad_phone' !== $bad_phone->get_error_code() ) {
+	$errors[] = 'ثبت‌نام با شماره‌ی نامعتبر باید رد شود اما نشد';
+} else {
+	echo "✓ شماره موبایل نامعتبر در ثبت‌نام به‌درستی رد شد\n";
+}
+
+// بررسی ۲۲: ورود با رمز درست موفق است
+$reset_rl();
+$login_ok = cyh_rest_account_login(
+	new WP_REST_Request( [ 'email' => 'karimi@example.com', 'password' => 'رمزعبور۱۲۳۴' ] )
+);
+if ( is_wp_error( $login_ok ) || empty( $login_ok['token'] ) ) {
+	$errors[] = 'ورود با رمز درست شکست خورد';
+} else {
+	echo "✓ ورود با ایمیل و رمز درست موفق شد\n";
+}
+
+/* بررسی ۲۳ (رگرسیون امنیتی): پیام خطای «رمز اشتباه» و «کاربر ناموجود»
+   باید از دید کد خطا قابل تفکیک باشند (برای مدیریت خطای فرانت‌اند) ولی
+   cyh_rest_account_login در کد واقعی همیشه یک پیام یکسان («ایمیل یا رمز
+   عبور اشتباه است») برمی‌گرداند تا کسی نتواند با امتحان ایمیل‌های
+   مختلف بفهمد کدام‌ها روی سایت ثبت‌نام کرده‌اند. هر دو حالت اینجا با
+   کد خطای *یکسانِ* cyh_bad_login آزموده می‌شوند تا این یکسانی تضمین
+   بماند. */
+$reset_rl();
+$wrong_pass = cyh_rest_account_login(
+	new WP_REST_Request( [ 'email' => 'karimi@example.com', 'password' => 'رمزعبورغلط' ] )
+);
+$reset_rl();
+$unknown_email = cyh_rest_account_login(
+	new WP_REST_Request( [ 'email' => 'nobody@example.com', 'password' => 'هرچیزی' ] )
+);
+if (
+	! is_wp_error( $wrong_pass ) || ! is_wp_error( $unknown_email )
+	|| 'cyh_bad_login' !== $wrong_pass->get_error_code() || 'cyh_bad_login' !== $unknown_email->get_error_code()
+	|| $wrong_pass->get_error_message() !== $unknown_email->get_error_message()
+) {
+	$errors[] = 'ورود ناموفق باید پیام یکسان بدهد چه رمز غلط باشد چه ایمیل ناموجود (ضدِ User Enumeration)';
+} else {
+	echo "✓ رمز غلط و ایمیل ناموجود پیام یکسان می‌دهند — شمارش کاربر ممکن نیست\n";
+}
+
+// بررسی ۲۴: /account/me بدون توکن رد می‌شود
+$GLOBALS['cyh_test_headers'] = [];
+$me_no_token = cyh_rest_account_me( new WP_REST_Request( [] ) );
+if ( ! is_wp_error( $me_no_token ) || 401 !== ( $me_no_token->get_error_data()['status'] ?? null ) ) {
+	$errors[] = '/account/me بدون توکن باید ۴۰۱ بدهد';
+} else {
+	echo "✓ /account/me بدون توکن به‌درستی ۴۰۱ می‌دهد\n";
+}
+
+// بررسی ۲۵: /account/me با توکن معتبر پروفایل درست را برمی‌گرداند
+$GLOBALS['cyh_test_headers'] = [ 'authorization' => 'Bearer ' . $customer_token ];
+$me_ok = cyh_rest_account_me( new WP_REST_Request( [] ) );
+if ( is_wp_error( $me_ok ) || ( $me_ok['profile']['email'] ?? null ) !== 'karimi@example.com' ) {
+	$errors[] = '/account/me با توکن معتبر پروفایل درست را برنگرداند';
+} else {
+	echo "✓ /account/me با توکن معتبر پروفایل درست را برمی‌گرداند\n";
+}
+
+// بررسی ۲۶: خروج، همان توکن را باطل می‌کند
+cyh_rest_account_logout( new WP_REST_Request( [] ) );
+$me_after_logout = cyh_rest_account_me( new WP_REST_Request( [] ) );
+if ( ! is_wp_error( $me_after_logout ) ) {
+	$errors[] = 'خروج باید توکن را باطل کند، ولی /account/me هنوز موفق بود';
+} else {
+	echo "✓ خروج توکن را باطل می‌کند — /account/me بعد از آن رد می‌شود\n";
+}
+$GLOBALS['cyh_test_headers'] = [];
+
+/* بررسی ۲۷ (رگرسیون ضدِ User Enumeration): فراموشی رمز برای ایمیلِ
+   ناموجود هم باید success=true بدهد و **نباید** ایمیلی بفرستد — دقیقاً
+   همان الگوی هانی‌پات این پروژه (پاسخ موفق جعلی، نه خطا). */
+$reset_rl();
+$GLOBALS['cyh_test_mail_calls'] = [];
+$forgot_unknown = cyh_rest_account_forgot_password( new WP_REST_Request( [ 'email' => 'ghost@example.com' ] ) );
+if ( is_wp_error( $forgot_unknown ) || empty( $forgot_unknown['success'] ) || ! empty( $GLOBALS['cyh_test_mail_calls'] ) ) {
+	$errors[] = 'فراموشی رمز برای ایمیل ناموجود باید success=true بدهد و هیچ ایمیلی نفرستد';
+} else {
+	echo "✓ فراموشی رمز برای ایمیل ناموجود پاسخ موفق جعلی می‌دهد، بدون افشای وجود/عدم‌وجود حساب\n";
+}
+
+// بررسی ۲۸: فراموشی رمز برای ایمیل واقعی، ایمیل واقعی می‌فرستد
+$reset_rl();
+$GLOBALS['cyh_test_mail_calls'] = [];
+$forgot_real = cyh_rest_account_forgot_password( new WP_REST_Request( [ 'email' => 'karimi@example.com' ] ) );
+if ( is_wp_error( $forgot_real ) || empty( $forgot_real['success'] ) || empty( $GLOBALS['cyh_test_mail_calls'] ) ) {
+	$errors[] = 'فراموشی رمز برای ایمیل واقعی باید ایمیل بفرستد اما نفرستاد';
+} else {
+	echo "✓ فراموشی رمز برای ایمیل واقعی ایمیل بازیابی می‌فرستد\n";
+}
+
+// بررسی ۲۹: بازنشانی رمز با توکن معتبر کار می‌کند و نشست‌های قبلی را باطل می‌کند
+preg_match( '/token=([0-9a-f]+)/', $GLOBALS['cyh_test_mail_calls'][0]['body'] ?? '', $token_match );
+$reset_token = $token_match[1] ?? '';
+$reset_rl();
+$reset_ok = cyh_rest_account_reset_password(
+	new WP_REST_Request( [ 'email' => 'karimi@example.com', 'token' => $reset_token, 'password' => 'رمزتازه۵۶۷۸' ] )
+);
+if ( is_wp_error( $reset_ok ) || empty( $reset_ok['success'] ) ) {
+	$errors[] = 'بازنشانی رمز با توکن معتبر شکست خورد: ' . ( is_wp_error( $reset_ok ) ? $reset_ok->get_error_message() : '' );
+} else {
+	echo "✓ بازنشانی رمز با توکن معتبر انجام شد\n";
+}
+// نشست قبلی (که در بررسی ۲۵ صادر شده بود) باید بعد از تغییر رمز باطل باشد.
+$GLOBALS['cyh_test_headers'] = [ 'authorization' => 'Bearer ' . $customer_token ];
+$me_after_reset = cyh_rest_account_me( new WP_REST_Request( [] ) );
+$GLOBALS['cyh_test_headers'] = [];
+if ( ! is_wp_error( $me_after_reset ) ) {
+	$errors[] = 'تغییر رمز باید همه‌ی نشست‌های قبلی را باطل کند، ولی توکن قدیمی هنوز کار می‌کرد';
+} else {
+	echo "✓ تغییر رمز همه‌ی نشست‌های قبلی را باطل می‌کند\n";
+}
+
+// بررسی ۳۰: توکن بازنشانیِ منقضی/جعلی رد می‌شود
+$reset_rl();
+$bad_reset = cyh_rest_account_reset_password(
+	new WP_REST_Request( [ 'email' => 'karimi@example.com', 'token' => 'توکن-جعلی', 'password' => 'رمزتازه۵۶۷۸' ] )
+);
+if ( ! is_wp_error( $bad_reset ) || 'cyh_bad_reset' !== $bad_reset->get_error_code() ) {
+	$errors[] = 'بازنشانی رمز با توکن جعلی باید رد شود اما نشد';
+} else {
+	echo "✓ بازنشانی رمز با توکن جعلی/منقضی به‌درستی رد شد\n";
 }
 
 
