@@ -16,15 +16,25 @@
 **فاز پروژه «ساختن» نیست، «پر کردن» است.** این را پیش از پیشنهاد هر فیچری
 بدان.
 
-> هیچ کد تازه‌ای نوشته نمی‌شود، مگر آنکه **ورود محتوا را مسدود** کرده باشد.
+> **فیچر تازه** ساخته نمی‌شود. کدی که در `docs/backlog.md` بخش
+> «ایست‌های باقی‌مانده» ثبت شده، **کار تمام‌نشده است، نه فیچر تازه** —
+> و ساختنش مجاز است.
 
-چرا: ~۱۷٬۰۰۰ خط کد در برابر ۳٬۳۴۴ کلمه محتوا. ۴ دسته از ۳۱ پر است. چیزی که
-غایب است قابلیت نیست، صفحه است.
+چرا: ~۱۷٬۰۰۰ خط کد در برابر ۳٬۳۴۴ کلمه محتوا. ۴ دسته از ۳۱ پر است.
 
-- ایده‌ی تازه → `docs/backlog.md`، بخش «تأیید نشده». **ساخته نمی‌شود.**
-- باگی که محتوا را مسدود کند → رفع شود. استثنا نیست، خودِ تعریف است.
-- نگهبان (`scripts/check-*`) → مجاز. کد فیچر نیست.
-- امنیت → همیشه مجاز.
+⚠️ **این انجماد «همه‌ی کد تمام شد» معنا نمی‌دهد.** نسخه‌ی اول همین بند
+این دو را قاطی کرده بود و کارفرما درست گرفتش. تفکیک درست:
+
+| نوع | حکم |
+|---|---|
+| ایده‌ی تازه‌ای که تا امروز مطرح نشده | → backlog، بخش «تأیید نشده». **ساخته نمی‌شود.** |
+| کار تأییدشده‌ی ثبت‌شده در «ایست‌های باقی‌مانده» | **ساخته می‌شود.** درگاه پرداخت، صفحات حقوقی، انتقال متن‌های هاردکد — هیچ‌کدام فیچر تازه نیستند. |
+| باگی که محتوا را مسدود کند | رفع شود. استثنا نیست، خودِ تعریف است. |
+| نگهبان (`scripts/check-*`) | مجاز. کد فیچر نیست. |
+| امنیت | همیشه مجاز. |
+
+**پیش از هر کاری، «ایست‌های باقی‌مانده» در `docs/backlog.md` را بخوان.**
+آنجا دقیقاً نوشته چه کدی مانده، چه چیزی بلاکش کرده، و ترتیبش چیست.
 
 اگر کارفرما فیچری خواست که در این قاعده نمی‌گنجد، **پیش از ساختنش** همین
 معامله را یادآوری کن: هر فیچر، درزِ تازه است و درز همان جایی است که تمام
@@ -102,19 +112,69 @@ npm run build          # taxonomy + check + astro build
 
 
 ## Communication Protocol (Caveman Mode)
-- Be extremely terse and dense. Speak like an elite systems engineer under strict token constraints.
-- Skip greetings, polite fluff, preambles, pedagogical explanations, and unsolicited summaries.
-- Never reprint entire files. Return ONLY minimal unified diffs or isolated functions with exact line context.
-- Plain technical facts only. Never explain why standard patterns work unless explicitly asked.
+
+- Be extremely terse and dense. Speak like an elite systems engineer under
+  strict token constraints.
+- Skip greetings, polite fluff, preambles, and pedagogical explanations.
+- Never reprint entire files. Return ONLY minimal unified diffs or isolated
+  functions with exact line context.
+- Plain technical facts only. Never explain why standard patterns work unless
+  explicitly asked.
+
+### ⚠️ دامنه‌ی این قاعده — فقط *چت*
+
+سه چیز صراحتاً **مستثنا** هستند و ایجاز شامل‌شان نمی‌شود:
+
+1. **کامنت‌های کد.** گران‌بهاترین دارایی این مخزن همین‌هاست. هر کامنت
+   `⚠️` یک شکست واقعی را رمزگذاری کرده و تنها چیزی است که مانع تکرارش
+   می‌شود. کدِ بی‌«چرا» یعنی همان باگ، شش ماه بعد، دوباره.
+2. **پیام‌های کامیت.** بایگانی تصمیم‌های این پروژه‌اند، نه یادداشت.
+3. **گام‌های پایانی پاسخ** (قاعده‌ی ۸ بالا). «خلاصه‌ی ناخواسته» نیستند؛
+   خواسته‌ی صریح کارفرمایند و مقدم بر ایجاز. تضاد ظاهری این دو قاعده
+   این‌گونه حل می‌شود: **بدنه‌ی پاسخ فشرده، پایانش شماره‌دار و روشن.**
 
 ## Autonomous Testing Protocol
-- NEVER ask the user to run tests, builds, or diagnostics. You have active terminal access.
+
+- تست، build و تشخیص را **خودت اجرا کن**؛ هرگز به کارفرما واگذار نکن.
+  ترمینال فعال داری و PHP هم روی این ماشین نصب است، پس
+  `npm run check:plugin` هم اجرا می‌شود.
+- اگر دستوری واقعاً در این محیط اجرا نمی‌شود، **دقیقاً بگو کدام و چرا**.
+
+> ⚠️ **هرگز نتیجه‌ای را گزارش نکن که خودت ندیده‌ای.**
+>
+> این جمله جایگزین «هرگز از کارفرما نخواه تست بزند» شد، چون شکل مطلقِ
+> قبلی فشار می‌آورد که وقتی چیزی اجرا نمی‌شود، *ادعای* اجرا شود. بدترین
+> خطای این پروژه دقیقاً همین بود: یک بار «Tested:» در پیام کامیت نوشته
+> شد برای آزمونی که هرگز اجرا نشده بود.
+>
+> خودمختاری یعنی خودت اجرا کنی، نه اینکه وانمود کنی.
 
 ## Performance & Visual Audit
-- Use your native Browser tool to load `http://localhost:4321` and take screenshots to visually diagnose layout shifts (CLS) or responsive design issues.
-- For strict performance metrics, autonomously execute `npx @lhci/cli collect --url=http://localhost:4321`, read the JSON report, and fix elements harming LCP or INP scores.
 
-## SEO, Schema & Live Search Hack
-- Do NOT ask for Search APIs or external connectors. When you need live competitor data, title tags, or PAA (People Also Ask) structures, autonomously use your native `Browser` tool.
-- Navigate directly to `https://www.google.com/search?q=YOUR_KEYWORD`, read the parsed DOM, and extract real-time search results from page 1.
-- Whenever modifying `src/lib/seo-meta.ts` or JSON-LD, validate the output against `schema.org/Product` and `schema.org/QAPage` standard rules.
+⚠️ **هرگز روی `astro dev` (پورت ۴۳۲۱) سنجش نکن.** سرور توسعه ماژول‌های
+ES را بدون باندل و بدون مینیفای سرو می‌کند و کلاینت HMR را هم می‌افزاید.
+LCP و TBT آن هیچ نسبتی با تولید ندارند — بهینه‌سازی بر اساس آن اعداد،
+بیلد واقعی را **بدتر** می‌کند.
+
+```bash
+npm run build && npm run preview     # خروجی واقعی، مینیفای‌شده
+npx @lhci/cli collect --url=http://localhost:4322
+```
+
+پورت را از خروجی `preview` بخوان و فرض نکن. برای CLS و مسائل واکنش‌گرا
+هم همان آدرس `preview` را در مرورگر باز کن، نه `dev` — چیدمان این دو
+یکسان نیست.
+
+## SEO & Competitive Research
+
+- برای عنوان و ساختار رقبا، **مستقیم صفحه‌ی خودشان را بخوان**
+  (`vaznehcrane.com` و مانندش). یک fetch، داده‌ی دقیق، بدون واسطه.
+- ⚠️ **گوگل را اسکرپ نکن.** نتیجه‌اش معمولاً دیوار رضایت یا کپچاست، و
+  دور زدن تشخیص ربات انجام نمی‌شود. خطر واقعی‌اش هم این است: وقتی
+  اسکرپ شکست می‌خورد، وسوسه‌ی «نتیجه‌ی جستجو»ی ساختگی پیش می‌آید — و
+  در پروژه‌ای که قاعده‌ی دومش «هرگز چیزی از خودت نساز» است، این بدترین
+  جای ممکن برای داده‌ی جعلی است.
+- اگر داده‌ی واقعی SERP لازم شد، از کارفرما بخواه از Search Console
+  بگیرد. داده‌ی خودِ سایت، هم دقیق‌تر است هم رایگان.
+- با هر تغییر در `src/lib/seo-meta.ts` یا JSON-LD، خروجی را با قواعد
+  `schema.org/Product` و `schema.org/QAPage` بسنج.
