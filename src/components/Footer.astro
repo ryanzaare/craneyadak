@@ -3,6 +3,7 @@
 import { SITE } from '../data/site';
 import { SILOS, siloPath } from '../data/taxonomy';
 import { getContact, getSiteOptions } from '../lib/site-options';
+import { getLegalPages } from '../lib/legal-pages';
 
 /* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
    قبلاً انتهای فرontmatter بودند و کدِ بالاتر که از آن‌ها استفاده
@@ -11,6 +12,9 @@ import { getContact, getSiteOptions } from '../lib/site-options';
    زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
 const contact = await getContact();
 const social = (await getSiteOptions()).social;
+// فقط صفحاتی که مشاور حقوقی واقعاً در پنل ثبت کرده — لینک به سند حقوقی
+// خالی، بدتر از نبود لینک است (docs/backlog.md، ایست ۱).
+const legalPages = await getLegalPages();
 
 /* اطلاعات تماس و شبکه‌های اجتماعی از وردپرس می‌آیند.
    هر بلوک فقط وقتی رندر می‌شود که مقدارش واقعاً ثبت شده باشد — دکمه‌ی
@@ -150,7 +154,21 @@ const footerSilos = SILOS.slice(0, 6);
         آخرین فرزند سمت چپ. نسخه‌ی اول این بلوک، اینماد را اول گذاشته بود
         و در نتیجه دقیقاً در گوشه‌ی مخالف خواسته رندر می‌شد.
         پس: کپی‌رایت اول (راست) و اینماد آخر (چپ). */}
-    <div class="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center gap-5 text-xs text-gray-400">
+    {legalPages.length > 0 && (
+      <nav aria-label="صفحات حقوقی" class="border-t border-white/10 mt-10 pt-6">
+        <ul class="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 text-xs text-gray-400" role="list">
+          {legalPages.map((page) => (
+            <li>
+              <a href={`/legal/${page.slug}`} class="hover:text-crane-orange transition-colors focus:outline-none focus:text-crane-orange">
+                {page.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    )}
+
+    <div class={`border-t border-white/10 pt-6 flex flex-col md:flex-row justify-between items-center gap-5 text-xs text-gray-400 ${legalPages.length > 0 ? 'mt-6' : 'mt-10'}`}>
       <p class="text-center md:text-right order-2 md:order-none">
         کپی‌رایت © {year} {SITE.name}. تمامی حقوق محفوظ است.
       </p>

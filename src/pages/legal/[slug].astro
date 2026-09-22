@@ -1,0 +1,71 @@
+---
+// src/pages/legal/[slug].astro
+// صفحات حقوقی — ایست ۱ در docs/backlog.md. eNamad این چهار سند را الزام
+// می‌کند و eNamad دروازه‌ی درگاه شاپرک را باز می‌کند؛ تا این مسیرها زنده
+// نشوند، درگاه پرداخت (ایست ۲) اصلاً قابل شروع نیست.
+//
+// ⚠️ متن هر صفحه از پنل وردپرس («برگه‌ها») می‌آید، نه از این فایل. تا
+// مشاور حقوقی کارفرما متن واقعی هر سند را ثبت نکند، getStaticPaths برای
+// آن اسلاگ هیچ مسیری نمی‌سازد — صفحه‌ی ۴۰۴ بهتر از متن حقوقی ساختگی است.
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import { buildTitle } from '../../lib/seo-meta';
+import { SITE } from '../../data/site';
+import { getLegalPages } from '../../lib/legal-pages';
+
+export async function getStaticPaths() {
+  return (await getLegalPages()).map((page) => ({
+    params: { slug: page.slug },
+    props: { page },
+  }));
+}
+
+const { page } = Astro.props;
+
+const title = buildTitle([page.label, SITE.name], `/legal/${page.slug}/`);
+const description = page.excerpt;
+const canonicalUrl = `${SITE.url}/legal/${page.slug}`;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      '@id': `${canonicalUrl}#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: SITE.url },
+        { '@type': 'ListItem', position: 2, name: page.label, item: canonicalUrl },
+      ],
+    },
+    {
+      '@type': 'WebPage',
+      '@id': `${canonicalUrl}#webpage`,
+      url: canonicalUrl,
+      name: title,
+      description,
+      isPartOf: { '@id': `${SITE.url}/#website` },
+      inLanguage: SITE.locale,
+      ...(page.isoModified ? { dateModified: page.isoModified } : {}),
+    },
+  ],
+};
+---
+
+<Layout title={title} description={description} jsonLd={jsonLd}>
+  <section class="bg-crane-navy text-white pt-12 pb-14 px-4 border-b-[8px] border-crane-orange relative">
+    <div class="max-w-4xl mx-auto relative z-10">
+      <Breadcrumb items={[{ label: 'صفحه اصلی', href: '/' }, { label: page.label }]} />
+      <h1 class="text-3xl md:text-4xl font-black mb-3 tracking-tight leading-tight drop-shadow-md">{page.label}</h1>
+      {page.isoModified && (
+        <p class="text-sm text-gray-400 font-bold">آخرین به‌روزرسانی: {page.isoModified}</p>
+      )}
+    </div>
+  </section>
+
+  <section class="py-16 px-4 bg-white">
+    <article class="max-w-3xl mx-auto text-gray-700 leading-9 text-right text-lg">
+      {/* همان کلاس prose-crane که مقاله و بلوک متنی دارند — یک‌شکلیِ سراسر سایت. */}
+      <div class="prose-crane" set:html={page.bodyHtml} />
+    </article>
+  </section>
+</Layout>
