@@ -49,6 +49,27 @@ export interface SiteHours {
   closes: string;
 }
 
+export interface SiteAdvantage {
+  title: string;
+  body: string;
+}
+
+export interface SiteHighlight {
+  label: string;
+  value: string;
+}
+
+export interface SiteAuthorityBlock {
+  heading: string;
+  paragraphs: string[];
+  highlights: SiteHighlight[];
+}
+
+export interface SiteWearItem {
+  categorySlug: string;
+  reason: string;
+}
+
 export interface SiteOptions {
   faqs: SiteFaq[];
   hours: SiteHours[];
@@ -61,6 +82,10 @@ export interface SiteOptions {
     instagram: string | null;
     telegram: string | null;
   };
+  advantages: SiteAdvantage[];
+  /** `null` یعنی عنوان بلوک هنوز در پنل ثبت نشده — کامپوننت اصلاً رندر نمی‌کند. */
+  authority: SiteAuthorityBlock | null;
+  highWearParts: SiteWearItem[];
   /** آیا وردپرس واقعاً چیزی برگرداند؟ برای گزارش زمان build. */
   fromWordPress: boolean;
 }
@@ -99,6 +124,11 @@ const OPTION_FIELDS = `
   addressCity
   addressRegion
   addressPostal
+  advantages { title body }
+  authorityHeading
+  authorityParagraphs
+  authorityHighlights { label value }
+  highWearParts { categorySlug reason }
 `;
 
 const QUERY_SHAPES: { name: string; query: string; pick: (d: any) => RawOptions | null }[] = [
@@ -137,6 +167,11 @@ interface RawOptions {
   addressCity?: string | null;
   addressRegion?: string | null;
   addressPostal?: string | null;
+  advantages?: ({ title?: string | null; body?: string | null } | null)[] | null;
+  authorityHeading?: string | null;
+  authorityParagraphs?: (string | null)[] | null;
+  authorityHighlights?: ({ label?: string | null; value?: string | null } | null)[] | null;
+  highWearParts?: ({ categorySlug?: string | null; reason?: string | null } | null)[] | null;
 }
 
 const EMPTY_CONTACT: SiteContact = {
@@ -167,6 +202,9 @@ const EMPTY: SiteOptions = {
   contact: EMPTY_CONTACT,
   geo: { lat: null, lng: null },
   social: { googleBusinessProfile: null, neshan: null, balad: null, instagram: null, telegram: null },
+  advantages: [],
+  authority: null,
+  highWearParts: [],
   fromWordPress: false,
 };
 
@@ -201,7 +239,9 @@ async function fetchOptions(): Promise<SiteOptions> {
         failures.map((f) => `     • ${f}`).join('\n') +
         `\n\n   اگر همه‌ی موارد بالا «Cannot query field» هستند، آخرین نسخه‌ی\n` +
         `   افزونه‌ی «کرین یدک» نصب نیست. بررسی کنید:\n` +
-        `     ۱) افزونه‌ها ← «Crane Yadak — Headless Backend» نسخه‌ی ۱.۳.۱ فعال است؟\n` +
+        `     ۱) افزونه‌ها ← «Crane Yadak — Headless Backend» روی آخرین نسخه فعال است؟\n` +
+        `        (شماره‌ی نسخه را اینجا هاردکد نکنید — قبلاً یک بار ۱.۳.۱ نوشته شده بود\n` +
+        `        و ده‌ها نسخه عقب افتاد بدون اینکه کسی متوجه شود.)\n` +
         `     ۲) تنظیمات کرین یدک ← مقادیر تماس و پرسش‌های متداول پر شده‌اند؟\n`
     );
     return EMPTY;
@@ -233,6 +273,39 @@ async function fetchOptions(): Promise<SiteOptions> {
     })
     .filter((row): row is SiteHours => row !== null);
 
+  const advantages: SiteAdvantage[] = (raw.advantages ?? [])
+    .map((row) => {
+      const title = clean(row?.title);
+      const body = clean(row?.body);
+      return title && body ? { title, body } : null;
+    })
+    .filter((row): row is SiteAdvantage => row !== null);
+
+  const authorityHeading = clean(raw.authorityHeading);
+  const authorityParagraphs = (raw.authorityParagraphs ?? [])
+    .map((p) => clean(p))
+    .filter((p): p is string => p !== null);
+  const authorityHighlights: SiteHighlight[] = (raw.authorityHighlights ?? [])
+    .map((row) => {
+      const label = clean(row?.label);
+      const value = clean(row?.value);
+      return label && value ? { label, value } : null;
+    })
+    .filter((row): row is SiteHighlight => row !== null);
+  // بلوکِ نیمه — عنوان بدون پاراگراف یا برعکس — بدتر از نبودِ بلوک است.
+  const authority: SiteAuthorityBlock | null =
+    authorityHeading && authorityParagraphs.length > 0
+      ? { heading: authorityHeading, paragraphs: authorityParagraphs, highlights: authorityHighlights }
+      : null;
+
+  const highWearParts: SiteWearItem[] = (raw.highWearParts ?? [])
+    .map((row) => {
+      const categorySlug = clean(row?.categorySlug);
+      const reason = clean(row?.reason);
+      return categorySlug && reason ? { categorySlug, reason } : null;
+    })
+    .filter((row): row is SiteWearItem => row !== null);
+
   return {
     faqs,
     hours,
@@ -263,6 +336,9 @@ async function fetchOptions(): Promise<SiteOptions> {
       instagram: cleanUrl(raw.instagram),
       telegram: cleanUrl(raw.telegram),
     },
+    advantages,
+    authority,
+    highWearParts,
     fromWordPress: true,
   };
 }
@@ -296,6 +372,66 @@ export async function getFaqs(): Promise<SiteFaq[]> {
   }
 
   return options.faqs;
+}
+
+/**
+ * مزیت‌های بخش «چرا کرین یدک» — فقط از وردپرس.
+ *
+ * جای‌گیر ندارد: اگر پنل چیزی برنگرداند، بخش اصلاً رندر نمی‌شود. آیکون هر
+ * کارت در کد ثابت است (`ADVANTAGE_ICONS` در `src/pages/index.astro`) و با
+ * ترتیب ردیف‌های پنل جفت می‌شود.
+ */
+export async function getAdvantages(): Promise<SiteAdvantage[]> {
+  const options = await getSiteOptions();
+
+  if (options.advantages.length === 0) {
+    console.warn(
+      `\n⚠️  هیچ مزیتی در «تنظیمات کرین یدک ← مزیت‌های صفحه‌ی اصلی» ثبت نشده — \n` +
+        `   بخش «چرا کرین یدک» روی صفحه‌ی اصلی رندر نمی‌شود.\n`,
+    );
+  }
+
+  return options.advantages;
+}
+
+/**
+ * بلوک اقتدار دامنه (پایین صفحه‌ی اصلی) — فقط از وردپرس.
+ *
+ * `null` یعنی عنوان یا هیچ پاراگرافی ثبت نشده؛ کامپوننت این حالت را
+ * رندر نمی‌کند. بلوک نیمه‌کاره (عنوان بدون متن) بدتر از نبودِ بلوک است.
+ */
+export async function getAuthorityBlock(): Promise<SiteAuthorityBlock | null> {
+  const options = await getSiteOptions();
+
+  if (!options.authority) {
+    console.warn(
+      `\n⚠️  بلوک اقتدار دامنه در پنل کامل نیست (عنوان یا پاراگراف خالی) — \n` +
+        `   این بخش پایین صفحه‌ی اصلی رندر نمی‌شود.\n` +
+        `   پنل ← تنظیمات کرین یدک ← بلوک اقتدار دامنه\n`,
+    );
+  }
+
+  return options.authority;
+}
+
+/**
+ * «قطعات مصرفی و پرتعویض» — فقط از وردپرس.
+ *
+ * تطبیق اسلاگ با تاکسونومی واقعی همچنان در کامپوننت (`HighWearParts.astro`)
+ * انجام می‌شود، نه اینجا — دقیقاً مثل قبل از مهاجرت.
+ */
+export async function getHighWearParts(): Promise<SiteWearItem[]> {
+  const options = await getSiteOptions();
+
+  if (options.highWearParts.length === 0) {
+    console.warn(
+      `\n⚠️  هیچ «قطعه‌ی مصرفی» در پنل ثبت نشده — بخش مربوطه روی صفحه‌ی اصلی \n` +
+        `   رندر نمی‌شود.\n` +
+        `   پنل ← تنظیمات کرین یدک ← قطعات مصرفی و پرتعویض\n`,
+    );
+  }
+
+  return options.highWearParts;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

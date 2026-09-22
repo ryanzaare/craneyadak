@@ -78,10 +78,55 @@ function cyh_register_site_options_graphql() {
 		'CraneBusinessHours',
 		[
 			'description' => 'یک بازه‌ی ساعت کاری',
+			/* ⚠️ نام فیلد باید `days` باشد، نه `dayOfWeek` — دقیقاً همان
+			 * باگی که کامنت check-architecture.mjs («۰ج») توضیح می‌دهد:
+			 * ACF فیلد را `days` نام‌گذاری کرده و site-options.ts هم
+			 * `days` می‌خواهد. اینجا (تایپ سفارشی خودِ shape #1) با
+			 * `dayOfWeek` ثبت شده بود و آن بررسی معماری این تایپ را
+			 * اصلاً نمی‌بیند — رجکس فقط دنبال متن «siteOptionsFields{»
+			 * می‌گردد، نه «craneSiteOptions{». یعنی shape #1 (که کامنت‌های
+			 * بالای این فایل می‌گویند «همان چیزی که واقعاً کار می‌کند»)
+			 * همیشه با «Cannot query field days» می‌افتاد و بی‌سروصدا به
+			 * shape #2 تنزل می‌کرد — دقیقاً همان shapeای که کامنت‌ها
+			 * می‌گفتند فقط برای سازگاری عقب‌رو است و احتمالاً هرگز کار
+			 * نمی‌کند. */
 			'fields'      => [
-				'dayOfWeek' => [ 'type' => [ 'list_of' => 'String' ] ],
-				'opens'     => [ 'type' => 'String' ],
-				'closes'    => [ 'type' => 'String' ],
+				'days'   => [ 'type' => [ 'list_of' => 'String' ] ],
+				'opens'  => [ 'type' => 'String' ],
+				'closes' => [ 'type' => 'String' ],
+			],
+		]
+	);
+
+	register_graphql_object_type(
+		'CraneAdvantage',
+		[
+			'description' => 'یک مزیت روی بخش «چرا کرین یدک» در صفحه‌ی اصلی',
+			'fields'      => [
+				'title' => [ 'type' => 'String' ],
+				'body'  => [ 'type' => 'String' ],
+			],
+		]
+	);
+
+	register_graphql_object_type(
+		'CraneHighlight',
+		[
+			'description' => 'یک نکته‌ی کوتاه کنار بلوک اقتدار دامنه',
+			'fields'      => [
+				'label' => [ 'type' => 'String' ],
+				'value' => [ 'type' => 'String' ],
+			],
+		]
+	);
+
+	register_graphql_object_type(
+		'CraneHighWearPart',
+		[
+			'description' => 'یک قطعه در بخش «قطعات مصرفی و پرتعویض» صفحه‌ی اصلی',
+			'fields'      => [
+				'categorySlug' => [ 'type' => 'String' ],
+				'reason'       => [ 'type' => 'String' ],
 			],
 		]
 	);
@@ -108,6 +153,11 @@ function cyh_register_site_options_graphql() {
 				'geoLng'                => [ 'type' => 'Float' ],
 				'faqs'                  => [ 'type' => [ 'list_of' => 'CraneFaq' ] ],
 				'businessHours'         => [ 'type' => [ 'list_of' => 'CraneBusinessHours' ] ],
+				'advantages'            => [ 'type' => [ 'list_of' => 'CraneAdvantage' ] ],
+				'authorityHeading'      => [ 'type' => 'String' ],
+				'authorityParagraphs'   => [ 'type' => [ 'list_of' => 'String' ] ],
+				'authorityHighlights'   => [ 'type' => [ 'list_of' => 'CraneHighlight' ] ],
+				'highWearParts'         => [ 'type' => [ 'list_of' => 'CraneHighWearPart' ] ],
 			],
 		]
 	);
@@ -144,7 +194,8 @@ function cyh_register_site_options_graphql() {
 						if ( ! is_array( $row ) ) {
 							continue;
 						}
-						$days = $row['day_of_week'] ?? ( $row['dayOfWeek'] ?? [] );
+						// نام واقعی زیرفیلد ACF (field_cyh_hours_days) دقیقاً «days» است.
+						$days = $row['days'] ?? [];
 						if ( is_string( $days ) ) {
 							$days = [ $days ];
 						}
@@ -152,7 +203,74 @@ function cyh_register_site_options_graphql() {
 						$opens  = isset( $row['opens'] ) ? trim( (string) $row['opens'] ) : '';
 						$closes = isset( $row['closes'] ) ? trim( (string) $row['closes'] ) : '';
 						if ( ! empty( $days ) && '' !== $opens && '' !== $closes ) {
-							$hours[] = [ 'dayOfWeek' => $days, 'opens' => $opens, 'closes' => $closes ];
+							$hours[] = [ 'days' => $days, 'opens' => $opens, 'closes' => $closes ];
+						}
+					}
+				}
+
+				// ── مزیت‌های «چرا کرین یدک» ──
+				$advantages = [];
+				$raw_advantages = function_exists( 'get_field' ) ? get_field( 'advantages', 'option' ) : null;
+				if ( is_array( $raw_advantages ) ) {
+					foreach ( $raw_advantages as $row ) {
+						if ( ! is_array( $row ) ) {
+							continue;
+						}
+						$adv_title = isset( $row['title'] ) ? trim( (string) $row['title'] ) : '';
+						$adv_body  = isset( $row['body'] ) ? trim( (string) $row['body'] ) : '';
+						if ( '' !== $adv_title && '' !== $adv_body ) {
+							$advantages[] = [ 'title' => $adv_title, 'body' => $adv_body ];
+						}
+					}
+				}
+
+				// ── پاراگراف‌های بلوک اقتدار دامنه ──
+				// ⚠️ مثل faqs/hours، خروجی نهایی مسطح است: نوع گراف‌کیوال
+				// [String] است، نه لیستی از آبجکت — چون هر ردیف فقط یک
+				// زیرفیلد (`paragraph`) دارد و آبجکت‌کردنش زائد بود.
+				$authority_paragraphs = [];
+				$raw_paragraphs = function_exists( 'get_field' ) ? get_field( 'authority_paragraphs', 'option' ) : null;
+				if ( is_array( $raw_paragraphs ) ) {
+					foreach ( $raw_paragraphs as $row ) {
+						$p = is_array( $row ) && isset( $row['paragraph'] ) ? trim( (string) $row['paragraph'] ) : '';
+						if ( '' !== $p ) {
+							$authority_paragraphs[] = $p;
+						}
+					}
+				}
+
+				// ── نکات کنار بلوک اقتدار دامنه ──
+				$authority_highlights = [];
+				$raw_highlights = function_exists( 'get_field' ) ? get_field( 'authority_highlights', 'option' ) : null;
+				if ( is_array( $raw_highlights ) ) {
+					foreach ( $raw_highlights as $row ) {
+						if ( ! is_array( $row ) ) {
+							continue;
+						}
+						$h_label = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
+						$h_value = isset( $row['value'] ) ? trim( (string) $row['value'] ) : '';
+						if ( '' !== $h_label && '' !== $h_value ) {
+							$authority_highlights[] = [ 'label' => $h_label, 'value' => $h_value ];
+						}
+					}
+				}
+
+				// ── قطعات مصرفی و پرتعویض ──
+				// ⚠️ تطبیق اسلاگ با تاکسونومی واقعی اینجا انجام نمی‌شود — همان
+				// جایی که همیشه بوده: فرانت‌اند (findCategory در taxonomy.ts).
+				// این پرهیز عمدی است تا PHP مجبور نباشد ساختار تاکسونومی
+				// فرانت‌اند را بشناسد.
+				$high_wear_parts = [];
+				$raw_wear = function_exists( 'get_field' ) ? get_field( 'high_wear_parts', 'option' ) : null;
+				if ( is_array( $raw_wear ) ) {
+					foreach ( $raw_wear as $row ) {
+						if ( ! is_array( $row ) ) {
+							continue;
+						}
+						$w_slug   = isset( $row['category_slug'] ) ? trim( (string) $row['category_slug'] ) : '';
+						$w_reason = isset( $row['reason'] ) ? trim( (string) $row['reason'] ) : '';
+						if ( '' !== $w_slug && '' !== $w_reason ) {
+							$high_wear_parts[] = [ 'categorySlug' => $w_slug, 'reason' => $w_reason ];
 						}
 					}
 				}
@@ -175,6 +293,11 @@ function cyh_register_site_options_graphql() {
 					'geoLng'                => cyh_option_float( 'geo_lng' ),
 					'faqs'                  => $faqs,
 					'businessHours'         => $hours,
+					'advantages'            => $advantages,
+					'authorityHeading'      => cyh_option_text( 'authority_heading' ),
+					'authorityParagraphs'   => $authority_paragraphs,
+					'authorityHighlights'   => $authority_highlights,
+					'highWearParts'         => $high_wear_parts,
 				];
 			},
 		]

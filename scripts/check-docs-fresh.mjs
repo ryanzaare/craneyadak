@@ -76,6 +76,11 @@ const RETIRED = [
   { term: 'CATEGORY_FACETS', why: 'نقشه‌ی هاردکد فیلترها — به categoryMeta.spec_facets منتقل شد' },
   { term: 'facetsForCategory', why: 'با getCategoryFacets (async، از وردپرس) جایگزین شد' },
   { term: 'validateFilterLabels', why: 'نگهبان خواب — هیچ‌جا صدا زده نمی‌شد؛ بررسی به ابزار ورود منتقل شد' },
+
+  // ── ایست ۳: آخرین متن‌های هاردکد → siteOptionsFields ──────────────────
+  { term: 'ADVANTAGES', why: 'آرایه‌ی هاردکد src/data/content.ts — به advantages در siteOptionsFields منتقل شد' },
+  { term: 'AUTHORITY_BLOCK', why: 'ثابت هاردکد src/data/discovery.ts — به authorityHeading/authorityParagraphs/authorityHighlights منتقل شد' },
+  { term: 'HIGH_WEAR_PARTS', why: 'ثابت هاردکد src/data/discovery.ts — به highWearParts در siteOptionsFields منتقل شد' },
 ];
 
 const DOCS = [...globSync('docs/**/*.md'), 'CLAUDE.md', 'README.md'].filter((f) => {

@@ -23,43 +23,47 @@
 //   ۳) چگالی: دو ستون، پاراگراف کوتاه، به‌علاوه فهرست قابل اسکن — نه یک
 //      دیوار متن.
 // ---------------------------------------------------------------------------
-import { AUTHORITY_BLOCK } from '../data/discovery';
+import { getAuthorityBlock } from '../lib/site-options';
 
 interface Props {
   class?: string;
 }
 
 const { class: className = '' } = Astro.props;
-const { heading, paragraphs, highlights } = AUTHORITY_BLOCK;
+const authority = await getAuthorityBlock();
 ---
 
-<section class={`bg-steel-50 border-t border-steel-300 px-4 py-10 ${className}`} aria-labelledby="authority-heading">
-  <div class="max-w-7xl mx-auto">
-    <h2 id="authority-heading" class="text-xl md:text-2xl font-black text-steel-900 leading-9 mb-6 pb-4 border-b border-steel-300">
-      {heading}
-    </h2>
+{authority && (
+  <section class={`bg-steel-50 border-t border-steel-300 px-4 py-10 ${className}`} aria-labelledby="authority-heading">
+    <div class="max-w-7xl mx-auto">
+      <h2 id="authority-heading" class="text-xl md:text-2xl font-black text-steel-900 leading-9 mb-6 pb-4 border-b border-steel-300">
+        {authority.heading}
+      </h2>
 
-    <div class="grid lg:grid-cols-[minmax(0,1fr)_18rem] gap-8 lg:gap-12 items-start">
-      {/* متن در دو ستون روی دسکتاپ: طول خط کوتاه‌تر = خواناتر. یک
-          پاراگراف تمام‌عرض در ۱۲۸۰ پیکسل عملاً خوانده نمی‌شود. */}
-      <div class="min-w-0 md:columns-2 md:gap-8 text-steel-700 leading-8 text-right">
-        {
-          paragraphs.map((text) => (
-            <p class="mb-4 break-inside-avoid text-[15px]">{text}</p>
-          ))
-        }
+      <div class="grid lg:grid-cols-[minmax(0,1fr)_18rem] gap-8 lg:gap-12 items-start">
+        {/* متن در دو ستون روی دسکتاپ: طول خط کوتاه‌تر = خواناتر. یک
+            پاراگراف تمام‌عرض در ۱۲۸۰ پیکسل عملاً خوانده نمی‌شود. */}
+        <div class="min-w-0 md:columns-2 md:gap-8 text-steel-700 leading-8 text-right">
+          {
+            authority.paragraphs.map((text) => (
+              <p class="mb-4 break-inside-avoid text-[15px]">{text}</p>
+            ))
+          }
+        </div>
+
+        {authority.highlights.length > 0 && (
+          <dl class="bg-white border border-steel-300 rounded-lg divide-y divide-steel-100 shrink-0">
+            {
+              authority.highlights.map((item) => (
+                <div class="px-4 py-3">
+                  <dt class="text-xs font-bold text-steel-600 mb-1">{item.label}</dt>
+                  <dd class="text-sm font-black text-steel-900 leading-6">{item.value}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        )}
       </div>
-
-      <dl class="bg-white border border-steel-300 rounded-lg divide-y divide-steel-100 shrink-0">
-        {
-          highlights.map((item) => (
-            <div class="px-4 py-3">
-              <dt class="text-xs font-bold text-steel-600 mb-1">{item.label}</dt>
-              <dd class="text-sm font-black text-steel-900 leading-6">{item.value}</dd>
-            </div>
-          ))
-        }
-      </dl>
     </div>
-  </div>
-</section>
+  </section>
+)}

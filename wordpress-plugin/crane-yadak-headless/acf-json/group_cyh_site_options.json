@@ -250,6 +250,123 @@
             "default_value": "",
             "show_in_graphql": 1,
             "graphql_field_name": "telegram"
+        },
+        {
+            "key": "field_cyh_opt_advantages",
+            "label": "مزیت‌های صفحه‌ی اصلی («چرا کرین یدک»)",
+            "name": "advantages",
+            "type": "repeater",
+            "instructions": "معادل آرایه‌ی ADVANTAGES در src/data/content.ts (ایست ۳، docs/backlog.md). آیکون هر کارت در کد ثابت است و با ترتیب ردیف‌ها جفت می‌شود؛ فقط چهار ردیف اول آیکون دارند.",
+            "required": 0,
+            "layout": "block",
+            "button_label": "افزودن مزیت",
+            "sub_fields": [
+                {
+                    "key": "field_cyh_adv_title",
+                    "label": "عنوان کوتاه",
+                    "name": "title",
+                    "type": "text",
+                    "required": 1
+                },
+                {
+                    "key": "field_cyh_adv_body",
+                    "label": "توضیح یک‌خطی",
+                    "name": "body",
+                    "type": "text",
+                    "required": 1
+                }
+            ],
+            "show_in_graphql": 1,
+            "graphql_field_name": "advantages"
+        },
+        {
+            "key": "field_cyh_opt_authority_heading",
+            "label": "عنوان بلوک اقتدار دامنه (پایین صفحه‌ی اصلی)",
+            "name": "authority_heading",
+            "type": "text",
+            "instructions": "معادل AUTHORITY_BLOCK.heading در src/data/discovery.ts.",
+            "required": 0,
+            "show_in_graphql": 1,
+            "graphql_field_name": "authorityHeading"
+        },
+        {
+            "key": "field_cyh_opt_authority_paragraphs",
+            "label": "پاراگراف‌های بلوک اقتدار دامنه",
+            "name": "authority_paragraphs",
+            "type": "repeater",
+            "instructions": "معادل AUTHORITY_BLOCK.paragraphs. لحن فنی و قابل راستی‌آزمایی — بدون صفت تبلیغاتی یا عدد اثبات‌نشده (آن‌ها در src/data/trust.ts هستند).",
+            "required": 0,
+            "layout": "block",
+            "button_label": "افزودن پاراگراف",
+            "sub_fields": [
+                {
+                    "key": "field_cyh_authority_paragraph",
+                    "label": "متن پاراگراف",
+                    "name": "paragraph",
+                    "type": "textarea",
+                    "rows": 3,
+                    "required": 1
+                }
+            ],
+            "show_in_graphql": 1,
+            "graphql_field_name": "authorityParagraphs"
+        },
+        {
+            "key": "field_cyh_opt_authority_highlights",
+            "label": "نکات کنار بلوک اقتدار دامنه",
+            "name": "authority_highlights",
+            "type": "repeater",
+            "instructions": "معادل AUTHORITY_BLOCK.highlights — نکات کوتاه قابل اسکن.",
+            "required": 0,
+            "layout": "table",
+            "button_label": "افزودن نکته",
+            "sub_fields": [
+                {
+                    "key": "field_cyh_highlight_label",
+                    "label": "برچسب",
+                    "name": "label",
+                    "type": "text",
+                    "required": 1
+                },
+                {
+                    "key": "field_cyh_highlight_value",
+                    "label": "مقدار",
+                    "name": "value",
+                    "type": "text",
+                    "required": 1
+                }
+            ],
+            "show_in_graphql": 1,
+            "graphql_field_name": "authorityHighlights"
+        },
+        {
+            "key": "field_cyh_opt_high_wear_parts",
+            "label": "قطعات مصرفی و پرتعویض (صفحه‌ی اصلی)",
+            "name": "high_wear_parts",
+            "type": "repeater",
+            "instructions": "معادل HIGH_WEAR_PARTS در src/data/discovery.ts. اسلاگ دسته باید دقیقاً با اسلاگ در تاکسونومی وردپرس یکی باشد؛ ناهم‌خوانی در لاگ build هشدار می‌دهد و آن ردیف حذف می‌شود.",
+            "required": 0,
+            "layout": "table",
+            "button_label": "افزودن قطعه",
+            "sub_fields": [
+                {
+                    "key": "field_cyh_wear_category_slug",
+                    "label": "اسلاگ دسته",
+                    "name": "category_slug",
+                    "type": "text",
+                    "required": 1
+                },
+                {
+                    "key": "field_cyh_wear_reason",
+                    "label": "دلیل فنی سایش",
+                    "name": "reason",
+                    "type": "text",
+                    "instructions": "واقعیت فنی، نه متن تبلیغاتی.",
+                    "required": 1
+                }
+            ],
+            "show_in_graphql": 1,
+            "graphql_field_name": "highWearParts"
         }
     ],
     "location": [
@@ -273,5 +390,5 @@
     "graphql_types": [
         "CraneSiteSettings"
     ],
-    "modified": 1787927518
+    "modified": 1790082357
 }
