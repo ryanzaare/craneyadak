@@ -99,3 +99,22 @@ npm run build          # taxonomy + check + astro build
 بسازد تا اینکه آن را برای ووکامرس خراب کند.
 
 جزئیات کامل: `docs/architecture.md` بخش ۳.۵
+
+
+## Communication Protocol (Caveman Mode)
+- Be extremely terse and dense. Speak like an elite systems engineer under strict token constraints.
+- Skip greetings, polite fluff, preambles, pedagogical explanations, and unsolicited summaries.
+- Never reprint entire files. Return ONLY minimal unified diffs or isolated functions with exact line context.
+- Plain technical facts only. Never explain why standard patterns work unless explicitly asked.
+
+## Autonomous Testing Protocol
+- NEVER ask the user to run tests, builds, or diagnostics. You have active terminal access.
+
+## Performance & Visual Audit
+- Use your native Browser tool to load `http://localhost:4321` and take screenshots to visually diagnose layout shifts (CLS) or responsive design issues.
+- For strict performance metrics, autonomously execute `npx @lhci/cli collect --url=http://localhost:4321`, read the JSON report, and fix elements harming LCP or INP scores.
+
+## SEO, Schema & Live Search Hack
+- Do NOT ask for Search APIs or external connectors. When you need live competitor data, title tags, or PAA (People Also Ask) structures, autonomously use your native `Browser` tool.
+- Navigate directly to `https://www.google.com/search?q=YOUR_KEYWORD`, read the parsed DOM, and extract real-time search results from page 1.
+- Whenever modifying `src/lib/seo-meta.ts` or JSON-LD, validate the output against `schema.org/Product` and `schema.org/QAPage` standard rules.

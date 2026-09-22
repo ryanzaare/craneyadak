@@ -1,0 +1,61 @@
+{
+  "$comment": [
+    "اجازه‌های پروژه برای Claude Code.",
+    "",
+    "اصل: هر چیزی که فقط *می‌خواند* یا محلی و برگشت‌پذیر است → allow.",
+    "هر چیزی که بیرون از این ماشین اثر می‌گذارد → ask.",
+    "",
+    "⚠️ `git push` عمداً در allow نیست. یک بار در این پروژه با",
+    "`npm run check` قرمز کامیت شد و دیده نشد. کامیت محلی برگشت‌پذیر است؛",
+    "push تاریخچه‌ی مشترک را عوض می‌کند. یک تأیید، ارزشش را دارد."
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(npm run check)",
+      "Bash(npm run check:*)",
+      "Bash(npm run build)",
+      "Bash(npm run dev)",
+      "Bash(npm run test:*)",
+      "Bash(npm run taxonomy)",
+      "Bash(node scripts/*)",
+      "Bash(npx astro *)",
+      "Bash(php wordpress-plugin/*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git stash:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(diff:*)",
+      "Bash(zip -rq wordpress-plugin/*)",
+      "Bash(unzip -l:*)",
+      "Read(//Users/mathew/Documents/web design/craneyadak 5/**)",
+      "Edit(//Users/mathew/Documents/web design/craneyadak 5/**)",
+      "WebFetch"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git rebase:*)",
+      "Bash(rm:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(brew:*)"
+    ],
+    "deny": [
+      "Read(//Users/mathew/Documents/web design/craneyadak 5/.env)",
+      "Bash(curl:*)",
+      "Bash(wget:*)"
+    ]
+  }
+}

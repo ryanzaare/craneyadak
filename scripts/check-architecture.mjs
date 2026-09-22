@@ -403,6 +403,177 @@ if (acfTypes.length && libTypes.length && renderedTypes.length) {
   problems.push('استخراج انواع بلوک شکست خورد — این بررسی بی‌اعتبار است تا رفع شود.');
 }
 
+/* ═══ ۷) اتصال CPT ↔ تاکسونومی ═════════════════════════════════════════
+   ⚠️ این بررسی بعد از یک شکست کامل و بی‌صدا اضافه شد — و نبودش تنها
+   دلیلی بود که آن باگ به دست کارفرما رسید.
+
+   کوئری فرانت‌اند `craneCategories` را روی `CraneQuestion` می‌خواست.
+   CPT ثبت شده بود، تاکسونومی هم، ولی CPT در فهرست `object_type` آن
+   تاکسونومی نبود — چون `register_taxonomy_for_object_type()` روی
+   اولویت ۵ صدا زده می‌شد و خود تاکسونومی روی اولویت ۱۰ ساخته می‌شد.
+   آن تابع در این حالت فقط `false` برمی‌گرداند. نه خطا، نه هشدار.
+
+   نتیجه: `Cannot query field "craneCategories" on type "CraneQuestion"`
+   و کل بخش پرسش‌وپاسخ خاموش. هیچ‌کدام از شش بررسی قبلی این را نگرفتند:
+   بررسی ۰ نام تایپ‌ها را می‌سنجید و بررسی ۳ فیلدهای ACF را — ولی اتصال
+   تاکسونومی هیچ‌کدام نبود.
+
+   ⚠️ نکته‌ی مهم: «نردبان کوئری» هم اینجا بی‌فایده بود، چون هر دو پله
+   همان فیلد شکسته را می‌خواستند. نردبان فقط از افتِ *فیلدهای تازه*
+   محافظت می‌کند، نه از اتصالِ نداشته.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ⚠️ ثابت‌های PHP اول جمع می‌شوند.
+
+   نسخه‌ی اول این بررسی فقط `register_post_type( 'literal', … )` را
+   می‌شناخت. ولی CPT پرسش با یک **ثابت** ثبت می‌شود:
+
+       register_post_type( CYH_QUESTION_CPT, [ … ] )
+
+   نتیجه: بررسی نسبت به دقیقاً همان CPTای که برای محافظت از آن نوشته
+   شده بود کور بود و «سالم» چاپ می‌کرد. سومین بار در این پروژه که یک
+   ابزارِ سبز، چیزی را نمی‌دید. قاعده‌ی ۶ برای همین است — ابزار باید روی
+   ورودیِ خرابِ شناخته‌شده آزموده شود، نه فقط روی سالم. */
+const phpConst = new Map();
+for (const f of PHP) {
+  for (const m of read(f).matchAll(/^\s*const\s+([A-Z_][A-Z0-9_]*)\s*=\s*'([^']+)'\s*;/gm)) {
+    phpConst.set(m[1], m[2]);
+  }
+}
+
+/** آرگومان اول: یا رشته‌ی نقل‌قولی، یا ثابتی که بالا جمع شد. */
+const resolveName = (token) => {
+  const t = token.trim();
+  const lit = /^'([^']+)'$/.exec(t);
+  if (lit) return lit[1];
+  return phpConst.get(t) ?? null;
+};
+
+/* ⚠️ الگوی آرگومان عمداً تنگ است: `'literal'` یا `CONSTANT`، نه «هر چیزی
+   تا نخستین کاما». نسخه‌ی قبلی از `[^,]+?` استفاده می‌کرد و یک بلوک
+   کامنت چهل‌خطی را بلعید. و `(?<!un)` لازم است چون
+   `unregister_post_type()` هم در این مخزن وجود دارد. */
+const ARG = "\\s*('[^']+'|[A-Z_][A-Z0-9_]*)\\s*";
+
+// تاکسونومی → { objectTypes, gqlPlural }
+const taxonomies = new Map();
+// post type → gqlPlural  (برای یافتن ریشه‌ی کوئری)
+const cptPlural = new Map();
+const unresolved = [];
+
+for (const f of PHP) {
+  const src = read(f);
+
+  // register_taxonomy( 'crane_category', [ 'product', CYH_QUESTION_CPT ], [ … ] )
+  const taxRe = new RegExp(`(?<!un)register_taxonomy\\(${ARG},\\s*\\[([^\\]]*)\\]([\\s\\S]{0,2500}?)\\n\\s*\\);`, 'g');
+  for (const m of src.matchAll(taxRe)) {
+    const name = resolveName(m[1]);
+    if (!name) { unresolved.push(`register_taxonomy(${m[1].trim()}) در ${path.basename(f)}`); continue; }
+    const plural = /'graphql_plural_name'\s*=>\s*'([^']+)'/.exec(m[3]);
+    taxonomies.set(name, {
+      objectTypes: [...m[2].matchAll(/'([a-z0-9_-]+)'|([A-Z_][A-Z0-9_]*)/g)]
+        .map((x) => (x[1] ? x[1] : phpConst.get(x[2])))
+        .filter(Boolean),
+      gqlPlural: plural ? plural[1] : null,
+    });
+  }
+
+  const cptRe = new RegExp(`(?<!un)register_post_type\\(${ARG},([\\s\\S]{0,2500}?)\\n\\s*\\);`, 'g');
+  for (const m of src.matchAll(cptRe)) {
+    const name = resolveName(m[1]);
+    if (!name) { unresolved.push(`register_post_type(${m[1].trim()}) در ${path.basename(f)}`); continue; }
+    const plural = /'graphql_plural_name'\s*=>\s*'([^']+)'/.exec(m[2]);
+    if (plural) cptPlural.set(plural[1], name);
+  }
+}
+
+/* نامی که resolve نشد یعنی این بررسی نسبت به آن موجودیت کور است.
+   سکوت در این حالت، همان «سبزِ کور» است. */
+for (const u of unresolved) {
+  problems.push(`نام موجودیت در ${u} قابل استخراج نبود — بررسی ۷ نسبت به آن کور می‌ماند.`);
+}
+
+if (taxonomies.size === 0 || cptPlural.size === 0) {
+  problems.push('استخراج CPT/تاکسونومی شکست خورد — بررسی ۷ بی‌اعتبار است.');
+} else {
+  // تاکسونومی‌هایی که نام جمع گراف‌کیوال دارند، بر اساس همان نام.
+  const taxByGql = new Map();
+  for (const [name, t] of taxonomies) if (t.gqlPlural) taxByGql.set(t.gqlPlural, name);
+
+  for (const file of globSync('src/lib/*.ts')) {
+    const raw = read(file);
+
+    /* ⚠️ قطعه‌های `${CONST}` باید *باز* شوند وگرنه این بررسی کور است.
+       نسخه‌ی اول همین‌جا شکست: `craneCategories` داخل ثابت `CORE`
+       زندگی می‌کند و کوئری فقط `nodes { ${CORE} … }` دارد. بررسی
+       باگِ واقعی را ندید و سبز گزارش داد — یعنی خودش همان «ابزاری که
+       سبز است ولی کور است» شد که قاعده‌ی ۶ درباره‌اش هشدار می‌دهد.
+       (بررسی ۳ از قبل همین کار را می‌کرد؛ اینجا تکرارش لازم بود.) */
+    const consts = new Map();
+    for (const m of raw.matchAll(/const\s+(\w+)\s*=\s*`([\s\S]*?)`/g)) {
+      consts.set(m[1], m[2]);
+    }
+    let src = raw;
+    for (let pass = 0; pass < 3; pass++) {
+      const next = src.replace(/\$\{(\w+)\}/g, (whole, name) =>
+        consts.has(name) ? consts.get(name) : whole,
+      );
+      if (next === src) break;
+      src = next;
+    }
+
+    for (const [rootPlural, postType] of cptPlural) {
+      const start = src.indexOf(`${rootPlural}(`);
+      if (start < 0) continue;
+
+      /* ⚠️ اول باید از *آرگومان‌ها* رد شد، بعد دنبال بلوک انتخاب گشت.
+         نسخه‌ی قبلی مستقیم نخستین `{` بعد از نام ریشه را می‌گرفت — و آن
+         `{` مالِ آرگومان است، نه بدنه:
+
+             craneQuestions(first: $first, where: { status: PUBLISH }) {
+                                                 ↑ این گرفته می‌شد
+
+         پس «بدنه» فقط خودِ آرگومان می‌شد، `craneCategories` هرگز داخلش
+         نبود، و بررسی روی باگِ واقعی سبز می‌ماند. چهارمین تکرارِ همین
+         درس در این پروژه: ابزاری که فقط روی ورودی سالم آزموده شود،
+         کور بودنش را نشان نمی‌دهد. */
+      let p = src.indexOf('(', start);
+      let depth = 0, i = p;
+      for (; i < src.length; i++) {
+        if (src[i] === '(') depth++;
+        else if (src[i] === ')') { depth--; if (depth === 0) break; }
+      }
+      const afterArgs = i;
+
+      const braceStart = src.indexOf('{', afterArgs);
+      if (braceStart < 0) continue;
+
+      depth = 0;
+      let end = -1;
+      for (i = braceStart; i < src.length; i++) {
+        if (src[i] === '{') depth++;
+        else if (src[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+      }
+      if (end < 0) continue;
+      const body = src.slice(braceStart, end);
+
+      for (const [taxGql, taxName] of taxByGql) {
+        // فیلد اتصال، نه رشته‌ی تصادفی: باید با `{` دنبال شود.
+        if (!new RegExp(`\\b${taxGql}\\s*(\\(|\\{)`).test(body)) continue;
+
+        const tax = taxonomies.get(taxName);
+        if (!tax.objectTypes.includes(postType)) {
+          problems.push(
+            `${path.basename(file)}: کوئری «${taxGql}» را روی «${rootPlural}» می‌خواهد، ` +
+              `ولی post type «${postType}» در آرایه‌ی object_type تاکسونومی «${taxName}» نیست. ` +
+              'این دقیقاً همان خطای «Cannot query field … on type …» را در build می‌دهد.',
+          );
+        }
+      }
+    }
+  }
+}
+
 /* ═══ ۵) سند معماری باید وجود داشته باشد ══════════════════════════════ */
 if (!existsSync('docs/architecture.md')) {
   problems.push('docs/architecture.md وجود ندارد — قرارداد معماری گم شده است.');
