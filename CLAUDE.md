@@ -68,25 +68,6 @@
    می‌شود چون گیت‌هاب از محیط دستیار مسدود است.
 8. **پاسخ‌ها با گام‌های شماره‌دار روشن تمام شوند** — «دقیقاً چه کار کنم».
 
-## انتخاب مدل و عمق تفکر
-
-توصیه، نه قانون — بودجه دست کارفرماست.
-
-| کار | مدل | تفکر |
-|---|---|---|
-| نوشتن محتوای دسته (نثر فنی فارسی + قضاوت سئو) | Opus | بالا |
-| بازبینی معماری، رفع باگ ظریف، طراحی اسکیما | Opus | بالا |
-| اجرای build، خواندن لاگ، جابه‌جایی فایل، نسخه‌زنی | Sonnet | کم |
-| وارسی مکانیکی و تکراری | Haiku | کم |
-
-⚠️ نوشتن محتوا جایی است که خطا **ادعای ایمنی** تولید می‌کند: حد
-دورانداختن اشتباه در یک قطعه‌ی جرثقیل، غلط تایپی نیست. صرفه‌جویی توکن
-اینجا گران‌ترین جای ممکن است.
-
-نکته‌ی عملی: نوشتنِ یک دسته شاید ۲۰٪ مصرف توکن باشد؛ ۸۰٪ دیگر خواندن
-فایل و اجرای build است. اگر آن ۸۰٪ روی Sonnet برود، تفاوت هزینه‌ی
-Opus برای خودِ نوشتن تقریباً از بین می‌رود.
-
 ## معماری، در سه خط
 
 Astro استاتیک (`output: 'static'`) + وردپرس هدلس با WPGraphQL و ACF Pro.
@@ -134,7 +115,8 @@ npm run build          # taxonomy + check + astro build
 
 - Be extremely terse and dense. Speak like an elite systems engineer under
   strict token constraints.
-- Skip greetings, polite fluff, preambles, and pedagogical explanations.
+- Skip greetings, polite fluff, preambles, pedagogical explanations, and
+  unsolicited summaries.
 - Never reprint entire files. Return ONLY minimal unified diffs or isolated
   functions with exact line context.
 - Plain technical facts only. Never explain why standard patterns work unless
