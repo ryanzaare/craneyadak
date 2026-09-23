@@ -1,166 +1,129 @@
 ---
 // src/pages/account/index.astro
-// داشبورد حساب مشتری — کاملاً سمت کلاینت، چون سایت استاتیک است و اطلاعات
-// کاربر فقط بعد از ورود (با توکن ذخیره‌شده در مرورگر) معلوم می‌شود.
-// این صفحه در زمان build خالی رندر می‌شود؛ محتوای واقعی با جاوااسکریپت
-// پر می‌شود.
+// داشبورد حساب مشتری — کاملاً سمت کلاینت: سایت استاتیک است و کاربر فقط
+// بعد از ورود (با توکن مرورگر) معلوم می‌شود.
+//
+// ⚠️ حلقه‌ی «ورود ← حساب من ← ورود» اینجا دیده شد. علتش CORS بود
+// (class-cors.php هدر توکن را مجاز نکرده بود)، ولی این صفحه آن را پنهان
+// کرد: هر شکستی — حتی خطای شبکه — را «وارد نشده‌اید» نشان می‌داد. حالا:
+// ۴۰۱ = ورود دوباره؛ هر شکست دیگر = پیام خطای واقعی.
 import Layout from '../../layouts/Layout.astro';
+import AccountNav from '../../components/AccountNav.astro';
 import { SITE } from '../../data/site';
 
-const wpBase = (import.meta.env.WP_GRAPHQL_URL as string | undefined)?.replace(/\/+$/, '') ?? null;
 const title = `حساب من | ${SITE.name}`;
 const description = 'پروفایل و سفارش‌های حساب کاربری.';
 ---
 
 <Layout title={title} description={description} noindex>
   <section class="bg-steel-900 text-white px-4 py-10">
-    <div class="max-w-3xl mx-auto flex items-center justify-between gap-4">
+    <div class="max-w-5xl mx-auto">
       <h1 class="text-2xl md:text-3xl font-black">حساب من</h1>
-      <button id="logout-btn" hidden class="text-sm font-bold text-steel-300 hover:text-white border border-steel-600 rounded-md px-4 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40">
-        خروج
-      </button>
     </div>
   </section>
 
   <section class="bg-white px-4 py-10">
-    <div class="max-w-3xl mx-auto">
-      <p id="account-loading" class="text-steel-600">در حال بارگذاری…</p>
+    <div class="max-w-5xl mx-auto grid md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
+      <AccountNav />
 
-      <div id="account-guest" hidden class="bg-steel-50 border border-steel-300 rounded-lg p-6 text-center">
-        <p class="text-steel-700 leading-7 mb-4">برای دیدن این صفحه وارد حساب کاربری خود شوید.</p>
-        <a href="/account/login?next=/account" class="inline-block bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-accent-ink transition-colors">ورود</a>
-      </div>
+      <div class="min-w-0">
+        <p id="account-loading" class="text-steel-600">در حال بارگذاری…</p>
+        <p id="account-error" hidden class="text-sm leading-7 text-red-700 font-bold bg-red-50 border border-red-200 rounded-md p-4"></p>
 
-      <div id="account-body" hidden>
-        <div class="bg-steel-50 border border-steel-300 rounded-lg p-5 mb-8">
-          <h2 class="font-black text-steel-900 mb-3">اطلاعات حساب</h2>
-          <dl class="text-sm space-y-1.5">
-            <div class="flex gap-2"><dt class="text-steel-600 w-20 shrink-0">نام</dt><dd id="profile-name" class="text-steel-900 font-bold"></dd></div>
-            <div class="flex gap-2"><dt class="text-steel-600 w-20 shrink-0">ایمیل</dt><dd id="profile-email" dir="ltr" class="text-steel-900"></dd></div>
-            <div class="flex gap-2" id="profile-phone-row" hidden><dt class="text-steel-600 w-20 shrink-0">موبایل</dt><dd id="profile-phone" dir="ltr" class="text-steel-900"></dd></div>
-            <div class="flex gap-2" id="profile-company-row" hidden><dt class="text-steel-600 w-20 shrink-0">شرکت</dt><dd id="profile-company" class="text-steel-900"></dd></div>
-          </dl>
+        <div id="account-body" hidden>
+          <div class="bg-steel-50 border border-steel-300 rounded-lg p-5 mb-8">
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <h2 class="font-black text-steel-900">اطلاعات حساب</h2>
+              <a href="/account/settings" class="text-sm text-accent-ink font-bold hover:underline">ویرایش</a>
+            </div>
+            <dl class="text-sm space-y-1.5">
+              <div class="flex gap-2"><dt class="text-steel-600 w-20 shrink-0">نام</dt><dd id="profile-name" class="text-steel-900 font-bold"></dd></div>
+              <div class="flex gap-2"><dt class="text-steel-600 w-20 shrink-0">ایمیل</dt><dd id="profile-email" dir="ltr" class="text-steel-900"></dd></div>
+              <div class="flex gap-2" id="profile-phone-row" hidden><dt class="text-steel-600 w-20 shrink-0">موبایل</dt><dd id="profile-phone" dir="ltr" class="text-steel-900"></dd></div>
+              <div class="flex gap-2" id="profile-company-row" hidden><dt class="text-steel-600 w-20 shrink-0">شرکت</dt><dd id="profile-company" class="text-steel-900"></dd></div>
+            </dl>
+          </div>
+
+          <h2 class="font-black text-steel-900 mb-3">سفارش‌ها و استعلام‌ها</h2>
+          <p id="orders-empty" hidden class="text-steel-600 leading-7 mb-4">
+            هنوز سفارشی به این حساب وصل نیست.
+            <a href="/track" class="text-accent-ink font-bold hover:underline">پیگیری با کد رهگیری ←</a>
+          </p>
+          <ul id="orders-list" role="list" class="space-y-2"></ul>
         </div>
-
-        <h2 class="font-black text-steel-900 mb-3">سفارش‌ها و استعلام‌ها</h2>
-        <p id="orders-empty" hidden class="text-steel-600 leading-7 mb-4">
-          هنوز سفارشی به این حساب وصل نیست.
-          <a href="/track" class="text-accent-ink font-bold hover:underline">پیگیری با کد رهگیری ←</a>
-        </p>
-        <ul id="orders-list" role="list" class="space-y-2"></ul>
       </div>
     </div>
   </section>
 </Layout>
 
-<script define:vars={{ wpBase }}>
-  (function () {
-    const TOKEN_KEY = 'cy-account-token-v1';
-    const loading = document.getElementById('account-loading');
-    const guest = document.getElementById('account-guest');
-    const body = document.getElementById('account-body');
-    const logoutBtn = document.getElementById('logout-btn');
+<script>
+  import { api, errorMessage, requireLogin } from '../../scripts/account';
 
-    let token = null;
-    try {
-      token = localStorage.getItem(TOKEN_KEY);
-    } catch {
-      token = null;
+  const STATUS_LABEL: Record<string, string> = {
+    new: 'ثبت‌شده',
+    in_progress: 'در حال بررسی',
+    answered: 'پاسخ داده شده',
+    closed: 'بسته‌شده',
+  };
+
+  const $ = (id: string) => document.getElementById(id);
+
+  async function load() {
+    if (!requireLogin()) return;
+
+    const res = await api<{
+      profile?: { name?: string; email?: string; phone?: string | null; company?: string | null };
+      orders?: { code?: string; kind?: string; status?: string; date?: string }[];
+    }>('/account/me', { auth: true });
+
+    $('account-loading')!.hidden = true;
+
+    if (res.status === 401) {
+      requireLogin(); // api() توکن مرده را پاک کرده است
+      return;
     }
-
-    function showGuest() {
-      if (loading) loading.hidden = true;
-      if (guest) guest.hidden = false;
-    }
-
-    if (!wpBase || !token) {
-      showGuest();
+    if (!res.ok) {
+      const err = $('account-error')!;
+      err.textContent = errorMessage(res, 'اطلاعات حساب بارگذاری نشد. کمی بعد دوباره تلاش کنید.');
+      err.hidden = false;
       return;
     }
 
-    const STATUS_LABEL = {
-      new: 'ثبت‌شده',
-      in_progress: 'در حال بررسی',
-      answered: 'پاسخ داده شده',
-      closed: 'بسته‌شده',
-    };
+    $('account-body')!.hidden = false;
+    const p = res.data.profile ?? {};
+    $('profile-name')!.textContent = p.name || '—';
+    $('profile-email')!.textContent = p.email || '—';
+    if (p.phone) {
+      $('profile-phone-row')!.hidden = false;
+      $('profile-phone')!.textContent = p.phone;
+    }
+    if (p.company) {
+      $('profile-company-row')!.hidden = false;
+      $('profile-company')!.textContent = p.company;
+    }
 
-    fetch(`${wpBase}/wp-json/crane-yadak/v1/account/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(async (res) => {
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          // توکن نامعتبر یا منقضی — نشست را پاک کن.
-          try {
-            localStorage.removeItem(TOKEN_KEY);
-          } catch {
-            /* بدون localStorage هم کاربر به صفحه‌ی ورود می‌رود. */
-          }
-          showGuest();
-          return;
-        }
+    const orders = res.data.orders ?? [];
+    if (orders.length === 0) {
+      $('orders-empty')!.hidden = false;
+      return;
+    }
+    const list = $('orders-list')!;
+    for (const order of orders) {
+      const li = document.createElement('li');
+      li.className = 'bg-steel-50 border border-steel-300 rounded-md px-4 py-3 flex items-center justify-between gap-3 text-sm';
+      const code = document.createElement('span');
+      code.className = 'font-mono font-black text-steel-900';
+      code.dir = 'ltr';
+      code.textContent = order.code || '';
+      const meta = document.createElement('span');
+      meta.className = 'text-steel-600';
+      meta.textContent = `${order.kind === 'order' ? 'سفارش' : 'استعلام'} — ${
+        STATUS_LABEL[order.status ?? ''] || order.status || ''
+      } — ${order.date || ''}`;
+      li.append(code, meta);
+      list.appendChild(li);
+    }
+  }
 
-        if (loading) loading.hidden = true;
-        if (body) body.hidden = false;
-        if (logoutBtn) logoutBtn.hidden = false;
-
-        const p = json.profile || {};
-        document.getElementById('profile-name').textContent = p.name || '—';
-        document.getElementById('profile-email').textContent = p.email || '—';
-        if (p.phone) {
-          document.getElementById('profile-phone-row').hidden = false;
-          document.getElementById('profile-phone').textContent = p.phone;
-        }
-        if (p.company) {
-          document.getElementById('profile-company-row').hidden = false;
-          document.getElementById('profile-company').textContent = p.company;
-        }
-
-        const orders = Array.isArray(json.orders) ? json.orders : [];
-        const list = document.getElementById('orders-list');
-        if (orders.length === 0) {
-          document.getElementById('orders-empty').hidden = false;
-        } else if (list) {
-          for (const order of orders) {
-            const li = document.createElement('li');
-            li.className = 'bg-steel-50 border border-steel-300 rounded-md px-4 py-3 flex items-center justify-between gap-3 text-sm';
-
-            const left = document.createElement('span');
-            left.className = 'font-mono font-black text-steel-900';
-            left.dir = 'ltr';
-            left.textContent = order.code || '';
-
-            const right = document.createElement('span');
-            right.className = 'text-steel-600';
-            right.textContent = `${order.kind === 'order' ? 'سفارش' : 'استعلام'} — ${
-              STATUS_LABEL[order.status] || order.status
-            } — ${order.date || ''}`;
-
-            li.append(left, right);
-            list.appendChild(li);
-          }
-        }
-      })
-      .catch(() => {
-        showGuest();
-      });
-
-    logoutBtn?.addEventListener('click', async () => {
-      try {
-        await fetch(`${wpBase}/wp-json/crane-yadak/v1/account/logout`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch {
-        /* اگر درخواست خروج به سرور نرسد، همچنان محلی خارج می‌کنیم. */
-      }
-      try {
-        localStorage.removeItem(TOKEN_KEY);
-      } catch {
-        /* مرورگرهایی که localStorage را مسدود کرده‌اند از ابتدا وارد نشده بودند. */
-      }
-      location.href = '/account/login';
-    });
-  })();
+  void load();
 </script>

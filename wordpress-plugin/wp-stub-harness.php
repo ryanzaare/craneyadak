@@ -89,8 +89,14 @@ function is_object_in_taxonomy( $object_type, $taxonomy ) {
 	return in_array( $object_type, $GLOBALS['cyh_test_tax_object_types'][ $taxonomy ] ?? [], true );
 }
 function register_rest_route( $namespace, $route, $args ) {
-	if ( ! is_callable( $args['callback'] ) && ! function_exists( $args['callback'] ) ) {
-		throw new Exception( "register_rest_route($namespace$route): callback not callable" );
+	// وردپرس واقعی هم یک endpoint می‌پذیرد و هم فهرستی از آن‌ها (GET و
+	// POST روی یک مسیر). هر کدام باید کال‌بک معتبر داشته باشد.
+	$endpoints = isset( $args['callback'] ) ? [ $args ] : $args;
+	foreach ( $endpoints as $endpoint ) {
+		$cb = $endpoint['callback'] ?? null;
+		if ( ! is_callable( $cb ) ) {
+			throw new Exception( "register_rest_route($namespace$route): callback not callable" );
+		}
 	}
 	$GLOBALS['cyh_test_routes'][ $namespace . $route ] = $args;
 }
@@ -605,6 +611,17 @@ function wp_insert_user( $data ) {
 	return $id;
 }
 
+function wp_update_user( $data ) {
+	$id = (int) ( $data['ID'] ?? 0 );
+	if ( ! isset( $GLOBALS['cyh_test_users'][ $id ] ) ) {
+		return new WP_Error( 'invalid_user_id', 'کاربر پیدا نشد.' );
+	}
+	foreach ( $data as $k => $v ) {
+		if ( 'ID' !== $k && 'user_pass' !== $k ) { $GLOBALS['cyh_test_users'][ $id ]->$k = $v; }
+	}
+	return $id;
+}
+
 function wp_set_password( $password, $user_id ) {
 	if ( isset( $GLOBALS['cyh_test_users'][ $user_id ] ) ) {
 		$GLOBALS['cyh_test_users'][ $user_id ]->user_pass = (string) $password;
@@ -1037,7 +1054,7 @@ $reg_request = new WP_REST_Request(
 	[
 		'name'     => 'مهندس کریمی',
 		'email'    => 'karimi@example.com',
-		'password' => 'رمزعبور۱۲۳۴',
+		'password' => 'Jarsaghil2026',
 		'phone'    => '09121234567',
 		'company'  => 'فولاد کویر',
 		'website'  => '',
@@ -1072,7 +1089,7 @@ if ( ! is_wp_error( $dup_result ) || 'cyh_email_taken' !== $dup_result->get_erro
 	echo "✓ ثبت‌نام با ایمیل تکراری به‌درستی رد شد\n";
 }
 
-// بررسی ۲۰: رمز کوتاه‌تر از ۱۰ کاراکتر رد می‌شود
+// بررسی ۲۰: رمز کوتاه‌تر از ۸ کاراکتر رد می‌شود
 $reset_rl();
 $weak_pw = cyh_rest_account_register(
 	new WP_REST_Request( [ 'name' => 'تست', 'email' => 'weak@example.com', 'password' => '۱۲۳', 'website' => '' ] )
@@ -1080,7 +1097,7 @@ $weak_pw = cyh_rest_account_register(
 if ( ! is_wp_error( $weak_pw ) || 'cyh_weak_password' !== $weak_pw->get_error_code() ) {
 	$errors[] = 'رمز عبور کوتاه باید رد شود اما نشد';
 } else {
-	echo "✓ رمز عبور کوتاه‌تر از ۱۰ کاراکتر به‌درستی رد شد\n";
+	echo "✓ رمز عبور کوتاه‌تر از ۸ کاراکتر به‌درستی رد شد\n";
 }
 
 /* بررسی ۲۰ب (رگرسیون — رمز ساده): «حداقل ۸ کاراکتر» (سیاست قبلی) به‌تنهایی
@@ -1092,7 +1109,8 @@ $weak_cases = [
 	'فهرست سیاه'         => 'password123',
 	'تکرار یک کاراکتر'   => 'aaaaaaaaaa1',
 	'نام ایمیل در رمز'    => 'strongsara2024',
-	'کوتاه با ارقام فارسی' => 'رمز۱۲۳۴۵',
+	'ارقام فارسی'         => 'Jarsaghil۱۲۳۴',
+	'کوتاه‌تر از ۸'        => 'ab12cd',
 ];
 $weak_leaks = [];
 foreach ( $weak_cases as $label => $pw ) {
@@ -1100,7 +1118,7 @@ foreach ( $weak_cases as $label => $pw ) {
 		$weak_leaks[] = "$label ($pw)";
 	}
 }
-if ( null !== cyh_customer_password_problem( 'رمزعبور۱۲۳۴', 'karimi@example.com' ) ) {
+if ( null !== cyh_customer_password_problem( 'Jarsaghil2026', 'karimi@example.com' ) || null !== cyh_customer_password_problem( 'رمزعبور1234', 'karimi@example.com' ) ) {
 	$weak_leaks[] = 'رمز معتبر فارسی به‌اشتباه رد شد';
 }
 if ( $weak_leaks ) {
@@ -1112,7 +1130,7 @@ if ( $weak_leaks ) {
 // بررسی ۲۱: شماره موبایل نامعتبر رد می‌شود (اگر داده شده باشد)
 $reset_rl();
 $bad_phone = cyh_rest_account_register(
-	new WP_REST_Request( [ 'name' => 'تست', 'email' => 'badphone@example.com', 'password' => 'رمزعبور۱۲۳۴', 'phone' => '12345', 'website' => '' ] )
+	new WP_REST_Request( [ 'name' => 'تست', 'email' => 'badphone@example.com', 'password' => 'Jarsaghil2026', 'phone' => '12345', 'website' => '' ] )
 );
 if ( ! is_wp_error( $bad_phone ) || 'cyh_bad_phone' !== $bad_phone->get_error_code() ) {
 	$errors[] = 'ثبت‌نام با شماره‌ی نامعتبر باید رد شود اما نشد';
@@ -1123,7 +1141,7 @@ if ( ! is_wp_error( $bad_phone ) || 'cyh_bad_phone' !== $bad_phone->get_error_co
 // بررسی ۲۲: ورود با رمز درست موفق است
 $reset_rl();
 $login_ok = cyh_rest_account_login(
-	new WP_REST_Request( [ 'email' => 'karimi@example.com', 'password' => 'رمزعبور۱۲۳۴' ] )
+	new WP_REST_Request( [ 'email' => 'karimi@example.com', 'password' => 'Jarsaghil2026' ] )
 );
 if ( is_wp_error( $login_ok ) || empty( $login_ok['token'] ) ) {
 	$errors[] = 'ورود با رمز درست شکست خورد';
@@ -1174,6 +1192,17 @@ if ( is_wp_error( $me_ok ) || ( $me_ok['profile']['email'] ?? null ) !== 'karimi
 	echo "✓ /account/me با توکن معتبر پروفایل درست را برمی‌گرداند\n";
 }
 
+/* بررسی ۲۵ب: هدر X-Crane-Token — همان هدری که فرانت‌اند واقعاً می‌فرستد.
+   بررسی ۲۵ فقط مسیر Authorization را می‌آزمود؛ اگر خواندن هدر سفارشی
+   بشکند، سایت واقعی (نه این هارنس) کاربر را بیرون می‌اندازد. */
+$GLOBALS['cyh_test_headers'] = [ 'x-crane-token' => $customer_token ];
+$me_custom = cyh_rest_account_me( new WP_REST_Request( [] ) );
+if ( is_wp_error( $me_custom ) || ( $me_custom['profile']['email'] ?? null ) !== 'karimi@example.com' ) {
+	$errors[] = '/account/me با هدر X-Crane-Token پروفایل را برنگرداند';
+} else {
+	echo "✓ /account/me با هدر X-Crane-Token (مسیر واقعی فرانت‌اند) کار می‌کند\n";
+}
+
 // بررسی ۲۶: خروج، همان توکن را باطل می‌کند
 cyh_rest_account_logout( new WP_REST_Request( [] ) );
 $me_after_logout = cyh_rest_account_me( new WP_REST_Request( [] ) );
@@ -1209,17 +1238,29 @@ if ( is_wp_error( $forgot_real ) || empty( $forgot_real['success'] ) || empty( $
 // بررسی ۲۹: بازنشانی رمز با توکن معتبر کار می‌کند و نشست‌های قبلی را باطل می‌کند
 preg_match( '/token=([0-9a-f]+)/', $GLOBALS['cyh_test_mail_calls'][0]['body'] ?? '', $token_match );
 $reset_token = $token_match[1] ?? '';
+/* ⚠️ یک نشست *تازه و زنده* پیش از بازنشانی. نسخه‌ی قبلی این بررسی
+   توکنِ بررسی ۲۵ را می‌آزمود — توکنی که بررسی ۲۶ (خروج) از قبل باطل
+   کرده بود. یعنی بررسی سبز می‌ماند حتی اگر بازنشانی هیچ نشستی را باطل
+   نمی‌کرد: آزمونی کور، دقیقاً همان چیزی که قاعده‌ی ۶ پروژه می‌گوید. */
+$reset_rl();
+$live_login = cyh_rest_account_login( new WP_REST_Request( [ 'email' => 'karimi@example.com', 'password' => 'Jarsaghil2026' ] ) );
+$live_token = is_wp_error( $live_login ) ? '' : ( $live_login['token'] ?? '' );
+$GLOBALS['cyh_test_headers'] = [ 'x-crane-token' => $live_token ];
+if ( '' === $live_token || is_wp_error( cyh_rest_account_me( new WP_REST_Request( [] ) ) ) ) {
+	$errors[] = 'پیش‌شرط بررسی ۲۹: نشست تازه پیش از بازنشانی کار نکرد';
+}
+$GLOBALS['cyh_test_headers'] = [];
 $reset_rl();
 $reset_ok = cyh_rest_account_reset_password(
-	new WP_REST_Request( [ 'email' => 'karimi@example.com', 'token' => $reset_token, 'password' => 'رمزتازه۵۶۷۸' ] )
+	new WP_REST_Request( [ 'email' => 'karimi@example.com', 'token' => $reset_token, 'password' => 'TazehRamz77' ] )
 );
 if ( is_wp_error( $reset_ok ) || empty( $reset_ok['success'] ) ) {
 	$errors[] = 'بازنشانی رمز با توکن معتبر شکست خورد: ' . ( is_wp_error( $reset_ok ) ? $reset_ok->get_error_message() : '' );
 } else {
 	echo "✓ بازنشانی رمز با توکن معتبر انجام شد\n";
 }
-// نشست قبلی (که در بررسی ۲۵ صادر شده بود) باید بعد از تغییر رمز باطل باشد.
-$GLOBALS['cyh_test_headers'] = [ 'authorization' => 'Bearer ' . $customer_token ];
+// همان نشست زنده — که یک لحظه پیش کار می‌کرد — باید حالا باطل باشد.
+$GLOBALS['cyh_test_headers'] = [ 'x-crane-token' => $live_token ];
 $me_after_reset = cyh_rest_account_me( new WP_REST_Request( [] ) );
 $GLOBALS['cyh_test_headers'] = [];
 if ( ! is_wp_error( $me_after_reset ) ) {
@@ -1231,12 +1272,115 @@ if ( ! is_wp_error( $me_after_reset ) ) {
 // بررسی ۳۰: توکن بازنشانیِ منقضی/جعلی رد می‌شود
 $reset_rl();
 $bad_reset = cyh_rest_account_reset_password(
-	new WP_REST_Request( [ 'email' => 'karimi@example.com', 'token' => 'توکن-جعلی', 'password' => 'رمزتازه۵۶۷۸' ] )
+	new WP_REST_Request( [ 'email' => 'karimi@example.com', 'token' => 'توکن-جعلی', 'password' => 'TazehRamz77' ] )
 );
 if ( ! is_wp_error( $bad_reset ) || 'cyh_bad_reset' !== $bad_reset->get_error_code() ) {
 	$errors[] = 'بازنشانی رمز با توکن جعلی باید رد شود اما نشد';
 } else {
 	echo "✓ بازنشانی رمز با توکن جعلی/منقضی به‌درستی رد شد\n";
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// بررسی ۳۱ تا ۳۸: تنظیمات حساب و علاقه‌مندی‌ها
+// ═══════════════════════════════════════════════════════════════════════════
+// رمز فعلی بعد از بررسی ۲۹: TazehRamz77
+$reset_rl();
+$acct_login = cyh_rest_account_login( new WP_REST_Request( [ 'email' => 'karimi@example.com', 'password' => 'TazehRamz77' ] ) );
+$acct_token = is_wp_error( $acct_login ) ? '' : ( $acct_login['token'] ?? '' );
+$as_customer = static function () use ( &$acct_token ) {
+	$GLOBALS['cyh_test_headers'] = [ 'x-crane-token' => $acct_token ];
+};
+
+// بررسی ۳۱: ویرایش پروفایل — نام تازه ذخیره و شماره‌ی خالی حذف می‌شود
+$as_customer();
+$prof = cyh_rest_account_profile( new WP_REST_Request( [ 'name' => 'مهندس کریمی‌نژاد', 'phone' => '', 'company' => 'فولاد کویر' ] ) );
+if ( is_wp_error( $prof ) || 'مهندس کریمی‌نژاد' !== ( $prof['profile']['name'] ?? '' ) || ! array_key_exists( 'phone', $prof['profile'] ?? [] ) || null !== $prof['profile']['phone'] ) {
+	$errors[] = 'ویرایش پروفایل نام را ذخیره نکرد یا شماره‌ی خالی را حذف نکرد';
+} else {
+	echo "✓ ویرایش پروفایل نام را ذخیره و شماره‌ی خالی را حذف کرد\n";
+}
+
+// بررسی ۳۲: ویرایش پروفایل بدون توکن رد می‌شود
+$GLOBALS['cyh_test_headers'] = [];
+$prof_anon = cyh_rest_account_profile( new WP_REST_Request( [ 'name' => 'مهاجم' ] ) );
+if ( ! is_wp_error( $prof_anon ) || 401 !== ( $prof_anon->get_error_data()['status'] ?? null ) ) {
+	$errors[] = 'ویرایش پروفایل بدون توکن باید ۴۰۱ بدهد';
+} else {
+	echo "✓ ویرایش پروفایل بدون توکن ۴۰۱ می‌دهد\n";
+}
+
+// بررسی ۳۳: تغییر رمز با رمز فعلیِ اشتباه رد می‌شود (توکن تنها کافی نیست)
+$reset_rl();
+$as_customer();
+$cp_wrong = cyh_rest_account_change_password( new WP_REST_Request( [ 'current_password' => 'Hads-e-ghalat1', 'new_password' => 'Jadid2027xyz' ] ) );
+if ( ! is_wp_error( $cp_wrong ) || 'cyh_bad_current_password' !== $cp_wrong->get_error_code() ) {
+	$errors[] = 'تغییر رمز با رمز فعلی اشتباه باید رد شود';
+} else {
+	echo "✓ تغییر رمز بدون رمز فعلیِ درست رد می‌شود — توکن دزدیده‌شده کافی نیست\n";
+}
+
+// بررسی ۳۴: تغییر رمز موفق — توکن قدیمی باطل، توکن تازه معتبر
+$reset_rl();
+$as_customer();
+$cp_ok = cyh_rest_account_change_password( new WP_REST_Request( [ 'current_password' => 'TazehRamz77', 'new_password' => 'Jadid2027xyz' ] ) );
+$old_token = $acct_token;
+$new_token = is_wp_error( $cp_ok ) ? '' : ( $cp_ok['token'] ?? '' );
+$GLOBALS['cyh_test_headers'] = [ 'x-crane-token' => $old_token ];
+$old_dead = is_wp_error( cyh_rest_account_me( new WP_REST_Request( [] ) ) );
+$GLOBALS['cyh_test_headers'] = [ 'x-crane-token' => $new_token ];
+$new_alive = ! is_wp_error( cyh_rest_account_me( new WP_REST_Request( [] ) ) );
+if ( is_wp_error( $cp_ok ) || ! $old_dead || ! $new_alive ) {
+	$errors[] = 'تغییر رمز باید توکن قدیمی را باطل و توکن تازه‌ی معتبر برگرداند';
+} else {
+	echo "✓ تغییر رمز توکن قدیمی را باطل و برای همین دستگاه توکن تازه صادر کرد\n";
+}
+$acct_token = $new_token;
+
+// محصول آزمایشی برای علاقه‌مندی‌ها
+$wish_pid = wp_insert_post( [ 'post_type' => 'product', 'post_title' => 'ریموت ساگا', 'post_name' => 'saga1-l12', 'post_status' => 'publish' ] );
+wp_insert_post( [ 'post_type' => 'product', 'post_title' => 'پیش‌نویس', 'post_name' => 'draft-part', 'post_status' => 'draft' ] );
+
+// بررسی ۳۵: افزودن محصول منتشرشده
+$as_customer();
+$w_add = cyh_rest_account_wishlist_update( new WP_REST_Request( [ 'slug' => 'saga1-l12', 'action' => 'add' ] ) );
+if ( is_wp_error( $w_add ) || [ 'saga1-l12' ] !== ( $w_add['slugs'] ?? null ) ) {
+	$errors[] = 'افزودن محصول منتشرشده به علاقه‌مندی‌ها شکست خورد';
+} else {
+	echo "✓ محصول منتشرشده به علاقه‌مندی‌ها اضافه شد (تکرار نمی‌شود)\n";
+}
+
+// بررسی ۳۶: محصول ناموجود یا پیش‌نویس پذیرفته نمی‌شود
+$w_ghost = cyh_rest_account_wishlist_update( new WP_REST_Request( [ 'slug' => 'no-such-part', 'action' => 'add' ] ) );
+$w_draft = cyh_rest_account_wishlist_update( new WP_REST_Request( [ 'slug' => 'draft-part', 'action' => 'add' ] ) );
+if ( ! is_wp_error( $w_ghost ) || ! is_wp_error( $w_draft ) ) {
+	$errors[] = 'محصول ناموجود/پیش‌نویس نباید به علاقه‌مندی‌ها اضافه شود';
+} else {
+	echo "✓ محصول ناموجود و پیش‌نویس به علاقه‌مندی‌ها راه نمی‌یابند\n";
+}
+
+// بررسی ۳۷: فهرست با نام محصول برمی‌گردد؛ محصولِ بعداً پیش‌نویس‌شده حذف می‌شود
+$w_list = cyh_rest_account_wishlist_get( new WP_REST_Request( [] ) );
+$GLOBALS['cyh_test_posts'][ $wish_pid ]['post_status'] = 'draft';
+$w_list_after = cyh_rest_account_wishlist_get( new WP_REST_Request( [] ) );
+$GLOBALS['cyh_test_posts'][ $wish_pid ]['post_status'] = 'publish';
+if (
+	is_wp_error( $w_list ) || 'ریموت ساگا' !== ( $w_list['items'][0]['name'] ?? '' )
+	|| is_wp_error( $w_list_after ) || [] !== ( $w_list_after['items'] ?? null )
+) {
+	$errors[] = 'فهرست علاقه‌مندی‌ها نام درست نداد یا محصولِ از دسترس خارج‌شده را نگه داشت';
+} else {
+	echo "✓ فهرست علاقه‌مندی‌ها نام محصول می‌دهد و محصولِ از دسترس خارج‌شده را پاک می‌کند\n";
+}
+
+// بررسی ۳۸: حذف از فهرست
+cyh_rest_account_wishlist_update( new WP_REST_Request( [ 'slug' => 'saga1-l12', 'action' => 'add' ] ) );
+$w_rm = cyh_rest_account_wishlist_update( new WP_REST_Request( [ 'slug' => 'saga1-l12', 'action' => 'remove' ] ) );
+$GLOBALS['cyh_test_headers'] = [];
+if ( is_wp_error( $w_rm ) || [] !== ( $w_rm['slugs'] ?? null ) ) {
+	$errors[] = 'حذف از علاقه‌مندی‌ها انجام نشد';
+} else {
+	echo "✓ حذف از علاقه‌مندی‌ها انجام شد\n";
 }
 
 

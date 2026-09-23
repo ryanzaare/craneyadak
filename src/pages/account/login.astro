@@ -44,6 +44,23 @@ const description = 'ورود به حساب کاربری برای پیگیری �
 <script define:vars={{ wpBase }}>
   (function () {
     const TOKEN_KEY = 'cy-account-token-v1';
+
+    /* ⚠️ همان قاعده‌ی «فقط مسیر داخلی تک‌اسلش» — پایین توضیح داده شده. */
+    const nextRaw = new URLSearchParams(location.search).get('next') || '';
+    const next = /^\/(?![/\\])/.test(nextRaw) ? nextRaw : '/account';
+
+    /* کاربرِ واردشده صفحه‌ی ورود را نمی‌بیند. توکن مرده حلقه نمی‌سازد:
+       اولین درخواست حساب با ۴۰۱ آن را پاک می‌کند و کاربر به اینجا
+       برمی‌گردد — این بار بدون توکن. */
+    try {
+      if (localStorage.getItem(TOKEN_KEY)) {
+        location.replace(next);
+        return;
+      }
+    } catch {
+      /* بدون localStorage ادامه بده. */
+    }
+
     const form = document.getElementById('login-form');
     const msg = document.getElementById('login-msg');
     const button = document.getElementById('login-submit');
@@ -88,8 +105,11 @@ const description = 'ورود به حساب کاربری برای پیگیری �
             }
             return;
           }
-          const back = new URLSearchParams(location.search).get('next');
-          location.href = back && back.startsWith('/') ? back : '/account';
+          /* ⚠️ `//` هم با `/` شروع می‌شود ولی مرورگر `//evil.com` را دامنه‌ی
+             دیگری می‌خواند — ریدایرکت باز (Open Redirect): لینکی از
+             craneyadak.com که کاربر را بعد از ورود به سایت فیشینگ می‌برد.
+             فقط مسیر داخلی تک‌اسلش پذیرفته می‌شود (`next` بالا). */
+          location.href = next;
           return;
         }
 

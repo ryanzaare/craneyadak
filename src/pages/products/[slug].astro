@@ -320,6 +320,19 @@ const contact = await getContact();
             </a>
           </div>
 
+          {/* علاقه‌مندی — وارد نشده: به ورود می‌رود و بعد به همین صفحه برمی‌گردد.
+              وضعیت (پر/خالی) فقط برای کاربر واردشده از سرور خوانده می‌شود. */}
+          <button
+            type="button"
+            id="wish-toggle"
+            data-wish-slug={product.slug}
+            aria-pressed="false"
+            class="mt-3 inline-flex items-center gap-2 text-sm font-bold text-steel-700 hover:text-red-700 transition-colors rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-300"
+          >
+            <svg id="wish-icon" class="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.6a4.3 4.3 0 017.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" /></svg>
+            <span id="wish-label">افزودن به علاقه‌مندی‌ها</span>
+          </button>
+
           <p class="text-xs text-steel-600 leading-6 mt-3">
             می‌توانید چند قطعه را در سبد جمع کنید و یک درخواست پیش‌فاکتور بفرستید —
             بدون ثبت‌نام و بدون رمز عبور.
@@ -629,5 +642,52 @@ const contact = await getContact();
       { rootMargin: '0px 0px -80px 0px' }
     );
     observer.observe(buyBox);
+  }
+</script>
+
+<script>
+  /* ------------------------- علاقه‌مندی‌ها -------------------------
+     وضعیت اولیه با یک GET از فهرست کاربر خوانده می‌شود — فقط وقتی توکن
+     هست. کاربرِ واردنشده هیچ درخواستی به سرور نمی‌فرستد. */
+  import { api, getToken } from '../../scripts/account';
+
+  const btn = document.getElementById('wish-toggle') as HTMLButtonElement | null;
+  const icon = document.getElementById('wish-icon');
+  const label = document.getElementById('wish-label');
+  const slug = btn?.dataset.wishSlug ?? '';
+
+  const paint = (on: boolean) => {
+    if (!btn || !label || !icon) return;
+    btn.setAttribute('aria-pressed', String(on));
+    label.textContent = on ? 'در فهرست علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها';
+    icon.setAttribute('fill', on ? 'currentColor' : 'none');
+    btn.classList.toggle('text-red-700', on);
+  };
+
+  const toLogin = () => {
+    location.href = `/account/login?next=${encodeURIComponent(location.pathname)}`;
+  };
+
+  if (btn && slug) {
+    if (getToken()) {
+      void api<{ items?: { slug: string }[] }>('/account/wishlist', { auth: true }).then((res) => {
+        if (res.ok) paint((res.data.items ?? []).some((i) => i.slug === slug));
+      });
+    }
+
+    btn.addEventListener('click', async () => {
+      if (!getToken()) return toLogin();
+      const on = btn.getAttribute('aria-pressed') === 'true';
+      btn.disabled = true;
+      const res = await api('/account/wishlist', {
+        method: 'POST',
+        auth: true,
+        body: { slug, action: on ? 'remove' : 'add' },
+      });
+      btn.disabled = false;
+      if (res.status === 401) return toLogin();
+      if (res.ok) paint(!on);
+      else if (label) label.textContent = 'خطا — دوباره تلاش کنید';
+    });
   }
 </script>

@@ -1,0 +1,164 @@
+---
+// src/pages/account/settings.astro
+// تنظیمات حساب — ویرایش مشخصات و تغییر رمز.
+//
+// ⚠️ ایمیل فقط نمایش داده می‌شود، قابل ویرایش نیست: تنها کانال بازیابی
+// رمز است و تغییرش بدون تأیید ایمیل تازه، یک غلط تایپی را به قفل دائمی
+// حساب تبدیل می‌کند (class-customer-accounts.php → cyh_rest_account_profile).
+import Layout from '../../layouts/Layout.astro';
+import AccountNav from '../../components/AccountNav.astro';
+import { SITE } from '../../data/site';
+
+const title = `تنظیمات حساب | ${SITE.name}`;
+const description = 'ویرایش مشخصات و رمز عبور حساب کاربری.';
+const input = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40';
+const button = 'bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px] disabled:opacity-60';
+---
+
+<Layout title={title} description={description} noindex>
+  <section class="bg-steel-900 text-white px-4 py-10">
+    <div class="max-w-5xl mx-auto">
+      <h1 class="text-2xl md:text-3xl font-black">تنظیمات حساب</h1>
+    </div>
+  </section>
+
+  <section class="bg-white px-4 py-10">
+    <div class="max-w-5xl mx-auto grid md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
+      <AccountNav />
+
+      <div class="min-w-0 space-y-8">
+        <form id="profile-form" class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+          <h2 class="font-black text-steel-900">مشخصات</h2>
+          <div>
+            <label for="set-email" class="block text-sm font-bold text-steel-900 mb-1">ایمیل</label>
+            <input id="set-email" type="email" dir="ltr" readonly class={`${input} bg-steel-100 text-steel-600`} />
+            <p class="text-xs text-steel-600 mt-1">ایمیل تنها راه بازیابی رمز است و از اینجا قابل تغییر نیست. برای تغییر با پشتیبانی تماس بگیرید.</p>
+          </div>
+          <div>
+            <label for="set-name" class="block text-sm font-bold text-steel-900 mb-1">نام و نام خانوادگی</label>
+            <input id="set-name" name="name" required class={input} />
+          </div>
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label for="set-phone" class="block text-sm font-bold text-steel-900 mb-1">شماره موبایل (اختیاری)</label>
+              <input id="set-phone" name="phone" type="tel" inputmode="tel" dir="ltr" class={input} />
+            </div>
+            <div>
+              <label for="set-company" class="block text-sm font-bold text-steel-900 mb-1">نام شرکت (اختیاری)</label>
+              <input id="set-company" name="company" class={input} />
+            </div>
+          </div>
+          <button type="submit" id="profile-submit" class={button}>ذخیره‌ی مشخصات</button>
+          <p id="profile-msg" class="text-sm leading-7" role="status" aria-live="polite"></p>
+        </form>
+
+        <form id="password-form" class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+          <h2 class="font-black text-steel-900">تغییر رمز عبور</h2>
+          <div>
+            <label for="set-current" class="block text-sm font-bold text-steel-900 mb-1">رمز عبور فعلی</label>
+            <input id="set-current" name="current_password" type="password" required dir="ltr" autocomplete="current-password" class={input} />
+          </div>
+          <div>
+            <label for="set-new" class="block text-sm font-bold text-steel-900 mb-1">رمز عبور تازه</label>
+            <input id="set-new" name="new_password" type="password" required minlength="8" dir="ltr" autocomplete="new-password" class={input} />
+            <p class="text-xs text-steel-600 mt-1">حداقل ۸ کاراکتر، شامل حرف و عدد انگلیسی (0-9). ورود در سایر دستگاه‌ها لغو می‌شود.</p>
+          </div>
+          <button type="submit" id="password-submit" class={button}>تغییر رمز عبور</button>
+          <p id="password-msg" class="text-sm leading-7" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { api, errorMessage, requireLogin, setToken } from '../../scripts/account';
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  function say(el: HTMLElement, ok: boolean, text: string) {
+    el.className = `text-sm leading-7 font-bold ${ok ? 'text-green-700' : 'text-red-700'}`;
+    el.textContent = text;
+  }
+
+  async function busy<T>(btn: HTMLButtonElement, label: string, work: () => Promise<T>): Promise<T> {
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = label;
+    try {
+      return await work();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
+
+  async function init() {
+    if (!requireLogin()) return;
+
+    const me = await api<{ profile?: { name?: string; email?: string; phone?: string | null; company?: string | null } }>(
+      '/account/me',
+      { auth: true },
+    );
+    if (me.status === 401) {
+      requireLogin();
+      return;
+    }
+    if (!me.ok) {
+      say($('profile-msg'), false, errorMessage(me, 'مشخصات بارگذاری نشد.'));
+      return;
+    }
+    const p = me.data.profile ?? {};
+    $<HTMLInputElement>('set-email').value = p.email ?? '';
+    $<HTMLInputElement>('set-name').value = p.name ?? '';
+    $<HTMLInputElement>('set-phone').value = p.phone ?? '';
+    $<HTMLInputElement>('set-company').value = p.company ?? '';
+  }
+
+  $<HTMLFormElement>('profile-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('profile-msg');
+    msg.textContent = '';
+    const res = await busy($<HTMLButtonElement>('profile-submit'), 'در حال ذخیره…', () =>
+      api('/account/profile', {
+        method: 'POST',
+        auth: true,
+        body: {
+          name: $<HTMLInputElement>('set-name').value,
+          phone: $<HTMLInputElement>('set-phone').value,
+          company: $<HTMLInputElement>('set-company').value,
+        },
+      }),
+    );
+    if (res.status === 401) return requireLogin();
+    say(msg, res.ok, res.ok ? 'مشخصات ذخیره شد.' : errorMessage(res, 'ذخیره انجام نشد.'));
+  });
+
+  $<HTMLFormElement>('password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    const msg = $('password-msg');
+    msg.textContent = '';
+    const res = await busy($<HTMLButtonElement>('password-submit'), 'در حال تغییر…', () =>
+      api<{ token?: string }>('/account/change-password', {
+        method: 'POST',
+        auth: true,
+        body: {
+          current_password: $<HTMLInputElement>('set-current').value,
+          new_password: $<HTMLInputElement>('set-new').value,
+        },
+      }),
+    );
+    if (res.status === 401) return requireLogin();
+    if (res.ok && res.data.token) {
+      // سرور همه‌ی نشست‌ها را باطل و برای همین دستگاه توکن تازه داده است.
+      setToken(res.data.token);
+      form.reset();
+      say(msg, true, 'رمز عبور تغییر کرد. ورود در سایر دستگاه‌ها لغو شد.');
+      return;
+    }
+    say(msg, false, errorMessage(res, 'تغییر رمز انجام نشد.'));
+  });
+
+  void init();
+</script>

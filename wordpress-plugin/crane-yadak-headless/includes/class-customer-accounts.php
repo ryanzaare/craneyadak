@@ -148,13 +148,32 @@ function cyh_customer_revoke_all_tokens( $user_id ) {
 	}
 }
 
-/** هدر Authorization: Bearer <token> را می‌خواند و کاربر را برمی‌گرداند. */
+/**
+ * توکن خام درخواست — اول هدر X-Crane-Token، بعد Authorization: Bearer.
+ *
+ * ⚠️ چرا هدر سفارشی اول است: روی بسیاری از هاست‌های اشتراکی (Apache با
+ * PHP به‌شکل CGI/FastCGI) هدر Authorization پیش از رسیدن به PHP حذف
+ * می‌شود، مگر قاعده‌ای در .htaccess آن را برگرداند. هدرهای X- این
+ * مشکل را ندارند. 🔶 این‌که هاست این پروژه Authorization را حذف
+ * می‌کند یا نه آزموده نشده؛ هدر سفارشی آن سؤال را بی‌اهمیت می‌کند.
+ * Authorization فقط برای سازگاری نگه داشته شد.
+ */
+function cyh_customer_request_token( $request ) {
+	$custom = trim( (string) $request->get_header( 'x-crane-token' ) );
+	if ( '' !== $custom ) {
+		return $custom;
+	}
+	$header = trim( (string) $request->get_header( 'authorization' ) );
+	return preg_match( '/^Bearer\s+(.+)$/i', $header, $m ) ? trim( $m[1] ) : '';
+}
+
+/** توکن درخواست را می‌خواند و کاربر را برمی‌گرداند. */
 function cyh_customer_authenticate_request( $request ) {
-	$header = (string) $request->get_header( 'authorization' );
-	if ( ! preg_match( '/^Bearer\s+(.+)$/i', trim( $header ), $m ) ) {
+	$token = cyh_customer_request_token( $request );
+	if ( '' === $token ) {
 		return new WP_Error( 'cyh_no_token', 'وارد نشده‌اید.', [ 'status' => 401 ] );
 	}
-	$user_id = cyh_customer_verify_token( $m[1] );
+	$user_id = cyh_customer_verify_token( $token );
 	if ( ! $user_id ) {
 		return new WP_Error( 'cyh_bad_token', 'نشست منقضی شده — دوباره وارد شوید.', [ 'status' => 401 ] );
 	}
@@ -169,38 +188,47 @@ function cyh_customer_authenticate_request( $request ) {
 /**
  * سیاست رمز عبور — مشکل را برمی‌گرداند، یا null اگر رمز قابل قبول است.
  *
- * ⚠️ نسخه‌ی اول فقط «حداقل ۸ کاراکتر» بود و کارفرما درست گرفتش: رمزی
- * مثل `12345678` یا `password` از آن رد می‌شد. حالا چهار قید، هرکدام
- * برای یک حمله‌ی مشخص:
+ * تاریخچه‌ی تصمیم (هر دو از کارفرما):
+ *   • نسخه‌ی اول فقط «حداقل ۸ کاراکتر» بود — `12345678` و `password`
+ *     از آن رد می‌شدند. قیدهای ۲ تا ۵ اضافه شد.
+ *   • یک نسخه‌ی میانی حداقل را ۱۰ کرد؛ کارفرما گفت زیاد است. با وجود
+ *     قیدهای ۲ تا ۵، ۸ کافی است — طول تنها قید نیست.
  *
- *   ۱) طول ≥ ۱۰ — mb_strlen، چون حرف فارسی چندبایتی است و strlen
- *      «رمز۱۲» را ۱۲ کاراکتر می‌شمرد.
- *   ۲) حداقل یک حرف و یک رقم — ارقام فارسی هم رقم‌اند (با
- *      cyh_to_latin_digits یکسان می‌شوند).
- *   ۳) فهرست سیاه — رمزهایی که هر حمله‌ی حدس رمز اول امتحان می‌کند.
- *      فهرست عمداً کوتاه است؛ هدفش گرفتن بدترین‌هاست، نه کامل بودن.
- *   ۴) نام ایمیل داخل رمز نباشد — اولین چیزی که مهاجم با دانستن ایمیل
- *      امتحان می‌کند.
+ * قیدها، هرکدام برای یک مشکل مشخص:
+ *   ۱) طول ≥ ۸ — mb_strlen، چون حرف فارسی چندبایتی است.
+ *   ۲) ارقام فارسی/عربی **ممنوع**، فقط 0-9 انگلیسی. رمز با ارقام فارسی
+ *      روی صفحه‌کلید دیگر (یا دستگاه دیگر) عملاً قابل تایپ نیست و کاربر
+ *      از حساب خودش بیرون می‌ماند. ⚠️ عمداً به لاتین تبدیل *نمی‌شوند*:
+ *      تبدیل یعنی «۱۲۳» و «123» دو رمز یکسان باشند، ولی wp_authenticate
+ *      رشته‌ی خام را مقایسه می‌کند و ورود بعدی شکست می‌خورد.
+ *   ۳) حداقل یک حرف و یک رقم.
+ *   ۴) فهرست سیاه + تکرار یک کاراکتر — اولین حدس‌های هر حمله.
+ *   ۵) نام ایمیل داخل رمز نباشد.
  *
  * این تابع تنها مرجع است؛ فرم‌های فرانت‌اند فقط پیامش را نشان می‌دهند.
  */
 function cyh_customer_password_problem( $pass, $email = '' ) {
 	$pass = (string) $pass;
 
-	if ( mb_strlen( $pass ) < 10 ) {
-		return 'رمز عبور باید حداقل ۱۰ کاراکتر باشد.';
+	if ( mb_strlen( $pass ) < 8 ) {
+		return 'رمز عبور باید حداقل ۸ کاراکتر باشد.';
 	}
 
-	$latin = cyh_to_latin_digits( $pass );
-	if ( ! preg_match( '/\p{L}/u', $latin ) || ! preg_match( '/\d/', $latin ) ) {
+	if ( preg_match( '/[\x{06F0}-\x{06F9}\x{0660}-\x{0669}]/u', $pass ) ) {
+		return 'در رمز عبور فقط از اعداد انگلیسی (0-9) استفاده کنید، نه اعداد فارسی.';
+	}
+
+	if ( ! preg_match( '/\p{L}/u', $pass ) || ! preg_match( '/[0-9]/', $pass ) ) {
 		return 'رمز عبور باید هم حرف داشته باشد و هم عدد.';
 	}
 
-	$lower = mb_strtolower( $latin );
+	$lower = mb_strtolower( $pass );
 	$blocked = [
-		'password123', 'password1234', 'qwerty12345', 'qwerty123456', 'abc1234567',
-		'1234567890a', 'a1234567890', 'iloveyou123', 'admin12345', 'welcome123',
-		'craneyadak1', 'craneyadak123', 'crane123456', 'test123456', 'pass123456',
+		'password1', 'password12', 'password123', 'password1234', 'passw0rd',
+		'qwerty123', 'qwerty1234', 'qwerty12345', 'abc12345', 'abcd1234',
+		'12345678a', 'a12345678', '1q2w3e4r', '1qaz2wsx', 'iloveyou1',
+		'admin123', 'admin1234', 'welcome1', 'welcome123', 'test1234',
+		'pass1234', 'crane123', 'craneyadak1', 'craneyadak123',
 	];
 	if ( in_array( $lower, $blocked, true ) ) {
 		return 'این رمز عبور بسیار رایج است و به‌راحتی حدس زده می‌شود.';
@@ -248,6 +276,16 @@ function cyh_register_customer_routes() {
 		'crane-yadak/v1',
 		'/account/me',
 		[ 'methods' => 'GET', 'permission_callback' => '__return_true', 'callback' => 'cyh_rest_account_me' ]
+	);
+	register_rest_route( 'crane-yadak/v1', '/account/profile', array_merge( $public, [ 'callback' => 'cyh_rest_account_profile' ] ) );
+	register_rest_route( 'crane-yadak/v1', '/account/change-password', array_merge( $public, [ 'callback' => 'cyh_rest_account_change_password' ] ) );
+	register_rest_route(
+		'crane-yadak/v1',
+		'/account/wishlist',
+		[
+			[ 'methods' => 'GET', 'permission_callback' => '__return_true', 'callback' => 'cyh_rest_account_wishlist_get' ],
+			[ 'methods' => 'POST', 'permission_callback' => '__return_true', 'callback' => 'cyh_rest_account_wishlist_update' ],
+		]
 	);
 }
 add_action( 'rest_api_init', 'cyh_register_customer_routes' );
@@ -349,9 +387,9 @@ function cyh_rest_account_login( $request ) {
 }
 
 function cyh_rest_account_logout( $request ) {
-	$header = (string) $request->get_header( 'authorization' );
-	if ( preg_match( '/^Bearer\s+(.+)$/i', trim( $header ), $m ) ) {
-		cyh_customer_revoke_token( $m[1] );
+	$token = cyh_customer_request_token( $request );
+	if ( '' !== $token ) {
+		cyh_customer_revoke_token( $token );
 	}
 	return rest_ensure_response( [ 'success' => true ] );
 }
@@ -458,6 +496,159 @@ function cyh_rest_account_me( $request ) {
 			),
 		]
 	);
+}
+
+/* =========================================================================
+   ۴) تنظیمات حساب
+   ========================================================================= */
+
+/**
+ * ویرایش نام، موبایل و شرکت.
+ *
+ * ⚠️ ایمیل اینجا قابل تغییر نیست — عمدی. ایمیل تنها کانال بازیابی رمز
+ * است؛ تغییرش بدون تأیید ایمیل تازه یعنی یک غلط تایپی کاربر را برای
+ * همیشه از حسابش بیرون می‌گذارد. تأیید ایمیل (backlog، پیشنهاد ۹) تا
+ * راه‌اندازی سایت و داشتن سرویس ایمیل کنار گذاشته شد.
+ */
+function cyh_rest_account_profile( $request ) {
+	$user_id = cyh_customer_authenticate_request( $request );
+	if ( is_wp_error( $user_id ) ) {
+		return $user_id;
+	}
+
+	$name  = sanitize_text_field( (string) $request->get_param( 'name' ) );
+	$phone = cyh_to_latin_digits( sanitize_text_field( (string) $request->get_param( 'phone' ) ) );
+	$org   = sanitize_text_field( (string) $request->get_param( 'company' ) );
+
+	if ( mb_strlen( $name ) < 2 ) {
+		return new WP_Error( 'cyh_bad_name', 'نام را کامل وارد کنید.', [ 'status' => 400 ] );
+	}
+	if ( '' !== $phone && ! cyh_customer_valid_phone( $phone ) ) {
+		return new WP_Error( 'cyh_bad_phone', 'شماره موبایل معتبر نیست.', [ 'status' => 400 ] );
+	}
+
+	wp_update_user( [ 'ID' => $user_id, 'display_name' => $name ] );
+	// خالی = حذف؛ نه ذخیره‌ی رشته‌ی خالی که بعداً «شماره‌ی ثبت‌شده» به نظر برسد.
+	'' !== $phone ? update_user_meta( $user_id, 'cyh_phone', $phone ) : delete_user_meta( $user_id, 'cyh_phone' );
+	'' !== $org ? update_user_meta( $user_id, 'cyh_company', $org ) : delete_user_meta( $user_id, 'cyh_company' );
+
+	return rest_ensure_response( [ 'success' => true, 'profile' => cyh_customer_profile( get_userdata( $user_id ) ) ] );
+}
+
+/**
+ * تغییر رمز با دانستن رمز فعلی.
+ *
+ * ⚠️ رمز فعلی الزامی است: توکن دزدیده‌شده (مثلاً از مرورگری که کاربر
+ * خارج نشده) نباید برای تصاحب دائمی حساب کافی باشد. بعد از تغییر، همه‌ی
+ * نشست‌ها باطل و برای همین دستگاه یک توکن تازه صادر می‌شود — کاربری که
+ * رمزش را عوض کرده نباید از صفحه‌ای که در آن است بیرون پرت شود.
+ */
+function cyh_rest_account_change_password( $request ) {
+	$user_id = cyh_customer_authenticate_request( $request );
+	if ( is_wp_error( $user_id ) ) {
+		return $user_id;
+	}
+	if ( cyh_is_rate_limited( cyh_client_ip() ) ) {
+		return new WP_Error( 'cyh_rate_limited', 'تعداد تلاش‌ها زیاد است. کمی بعد دوباره تلاش کنید.', [ 'status' => 429 ] );
+	}
+
+	$user    = get_userdata( $user_id );
+	$current = (string) $request->get_param( 'current_password' );
+	$new     = (string) $request->get_param( 'new_password' );
+
+	if ( is_wp_error( wp_authenticate( $user->user_email, $current ) ) ) {
+		return new WP_Error( 'cyh_bad_current_password', 'رمز عبور فعلی اشتباه است.', [ 'status' => 400 ] );
+	}
+	$pw_problem = cyh_customer_password_problem( $new, $user->user_email );
+	if ( null !== $pw_problem ) {
+		return new WP_Error( 'cyh_weak_password', $pw_problem, [ 'status' => 400 ] );
+	}
+
+	wp_set_password( $new, $user_id );
+	cyh_customer_revoke_all_tokens( $user_id );
+
+	return rest_ensure_response( [ 'success' => true, 'token' => cyh_customer_issue_token( $user_id ) ] );
+}
+
+/* =========================================================================
+   ۵) علاقه‌مندی‌ها
+   =========================================================================
+   فهرست اسلاگ محصول در متای کاربر. اسلاگ و نه شناسه، چون فرانت‌اند
+   استاتیک محصول را با اسلاگ می‌شناسد (همان دلیل productSlug در
+   class-questions.php). */
+const CYH_WISHLIST_META = 'cyh_wishlist';
+const CYH_WISHLIST_MAX  = 100;
+
+/** محصول منتشرشده با این اسلاگ، یا null. */
+function cyh_customer_find_product( $slug ) {
+	$found = get_posts(
+		[
+			'post_type'      => 'product',
+			'name'           => $slug,
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+		]
+	);
+	return $found ? $found[0] : null;
+}
+
+function cyh_customer_wishlist_slugs( $user_id ) {
+	$raw = get_user_meta( $user_id, CYH_WISHLIST_META, true );
+	return is_array( $raw ) ? array_values( array_filter( $raw, 'is_string' ) ) : [];
+}
+
+/**
+ * ⚠️ محصولی که بعد از افزوده‌شدن حذف یا پیش‌نویس شده، از خروجی بیرون
+ * می‌رود و از متا هم پاک می‌شود — وگرنه فهرست کاربر لینک ۴۰۴ نشان می‌داد.
+ */
+function cyh_rest_account_wishlist_get( $request ) {
+	$user_id = cyh_customer_authenticate_request( $request );
+	if ( is_wp_error( $user_id ) ) {
+		return $user_id;
+	}
+
+	$items = [];
+	$alive = [];
+	foreach ( cyh_customer_wishlist_slugs( $user_id ) as $slug ) {
+		$product = cyh_customer_find_product( $slug );
+		if ( $product ) {
+			$alive[] = $slug;
+			$items[] = [ 'slug' => $slug, 'name' => $product->post_title ];
+		}
+	}
+	update_user_meta( $user_id, CYH_WISHLIST_META, $alive );
+
+	return rest_ensure_response( [ 'items' => $items ] );
+}
+
+function cyh_rest_account_wishlist_update( $request ) {
+	$user_id = cyh_customer_authenticate_request( $request );
+	if ( is_wp_error( $user_id ) ) {
+		return $user_id;
+	}
+
+	$slug   = sanitize_title( (string) $request->get_param( 'slug' ) );
+	$action = (string) $request->get_param( 'action' );
+	$slugs  = cyh_customer_wishlist_slugs( $user_id );
+
+	if ( 'add' === $action ) {
+		if ( '' === $slug || ! cyh_customer_find_product( $slug ) ) {
+			return new WP_Error( 'cyh_bad_product', 'این محصول پیدا نشد.', [ 'status' => 404 ] );
+		}
+		if ( ! in_array( $slug, $slugs, true ) ) {
+			if ( count( $slugs ) >= CYH_WISHLIST_MAX ) {
+				return new WP_Error( 'cyh_wishlist_full', 'فهرست علاقه‌مندی‌ها پر است.', [ 'status' => 400 ] );
+			}
+			$slugs[] = $slug;
+		}
+	} elseif ( 'remove' === $action ) {
+		$slugs = array_values( array_diff( $slugs, [ $slug ] ) );
+	} else {
+		return new WP_Error( 'cyh_bad_action', 'عملیات نامعتبر.', [ 'status' => 400 ] );
+	}
+
+	update_user_meta( $user_id, CYH_WISHLIST_META, $slugs );
+	return rest_ensure_response( [ 'success' => true, 'slugs' => $slugs ] );
 }
 
 /** آدرس فرانت‌اند Astro — برای ساختن لینک بازیابی رمز در ایمیل. */

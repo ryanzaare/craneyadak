@@ -48,7 +48,13 @@ function cyh_send_cors_headers() {
 	if ( $origin && in_array( $origin, cyh_get_allowed_origins(), true ) ) {
 		header( 'Access-Control-Allow-Origin: ' . $origin );
 		header( 'Access-Control-Allow-Methods: GET, POST, OPTIONS' );
-		header( 'Access-Control-Allow-Headers: Content-Type, X-WP-Nonce' );
+		/* ⚠️ هر هدری که فرانت‌اند می‌فرستد باید اینجا باشد، وگرنه مرورگر
+		   preflight را رد می‌کند و fetch بی‌صدا شکست می‌خورد. نبودِ
+		   X-Crane-Token (توکن حساب کاربری) یک حلقه‌ی «ورود ← حساب من ←
+		   ورود» ساخت. scripts/check-cors-headers.mjs این سطر را با
+		   fetchهای src/ مقایسه می‌کند — این سطر را به شکل رشته‌ی ادبی
+		   نگه دارید تا آن بررسی بتواند بخواندش. */
+		header( 'Access-Control-Allow-Headers: Content-Type, X-WP-Nonce, X-Crane-Token, Authorization' );
 		header( 'Access-Control-Allow-Credentials: false' );
 		header( 'Vary: Origin' );
 	}

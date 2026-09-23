@@ -22,6 +22,11 @@
 import { SITE } from '../data/site';
 import { SILOS, siloPath, categoryPath } from '../data/taxonomy';
 import Logo from './Logo.astro';
+import { ACCOUNT_MENU } from '../data/account-menu';
+
+// متغیر محیطی build به مرورگر نمی‌رسد؛ از data-wp-base خوانده می‌شود
+// (src/scripts/account.ts). بدون آن، «خروج» در منوی هدر کار نمی‌کند.
+const wpBase = (import.meta.env.WP_GRAPHQL_URL as string | undefined)?.replace(/\/+$/, '') ?? '';
 
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const isActive = (href: string) => path === href.replace(/\/$/, '');
@@ -41,6 +46,7 @@ const navLinks = [
   class="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 py-3 shadow-sm"
   style="transform: translateZ(0);"
   role="banner"
+  data-wp-base={wpBase}
 >
   <div class="w-full max-w-7xl mx-auto flex justify-between items-center px-4 md:px-8">
     <a href="/" class="flex items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label={`صفحه اصلی ${SITE.name}`}>
@@ -95,9 +101,10 @@ const navLinks = [
           می‌داند دنبال چه می‌گردد و پایین صفحه را نگاه می‌کند)، ورود
           کاری است که کاربر در هر صفحه‌ای ممکن است بخواهد.
 
-          href پیش‌فرض صفحه‌ی ورود است؛ اسکریپت پایین اگر نشستی در مرورگر
-          باشد آن را به «حساب من» تغییر می‌دهد. سایت استاتیک است، پس
-          وضعیت ورود فقط سمت کلاینت معلوم است. */}
+          وارد نشده: یک لینک ساده به صفحه‌ی ورود. وارد شده: منوی کشویی
+          (فهرستش در src/data/account-menu.ts). سایت استاتیک است، پس
+          اسکریپت پایین بر اساس توکن مرورگر یکی از این دو را نشان می‌دهد؛
+          بدون جاوااسکریپت، لینک ورود می‌ماند. */}
       <a
         id="account-link"
         href="/account/login"
@@ -110,8 +117,62 @@ const navLinks = [
         <svg class="w-7 h-7 md:w-6 md:h-6" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.1a7.5 7.5 0 0115 0A17.9 17.9 0 0112 21.75c-2.68 0-5.22-.58-7.5-1.65z" />
         </svg>
-        <span id="account-link-text" class="hidden md:inline">ورود</span>
+        <span class="hidden md:inline">ورود</span>
       </a>
+
+      <div id="account-menu-wrap" class="relative hidden">
+        <button
+          id="account-trigger"
+          type="button"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="account-menu"
+          aria-label="منوی حساب من"
+          class:list={[
+            'flex items-center gap-1.5 rounded-md p-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange',
+            inSection('/account') ? 'text-crane-orange' : 'text-crane-navy hover:text-crane-orange',
+          ]}
+        >
+          <svg class="w-7 h-7 md:w-6 md:h-6" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.1a7.5 7.5 0 0115 0A17.9 17.9 0 0112 21.75c-2.68 0-5.22-.58-7.5-1.65z" />
+          </svg>
+          <span class="hidden md:inline">حساب من</span>
+          <svg id="account-chevron" class="hidden md:block w-4 h-4 text-gray-500 transition-transform" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+        </button>
+
+        {/* left-0: در RTL، دکمه در لبه‌ی چپ هدر است؛ منو باید به سمت داخل
+            صفحه باز شود، نه بیرون از آن. */}
+        <div
+          id="account-menu"
+          class="hidden absolute left-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl py-2 z-50"
+          role="menu"
+          aria-label="حساب من"
+        >
+          {ACCOUNT_MENU.map((item) => (
+            <a
+              href={item.href}
+              role="menuitem"
+              class:list={[
+                'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors focus:outline-none focus:bg-gray-50',
+                isActive(item.href) ? 'text-crane-orange font-bold' : 'text-gray-700 hover:bg-gray-50 hover:text-crane-navy',
+              ]}
+            >
+              <svg class="w-5 h-5 shrink-0 text-gray-400" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={item.icon} /></svg>
+              {item.label}
+            </a>
+          ))}
+          <div class="border-t border-gray-100 my-1" role="separator"></div>
+          <button
+            id="account-logout"
+            type="button"
+            role="menuitem"
+            class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-700 hover:bg-red-50 transition-colors focus:outline-none focus:bg-red-50"
+          >
+            <svg class="w-5 h-5 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 16l4-4-4-4M19 12H9M13 20H6a2 2 0 01-2-2V6a2 2 0 012-2h7" /></svg>
+            خروج
+          </button>
+        </div>
+      </div>
 
       <button id="mobile-menu-btn" type="button" class="md:hidden text-crane-navy rounded-md p-2 z-50 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobile-menu">
         <svg class="w-8 h-8" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,23 +278,62 @@ const navLinks = [
 </header>
 
 <script>
-  /* ----------------------- وضعیت حساب کاربری -----------------------
-     ⚠️ کلید باید با صفحات src/pages/account/* یکی بماند
-     ('cy-account-token-v1'). فقط وجود توکن بررسی می‌شود، نه اعتبارش —
-     اعتبارسنجی یک درخواست شبکه در هر صفحه است. اگر توکن منقضی باشد،
-     صفحه‌ی «حساب من» خودش آن را پاک و کاربر را به ورود می‌فرستد. */
+  import { getToken, logout } from '../scripts/account';
+
+  /* ----------------------- منوی حساب کاربری -----------------------
+     فقط وجود توکن بررسی می‌شود، نه اعتبارش — اعتبارسنجی یک درخواست شبکه
+     در هر صفحه‌ی سایت می‌شد. توکن منقضی را اولین درخواست حساب (۴۰۱)
+     پاک می‌کند و از آن به بعد لینک ورود برمی‌گردد. */
   const accountLink = document.getElementById('account-link');
-  const accountText = document.getElementById('account-link-text');
-  let hasToken = false;
-  try {
-    hasToken = Boolean(localStorage.getItem('cy-account-token-v1'));
-  } catch {
-    hasToken = false;
-  }
-  if (accountLink && hasToken) {
-    accountLink.setAttribute('href', '/account');
-    accountLink.setAttribute('aria-label', 'حساب من');
-    if (accountText) accountText.textContent = 'حساب من';
+  const accountWrap = document.getElementById('account-menu-wrap');
+  const accountTrigger = document.getElementById('account-trigger');
+  const accountMenu = document.getElementById('account-menu');
+  const accountChevron = document.getElementById('account-chevron');
+
+  if (getToken() && accountLink && accountWrap && accountTrigger && accountMenu) {
+    accountLink.classList.add('hidden');
+    accountWrap.classList.remove('hidden');
+
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+    const setOpen = (open: boolean) => {
+      clearTimeout(closeTimer);
+      accountMenu.classList.toggle('hidden', !open);
+      accountTrigger.setAttribute('aria-expanded', String(open));
+      accountChevron?.classList.toggle('rotate-180', open);
+    };
+    const isOpen = () => accountTrigger.getAttribute('aria-expanded') === 'true';
+    // همان تأخیر بستن مگا-منو: حرکت مورب ماوس از دکمه به منو نباید آن را ببندد.
+    const scheduleClose = () => {
+      clearTimeout(closeTimer);
+      closeTimer = setTimeout(() => setOpen(false), 180);
+    };
+
+    // هاور فقط روی دستگاهی که واقعاً هاور دارد؛ روی لمسی، mouseenter پیش
+    // از click می‌آید و منو در یک لمس باز و فوراً بسته می‌شد.
+    if (window.matchMedia('(hover: hover)').matches) {
+      accountWrap.addEventListener('mouseenter', () => setOpen(true));
+      accountWrap.addEventListener('mouseleave', scheduleClose);
+    }
+    accountTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setOpen(!isOpen());
+    });
+    document.addEventListener('click', (e) => {
+      if (isOpen() && !accountWrap.contains(e.target as Node)) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isOpen()) {
+        setOpen(false);
+        accountTrigger.focus();
+      }
+    });
+    accountWrap.addEventListener('focusout', (e) => {
+      if (!accountWrap.contains(e.relatedTarget as Node)) setOpen(false);
+    });
+
+    document.getElementById('account-logout')?.addEventListener('click', () => {
+      logout();
+    });
   }
 
   /* ------------------------- منوی موبایل ------------------------- */
