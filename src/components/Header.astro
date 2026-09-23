@@ -89,11 +89,36 @@ const navLinks = [
       </ul>
     </nav>
 
-    <button id="mobile-menu-btn" type="button" class="md:hidden text-crane-navy rounded-md p-2 z-50 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobile-menu">
-      <svg class="w-8 h-8" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path id="hamburger-icon-path" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-      </svg>
-    </button>
+    <div class="flex items-center gap-1 md:gap-2">
+      {/* ⚠️ حساب کاربری در هدر است، نه فقط فوتر — کارفرما درست گرفت که
+          فوتر عملاً دیده نمی‌شود. برخلاف «پیگیری درخواست» (که کاربرش
+          می‌داند دنبال چه می‌گردد و پایین صفحه را نگاه می‌کند)، ورود
+          کاری است که کاربر در هر صفحه‌ای ممکن است بخواهد.
+
+          href پیش‌فرض صفحه‌ی ورود است؛ اسکریپت پایین اگر نشستی در مرورگر
+          باشد آن را به «حساب من» تغییر می‌دهد. سایت استاتیک است، پس
+          وضعیت ورود فقط سمت کلاینت معلوم است. */}
+      <a
+        id="account-link"
+        href="/account/login"
+        class:list={[
+          'flex items-center gap-1.5 rounded-md p-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange',
+          inSection('/account') ? 'text-crane-orange' : 'text-crane-navy hover:text-crane-orange',
+        ]}
+        aria-label="ورود یا ثبت‌نام"
+      >
+        <svg class="w-7 h-7 md:w-6 md:h-6" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.1a7.5 7.5 0 0115 0A17.9 17.9 0 0112 21.75c-2.68 0-5.22-.58-7.5-1.65z" />
+        </svg>
+        <span id="account-link-text" class="hidden md:inline">ورود</span>
+      </a>
+
+      <button id="mobile-menu-btn" type="button" class="md:hidden text-crane-navy rounded-md p-2 z-50 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobile-menu">
+        <svg class="w-8 h-8" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path id="hamburger-icon-path" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
   </div>
 
   {/* ---------------------------- مگا-منو ---------------------------- */}
@@ -192,6 +217,25 @@ const navLinks = [
 </header>
 
 <script>
+  /* ----------------------- وضعیت حساب کاربری -----------------------
+     ⚠️ کلید باید با صفحات src/pages/account/* یکی بماند
+     ('cy-account-token-v1'). فقط وجود توکن بررسی می‌شود، نه اعتبارش —
+     اعتبارسنجی یک درخواست شبکه در هر صفحه است. اگر توکن منقضی باشد،
+     صفحه‌ی «حساب من» خودش آن را پاک و کاربر را به ورود می‌فرستد. */
+  const accountLink = document.getElementById('account-link');
+  const accountText = document.getElementById('account-link-text');
+  let hasToken = false;
+  try {
+    hasToken = Boolean(localStorage.getItem('cy-account-token-v1'));
+  } catch {
+    hasToken = false;
+  }
+  if (accountLink && hasToken) {
+    accountLink.setAttribute('href', '/account');
+    accountLink.setAttribute('aria-label', 'حساب من');
+    if (accountText) accountText.textContent = 'حساب من';
+  }
+
   /* ------------------------- منوی موبایل ------------------------- */
   const btn = document.getElementById('mobile-menu-btn');
   const menu = document.getElementById('mobile-menu');

@@ -166,6 +166,59 @@ function cyh_customer_authenticate_request( $request ) {
    ========================================================================= */
 
 /** همان الگوی موبایل ایران که فرم تماس استفاده می‌کند (class-rest-contact.php). */
+/**
+ * سیاست رمز عبور — مشکل را برمی‌گرداند، یا null اگر رمز قابل قبول است.
+ *
+ * ⚠️ نسخه‌ی اول فقط «حداقل ۸ کاراکتر» بود و کارفرما درست گرفتش: رمزی
+ * مثل `12345678` یا `password` از آن رد می‌شد. حالا چهار قید، هرکدام
+ * برای یک حمله‌ی مشخص:
+ *
+ *   ۱) طول ≥ ۱۰ — mb_strlen، چون حرف فارسی چندبایتی است و strlen
+ *      «رمز۱۲» را ۱۲ کاراکتر می‌شمرد.
+ *   ۲) حداقل یک حرف و یک رقم — ارقام فارسی هم رقم‌اند (با
+ *      cyh_to_latin_digits یکسان می‌شوند).
+ *   ۳) فهرست سیاه — رمزهایی که هر حمله‌ی حدس رمز اول امتحان می‌کند.
+ *      فهرست عمداً کوتاه است؛ هدفش گرفتن بدترین‌هاست، نه کامل بودن.
+ *   ۴) نام ایمیل داخل رمز نباشد — اولین چیزی که مهاجم با دانستن ایمیل
+ *      امتحان می‌کند.
+ *
+ * این تابع تنها مرجع است؛ فرم‌های فرانت‌اند فقط پیامش را نشان می‌دهند.
+ */
+function cyh_customer_password_problem( $pass, $email = '' ) {
+	$pass = (string) $pass;
+
+	if ( mb_strlen( $pass ) < 10 ) {
+		return 'رمز عبور باید حداقل ۱۰ کاراکتر باشد.';
+	}
+
+	$latin = cyh_to_latin_digits( $pass );
+	if ( ! preg_match( '/\p{L}/u', $latin ) || ! preg_match( '/\d/', $latin ) ) {
+		return 'رمز عبور باید هم حرف داشته باشد و هم عدد.';
+	}
+
+	$lower = mb_strtolower( $latin );
+	$blocked = [
+		'password123', 'password1234', 'qwerty12345', 'qwerty123456', 'abc1234567',
+		'1234567890a', 'a1234567890', 'iloveyou123', 'admin12345', 'welcome123',
+		'craneyadak1', 'craneyadak123', 'crane123456', 'test123456', 'pass123456',
+	];
+	if ( in_array( $lower, $blocked, true ) ) {
+		return 'این رمز عبور بسیار رایج است و به‌راحتی حدس زده می‌شود.';
+	}
+
+	// یک کاراکتر تکراری با یک رقم ته آن (aaaaaaaaa1) — طولش گول می‌زند.
+	if ( preg_match( '/^(.)\1+\d*$/u', $lower ) ) {
+		return 'رمز عبور نباید از تکرار یک کاراکتر ساخته شود.';
+	}
+
+	$local = mb_strtolower( (string) strstr( (string) $email, '@', true ) );
+	if ( mb_strlen( $local ) >= 4 && false !== mb_strpos( $lower, $local ) ) {
+		return 'رمز عبور نباید شامل نام ایمیل شما باشد.';
+	}
+
+	return null;
+}
+
 function cyh_customer_valid_phone( $digits ) {
 	return (bool) preg_match( '/^(0)?9\d{9}$/', $digits );
 }
@@ -231,8 +284,9 @@ function cyh_rest_account_register( $request ) {
 	if ( email_exists( $email ) ) {
 		return new WP_Error( 'cyh_email_taken', 'حسابی با این ایمیل قبلاً ساخته شده — وارد شوید.', [ 'status' => 409 ] );
 	}
-	if ( strlen( $pass ) < 8 ) {
-		return new WP_Error( 'cyh_weak_password', 'رمز عبور باید حداقل ۸ کاراکتر باشد.', [ 'status' => 400 ] );
+	$pw_problem = cyh_customer_password_problem( $pass, $email );
+	if ( null !== $pw_problem ) {
+		return new WP_Error( 'cyh_weak_password', $pw_problem, [ 'status' => 400 ] );
 	}
 	if ( '' !== $phone && ! cyh_customer_valid_phone( $phone ) ) {
 		return new WP_Error( 'cyh_bad_phone', 'شماره موبایل معتبر نیست.', [ 'status' => 400 ] );
@@ -355,8 +409,9 @@ function cyh_rest_account_reset_password( $request ) {
 	if ( '' === $stored_hash || $expires < time() || ! hash_equals( $stored_hash, hash( 'sha256', $token ) ) ) {
 		return new WP_Error( 'cyh_bad_reset', 'لینک نامعتبر یا منقضی است.', [ 'status' => 400 ] );
 	}
-	if ( strlen( $pass ) < 8 ) {
-		return new WP_Error( 'cyh_weak_password', 'رمز عبور باید حداقل ۸ کاراکتر باشد.', [ 'status' => 400 ] );
+	$pw_problem = cyh_customer_password_problem( $pass, $email );
+	if ( null !== $pw_problem ) {
+		return new WP_Error( 'cyh_weak_password', $pw_problem, [ 'status' => 400 ] );
 	}
 
 	wp_set_password( $pass, $user->ID );

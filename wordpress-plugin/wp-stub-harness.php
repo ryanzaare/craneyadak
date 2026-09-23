@@ -1072,7 +1072,7 @@ if ( ! is_wp_error( $dup_result ) || 'cyh_email_taken' !== $dup_result->get_erro
 	echo "✓ ثبت‌نام با ایمیل تکراری به‌درستی رد شد\n";
 }
 
-// بررسی ۲۰: رمز کوتاه‌تر از ۸ کاراکتر رد می‌شود
+// بررسی ۲۰: رمز کوتاه‌تر از ۱۰ کاراکتر رد می‌شود
 $reset_rl();
 $weak_pw = cyh_rest_account_register(
 	new WP_REST_Request( [ 'name' => 'تست', 'email' => 'weak@example.com', 'password' => '۱۲۳', 'website' => '' ] )
@@ -1080,7 +1080,33 @@ $weak_pw = cyh_rest_account_register(
 if ( ! is_wp_error( $weak_pw ) || 'cyh_weak_password' !== $weak_pw->get_error_code() ) {
 	$errors[] = 'رمز عبور کوتاه باید رد شود اما نشد';
 } else {
-	echo "✓ رمز عبور کوتاه‌تر از ۸ کاراکتر به‌درستی رد شد\n";
+	echo "✓ رمز عبور کوتاه‌تر از ۱۰ کاراکتر به‌درستی رد شد\n";
+}
+
+/* بررسی ۲۰ب (رگرسیون — رمز ساده): «حداقل ۸ کاراکتر» (سیاست قبلی) به‌تنهایی
+   `12345678` و `password` را می‌پذیرفت. هر ردیف یک ورودیِ خرابِ
+   شناخته‌شده است و *باید* رد شود؛ رمز معتبر در بررسی ۱۷ آزموده شده. */
+$weak_cases = [
+	'بدون رقم'           => 'onlylettersherexx',
+	'بدون حرف'           => '12345678901',
+	'فهرست سیاه'         => 'password123',
+	'تکرار یک کاراکتر'   => 'aaaaaaaaaa1',
+	'نام ایمیل در رمز'    => 'strongsara2024',
+	'کوتاه با ارقام فارسی' => 'رمز۱۲۳۴۵',
+];
+$weak_leaks = [];
+foreach ( $weak_cases as $label => $pw ) {
+	if ( null === cyh_customer_password_problem( $pw, 'strongsara@example.com' ) ) {
+		$weak_leaks[] = "$label ($pw)";
+	}
+}
+if ( null !== cyh_customer_password_problem( 'رمزعبور۱۲۳۴', 'karimi@example.com' ) ) {
+	$weak_leaks[] = 'رمز معتبر فارسی به‌اشتباه رد شد';
+}
+if ( $weak_leaks ) {
+	$errors[] = 'سیاست رمز عبور نشت دارد: ' . implode( '، ', $weak_leaks );
+} else {
+	echo '✓ سیاست رمز عبور هر ' . count( $weak_cases ) . " رمز سادهٔ شناخته‌شده را رد و رمز معتبر فارسی را قبول کرد\n";
 }
 
 // بررسی ۲۱: شماره موبایل نامعتبر رد می‌شود (اگر داده شده باشد)
