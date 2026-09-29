@@ -37,8 +37,8 @@ const description = 'ساخت حساب کاربری برای پیگیری سفا
         </div>
         <div class="grid sm:grid-cols-2 gap-3">
           <div>
-            <label for="reg-phone" class="block text-sm font-bold text-steel-900 mb-1">شماره موبایل (اختیاری)</label>
-            <input id="reg-phone" name="phone" type="tel" inputmode="tel" dir="ltr" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
+            <label for="reg-phone" class="block text-sm font-bold text-steel-900 mb-1">شماره موبایل</label>
+            <input id="reg-phone" name="phone" type="tel" required maxlength="11" data-digits inputmode="tel" dir="ltr" class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40" />
           </div>
           <div>
             <label for="reg-company" class="block text-sm font-bold text-steel-900 mb-1">نام شرکت (اختیاری)</label>
@@ -73,6 +73,14 @@ const description = 'ساخت حساب کاربری برای پیگیری سفا
     const form = document.getElementById('register-form');
     const msg = document.getElementById('register-msg');
     const button = document.getElementById('register-submit');
+
+    // ارقام فارسی/عربی موبایل هنگام تایپ لاتین می‌شوند (سرور هم نرمال می‌کند).
+    const phoneEl = document.getElementById('reg-phone');
+    if (phoneEl) {
+      phoneEl.addEventListener('input', function () {
+        phoneEl.value = phoneEl.value.replace(/[۰-۹]/g, function (c) { return String(c.charCodeAt(0) - 0x06f0); }).replace(/[٠-٩]/g, function (c) { return String(c.charCodeAt(0) - 0x0660); });
+      });
+    }
 
     // ⚠️ `next` (مثلاً /checkout) فقط اگر مسیر داخلی تک‌اسلش باشد پذیرفته
     // می‌شود — همان قاعده‌ی login.astro؛ وگرنه ?next=//evil.com یک

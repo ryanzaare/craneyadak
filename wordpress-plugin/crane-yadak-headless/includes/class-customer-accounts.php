@@ -331,8 +331,10 @@ function cyh_rest_account_register( $request ) {
 	if ( null !== $pw_problem ) {
 		return new WP_Error( 'cyh_weak_password', $pw_problem, [ 'status' => 400 ] );
 	}
-	if ( '' !== $phone && ! cyh_customer_valid_phone( $phone ) ) {
-		return new WP_Error( 'cyh_bad_phone', 'شماره موبایل معتبر نیست.', [ 'status' => 400 ] );
+	// ⚠️ موبایل اجباری است (تصمیم کارفرما): پشتیبانی و پیگیری سفارش به آن نیاز دارد،
+	// و تا سرویس پیامک نیامده تنها راه تماس با مشتری بدون ایمیل است.
+	if ( '' === $phone || ! cyh_customer_valid_phone( $phone ) ) {
+		return new WP_Error( 'cyh_bad_phone', 'شماره موبایل معتبر لازم است (مثل ۰۹۱۲۱۲۳۴۵۶۷).', [ 'status' => 400 ] );
 	}
 
 	$user_id = wp_insert_user(
@@ -348,9 +350,7 @@ function cyh_rest_account_register( $request ) {
 		return new WP_Error( 'cyh_register_failed', 'ثبت‌نام انجام نشد. دوباره تلاش کنید.', [ 'status' => 500 ] );
 	}
 
-	if ( '' !== $phone ) {
-		update_user_meta( $user_id, 'cyh_phone', $phone );
-	}
+	update_user_meta( $user_id, 'cyh_phone', $phone );
 	if ( '' !== $org ) {
 		update_user_meta( $user_id, 'cyh_company', $org );
 	}
@@ -592,13 +592,13 @@ function cyh_rest_account_profile( $request ) {
 	if ( mb_strlen( $name ) < 2 ) {
 		return new WP_Error( 'cyh_bad_name', 'نام را کامل وارد کنید.', [ 'status' => 400 ] );
 	}
-	if ( '' !== $phone && ! cyh_customer_valid_phone( $phone ) ) {
-		return new WP_Error( 'cyh_bad_phone', 'شماره موبایل معتبر نیست.', [ 'status' => 400 ] );
+	// ⚠️ حذف شماره ممنوع است (همان قاعده‌ی ثبت‌نام).
+	if ( '' === $phone || ! cyh_customer_valid_phone( $phone ) ) {
+		return new WP_Error( 'cyh_bad_phone', 'شماره موبایل معتبر لازم است (مثل ۰۹۱۲۱۲۳۴۵۶۷).', [ 'status' => 400 ] );
 	}
 
 	wp_update_user( [ 'ID' => $user_id, 'display_name' => $name ] );
-	// خالی = حذف؛ نه ذخیره‌ی رشته‌ی خالی که بعداً «شماره‌ی ثبت‌شده» به نظر برسد.
-	'' !== $phone ? update_user_meta( $user_id, 'cyh_phone', $phone ) : delete_user_meta( $user_id, 'cyh_phone' );
+	update_user_meta( $user_id, 'cyh_phone', $phone );
 	'' !== $org ? update_user_meta( $user_id, 'cyh_company', $org ) : delete_user_meta( $user_id, 'cyh_company' );
 
 	return rest_ensure_response( [ 'success' => true, 'profile' => cyh_customer_profile( get_userdata( $user_id ) ) ] );

@@ -40,8 +40,8 @@ const button = 'bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-ac
           </div>
           <div class="grid sm:grid-cols-2 gap-3">
             <div>
-              <label for="set-phone" class="block text-sm font-bold text-steel-900 mb-1">شماره موبایل (اختیاری)</label>
-              <input id="set-phone" name="phone" type="tel" inputmode="tel" dir="ltr" class={input} />
+              <label for="set-phone" class="block text-sm font-bold text-steel-900 mb-1">شماره موبایل</label>
+              <input id="set-phone" name="phone" type="tel" required maxlength="11" data-digits inputmode="tel" dir="ltr" class={input} />
             </div>
             <div>
               <label for="set-company" class="block text-sm font-bold text-steel-900 mb-1">نام شرکت (اختیاری)</label>
@@ -73,8 +73,14 @@ const button = 'bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-ac
 
 <script>
   import { api, errorMessage, requireLogin, setToken, cacheName } from '../../scripts/account';
+  import { toLatinDigits } from '../../lib/checkout';
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  $<HTMLInputElement>('set-phone').addEventListener('input', (e) => {
+    const el = e.currentTarget as HTMLInputElement;
+    el.value = toLatinDigits(el.value);
+  });
 
   function say(el: HTMLElement, ok: boolean, text: string) {
     el.className = `text-sm leading-7 font-bold ${ok ? 'text-green-700' : 'text-red-700'}`;

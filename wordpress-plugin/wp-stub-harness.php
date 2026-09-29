@@ -1191,6 +1191,20 @@ if ( ! is_wp_error( $bad_phone ) || 'cyh_bad_phone' !== $bad_phone->get_error_co
 	echo "✓ شماره موبایل نامعتبر در ثبت‌نام به‌درستی رد شد\n";
 }
 
+// بررسی ۲۱-ب: موبایل اجباری است — نبودن یا خالی بودن رد می‌شود و کاربری ساخته نمی‌شود
+foreach ( [ 'absent' => null, 'empty' => '', 'spaces' => '   ' ] as $label => $ph ) {
+	$reset_rl();
+	$req = [ 'name' => 'تست', 'email' => 'nophone-' . $label . '@example.com', 'password' => 'Jarsaghil2026', 'website' => '' ];
+	if ( null !== $ph ) {
+		$req['phone'] = $ph;
+	}
+	$np = cyh_rest_account_register( new WP_REST_Request( $req ) );
+	if ( ! is_wp_error( $np ) || 'cyh_bad_phone' !== $np->get_error_code() || email_exists( $req['email'] ) ) {
+		$errors[] = "ثبت‌نام بدون موبایل ($label) باید رد شود و کاربری نسازد";
+	}
+}
+echo "✓ ثبت‌نام بدون موبایل (نبود/خالی/فاصله) رد شد و کاربری ساخته نشد\n";
+
 // بررسی ۲۲: ورود با رمز درست موفق است
 $reset_rl();
 $login_ok = cyh_rest_account_login(
@@ -1347,11 +1361,15 @@ $as_customer = static function () use ( &$acct_token ) {
 
 // بررسی ۳۱: ویرایش پروفایل — نام تازه ذخیره و شماره‌ی خالی حذف می‌شود
 $as_customer();
-$prof = cyh_rest_account_profile( new WP_REST_Request( [ 'name' => 'مهندس کریمی‌نژاد', 'phone' => '', 'company' => 'فولاد کویر' ] ) );
-if ( is_wp_error( $prof ) || 'مهندس کریمی‌نژاد' !== ( $prof['profile']['name'] ?? '' ) || ! array_key_exists( 'phone', $prof['profile'] ?? [] ) || null !== $prof['profile']['phone'] ) {
-	$errors[] = 'ویرایش پروفایل نام را ذخیره نکرد یا شماره‌ی خالی را حذف نکرد';
+$prof_empty = cyh_rest_account_profile( new WP_REST_Request( [ 'name' => 'مهندس کریمی‌نژاد', 'phone' => '', 'company' => 'فولاد کویر' ] ) );
+if ( ! is_wp_error( $prof_empty ) || 'cyh_bad_phone' !== $prof_empty->get_error_code() ) {
+	$errors[] = 'ذخیره‌ی پروفایل با موبایل خالی باید رد شود';
+}
+$prof = cyh_rest_account_profile( new WP_REST_Request( [ 'name' => 'مهندس کریمی‌نژاد', 'phone' => '۰۹۱۲۱۲۳۴۵۶۷', 'company' => 'فولاد کویر' ] ) );
+if ( is_wp_error( $prof ) || 'مهندس کریمی‌نژاد' !== ( $prof['profile']['name'] ?? '' ) || '09121234567' !== ( $prof['profile']['phone'] ?? '' ) ) {
+	$errors[] = 'ویرایش پروفایل نام را ذخیره نکرد یا شماره را به ارقام لاتین نرمال نکرد';
 } else {
-	echo "✓ ویرایش پروفایل نام را ذخیره و شماره‌ی خالی را حذف کرد\n";
+	echo "✓ ویرایش پروفایل: موبایل خالی رد شد؛ نام ذخیره و شماره‌ی فارسی به لاتین نرمال شد\n";
 }
 
 // بررسی ۳۲: ویرایش پروفایل بدون توکن رد می‌شود
