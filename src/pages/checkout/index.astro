@@ -10,7 +10,15 @@
 // کارفرما: قیمت نشان‌داده‌شده محترم است).
 //
 // مالیات: فقط با تیک «درخواست فاکتور رسمی». عددش این‌جا فقط نمایش است؛
-// سرور خودش دوباره حساب می‌کند.
+// سرور خودش دوباره حساب می‌کند (checkoutTotals در src/lib/checkout.ts).
+//
+// ⚠️ پرداخت مهمان ندارد (تصمیم کارفرما): بدون توکن، صفحه مستقیم به
+// /account/login?next=/checkout می‌رود و پس از ورود/ثبت‌نام برمی‌گردد. سرور
+// هم بدون توکن ۴۰۱ می‌دهد؛ این فقط مسیر را کوتاه می‌کند.
+//
+// ⚠️ اعتبارسنجی سمت مرورگر فقط بازخورد فوری است (blur/تایپ)؛ مرجع سرور است
+// و متن خطاها عیناً همان متن سرورند (src/lib/checkout.ts). ارقام فارسی/عربی
+// هنگام تایپ و paste به لاتین تبدیل می‌شوند و سقف طول (maxlength) دارند.
 // ---------------------------------------------------------------------------
 import Layout from '../../layouts/Layout.astro';
 import { SITE } from '../../data/site';
@@ -57,7 +65,7 @@ const err = 'text-xs text-red-700 font-bold mt-1';
               </div>
               <div>
                 <label for="c-phone" class={label}>موبایل</label>
-                <input id="c-phone" data-field="phone" type="tel" inputmode="tel" dir="ltr" autocomplete="tel" required placeholder="09121234567" class={`${input} text-right`} />
+                <input id="c-phone" data-field="phone" data-digits maxlength="11" type="tel" inputmode="numeric" dir="ltr" autocomplete="tel" required placeholder="09121234567" class={`${input} text-right`} />
                 <p class={err} data-error="phone"></p>
               </div>
               <div class="sm:col-span-2">
@@ -82,11 +90,26 @@ const err = 'text-xs text-red-700 font-bold mt-1';
               </div>
               <div>
                 <label for="c-postal" class={label}>کد پستی ۱۰ رقمی</label>
-                <input id="c-postal" data-field="postal" inputmode="numeric" dir="ltr" autocomplete="postal-code" required class={`${input} text-right`} />
+                <input id="c-postal" data-field="postal" data-digits maxlength="10" inputmode="numeric" dir="ltr" autocomplete="postal-code" required class={`${input} text-right`} />
                 <p class={err} data-error="postal"></p>
               </div>
             </div>
-            <p class="text-xs text-steel-600 leading-6">هزینه‌ی ارسال <strong>پس‌کرایه</strong> است و هنگام تحویل به شرکت حمل پرداخت می‌شود.</p>
+          </fieldset>
+
+          {/* ⚠️ هیچ گزینه‌ای از پیش انتخاب نیست: انتخاب آگاهانه است، به‌خصوص
+              ارسال هوایی که شرط حقوقی دارد. متن هر برچسب باید عیناً با
+              SHIPPING_METHODS و cyh_shipping_methods() یکی باشد
+              (checkout.test.mts مقایسه می‌کند). همه پس‌کرایه‌اند: در جمع ۰. */}
+          <fieldset class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3" aria-describedby="ship-help" id="ship-group">
+            <legend class="font-black text-steel-900 px-1">روش ارسال</legend>
+            <p id="ship-help" class="text-xs text-steel-600 leading-6">هزینه‌ی ارسال در همه‌ی روش‌ها <strong>پس‌کرایه</strong> است و هنگام تحویل به شرکت حمل پرداخت می‌شود.</p>
+            <div class="space-y-2 text-sm text-steel-900">
+              <label class="flex items-start gap-2"><input type="radio" name="shipping" value="tipax" class="mt-1" /><span>تیپاکس</span></label>
+              <label class="flex items-start gap-2"><input type="radio" name="shipping" value="bus" class="mt-1" /><span>اتوبوس</span></label>
+              <label class="flex items-start gap-2"><input type="radio" name="shipping" value="freight" class="mt-1" /><span>باربری</span></label>
+              <label class="flex items-start gap-2"><input type="radio" name="shipping" value="air" class="mt-1" /><span>ارسال هوایی (پس‌کرایه - مشروط به وضعیت نرمال مرزها و پروازها)</span></label>
+            </div>
+            <p class={err} data-error="shipping"></p>
           </fieldset>
 
           <fieldset class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
@@ -109,27 +132,27 @@ const err = 'text-xs text-red-700 font-bold mt-1';
               </div>
               <div>
                 <label for="i-nid" class={label} data-inv-label="national_id">کد ملی ۱۰ رقمی</label>
-                <input id="i-nid" data-inv="national_id" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
+                <input id="i-nid" data-inv="national_id" data-digits maxlength="10" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
                 <p class={err} data-error="invoice.national_id"></p>
               </div>
               <div>
                 <label for="i-eco" class={label}>کد اقتصادی</label>
-                <input id="i-eco" data-inv="economic_code" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
+                <input id="i-eco" data-inv="economic_code" data-digits maxlength="14" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
                 <p class={err} data-error="invoice.economic_code"></p>
               </div>
               <div data-legal-only hidden>
                 <label for="i-reg" class={label}>شماره ثبت</label>
-                <input id="i-reg" data-inv="reg_no" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
+                <input id="i-reg" data-inv="reg_no" data-digits maxlength="10" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
                 <p class={err} data-error="invoice.reg_no"></p>
               </div>
               <div>
                 <label for="i-postal" class={label}>کد پستی ۱۰ رقمی</label>
-                <input id="i-postal" data-inv="postal" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
+                <input id="i-postal" data-inv="postal" data-digits maxlength="10" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
                 <p class={err} data-error="invoice.postal"></p>
               </div>
               <div>
                 <label for="i-land" class={label}>تلفن ثابت یا فکس (با پیش‌شماره)</label>
-                <input id="i-land" data-inv="landline" inputmode="tel" dir="ltr" placeholder="02112345678" class={`${input} text-right`} />
+                <input id="i-land" data-inv="landline" data-digits maxlength="11" inputmode="numeric" dir="ltr" placeholder="02112345678" class={`${input} text-right`} />
                 <p class={err} data-error="invoice.landline"></p>
               </div>
               <div class="sm:col-span-2">
@@ -147,9 +170,10 @@ const err = 'text-xs text-red-700 font-bold mt-1';
           <dl class="text-sm space-y-1.5 border-t border-steel-300 pt-3">
             <div class="flex justify-between gap-2"><dt>جمع اقلام</dt><dd id="co-subtotal" class="tabular-nums"></dd></div>
             <div id="co-vat-row" hidden class="flex justify-between gap-2"><dt>ارزش افزوده</dt><dd id="co-vat" class="tabular-nums"></dd></div>
-            <div class="flex justify-between gap-2"><dt>ارسال</dt><dd>پس‌کرایه</dd></div>
+            <div class="flex justify-between gap-2"><dt>ارسال</dt><dd id="co-ship" class="text-left">پس‌کرایه</dd></div>
             <div class="flex justify-between gap-2 font-black text-base border-t border-steel-300 pt-2"><dt>قابل پرداخت</dt><dd id="co-total" class="tabular-nums"></dd></div>
           </dl>
+          <p id="co-ship-note" hidden class="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 leading-6"></p>
           <p id="co-expiry" class="text-xs text-steel-600 leading-6"></p>
 
           <label class="flex items-start gap-2 text-xs leading-6 text-steel-800">
@@ -172,9 +196,26 @@ const err = 'text-xs text-red-700 font-bold mt-1';
   </section>
 </Layout>
 
+
 <script>
   import { browserStore, moveToQuote, readBasket } from '../../scripts/baskets';
-  import { api, errorMessage, getToken } from '../../scripts/account';
+  import { api, errorMessage, getToken, requireLogin } from '../../scripts/account';
+  import {
+    CUSTOMER_FIELDS,
+    INVOICE_FIELDS,
+    SHIPPING_METHODS,
+    checkoutTotals,
+    customerMax,
+    digitsOnly,
+    invoiceMax,
+    toLatinDigits,
+    validateCustomerField,
+    validateInvoiceField,
+    validateShipping,
+    type CustomerField,
+    type InvoiceField,
+    type InvoiceType,
+  } from '../../lib/checkout';
 
   interface Line { slug: string; name: string; sku: string; qty: number; unit: number; total: number }
   interface SessionData {
@@ -209,15 +250,18 @@ const err = 'text-xs text-red-700 font-bold mt-1';
     }
   }
 
-  function invoiceType(): 'real' | 'legal' {
-    return (document.querySelector<HTMLInputElement>('input[name="inv-type"]:checked')?.value as 'legal') === 'legal' ? 'legal' : 'real';
+  function invoiceType(): InvoiceType {
+    return document.querySelector<HTMLInputElement>('input[name="inv-type"]:checked')?.value === 'legal' ? 'legal' : 'real';
   }
 
-  /** همان فرمول سرور (cyh_checkout_totals) — فقط برای نمایش. */
+  function shippingCode(): string | null {
+    return document.querySelector<HTMLInputElement>('input[name="shipping"]:checked')?.value ?? null;
+  }
+
+  /* ------------------------------ مبلغ ------------------------------ */
+
   function totals() {
-    const sub = session?.subtotal ?? 0;
-    const vat = wanted?.checked ? Math.round((sub * (session?.vatRate ?? 0)) / 100) : 0;
-    return { sub, vat, total: sub + vat };
+    return checkoutTotals(session?.subtotal ?? 0, !!wanted?.checked, session?.vatRate ?? 0);
   }
 
   function renderTotals() {
@@ -231,20 +275,163 @@ const err = 'text-xs text-red-700 font-bold mt-1';
     if (btn && !btn.disabled) btn.textContent = `پرداخت آنلاین ${rial(t.total)}`;
   }
 
-  function renderInvoiceType() {
-    const legal = invoiceType() === 'legal';
+  function renderShipping() {
+    const code = shippingCode();
+    const method = SHIPPING_METHODS.find((m) => m.code === code);
+    const dd = $('co-ship');
+    const note = $('co-ship-note');
+    if (dd) dd.textContent = method ? `${method.label.split('(')[0].trim()} — پس‌کرایه` : 'پس‌کرایه';
+    if (note) {
+      // ⚠️ شرط روش هوایی همان‌جا که مبلغ می‌بینند هم دیده شود، نه فقط کنار گزینه.
+      note.textContent = code === 'air' ? method!.label : '';
+      note.hidden = code !== 'air';
+    }
+  }
+
+  /* --------------------------- خطاها و اعتبارسنجی --------------------------- */
+
+  /** کلید خطا: 'name' (مشتری) | 'invoice.name' | 'shipping' | 'terms'. */
+  function fieldFor(key: string): HTMLElement | null {
+    if (key.startsWith('invoice.')) return document.querySelector<HTMLElement>(`[data-inv="${key.slice(8)}"]`);
+    if (key === 'terms') return $('co-terms');
+    if (key === 'shipping') return document.querySelector<HTMLElement>('input[name="shipping"]');
+    return document.querySelector<HTMLElement>(`[data-field="${key}"]`);
+  }
+
+  function setError(key: string, text: string) {
+    const slot = document.querySelector<HTMLElement>(`[data-error="${key}"]`);
+    if (slot) slot.textContent = text;
+    const field = fieldFor(key);
+    if (!field) return;
+    if (text) field.setAttribute('aria-invalid', 'true');
+    else field.removeAttribute('aria-invalid');
+  }
+
+  function clearErrors() {
+    document.querySelectorAll<HTMLElement>('[data-error]').forEach((el) => (el.textContent = ''));
+    document.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
+  }
+
+  /** خطای یک فیلد، یا '' — همان قواعد سرور. فیلد فاکتور تا تیک نخورده معتبر است. */
+  function messageFor(key: string): string {
+    if (key === 'shipping') return validateShipping(shippingCode());
+    if (key === 'terms') return $<HTMLInputElement>('co-terms')?.checked ? '' : 'پذیرش قوانین الزامی است.';
+    if (key.startsWith('invoice.')) {
+      if (!wanted?.checked) return '';
+      const name = key.slice(8) as InvoiceField;
+      const el = document.querySelector<HTMLInputElement>(`[data-inv="${name}"]`);
+      return el ? validateInvoiceField(name, el.value, invoiceType()) : '';
+    }
+    const el = document.querySelector<HTMLInputElement>(`[data-field="${key}"]`);
+    return el ? validateCustomerField(key as CustomerField, el.value) : '';
+  }
+
+  /** همه‌ی خطاهای فعلی فرم به ترتیب نمایش. */
+  function allErrors(): Record<string, string> {
+    const keys = [
+      ...CUSTOMER_FIELDS,
+      'shipping',
+      ...(wanted?.checked ? INVOICE_FIELDS.map((f) => `invoice.${f}`) : []),
+      'terms',
+    ];
+    const out: Record<string, string> = {};
+    for (const k of keys) {
+      // reg_no فقط برای حقوقی؛ فیلدش پنهان است و پیام تهی برمی‌گرداند.
+      const m = messageFor(k);
+      if (m) out[k] = m;
+    }
+    return out;
+  }
+
+  function showErrors(errors: Record<string, string>) {
+    let first: HTMLElement | null = null;
+    for (const [key, text] of Object.entries(errors)) {
+      setError(key, text);
+      first ??= fieldFor(key);
+    }
+    first?.focus();
+  }
+
+  /* -------------------- ارقام: نرمال‌سازی + سقف طول -------------------- */
+
+  /** ارقام فارسی/عربی → لاتین، حذف هرچه رقم نیست، برش تا maxlength. */
+  function normalizeDigits(el: HTMLInputElement) {
+    const max = el.maxLength > 0 ? el.maxLength : undefined;
+    const clean = digitsOnly(el.value).slice(0, max);
+    if (clean !== el.value) el.value = clean;
+  }
+
+  /** سقف طول فیلدهای فاکتور بسته به حقیقی/حقوقی (کد ملی ۱۰، شناسه ملی ۱۱). */
+  function applyInvoiceType() {
+    const type = invoiceType();
+    const legal = type === 'legal';
     document.querySelectorAll<HTMLElement>('[data-legal-only]').forEach((el) => (el.hidden = !legal));
     const nameLabel = document.querySelector('[data-inv-label="name"]');
     if (nameLabel) nameLabel.textContent = legal ? 'نام کامل شرکت' : 'نام و نام خانوادگی';
     const idLabel = document.querySelector('[data-inv-label="national_id"]');
     if (idLabel) idLabel.textContent = legal ? 'شناسه ملی ۱۱ رقمی' : 'کد ملی ۱۰ رقمی';
+
+    for (const f of INVOICE_FIELDS) {
+      const el = document.querySelector<HTMLInputElement>(`[data-inv="${f}"]`);
+      const max = invoiceMax(f, type);
+      if (el && max) el.maxLength = max;
+    }
+    const nid = document.querySelector<HTMLInputElement>('[data-inv="national_id"]');
+    if (nid) {
+      normalizeDigits(nid); // ۱۱ رقم واردشده‌ی حقوقی با برگشت به حقیقی به ۱۰ بریده می‌شود
+      // قاعده‌ی نوع عوض شده؛ فقط اگر کاربر قبلاً به این فیلد رسیده یا خطا دارد بازبینی کن.
+      if (nid.dataset.touched || nid.getAttribute('aria-invalid')) setError('invoice.national_id', messageFor('invoice.national_id'));
+    }
   }
+
+  for (const f of CUSTOMER_FIELDS) {
+    const max = customerMax(f);
+    const el = document.querySelector<HTMLInputElement>(`[data-field="${f}"]`);
+    if (el && max) el.maxLength = max;
+  }
+
+  /* بازخورد زنده: خروج از فیلد (blur) → اعتبارسنجی؛ پس از آن با هر تایپ. */
+  function keyOf(el: HTMLElement): string | null {
+    if (el.dataset.field) return el.dataset.field;
+    if (el.dataset.inv) return `invoice.${el.dataset.inv}`;
+    return null;
+  }
+
+  form?.addEventListener('input', (e) => {
+    const el = e.target as HTMLInputElement;
+    if (el.matches?.('[data-digits]')) normalizeDigits(el);
+    const key = el.matches?.('[data-field],[data-inv]') ? keyOf(el) : null;
+    if (key && (el.dataset.touched || el.getAttribute('aria-invalid'))) setError(key, messageFor(key));
+  });
+
+  form?.addEventListener('focusout', (e) => {
+    const el = e.target as HTMLInputElement;
+    if (!el.matches?.('[data-field],[data-inv]')) return;
+    const key = keyOf(el);
+    if (!key) return;
+    el.dataset.touched = '1';
+    setError(key, messageFor(key));
+  });
+
+  document.querySelectorAll('input[name="shipping"]').forEach((r) =>
+    r.addEventListener('change', () => {
+      setError('shipping', '');
+      renderShipping();
+    }),
+  );
+  $('co-terms')?.addEventListener('change', () => setError('terms', messageFor('terms')));
 
   wanted?.addEventListener('change', () => {
     show('inv-fields', wanted.checked);
+    if (!wanted.checked) {
+      document.querySelectorAll<HTMLElement>('[data-error^="invoice."]').forEach((el) => (el.textContent = ''));
+      document.querySelectorAll('[data-inv][aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
+    }
     renderTotals();
   });
-  document.querySelectorAll('input[name="inv-type"]').forEach((r) => r.addEventListener('change', renderInvoiceType));
+  document.querySelectorAll('input[name="inv-type"]').forEach((r) => r.addEventListener('change', applyInvoiceType));
+
+  /* ------------------------------ نمایش ------------------------------ */
 
   function renderLines(lines: Line[]) {
     const ul = $('co-lines');
@@ -282,9 +469,14 @@ const err = 'text-xs text-red-700 font-bold mt-1';
     }
     const res = await api<SessionData>('/checkout/session', {
       method: 'POST',
+      auth: true,
       body: { items: cart.map(({ slug, qty }) => ({ slug, qty })) },
     });
     show('co-loading', false);
+    if (res.status === 401) {
+      requireLogin(); // api() توکن مرده را پاک کرده؛ به ورود و برگشت به /checkout
+      return;
+    }
     if (!res.ok) {
       fatal(errorMessage(res, 'بررسی قیمت‌ها انجام نشد. صفحه را دوباره باز کنید.'));
       return;
@@ -327,7 +519,7 @@ const err = 'text-xs text-red-700 font-bold mt-1';
     show('co-form', true);
   }
 
-  /** پیش‌پر کردن از حساب — اگر وارد شده است. شکستش هیچ چیز را نمی‌شکند. */
+  /** پیش‌پر کردن از حساب. شکستش هیچ چیز را نمی‌شکند؛ خطا هم نشان داده نمی‌شود. */
   async function prefill() {
     if (!getToken()) return;
     // شکل پاسخ: cyh_rest_account_me → { profile: cyh_customer_profile() }
@@ -336,32 +528,13 @@ const err = 'text-xs text-red-700 font-bold mt-1';
     if (!u) return;
     const fill = (field: string, v?: string | null) => {
       const el = document.querySelector<HTMLInputElement>(`[data-field="${field}"]`);
-      if (el && !el.value && v) el.value = v;
+      if (!el || el.value || !v) return;
+      el.value = v;
+      if (el.matches('[data-digits]')) normalizeDigits(el); // پروفایل ممکن است ارقام فارسی داشته باشد
     };
     fill('name', u.name);
     fill('phone', u.phone);
     fill('email', u.email);
-  }
-
-  function clearErrors() {
-    document.querySelectorAll<HTMLElement>('[data-error]').forEach((el) => (el.textContent = ''));
-    document.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
-  }
-
-  function showErrors(errors: Record<string, string>) {
-    let first: HTMLElement | null = null;
-    for (const [key, text] of Object.entries(errors)) {
-      const slot = document.querySelector<HTMLElement>(`[data-error="${key}"]`);
-      if (slot) slot.textContent = text;
-      const field = key.startsWith('invoice.')
-        ? document.querySelector<HTMLElement>(`[data-inv="${key.slice(8)}"]`)
-        : key === 'terms'
-          ? $('co-terms')
-          : document.querySelector<HTMLElement>(`[data-field="${key}"]`);
-      field?.setAttribute('aria-invalid', 'true');
-      first ??= field;
-    }
-    first?.focus();
   }
 
   form?.addEventListener('submit', async (e) => {
@@ -371,10 +544,21 @@ const err = 'text-xs text-red-700 font-bold mt-1';
     const msg = $('co-msg');
     if (msg) msg.textContent = '';
 
+    // ارقام یک بار دیگر پاک می‌شوند تا مقدار ارسالی همیشه لاتین باشد
+    // (autofill مرورگر رویداد input نمی‌دهد).
+    document.querySelectorAll<HTMLInputElement>('[data-digits]').forEach(normalizeDigits);
+
+    const local = allErrors();
+    if (Object.keys(local).length) {
+      showErrors(local);
+      if (msg) msg.textContent = 'چند فیلد نیاز به اصلاح دارد؛ موارد قرمز را بررسی کنید.';
+      return; // بدون رفت‌وبرگشت به سرور
+    }
+
     const customer: Record<string, string> = {};
-    document.querySelectorAll<HTMLInputElement>('[data-field]').forEach((el) => (customer[el.dataset.field!] = el.value));
+    document.querySelectorAll<HTMLInputElement>('[data-field]').forEach((el) => (customer[el.dataset.field!] = toLatinDigits(el.value)));
     const invoice: Record<string, string | boolean> = { wanted: !!wanted?.checked, type: invoiceType() };
-    document.querySelectorAll<HTMLInputElement>('[data-inv]').forEach((el) => (invoice[el.dataset.inv!] = el.value));
+    document.querySelectorAll<HTMLInputElement>('[data-inv]').forEach((el) => (invoice[el.dataset.inv!] = toLatinDigits(el.value)));
 
     const btn = $<HTMLButtonElement>('co-submit');
     if (btn) {
@@ -390,6 +574,7 @@ const err = 'text-xs text-red-700 font-bold mt-1';
           session: session.session,
           customer,
           invoice,
+          shipping: shippingCode() ?? '',
           terms: !!$<HTMLInputElement>('co-terms')?.checked,
           website: (form.querySelector<HTMLInputElement>('input[name="website"]')?.value ?? ''),
         },
@@ -403,6 +588,10 @@ const err = 'text-xs text-red-700 font-bold mt-1';
     }
     if (btn) btn.disabled = false;
     renderTotals();
+    if (res.status === 401) {
+      requireLogin();
+      return;
+    }
     if (res.status === 410 && res.data.expired) {
       await loadSession('مهلت قیمت‌های قبلی تمام شد و قیمت‌ها تازه شدند. لطفاً مبلغ را دوباره بررسی و پرداخت کنید.');
       return;
@@ -411,6 +600,10 @@ const err = 'text-xs text-red-700 font-bold mt-1';
     if (msg) msg.textContent = errorMessage(res, 'پرداخت آغاز نشد. دوباره تلاش کنید.');
   });
 
-  renderInvoiceType();
-  loadSession().then(prefill);
+  // ⚠️ بدون توکن هیچ درخواستی نمی‌رود؛ requireLogin همین‌جا ریدایرکت می‌کند.
+  if (requireLogin()) {
+    applyInvoiceType();
+    renderShipping();
+    loadSession().then(prefill);
+  }
 </script>

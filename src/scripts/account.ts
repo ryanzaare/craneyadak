@@ -36,9 +36,36 @@ export function setToken(token: string): boolean {
   }
 }
 
+/**
+ * نام نمایشی برای هدر.
+ *
+ * ⚠️ هدر در هر صفحه اجرا می‌شود و سایت استاتیک است؛ اگر هر بار /account/me
+ * صدا می‌زد، هر صفحه یک درخواست به وردپرس می‌داشت. پس نام یک بار گرفته و
+ * کنار توکن نگه داشته می‌شود و با خروج/۴۰۱ (clearToken) همراه توکن پاک
+ * می‌شود — وگرنه نام کاربر قبلی روی دستگاه مشترک می‌ماند.
+ */
+export const NAME_KEY = 'cy-account-name-v1';
+
+export function cachedName(): string | null {
+  try {
+    return localStorage.getItem(NAME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function cacheName(name: string): void {
+  try {
+    if (name.trim()) localStorage.setItem(NAME_KEY, name.trim());
+  } catch {
+    /* بدون ذخیره، هدر به «حساب من» برمی‌گردد. */
+  }
+}
+
 export function clearToken(): void {
   try {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(NAME_KEY);
   } catch {
     /* مرورگری که localStorage را بسته، از ابتدا توکنی نداشت. */
   }

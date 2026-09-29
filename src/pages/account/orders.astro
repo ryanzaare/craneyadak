@@ -1,0 +1,157 @@
+---
+// src/pages/account/orders.astro
+// ---------------------------------------------------------------------------
+// «سفارش‌های من» — تاریخچه‌ی پرداخت‌های آنلاین کاربر واردشده.
+//
+// ⚠️ فقط *سفارش* (پرداخت آنلاین)؛ استعلام‌ها به کاربر وصل نیستند (بدون
+// ورود هم ثبت می‌شوند) و از /track با کد پیگیری دیده می‌شوند.
+//
+// وضعیت‌ها فقط «وضعیت پرداخت»اند: در انتظار پرداخت / پرداخت‌شده / ناموفق.
+// مراحل انجام سفارش (آماده‌سازی، ارسال، تحویل) و کد رهگیری بارنامه هنوز
+// در پنل وجود ندارند؛ آن‌ها را این‌جا حدس نمی‌زنیم (backlog، فاز ۵).
+// همه‌ی متن‌ها با textContent ساخته می‌شوند: نام کالا از پنل می‌آید.
+// ---------------------------------------------------------------------------
+import Layout from '../../layouts/Layout.astro';
+import AccountNav from '../../components/AccountNav.astro';
+import { SITE } from '../../data/site';
+
+const title = `سفارش‌های من | ${SITE.name}`;
+const description = 'تاریخچه‌ی سفارش‌ها و وضعیت پرداخت.';
+---
+
+<Layout title={title} description={description} noindex>
+  <section class="bg-steel-900 text-white px-4 py-10">
+    <div class="max-w-5xl mx-auto">
+      <h1 class="text-2xl md:text-3xl font-black">سفارش‌های من</h1>
+    </div>
+  </section>
+
+  <section class="bg-white px-4 py-10">
+    <div class="max-w-5xl mx-auto grid grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
+      <AccountNav />
+
+      <div class="min-w-0">
+        <p id="orders-loading" class="text-steel-600">در حال بارگذاری…</p>
+        <p id="orders-error" hidden class="text-sm leading-7 text-red-700 font-bold bg-red-50 border border-red-200 rounded-md p-4" role="alert"></p>
+        <div id="orders-empty" hidden class="text-steel-700 leading-7">
+          <p class="mb-3">هنوز پرداخت آنلاینی از این حساب ثبت نشده است.</p>
+          <a href="/products" class="inline-block bg-accent text-white px-5 py-2.5 rounded-md font-black hover:bg-accent-ink">مشاهده‌ی محصولات</a>
+        </div>
+        <ul id="orders-list" role="list" class="space-y-4"></ul>
+        <p class="text-xs text-steel-600 leading-6 mt-6">
+          استعلام‌های قیمت به حساب وصل نمی‌شوند؛ با کد پیگیری از
+          <a href="/track" class="text-accent-ink font-bold hover:underline">صفحه‌ی پیگیری</a> ببینید.
+        </p>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { api, errorMessage, requireLogin } from '../../scripts/account';
+
+  interface OrderItem { name: string; sku: string; qty: number; unit: number }
+  interface Order {
+    code: string;
+    date: string;
+    payment: 'pending' | 'paid' | 'failed';
+    paymentLabel: string;
+    subtotal: number;
+    vat: number;
+    total: number;
+    invoice: boolean;
+    shipping: string;
+    refId: string;
+    sandbox: boolean;
+    items: OrderItem[];
+  }
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const rial = (n: number) => `${n.toLocaleString('fa-IR')} ریال`;
+  const BADGE: Record<string, string> = {
+    paid: 'bg-emerald-100 text-emerald-900 border-emerald-600',
+    pending: 'bg-amber-100 text-amber-900 border-amber-500',
+    failed: 'bg-red-100 text-red-900 border-red-600',
+  };
+
+  function el(tag: string, cls: string, text = ''): HTMLElement {
+    const node = document.createElement(tag);
+    node.className = cls;
+    if (text) node.textContent = text;
+    return node;
+  }
+
+  function row(label: string, value: string, ltr = false): HTMLElement {
+    const div = el('div', 'flex gap-2');
+    div.append(el('dt', 'text-steel-600 w-24 shrink-0', label));
+    const dd = el('dd', 'text-steel-900 min-w-0 break-words', value);
+    if (ltr) dd.setAttribute('dir', 'ltr');
+    div.append(dd);
+    return div;
+  }
+
+  function card(o: Order): HTMLElement {
+    const li = el('li', 'bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3');
+
+    const head = el('div', 'flex flex-wrap items-center justify-between gap-2');
+    const code = el('span', 'font-mono font-black text-steel-900', o.code);
+    code.setAttribute('dir', 'ltr');
+    const badges = el('div', 'flex flex-wrap items-center gap-2');
+    badges.append(el('span', `text-xs font-bold border rounded-full px-2.5 py-0.5 ${BADGE[o.payment] ?? BADGE.pending}`, o.paymentLabel));
+    if (o.sandbox) badges.append(el('span', 'text-xs font-bold border border-amber-500 bg-amber-50 text-amber-900 rounded-full px-2.5 py-0.5', 'آزمایشی'));
+    head.append(code, badges);
+    li.append(head);
+
+    const ul = el('ul', 'divide-y divide-steel-200 text-sm border-y border-steel-200');
+    ul.setAttribute('role', 'list');
+    for (const it of o.items) {
+      const item = el('li', 'py-2 flex justify-between gap-3');
+      const left = el('div', 'min-w-0');
+      left.append(el('p', 'font-bold text-steel-900 leading-6', it.name));
+      left.append(el('p', 'text-xs text-steel-600', `${it.qty.toLocaleString('fa-IR')} × ${rial(it.unit)}`));
+      item.append(left, el('p', 'shrink-0 tabular-nums font-bold', rial(it.qty * it.unit)));
+      ul.append(item);
+    }
+    li.append(ul);
+
+    const dl = el('dl', 'text-sm space-y-1.5');
+    dl.append(row('تاریخ', o.date ? new Date(o.date).toLocaleDateString('fa-IR') : '—'));
+    if (o.vat > 0) dl.append(row('ارزش افزوده', rial(o.vat)));
+    dl.append(row('مبلغ کل', rial(o.total)));
+    if (o.invoice) dl.append(row('فاکتور', 'فاکتور رسمی درخواست شده'));
+    if (o.shipping) dl.append(row('روش ارسال', o.shipping));
+    if (o.refId) dl.append(row('شماره پیگیری پرداخت', o.refId, true));
+    li.append(dl);
+
+    const link = el('a', 'inline-block text-sm text-accent-ink font-bold hover:underline', 'پیگیری سفارش ←') as HTMLAnchorElement;
+    link.href = `/track?code=${encodeURIComponent(o.code)}`;
+    li.append(link);
+    return li;
+  }
+
+  async function load() {
+    if (!requireLogin()) return;
+    const res = await api<{ orders?: Order[] }>('/account/orders', { auth: true });
+    $('orders-loading').hidden = true;
+
+    if (res.status === 401) {
+      requireLogin();
+      return;
+    }
+    if (!res.ok) {
+      const err = $('orders-error');
+      err.textContent = errorMessage(res, 'سفارش‌ها بارگذاری نشد. کمی بعد دوباره تلاش کنید.');
+      err.hidden = false;
+      return;
+    }
+    const orders = res.data.orders ?? [];
+    if (!orders.length) {
+      $('orders-empty').hidden = false;
+      return;
+    }
+    const list = $('orders-list');
+    for (const o of orders) list.append(card(o));
+  }
+
+  void load();
+</script>

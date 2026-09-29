@@ -173,7 +173,7 @@ const navLinks = [
           <svg class="w-7 h-7 md:w-6 md:h-6" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.1a7.5 7.5 0 0115 0A17.9 17.9 0 0112 21.75c-2.68 0-5.22-.58-7.5-1.65z" />
           </svg>
-          <span class="hidden md:inline">حساب من</span>
+          <span id="account-name" class="hidden md:inline max-w-[9rem] truncate">حساب من</span>
           <svg id="account-chevron" class="hidden md:block w-4 h-4 text-gray-500 transition-transform" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
         </button>
 
@@ -315,7 +315,7 @@ const navLinks = [
 </header>
 
 <script>
-  import { getToken, logout } from '../scripts/account';
+  import { api, cacheName, cachedName, getToken, logout } from '../scripts/account';
 
   /* ----------------------- منوی حساب کاربری -----------------------
      فقط وجود توکن بررسی می‌شود، نه اعتبارش — اعتبارسنجی یک درخواست شبکه
@@ -330,6 +330,28 @@ const navLinks = [
   if (getToken() && accountLink && accountWrap && accountTrigger && accountMenu) {
     accountLink.classList.add('hidden');
     accountWrap.classList.remove('hidden');
+
+    /* نام کاربر به‌جای «حساب من». تا رسیدن نام، متن پیش‌فرض می‌ماند (بدون
+       پرش خالی). یک بار از سرور گرفته و نگه داشته می‌شود (cachedName)؛
+       شکست شبکه هیچ‌چیز را نمی‌شکند. textContent، نه innerHTML: نام را
+       خود کاربر نوشته است. */
+    const nameEl = document.getElementById('account-name');
+    const showName = (name: string) => {
+      if (!nameEl || !name) return;
+      nameEl.textContent = name;
+      nameEl.title = name;
+      accountTrigger.setAttribute('aria-label', `منوی حساب ${name}`);
+    };
+    const known = cachedName();
+    if (known) showName(known);
+    else
+      api<{ profile?: { name?: string } }>('/account/me', { auth: true }).then((res) => {
+        const name = res.ok ? res.data.profile?.name : '';
+        if (name) {
+          cacheName(name);
+          showName(name);
+        }
+      });
 
     let closeTimer: ReturnType<typeof setTimeout> | undefined;
     const setOpen = (open: boolean) => {

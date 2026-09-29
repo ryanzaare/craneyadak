@@ -23,7 +23,7 @@ const button = 'bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-ac
   </section>
 
   <section class="bg-white px-4 py-10">
-    <div class="max-w-5xl mx-auto grid md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
+    <div class="max-w-5xl mx-auto grid grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
       <AccountNav />
 
       <div class="min-w-0 space-y-8">
@@ -72,7 +72,7 @@ const button = 'bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-ac
 </Layout>
 
 <script>
-  import { api, errorMessage, requireLogin, setToken } from '../../scripts/account';
+  import { api, errorMessage, requireLogin, setToken, cacheName } from '../../scripts/account';
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -131,6 +131,13 @@ const button = 'bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-ac
       }),
     );
     if (res.status === 401) return requireLogin();
+    // ⚠️ نام کش‌شده‌ی هدر باید همین‌جا تازه شود، وگرنه تا خروج بعدی نام قدیمی می‌ماند.
+    if (res.ok) {
+      const saved = $<HTMLInputElement>('set-name').value;
+      cacheName(saved);
+      const headerName = document.getElementById('account-name');
+      if (headerName && saved.trim()) headerName.textContent = saved.trim();
+    }
     say(msg, res.ok, res.ok ? 'مشخصات ذخیره شد.' : errorMessage(res, 'ذخیره انجام نشد.'));
   });
 

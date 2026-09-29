@@ -23,7 +23,7 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
   </section>
 
   <section class="bg-white px-4 py-10">
-    <div class="max-w-5xl mx-auto grid md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
+    <div class="max-w-5xl mx-auto grid grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
       <AccountNav />
 
       <div class="min-w-0">
@@ -44,7 +44,10 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
             </dl>
           </div>
 
-          <h2 class="font-black text-steel-900 mb-3">سفارش‌ها و استعلام‌ها</h2>
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <h2 class="font-black text-steel-900">سفارش‌ها و استعلام‌ها</h2>
+            <a href="/account/orders" class="text-sm text-accent-ink font-bold hover:underline">جزئیات سفارش‌ها ←</a>
+          </div>
           <p id="orders-empty" hidden class="text-steel-600 leading-7 mb-4">
             هنوز سفارشی به این حساب وصل نیست.
             <a href="/track" class="text-accent-ink font-bold hover:underline">پیگیری با کد رهگیری ←</a>
@@ -57,7 +60,7 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
 </Layout>
 
 <script>
-  import { api, errorMessage, requireLogin } from '../../scripts/account';
+  import { api, cacheName, errorMessage, requireLogin } from '../../scripts/account';
 
   const STATUS_LABEL: Record<string, string> = {
     new: 'ثبت‌شده',
@@ -91,6 +94,7 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
 
     $('account-body')!.hidden = false;
     const p = res.data.profile ?? {};
+    if (p.name) cacheName(p.name);
     $('profile-name')!.textContent = p.name || '—';
     $('profile-email')!.textContent = p.email || '—';
     if (p.phone) {

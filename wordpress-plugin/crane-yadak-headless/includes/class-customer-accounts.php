@@ -277,6 +277,11 @@ function cyh_register_customer_routes() {
 		'/account/me',
 		[ 'methods' => 'GET', 'permission_callback' => '__return_true', 'callback' => 'cyh_rest_account_me' ]
 	);
+	register_rest_route(
+		'crane-yadak/v1',
+		'/account/orders',
+		[ 'methods' => 'GET', 'permission_callback' => '__return_true', 'callback' => 'cyh_rest_account_orders' ]
+	);
 	register_rest_route( 'crane-yadak/v1', '/account/profile', array_merge( $public, [ 'callback' => 'cyh_rest_account_profile' ] ) );
 	register_rest_route( 'crane-yadak/v1', '/account/change-password', array_merge( $public, [ 'callback' => 'cyh_rest_account_change_password' ] ) );
 	register_rest_route(
@@ -467,10 +472,9 @@ function cyh_rest_account_me( $request ) {
 		return $user_id;
 	}
 
-	/* ⚠️ سفارش‌ها هنوز به حساب وصل نمی‌شوند — ایست ۲ (درگاه پرداخت) که این
-	   اتصال را می‌سازد هنوز نوشته نشده. لیست خالی صادقانه است؛ ساختن یک
-	   اتصال حدسی (مثلاً تطبیق با شماره تلفن) دقیقاً همان داده‌ی ساختگی‌ای
-	   است که قاعده‌ی ۲ پروژه ممنوعش می‌کند. */
+	/* فهرست کوتاه داشبورد: سفارش‌ها (post_author = کاربر، از ایست ۲ فاز ۴) و
+	   هر رکورد دیگری که به این حساب وصل باشد. استعلام مهمان به حساب وصل
+	   نیست و اینجا نمی‌آید. جزئیات کامل: /account/orders. */
 	$orders = get_posts(
 		[
 			'post_type'   => 'cyh_quote',
@@ -496,6 +500,71 @@ function cyh_rest_account_me( $request ) {
 			),
 		]
 	);
+}
+
+/**
+ * سفارش‌های من — فقط رکوردهای kind=order همین کاربر، تازه‌ترین اول.
+ *
+ * ⚠️ نمایش بر پایه‌ی post_author است، نه شماره‌ی تلفن یا ایمیل: تطبیق با
+ * تلفن یعنی هر کس شماره‌ی دیگری را بنویسد سفارش او را ببیند. سفارش‌ها
+ * فقط از مسیر /checkout/pay ساخته می‌شوند که ورود را الزامی می‌کند.
+ *
+ * وضعیت پرداخت (cyh_payment) تنها وضعیتی است که برای سفارش معنا دارد؛
+ * فهرست وضعیت‌های cyh_status (ثبت‌شده/پاسخ داده شده…) مال استعلام است.
+ * شماره‌ی پیگیری زرین‌پال فقط برای سفارش پرداخت‌شده برمی‌گردد.
+ */
+function cyh_rest_account_orders( $request ) {
+	$user_id = cyh_customer_authenticate_request( $request );
+	if ( is_wp_error( $user_id ) ) {
+		return $user_id;
+	}
+
+	$labels = [
+		'pending' => 'در انتظار پرداخت',
+		'paid'    => 'پرداخت‌شده',
+		'failed'  => 'ناموفق',
+	];
+	$posts  = get_posts(
+		[
+			'post_type'   => 'cyh_quote',
+			'author'      => $user_id,
+			'post_status' => 'publish',
+			'numberposts' => 100,
+		]
+	);
+	$out    = [];
+	foreach ( $posts as $post ) {
+		if ( 'order' !== get_post_meta( $post->ID, 'cyh_kind', true ) ) {
+			continue;
+		}
+		$payment = (string) get_post_meta( $post->ID, 'cyh_payment', true );
+		$payment = isset( $labels[ $payment ] ) ? $payment : 'pending';
+		$out[]   = [
+			'code'         => (string) get_post_meta( $post->ID, 'cyh_code', true ),
+			'date'         => get_the_date( 'Y-m-d', $post ),
+			'payment'      => $payment,
+			'paymentLabel' => $labels[ $payment ],
+			'subtotal'     => (int) get_post_meta( $post->ID, 'cyh_subtotal', true ),
+			'vat'          => (int) get_post_meta( $post->ID, 'cyh_vat', true ),
+			'total'        => (int) get_post_meta( $post->ID, 'cyh_total', true ),
+			'invoice'      => is_array( get_post_meta( $post->ID, 'cyh_invoice', true ) ),
+			'shipping'     => (string) get_post_meta( $post->ID, 'cyh_shipping_label', true ),
+			'refId'        => 'paid' === $payment ? (string) get_post_meta( $post->ID, 'cyh_ref_id', true ) : '',
+			'sandbox'      => (bool) get_post_meta( $post->ID, 'cyh_sandbox', true ),
+			'items'        => array_map(
+				static function ( $item ) {
+					return [
+						'name' => (string) ( $item['name'] ?? '' ),
+						'sku'  => (string) ( $item['sku'] ?? '' ),
+						'qty'  => (int) ( $item['qty'] ?? 0 ),
+						'unit' => (int) ( $item['unit'] ?? 0 ),
+					];
+				},
+				(array) get_post_meta( $post->ID, 'cyh_items', true )
+			),
+		];
+	}
+	return rest_ensure_response( [ 'orders' => $out ] );
 }
 
 /* =========================================================================

@@ -35,6 +35,9 @@
  *     هم‌زمان، سفارش را دوباره پردازش نمی‌کند (قفل add_option).
  *   • مالیات ارزش افزوده فقط با تیک «درخواست فاکتور رسمی» و فقط سمت سرور
  *     (تصمیم کارفرما، ۳ مهر ۱۴۰۵). نرخ تنظیم پنل است، نه هاردکد.
+ *   • پرداخت مهمان ممنوع است (تصمیم کارفرما، ۷ مهر ۱۴۰۵): فاکتور رسمی به
+ *     هویت ثبت‌شده نیاز دارد. هر دو مسیر session و pay بدون توکن معتبر
+ *     ۴۰۱ می‌دهند؛ سفارش همیشه به یک کاربر وصل است.
  *
  * API زرین‌پال v4 از مستندات رسمی (zarinpal.com/docs، ۷ مهر ۱۴۰۵):
  * request.json / verify.json / StartPay؛ sandbox همان مسیرها روی
@@ -299,15 +302,52 @@ function cyh_checkout_validate_invoice( $raw ) {
 	return [ $clean, $errors ];
 }
 
-/** مبالغ به ریال، عدد صحیح. مالیات فقط با فاکتور رسمی. */
+/**
+ * روش‌های ارسال. همه پس‌کرایه‌اند: هزینه‌ی ارسال در مبلغ پرداختی نیست.
+ * ⚠️ عبارت داخل پرانتز روش هوایی الزام حقوقی کارفرماست؛ متن *کامل* در
+ * سفارش ثبت می‌شود (cyh_shipping_label) تا بعداً معلوم باشد خریدار چه
+ * شرطی را دیده است. همین فهرست در src/lib/checkout.ts (SHIPPING_METHODS)
+ * تکرار شده و src/lib/checkout.test.mts آن‌ها را با هم مقایسه می‌کند.
+ */
+function cyh_shipping_methods() {
+	return [
+		'tipax'   => 'تیپاکس',
+		'bus'     => 'اتوبوس',
+		'freight' => 'باربری',
+		'air'     => 'ارسال هوایی (پس‌کرایه - مشروط به وضعیت نرمال مرزها و پروازها)',
+	];
+}
+
+/** کد روش ارسال → کد پاک، یا ['', خطا]. */
+function cyh_checkout_validate_shipping( $raw ) {
+	// ⚠️ تطبیق دقیق، نه sanitize_key: آن حروف بزرگ را کوچک می‌کند و آرایه‌ی
+	// ارسالی را با هشدار «Array to string» می‌شکند. کد باید عیناً یکی از
+	// چهار کد فهرست باشد.
+	$code    = is_string( $raw ) ? $raw : '';
+	$methods = cyh_shipping_methods();
+	if ( ! isset( $methods[ $code ] ) ) {
+		return [ '', 'روش ارسال را انتخاب کنید.' ];
+	}
+	return [ $code, '' ];
+}
+
+/**
+ * مبالغ به ریال، عدد صحیح. مالیات فقط با فاکتور رسمی.
+ *
+ * ⚠️ گرد کردن فقط یک بار و روی جمع نهایی: total = round(sub × (۱۰۰+نرخ) ÷ ۱۰۰)
+ * و vat = total − sub. مالیات جدا گرد نمی‌شود، پس اقلام همیشه با جمع
+ * می‌خوانند و ریال کسری وجود ندارد (زرین‌پال عدد صحیح می‌خواهد). چون
+ * subtotal صحیح است، نتیجه با sub + round(sub × نرخ ÷ ۱۰۰) یکی است.
+ * همان فرمول در src/lib/checkout.ts (checkoutTotals).
+ */
 function cyh_checkout_totals( $subtotal, $invoice_wanted, $rate ) {
 	$subtotal = (int) round( $subtotal );
-	$vat      = $invoice_wanted ? (int) round( $subtotal * $rate / 100 ) : 0;
+	$total    = $invoice_wanted ? (int) round( $subtotal * ( 100 + $rate ) / 100 ) : $subtotal;
 	return [
 		'subtotal' => $subtotal,
 		'vat_rate' => $invoice_wanted ? (float) $rate : 0.0,
-		'vat'      => $vat,
-		'total'    => $subtotal + $vat,
+		'vat'      => $total - $subtotal,
+		'total'    => $total,
 	];
 }
 
@@ -413,7 +453,26 @@ function cyh_register_checkout_routes() {
 }
 add_action( 'rest_api_init', 'cyh_register_checkout_routes' );
 
+/**
+ * پرداخت مهمان ممنوع است — کاربر را از توکن می‌شناسد، وگرنه پاسخ ۴۰۱.
+ * خروجی: شناسه‌ی کاربر (int) یا WP_REST_Response ۴۰۱.
+ */
+function cyh_checkout_require_user( $request ) {
+	$auth = cyh_customer_authenticate_request( $request );
+	if ( is_wp_error( $auth ) ) {
+		return new WP_REST_Response(
+			[ 'ok' => false, 'auth' => true, 'message' => 'برای پرداخت باید وارد حساب کاربری شوید.' ],
+			401
+		);
+	}
+	return (int) $auth;
+}
+
 function cyh_rest_checkout_session( $request ) {
+	$user = cyh_checkout_require_user( $request );
+	if ( $user instanceof WP_REST_Response ) {
+		return $user;
+	}
 	if ( cyh_checkout_rate_limited( 'session', 30 ) ) {
 		return new WP_REST_Response( [ 'ok' => false, 'message' => 'تعداد درخواست زیاد بود. چند دقیقه بعد دوباره امتحان کنید.' ], 429 );
 	}
@@ -520,6 +579,10 @@ function cyh_rest_checkout_pay( $request ) {
 	if ( '' !== trim( (string) $request->get_param( 'website' ) ) ) {
 		return new WP_REST_Response( [ 'ok' => false, 'message' => 'درخواست نامعتبر.' ], 400 );
 	}
+	$user_id = cyh_checkout_require_user( $request );
+	if ( $user_id instanceof WP_REST_Response ) {
+		return $user_id;
+	}
 	if ( cyh_checkout_rate_limited( 'pay', 10 ) ) {
 		return new WP_REST_Response( [ 'ok' => false, 'message' => 'تعداد تلاش زیاد بود. چند دقیقه بعد دوباره امتحان کنید.' ], 429 );
 	}
@@ -536,6 +599,10 @@ function cyh_rest_checkout_pay( $request ) {
 	[ $customer, $errors ]  = cyh_checkout_validate_customer( $request->get_param( 'customer' ) );
 	[ $invoice, $inv_errs ] = cyh_checkout_validate_invoice( $request->get_param( 'invoice' ) );
 	$errors                 = array_merge( $errors, $inv_errs );
+	[ $shipping, $ship_err ] = cyh_checkout_validate_shipping( $request->get_param( 'shipping' ) );
+	if ( '' !== $ship_err ) {
+		$errors['shipping'] = $ship_err;
+	}
 	if ( ! $request->get_param( 'terms' ) ) {
 		$errors['terms'] = 'پذیرش قوانین و شرایط لازم است.';
 	}
@@ -555,11 +622,6 @@ function cyh_rest_checkout_pay( $request ) {
 	$sandbox = cyh_zp_sandbox();
 	$code    = cyh_generate_tracking_code();
 	$origin  = cyh_checkout_return_origin( $request );
-	$user_id = 0;
-	if ( '' !== cyh_customer_request_token( $request ) ) {
-		$auth    = cyh_customer_authenticate_request( $request );
-		$user_id = is_wp_error( $auth ) ? 0 : (int) $auth;
-	}
 
 	$post_id = wp_insert_post(
 		[
@@ -597,6 +659,8 @@ function cyh_rest_checkout_pay( $request ) {
 		'cyh_vat_rate'      => $totals['vat_rate'],
 		'cyh_vat'           => $totals['vat'],
 		'cyh_total'         => $totals['total'],
+		'cyh_shipping'      => $shipping,
+		'cyh_shipping_label' => cyh_shipping_methods()[ $shipping ],
 		'cyh_payment'       => 'pending',
 		'cyh_sandbox'       => $sandbox ? 1 : 0,
 		'cyh_return_origin' => $origin,
@@ -743,6 +807,8 @@ function cyh_checkout_notify_paid( $post_id ) {
 		$lines[] = sprintf( '- %s%s × %d', $item['name'], $item['sku'] ? ' (کد ' . $item['sku'] . ')' : '', $item['qty'] );
 	}
 	$invoice = get_post_meta( $post_id, 'cyh_invoice', true );
+	$ship    = (string) get_post_meta( $post_id, 'cyh_shipping_label', true );
+	$ship    = '' === $ship ? 'پس‌کرایه' : ( false === mb_strpos( $ship, 'پس‌کرایه' ) ? $ship . ' (پس‌کرایه)' : $ship );
 	wp_mail(
 		get_option( 'cyh_notification_email' ) ?: get_option( 'admin_email' ),
 		sprintf(
@@ -762,7 +828,7 @@ function cyh_checkout_notify_paid( $post_id ) {
 				'اقلام:',
 				implode( "\n", $lines ),
 				'',
-				'ارسال: پس‌کرایه',
+				'ارسال: ' . $ship,
 			]
 		)
 	);

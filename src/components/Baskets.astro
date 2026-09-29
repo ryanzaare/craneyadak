@@ -63,8 +63,10 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
           مبلغ نهایی در صفحه‌ی پرداخت اعلام می‌شود. پرداخت آنلاین فقط بهای
           قطعه است؛ هزینه‌ی ارسال پس‌کرایه است.
         </p>
-        <a href="/checkout" class="block text-center w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
-          ادامه و پرداخت
+        {/* ⚠️ پرداخت مهمان ندارد (تصمیم کارفرما): بدون توکن، مستقیم به ورود/ثبت‌نام
+            و بعد برگشت به /checkout. سرور هم ۴۰۱ می‌دهد؛ این فقط راه را کوتاه می‌کند. */}
+        <a id="cart-checkout" href="/checkout" class="block text-center w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+          ادامه جهت تسویه‌حساب
         </a>
       </div>
     </div>
@@ -132,7 +134,13 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
     type BasketItem,
     type BasketKind,
   } from '../scripts/baskets';
-  import { wpBase } from '../scripts/account';
+  import { getToken, wpBase } from '../scripts/account';
+
+  document.getElementById('cart-checkout')?.addEventListener('click', (e) => {
+    if (getToken()) return;
+    e.preventDefault();
+    location.href = `/account/login?next=${encodeURIComponent('/checkout')}`;
+  });
 
   const store = browserStore();
   const $ = (id: string) => document.getElementById(id);

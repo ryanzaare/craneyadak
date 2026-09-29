@@ -35,7 +35,7 @@ const description = 'ورود به حساب کاربری برای پیگیری �
 
       <div class="flex items-center justify-between mt-4 text-sm">
         <a href="/account/forgot-password" class="text-accent-ink font-bold hover:underline">رمز عبور را فراموش کرده‌اید؟</a>
-        <a href="/account/register" class="text-steel-600 hover:underline">ساخت حساب تازه</a>
+        <a id="login-register-link" href="/account/register" class="text-steel-600 hover:underline">ساخت حساب تازه</a>
       </div>
     </div>
   </section>
@@ -48,6 +48,8 @@ const description = 'ورود به حساب کاربری برای پیگیری �
     /* ⚠️ همان قاعده‌ی «فقط مسیر داخلی تک‌اسلش» — پایین توضیح داده شده. */
     const nextRaw = new URLSearchParams(location.search).get('next') || '';
     const next = /^\/(?![/\\])/.test(nextRaw) ? nextRaw : '/account';
+    const registerLink = document.getElementById('login-register-link');
+    if (registerLink && next !== '/account') registerLink.setAttribute('href', '/account/register?next=' + encodeURIComponent(next));
 
     /* کاربرِ واردشده صفحه‌ی ورود را نمی‌بیند. توکن مرده حلقه نمی‌سازد:
        اولین درخواست حساب با ۴۰۱ آن را پاک می‌کند و کاربر به اینجا

@@ -61,7 +61,7 @@ const description = 'ساخت حساب کاربری برای پیگیری سفا
       </form>
 
       <p class="text-sm text-steel-600 leading-7 mt-6 text-center">
-        حساب دارید؟ <a href="/account/login" class="text-accent-ink font-bold hover:underline">ورود</a>
+        حساب دارید؟ <a id="register-login-link" href="/account/login" class="text-accent-ink font-bold hover:underline">ورود</a>
       </p>
     </div>
   </section>
@@ -73,6 +73,15 @@ const description = 'ساخت حساب کاربری برای پیگیری سفا
     const form = document.getElementById('register-form');
     const msg = document.getElementById('register-msg');
     const button = document.getElementById('register-submit');
+
+    // ⚠️ `next` (مثلاً /checkout) فقط اگر مسیر داخلی تک‌اسلش باشد پذیرفته
+    // می‌شود — همان قاعده‌ی login.astro؛ وگرنه ?next=//evil.com یک
+    // open-redirect است. پیوند «ورود» هم next را حمل می‌کند تا کاربری که
+    // از پرداخت آمده و حساب دارد، مسیرش گم نشود.
+    const nextRaw = new URLSearchParams(location.search).get('next') || '';
+    const next = /^\/(?![/\\])/.test(nextRaw) ? nextRaw : '/account';
+    const loginLink = document.getElementById('register-login-link');
+    if (loginLink && next !== '/account') loginLink.setAttribute('href', '/account/login?next=' + encodeURIComponent(next));
 
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -114,7 +123,7 @@ const description = 'ساخت حساب کاربری برای پیگیری سفا
           } catch {
             /* بدون localStorage هم ثبت‌نام انجام شده — فقط ورود خودکار رخ نمی‌دهد. */
           }
-          location.href = '/account';
+          location.href = next;
           return;
         }
 

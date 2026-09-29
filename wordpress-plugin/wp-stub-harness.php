@@ -1641,7 +1641,7 @@ if (
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// بررسی ۶۰ تا ۷۱: پرداخت آنلاین (class-checkout.php، ایست ۲ فاز ۴)
+// بررسی ۶۰ تا ۷۷: پرداخت آنلاین (class-checkout.php، ایست ۲ فاز ۴ + اصلاح‌های UX)
 // ═══════════════════════════════════════════════════════════════════════════
 $co_check = static function ( $cond, $ok_msg, $err_msg ) use ( &$errors ) {
 	if ( $cond ) {
@@ -1650,6 +1650,16 @@ $co_check = static function ( $cond, $ok_msg, $err_msg ) use ( &$errors ) {
 		$errors[] = $err_msg;
 	}
 };
+/* ⚠️ پرداخت مهمان ندارد (تصمیم کارفرما): همه‌ی فراخوانی‌های این بخش با توکن
+   یک کاربر واقعی انجام می‌شوند. $co_as() هدر را برای یک کاربر می‌گذارد. */
+$co_uid_a  = wp_insert_user( [ 'user_email' => 'co-a@example.com', 'user_pass' => 'abc12345', 'display_name' => 'خریدار الف' ] );
+$co_uid_b  = wp_insert_user( [ 'user_email' => 'co-b@example.com', 'user_pass' => 'abc12345', 'display_name' => 'خریدار ب' ] );
+$co_tok_a  = cyh_customer_issue_token( $co_uid_a );
+$co_tok_b  = cyh_customer_issue_token( $co_uid_b );
+$co_as     = static function ( $token ) {
+	$GLOBALS['cyh_test_headers'] = null === $token ? [] : [ 'x-crane-token' => $token ];
+};
+$co_as( $co_tok_a );
 $co_reset_rl = static function () {
 	foreach ( array_keys( $GLOBALS['cyh_test_transients'] ?? [] ) as $k ) {
 		if ( 0 === strpos( $k, 'cyh_corl_' ) ) {
@@ -1721,11 +1731,12 @@ $co_customer = [
 	'address'  => 'خیابان آزادی، کوچه‌ی یک، پلاک ۲',
 	'postal'   => '1234567891',
 ];
-$co_pay = static function ( $session, $invoice = [ 'wanted' => false ] ) use ( $co_customer ) {
+$co_pay = static function ( $session, $invoice = [ 'wanted' => false ], $shipping = 'tipax' ) use ( $co_customer ) {
 	return cyh_rest_checkout_pay( new WP_REST_Request( [
 		'session'  => $session,
 		'customer' => $co_customer,
 		'invoice'  => $invoice,
+		'shipping' => $shipping,
 		'terms'    => true,
 		'website'  => '',
 	] ) );
@@ -1842,6 +1853,126 @@ $co_check(
 	'فاکتور/verify ناموفق: ' . wp_json_encode( [ $co_r71->get_data(), $co_req71, $co_r71v ] )
 );
 $GLOBALS['cyh_test_remote_queue'] = [];
+
+// ۷۲: بدون توکن (مهمان) → ۴۰۱ روی نشست و پرداخت؛ هیچ سفارشی ساخته نمی‌شود
+// و درگاه صدا زده نمی‌شود. توکن ساختگی هم همین‌طور.
+$co_reset_rl();
+$co_posts_before = count( $GLOBALS['cyh_test_posts'] );
+$GLOBALS['cyh_test_remote_post_calls'] = [];
+$co_guest = [];
+foreach ( [ null, 'توکن-ساختگی' ] as $co_bad_token ) {
+	$co_as( $co_bad_token );
+	$co_guest[] = cyh_rest_checkout_session( new WP_REST_Request( [ 'items' => [ [ 'slug' => 'co-remote', 'qty' => 1 ] ] ] ) )->get_status();
+	$co_guest[] = $co_pay( $co_sess2['session'] )->get_status();
+}
+$co_check(
+	[ 401, 401, 401, 401 ] === $co_guest && count( $GLOBALS['cyh_test_posts'] ) === $co_posts_before
+		&& 0 === count( $GLOBALS['cyh_test_remote_post_calls'] ),
+	'پرداخت مهمان ندارد: بدون توکن/توکن ساختگی ۴۰۱ روی نشست و پرداخت، بدون سفارش و بدون تماس با درگاه',
+	'مهمان باید ۴۰۱ بگیرد: ' . wp_json_encode( $co_guest )
+);
+$co_as( $co_tok_a );
+
+// ۷۳: روش ارسال اجباری و فقط از فهرست؛ خطای ۴۰۰ با errors.shipping.
+$co_reset_rl();
+$co_sess3 = cyh_rest_checkout_session( new WP_REST_Request( [ 'items' => [ [ 'slug' => 'co-remote', 'qty' => 1 ] ] ] ) )->get_data();
+$co_ship_bad = [];
+foreach ( [ '', 'ساختگی', 'TIPAX', null, [ 'tipax' ] ] as $co_bad_ship ) {
+	$co_r = $co_pay( $co_sess3['session'], [ 'wanted' => false ], $co_bad_ship );
+	$co_ship_bad[] = [ $co_r->get_status(), isset( $co_r->get_data()['errors']['shipping'] ) ];
+}
+$co_check(
+	array_fill( 0, 5, [ 400, true ] ) === $co_ship_bad && count( $GLOBALS['cyh_test_posts'] ) === $co_posts_before,
+	'روش ارسال: خالی/ناشناخته/حرف بزرگ/آرایه = ۴۰۰ با errors.shipping، بدون سفارش (نشست مصرف نمی‌شود)',
+	'ارسال نامعتبر باید رد شود: ' . wp_json_encode( $co_ship_bad )
+);
+
+// ۷۴: هر چهار روش پذیرفته و *متن کامل برچسب* در سفارش ثبت می‌شود
+// (شرط حقوقی روش هوایی). مبلغ ارسال در جمع صفر است.
+$co_ship_ok = [];
+foreach ( cyh_shipping_methods() as $co_code_s => $co_label_s ) {
+	$co_reset_rl();
+	$co_s = cyh_rest_checkout_session( new WP_REST_Request( [ 'items' => [ [ 'slug' => 'co-remote', 'qty' => 1 ] ] ] ) )->get_data();
+	$GLOBALS['cyh_test_remote_queue'] = [ [ 'data' => [ 'code' => 100, 'authority' => 'S000000000000000000000000000000' . $co_code_s ], 'errors' => [] ] ];
+	$co_rs  = $co_pay( $co_s['session'], [ 'wanted' => false ], $co_code_s );
+	$co_oid_s = max( array_keys( $GLOBALS['cyh_test_posts'] ) );
+	$co_ship_ok[ $co_code_s ] = 200 === $co_rs->get_status()
+		&& $co_code_s === get_post_meta( $co_oid_s, 'cyh_shipping', true )
+		&& $co_label_s === get_post_meta( $co_oid_s, 'cyh_shipping_label', true )
+		&& (int) get_post_meta( $co_oid_s, 'cyh_total', true ) === (int) get_post_meta( $co_oid_s, 'cyh_subtotal', true );
+}
+$co_air = cyh_shipping_methods()['air'] ?? '';
+$co_check(
+	4 === count( $co_ship_ok ) && ! in_array( false, $co_ship_ok, true )
+		&& false !== strpos( $co_air, 'مشروط به وضعیت نرمال مرزها و پروازها' ) && false !== strpos( $co_air, 'پس‌کرایه' ),
+	'هر ۴ روش ارسال (تیپاکس/اتوبوس/باربری/هوایی) ثبت می‌شود؛ برچسب کامل هوایی با شرط مرز و پرواز در سفارش؛ ارسال در جمع ۰',
+	'روش‌های ارسال: ' . wp_json_encode( [ $co_ship_ok, $co_air ] )
+);
+$GLOBALS['cyh_test_remote_queue'] = [];
+
+// ۷۵: مالیات دقیق — گرد کردن فقط روی جمع نهایی؛ vat = total − sub همیشه.
+// موارد مرزی عیناً در checkout.test.mts هم اجرا می‌شوند.
+$co_vat_cases = [
+	// [sub, rate, انتظار total]
+	[ 19999998, 10, 21999998 ],
+	[ 1000000, 10, 1100000 ],
+	[ 5, 10, 6 ],          // ۵٫۵ → ۶ (نیم به بالا)
+	[ 15, 10, 17 ],        // ۱۶٫۵ → ۱۷
+	[ 1, 10, 1 ],          // ۱٫۱ → ۱
+	[ 333333, 9, 363333 ], // ۳۶۳۳۳۲٫۹۷ → ۳۶۳۳۳۳
+	[ 0, 10, 0 ],
+];
+$co_vat_bad = [];
+foreach ( $co_vat_cases as [ $co_sub, $co_rate, $co_exp ] ) {
+	$co_t = cyh_checkout_totals( $co_sub, true, $co_rate );
+	if ( $co_exp !== $co_t['total'] || $co_t['vat'] !== $co_t['total'] - $co_sub || $co_sub !== $co_t['subtotal'] ) {
+		$co_vat_bad[] = [ $co_sub, $co_rate, $co_t ];
+	}
+}
+$co_check(
+	[] === $co_vat_bad,
+	'مالیات دقیق: جمع = گرد(sub×(۱۰۰+نرخ)÷۱۰۰)، vat = جمع − sub؛ ۷ مورد مرزی (نیم، ۰، ۱)',
+	'محاسبه‌ی مالیات: ' . wp_json_encode( $co_vat_bad )
+);
+
+// ⚠️ سفارش ناموفق با ref_id بازمانده (مثلاً تلاش قبلی) نباید شماره‌ی پیگیری نشان دهد.
+update_post_meta( $co_oid71, 'cyh_ref_id', '999' );
+
+// ۷۶: /account/orders — فقط سفارش‌های خودِ کاربر: نه سفارش کاربر دیگر،
+// نه استعلام (بدون نویسنده)، و بدون توکن ۴۰۱. کاربر ب سفارشی ندارد.
+$co_own = cyh_rest_account_orders( new WP_REST_Request( [] ) );
+$co_own_codes = is_wp_error( $co_own ) ? [] : array_column( $co_own['orders'], 'code' );
+$co_quote_id = wp_insert_post( [ 'post_type' => 'cyh_quote', 'post_status' => 'publish', 'post_title' => 'استعلام', 'post_author' => $co_uid_a ] );
+update_post_meta( $co_quote_id, 'cyh_kind', 'quote' );
+update_post_meta( $co_quote_id, 'cyh_code', 'Q-NOT-AN-ORDER' );
+$co_as( $co_tok_b );
+$co_other = cyh_rest_account_orders( new WP_REST_Request( [] ) );
+$co_as( null );
+$co_noauth = cyh_rest_account_orders( new WP_REST_Request( [] ) );
+$co_as( $co_tok_a );
+$co_own2 = cyh_rest_account_orders( new WP_REST_Request( [] ) );
+$co_first = $co_own2['orders'][0] ?? [];
+$co_check(
+	! is_wp_error( $co_own ) && count( $co_own_codes ) >= 6 && in_array( $co_code, $co_own_codes, true )
+		&& ! in_array( 'Q-NOT-AN-ORDER', array_column( $co_own2['orders'], 'code' ), true )
+		&& ! is_wp_error( $co_other ) && [] === $co_other['orders']
+		&& is_wp_error( $co_noauth ) && 401 === ( $co_noauth->get_error_data()['status'] ?? null )
+		&& isset( $co_first['paymentLabel'], $co_first['items'], $co_first['shipping'], $co_first['total'], $co_first['sandbox'] ),
+	'/account/orders: فقط سفارش‌های خود کاربر (نه دیگری، نه استعلام)؛ بدون توکن ۴۰۱؛ فیلدهای وضعیت/اقلام/ارسال',
+	'/account/orders: ' . wp_json_encode( [ $co_own_codes, $co_other, is_wp_error( $co_noauth ), $co_first ] )
+);
+
+// ۷۷: refId فقط برای سفارش پرداخت‌شده؛ پرداخت‌نشده‌ها refId خالی دارند.
+$co_by = [];
+foreach ( $co_own2['orders'] as $co_o ) { $co_by[ $co_o['code'] ] = $co_o; }
+$co_check(
+	'paid' === ( $co_by[ $co_code ]['payment'] ?? '' ) && '201' === ( $co_by[ $co_code ]['refId'] ?? '' )
+		&& 'failed' === ( $co_by[ get_post_meta( $co_oid71, 'cyh_code', true ) ]['payment'] ?? '' )
+		&& '' === ( $co_by[ get_post_meta( $co_oid71, 'cyh_code', true ) ]['refId'] ?? 'x' ),
+	'/account/orders: پرداخت‌شده refId دارد، ناموفق/در انتظار ندارد',
+	'refId سفارش‌ها: ' . wp_json_encode( $co_by )
+);
+$GLOBALS['cyh_test_headers'] = [];
 
 
 // ═══════════════════════════════════════════════════════════════════════════
