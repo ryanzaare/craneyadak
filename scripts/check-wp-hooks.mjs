@@ -85,6 +85,13 @@ const HOOK_ARITY = {
   admin_enqueue_scripts: 1,
   rest_api_init: 1,
 
+  // ── رسانه ── (class-media-keys.php؛ تا ۷ مهر ۱۴۰۵ «ناشناخته» و بررسی‌نشده بودند)
+  add_attachment: 1,
+  attachment_fields_to_edit: 2,
+  attachment_fields_to_save: 2,
+  manage_media_columns: 2,
+  manage_media_custom_column: 2,
+
   // ── ACF ──
   'acf/init': 0,
   'acf/save_post': 1,
@@ -105,6 +112,8 @@ const DYNAMIC = [
   [/^admin_post_nopriv_/, 0],
   [/^wp_ajax_/, 0],
   [/^manage_edit-.*_columns$/, 1],
+  // ACF 5.9+: ($value, $post_id, $field, $original)
+  [/^acf\/update_value(\/|$)/, 4],
 ];
 
 function hookArity(name) {

@@ -201,7 +201,7 @@ function catAttrs(product: typeof products[number]) {
     // «دارای قیمت» از قیمت *موثر* می‌آید (با احتساب تخفیف فعال)، نه از
     // buyMode. محصولی می‌تواند حالت استعلام داشته باشد ولی قیمت پایه هم
     // داشته باشد؛ computePrice تنها مرجع قیمت در کل پروژه است.
-    'data-priced': computePrice(product).effective !== null ? '1' : '0',
+    'data-priced': computePrice(product).payable ? '1' : '0',
   };
   for (const f of catFacets) {
     const raw = specValue(product, f.specLabel);

@@ -45,7 +45,7 @@ const activeBrands = BRANDS.filter((b) => brandCounts.has(b.slug));
 const inStockCount = products.filter((p) => p.stockStatus === 'in_stock').length;
 const backorderCount = products.length - inStockCount;
 const rfqCount = products.filter((p) => p.buyMode === 'rfq').length;
-const pricedCount = products.filter((p) => computePrice(p).effective !== null).length;
+const pricedCount = products.filter((p) => computePrice(p).payable).length;
 
 /** گزینه‌ای که همه‌ی محصولات یا هیچ‌کدام را می‌گیرد، چیزی را باریک نمی‌کند. */
 const narrows = (count: number) => count > 0 && count < products.length;

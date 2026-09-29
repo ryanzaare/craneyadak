@@ -7,10 +7,14 @@
 // چند فایل تکرار (و روزی فراموش) شود. هر جای سایت که قیمت نشان داده می‌شود
 // از همین کامپوننت و همان محاسبه‌ی `computePrice` استفاده می‌کند.
 //
-// وقتی قیمت واقعی وجود ندارد، هیچ عددی ساخته نمی‌شود — به‌جای آن برچسب
-// صادقانه‌ی «استعلام قیمت» نمایش داده می‌شود.
+// سه حالت (src/lib/pricing.ts):
+//   • پرداخت‌پذیر  → قیمت + «معتبر تا …»
+//   • مرجع         → «آخرین قیمت (تاریخ)» کم‌رنگ + «استعلام قیمت روز».
+//                    تصمیم مدیرعامل (ایست ۲): قلم منقضی/ناموجود قیمت قبلی را
+//                    با تاریخ نشان دهد. ⚠️ این عدد وارد JSON-LD نمی‌شود.
+//   • بدون قیمت    → برچسب صادقانه‌ی «استعلام قیمت»؛ هیچ عددی ساخته نمی‌شود.
 // ---------------------------------------------------------------------------
-import { formatPrice, type PriceState } from '../lib/wp';
+import { formatPrice, schemaPriceValidUntil, type PriceState } from '../lib/wp';
 
 export interface Props {
   price: PriceState;
@@ -22,15 +26,22 @@ export interface Props {
 const { price, size = 'card', class: className = '' } = Astro.props;
 
 const isPage = size === 'page';
+const faDate = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('fa-IR', { timeZone: 'Asia/Tehran', year: 'numeric', month: 'long', day: 'numeric' }) : null;
+// ⚠️ همان تاریخِ priceValidUntil در JSON-LD (زودترینِ پایان اعتبار و پایان
+// تخفیف) — متن صفحه و داده‌ی ساختاریافته نباید دو تاریخ متفاوت بگویند.
+const validUntilDay = schemaPriceValidUntil(price);
+const validUntilLabel = validUntilDay ? faDate(`${validUntilDay}T12:00:00+03:30`) : null;
+const priceDateLabel = faDate(price.priceDate);
 ---
 
-{price.hasPrice && price.effective !== null ? (
+{price.payable && price.effective !== null ? (
   <div class:list={['flex flex-wrap items-baseline gap-x-3 gap-y-1', className]}>
     {price.onSale && price.previous !== null && (
       <>
         {/* قیمت قبلی فقط زمانی رندر می‌شود که واقعاً یک قیمت عادیِ ثبت‌شده
             وجود داشته باشد و از قیمت فعلی بیشتر باشد — نگاه کنید به
-            computePrice در src/lib/wp.ts. */}
+            computePrice در src/lib/pricing.ts. */}
         <s class:list={['text-gray-500 tabular-nums', isPage ? 'text-lg' : 'text-sm']}>
           {formatPrice(price.previous)}
         </s>
@@ -54,6 +65,20 @@ const isPage = size === 'page';
       {formatPrice(price.effective)}
     </span>
   </div>
+) : price.reference && price.effective !== null ? (
+  <div class:list={['flex flex-col gap-1', className]}>
+    <span
+      class:list={[
+        'inline-flex items-center gap-2 font-bold text-crane-orange',
+        isPage ? 'text-xl' : 'text-sm',
+      ]}
+    >
+      استعلام قیمت روز
+    </span>
+    <span class:list={['text-gray-500 tabular-nums', isPage ? 'text-sm' : 'text-xs']}>
+      آخرین قیمت{priceDateLabel ? ` (${priceDateLabel})` : ''}: {formatPrice(price.effective)}
+    </span>
+  </div>
 ) : (
   <span
     class:list={[
@@ -69,8 +94,10 @@ const isPage = size === 'page';
   </span>
 )}
 
-{price.onSale && price.saleEnd && isPage && (
-  <p class="text-xs text-gray-600 mt-2">
-    اعتبار این قیمت تا <time datetime={price.saleEnd}>{new Date(price.saleEnd).toLocaleDateString('fa-IR')}</time>
+{price.payable && validUntilLabel && isPage && (
+  /* data-price-valid-until: محافظ مرورگر (فاز سبدها) پس از این لحظه دکمه‌ی
+     خرید را به استعلام تبدیل می‌کند — بی‌نیاز از rebuild. */
+  <p class="text-xs text-gray-600 mt-2" data-price-valid-until={price.validUntil}>
+    اعتبار این قیمت تا <time datetime={validUntilDay}>{validUntilLabel}</time>
   </p>
 )}

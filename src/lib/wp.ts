@@ -28,6 +28,11 @@ const WP_BASE_URL: string | null =
   nodeEnv?.WP_GRAPHQL_URL || (import.meta.env.WP_GRAPHQL_URL as string | undefined) || null;
 
 import { normalizeCommunity, type CommunityEntry } from './community';
+// ⚠️ نوع‌ها و محاسبه‌ی قیمت در pricing.ts (بدون وابستگی، قابل آزمون با node).
+import { computePrice, schemaPriceValidUntil, type BuyMode, type StockStatus, type PriceState } from './pricing';
+export { computePrice, schemaPriceValidUntil };
+export type { BuyMode, StockStatus, PriceState };
+
 import { SILOS, ALL_CATEGORIES } from '../data/taxonomy';
 
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -92,11 +97,6 @@ export interface CompatibleModel {
  * پرداخت. «افزودن به سبد» فقط برای اقلام موجودِ کم‌ریسک منطقی است. اگر
  * وردپرس چیزی نگوید، امن‌ترین حالت استعلام است، نه ادعای فروش فوری.
  */
-export type BuyMode = 'cart' | 'rfq';
-
-/** وضعیت موجودی — «نامشخص» یک حالت معتبر و صادقانه است. */
-export type StockStatus = 'in_stock' | 'on_order' | 'unknown';
-
 export interface CraneProduct {
   name: string;
   slug: string;
@@ -122,6 +122,14 @@ export interface CraneProduct {
   buyMode: BuyMode;
   stockStatus: StockStatus;
 
+  /**
+   * آخرین تغییر/تأیید مقدار قیمت و پایان اعتبارش (ISO) — از کوئری
+   * اختیاریِ جدا (fetchPriceValidity). null = افزونه هنوز این را ندارد
+   * یا قیمت هرگز تأیید نشده؛ هر دو یعنی «پرداخت‌پذیر نیست» (پیش‌فرض امن).
+   */
+  priceUpdatedAt: string | null;
+  priceValidUntil: string | null;
+
   images: CraneImage[];
   oemCrossReference: OemReference[];
   compatibleModels: CompatibleModel[];
@@ -142,20 +150,6 @@ export interface CraneProduct {
    * سایت حذف می‌شوند تا هرگز به‌عنوان موجودی واقعی ایندکس نشوند.
    */
   isDemo: boolean;
-}
-
-/** نتیجه‌ی محاسبه‌ی قیمت — تنها منبع مجاز برای نمایش قیمت و ساخت اسکیما. */
-export interface PriceState {
-  /** آیا اصلاً قیمت واقعی داریم؟ */
-  hasPrice: boolean;
-  /** قیمتی که کاربر می‌پردازد (تخفیف‌خورده در صورت فعال بودن). */
-  effective: number | null;
-  /** قیمت قبل، فقط وقتی تخفیف واقعاً فعال است (برای خط‌خورده). */
-  previous: number | null;
-  /** درصد تخفیف صحیح‌شده، فقط وقتی تخفیف فعال است. */
-  discountPercent: number | null;
-  onSale: boolean;
-  saleEnd: string | null;
 }
 
 export function isWpConfigured(): boolean {
@@ -408,65 +402,6 @@ function stripHtml(input: string | null | undefined): string | null {
   return text || null;
 }
 
-/**
- * محاسبه‌ی وضعیت قیمت و تخفیف.
- *
- * ⚠️ قانون سختگیرانه‌ی «قیمت خط‌خورده»:
- * قیمت خط‌خورده فقط زمانی نمایش داده می‌شود که یک قیمت عادیِ واقعی ثبت شده
- * باشد و قیمت تخفیف‌خورده از آن کمتر باشد. نمایش یک «قیمت قبلی» که هرگز
- * واقعی نبوده، هم نقض قانون داده‌ی جعلی این پروژه است، هم خلاف سیاست‌های
- * Google Merchant و هم در بسیاری از کشورها تخلف قانونی.
- *
- * ⚠️ نکته‌ی معماری استاتیک: این محاسبه در زمان BUILD انجام می‌شود. یعنی یک
- * تخفیف منقضی‌شده تا اولین بیلد بعدی روی سایت باقی می‌ماند. به همین دلیل
- * وب‌هوک بازسازی (WP publish → rebuild) برای این پروژه اختیاری نیست.
- */
-export function computePrice(product: CraneProduct, now: Date = new Date()): PriceState {
-  // ⚠️ قانون یکپارچگی: در حالت «استعلام و پیش‌فاکتور» هیچ قیمتی منتشر
-  // نمی‌شود — نه روی صفحه، نه در کارت، نه در Schema.org.
-  //
-  // چرا: نمایش هم‌زمان یک عدد و دکمه‌ی «استعلام قیمت» به کاربر پیام متناقض
-  // می‌دهد؛ اگر قیمت مشخص است چرا باید استعلام بگیرد؟ و اگر عدد نمایش‌داده‌شده
-  // قیمت نهایی نیست، یعنی سایت عددی را نشان داده که به آن پایبند نیست.
-  // این دقیقاً همان «داده‌ای که واقعیت ندارد» است، فقط در قالب قیمت.
-  //
-  // این بررسی عمداً اینجاست و نه در قالب‌ها: هر جای سایت که قیمت رندر
-  // می‌شود از همین تابع عبور می‌کند، پس قانون یک‌بار و برای همیشه اعمال
-  // می‌شود و امکان فراموش‌شدنش در یک کامپوننت وجود ندارد.
-  if (product.buyMode === 'rfq') {
-    return { hasPrice: false, effective: null, previous: null, discountPercent: null, onSale: false, saleEnd: null };
-  }
-
-  const base = product.price;
-  const sale = product.salePrice;
-
-  if (base === null && sale === null) {
-    return { hasPrice: false, effective: null, previous: null, discountPercent: null, onSale: false, saleEnd: null };
-  }
-
-  // بدون قیمت عادیِ واقعی، هیچ «قیمت قبلی» برای خط‌زدن وجود ندارد.
-  if (base === null) {
-    return { hasPrice: true, effective: sale, previous: null, discountPercent: null, onSale: false, saleEnd: null };
-  }
-
-  const startOk = !product.saleStart || new Date(product.saleStart) <= now;
-  const endOk = !product.saleEnd || new Date(product.saleEnd) >= now;
-  const saleValid = sale !== null && sale > 0 && sale < base && startOk && endOk;
-
-  if (!saleValid) {
-    return { hasPrice: true, effective: base, previous: null, discountPercent: null, onSale: false, saleEnd: null };
-  }
-
-  return {
-    hasPrice: true,
-    effective: sale,
-    previous: base,
-    discountPercent: Math.round(((base - sale!) / base) * 100),
-    onSale: true,
-    saleEnd: product.saleEnd,
-  };
-}
-
 /** قالب‌بندی قیمت با جداکننده‌ی هزارگان فارسی. */
 export function formatPrice(value: number): string {
   return `${value.toLocaleString('fa-IR')} ریال`;
@@ -549,6 +484,8 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
 
     buyMode: parseBuyMode(f?.buyMode),
     stockStatus: parseStockStatus(f?.stockStatus),
+    priceUpdatedAt: null,
+    priceValidUntil: null,
 
     images: toArray<RawImageNode>(f?.gallery)
       .filter((img) => Boolean(img?.sourceUrl))
@@ -960,18 +897,72 @@ async function fetchOptionalExtras(): Promise<Map<string, { community: Community
 
 let extrasPromise: Promise<Awaited<ReturnType<typeof fetchOptionalExtras>>> | null = null;
 
+/*
+ * اعتبار قیمت — کوئری اختیاریِ **جدا** از OPTIONAL_QUERY.
+ *
+ * ⚠️ جدا، نه یک فیلد دیگر در OPTIONAL_QUERY: اگر افزونه‌ی نصب‌شده این دو
+ * فیلد را نداشته باشد، کل آن کوئری می‌افتد و پرسش‌وپاسخ و نظرها هم با
+ * قیمت ناپدید می‌شوند. هر قابلیت وابسته به نسخه، پله‌ی خودش.
+ *
+ * شکست این کوئری = هیچ قلمی پرداخت‌پذیر نیست (پیش‌فرض امن): «قیمت
+ * تأییدنشده» و «افزونه‌ی قدیمی» هر دو یعنی نمی‌دانیم قیمت تازه است.
+ */
+const PRICE_VALIDITY_QUERY = `
+  query CranePriceValidity($first: Int!, $after: String) {
+    craneProducts(first: $first, after: $after, where: { status: PUBLISH }) {
+      pageInfo { hasNextPage endCursor }
+      nodes { slug priceUpdatedAt priceValidUntil }
+    }
+  }
+`;
+
+async function fetchPriceValidity(): Promise<Map<string, { updatedAt: string | null; validUntil: string | null }>> {
+  const map = new Map<string, { updatedAt: string | null; validUntil: string | null }>();
+  if (!isWpConfigured()) return map;
+
+  try {
+    let after: string | null = null;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const data: any = await wpQuery(PRICE_VALIDITY_QUERY, { first: PAGE_SIZE, after });
+      const conn = data?.craneProducts;
+      if (!conn) break;
+      for (const node of conn.nodes ?? []) {
+        const slug = cleanText(node?.slug);
+        if (slug) map.set(slug, { updatedAt: cleanText(node?.priceUpdatedAt), validUntil: cleanText(node?.priceValidUntil) });
+      }
+      if (!conn.pageInfo?.hasNextPage) break;
+      after = conn.pageInfo.endCursor ?? null;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `\n💳 اعتبار قیمت از وردپرس خوانده نشد — هیچ قلمی آنلاین پرداخت‌پذیر نمایش داده نمی‌شود\n` +
+        `   (قیمت‌ها به‌صورت «آخرین قیمت» می‌مانند). آخرین نسخه‌ی افزونه را نصب کنید.\n` +
+        `   جزئیات: ${message.slice(0, 200)}\n`,
+    );
+  }
+  return map;
+}
+
+let validityPromise: ReturnType<typeof fetchPriceValidity> | null = null;
+
 export async function getAllProducts(): Promise<CraneProduct[]> {
   catalogPromise ??= fetchAllProducts();
   extrasPromise ??= fetchOptionalExtras();
+  validityPromise ??= fetchPriceValidity();
 
-  const [products, extras] = await Promise.all([catalogPromise, extrasPromise]);
-  if (extras.size === 0) return products;
+  const [products, extras, validity] = await Promise.all([catalogPromise, extrasPromise, validityPromise]);
+  if (extras.size === 0 && validity.size === 0) return products;
 
   // ادغام — بدون تغییر آرایه‌ی اصلی.
   return products.map((product) => {
     const extra = extras.get(product.slug);
-    if (!extra) return product;
-    return { ...product, community: extra.community, wpId: extra.wpId };
+    const v = validity.get(product.slug);
+    return {
+      ...product,
+      ...(extra ? { community: extra.community, wpId: extra.wpId } : {}),
+      ...(v ? { priceUpdatedAt: v.updatedAt, priceValidUntil: v.validUntil } : {}),
+    };
   });
 }
 
@@ -1073,18 +1064,28 @@ export function productJsonLd(
   ];
   if (properties.length > 0) node.additionalProperty = properties;
 
-  if (price.hasPrice && price.effective !== null) {
+  /*
+   * ⚠️ Offer فقط برای قلم **پرداخت‌پذیر** (ایست ۲، ۷ مهر ۱۴۰۵).
+   *
+   * «آخرین قیمت» قلم ناموجود یا منقضی روی صفحه نمایش داده می‌شود ولی
+   * هرگز این‌جا نمی‌آید: Offer در JSON-LD یعنی «با این قیمت می‌فروشیم» و
+   * گوگل آن را قیمت جاری می‌خواند. پرداخت‌پذیر یعنی موجود در انبار،
+   * پس availability همیشه InStock است.
+   *
+   * priceValidUntil همیشه هست: اگر rebuild از کار بیفتد و صفحه‌ی کهنه
+   * بماند، گوگل از روی همین تاریخ خودش به قیمت منقضی اعتماد نمی‌کند.
+   * scripts/check-product-offers.mjs نبودش را در build می‌گیرد.
+   */
+  if (price.payable && price.effective !== null) {
     const offer: Record<string, unknown> = {
       '@type': 'Offer',
       price: price.effective,
       priceCurrency: CURRENCY,
+      availability: 'https://schema.org/InStock',
       url,
     };
-    if (product.stockStatus === 'in_stock') offer.availability = 'https://schema.org/InStock';
-    else if (product.stockStatus === 'on_order') offer.availability = 'https://schema.org/BackOrder';
-    // stockStatus === 'unknown' → کلید availability اصلاً نوشته نمی‌شود.
-
-    if (price.onSale && price.saleEnd) offer.priceValidUntil = price.saleEnd;
+    const validUntil = schemaPriceValidUntil(price);
+    if (validUntil) offer.priceValidUntil = validUntil;
     node.offers = offer;
   }
 

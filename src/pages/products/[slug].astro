@@ -305,7 +305,7 @@ const contact = await getContact();
               data-quote-add={product.slug}
               data-quote-name={product.name}
               data-quote-sku={product.sku ?? ''}
-              data-quote-mode={product.buyMode === 'cart' && price.hasPrice ? 'cart' : 'rfq'}
+              data-quote-mode={price.payable ? 'cart' : 'rfq'}
               class="flex-1 bg-crane-orange text-white px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px]"
             >
               <span data-quote-label>افزودن به سبد استعلام</span>

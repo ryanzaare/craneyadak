@@ -51,7 +51,7 @@ const activeSilos = SILOS.map((silo) => ({
 })).filter((g) => g.categories.length > 0);
 
 const inStockCount = products.filter((p) => p.stockStatus === 'in_stock').length;
-const withPriceCount = products.filter((p) => computePrice(p).hasPrice).length;
+const withPriceCount = products.filter((p) => computePrice(p).payable).length;
 
 const title = `همه‌ی قطعات جرثقیل سقفی | ${products.length} قطعه — کرین یدک`;
 const description = `فهرست کامل قطعات جرثقیل سقفی با فیلتر برند، دسته‌بندی و موجودی. جستجو با کد فنی، بررسی سازگاری و صدور فاکتور رسمی.`;
@@ -92,7 +92,7 @@ function facetAttrs(p: (typeof products)[number]) {
     'data-brand': p.brandSlug ?? '',
     'data-categories': p.categorySlugs.join(' '),
     'data-stock': p.stockStatus,
-    'data-price': price.effective !== null ? String(price.effective) : '',
+    'data-price': price.payable && price.effective !== null ? String(price.effective) : '',
     'data-name': p.name,
     'data-modified': p.modified ?? '',
   };

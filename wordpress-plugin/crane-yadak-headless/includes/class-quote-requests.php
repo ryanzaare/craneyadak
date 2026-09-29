@@ -179,34 +179,31 @@ function cyh_rest_submit_quote( $request ) {
 		 * همان را تایید کرده است. قیمت لحظه‌ی ثبت، مستقیم از فیلد ACF
 		 * همان محصول در پایگاه داده خوانده می‌شود.
 		 */
-		$product   = get_page_by_path( $slug, OBJECT, 'product' );
-		$buy_mode  = 'rfq';
-		$unit      = null;
-
-		/* ⚠️ گارد ACF: اگر افزونه‌ی ACF غیرفعال باشد، get_field وجود ندارد
-		   و فراخوانی‌اش خطای مرگبار می‌دهد — یعنی ثبت سفارش مشتری با
-		   خطای ۵۰۰ شکست می‌خورد، فقط چون یک افزونه غیرفعال شده. در آن
-		   حالت همه‌چیز امن‌ترین مسیر یعنی «استعلام» می‌شود. */
-		if ( $product && function_exists( 'get_field' ) ) {
-			$mode = get_field( 'buy_mode', $product->ID );
-			$raw  = get_field( 'sale_price', $product->ID );
-			if ( '' === $raw || null === $raw ) {
-				$raw = get_field( 'price', $product->ID );
-			}
-			$numeric = is_numeric( $raw ) ? (float) $raw : null;
-
-			// «خرید مستقیم» فقط وقتی معنا دارد که هم حالت cart باشد و هم
-			// قیمت واقعی ثبت شده باشد. یکی بدون دیگری بی‌معناست.
-			if ( 'cart' === $mode && null !== $numeric && $numeric > 0 ) {
-				$buy_mode = 'cart';
-				$unit     = $numeric;
-			}
-		}
+		/* ⚠️ قیمت از cyh_product_pricing() — همان مرجعی که پرداخت دارد.
+		   نسخه‌ی قبلی این‌جا قیمت را خودش حساب می‌کرد: sale_price را هر وقت
+		   پر بود برمی‌داشت (بدون بازه‌ی تاریخ، بدون شرط «کمتر از قیمت
+		   عادی») و با get_page_by_path محصول *پیش‌نویس* را هم می‌پذیرفت.
+		   حالا فقط محصول منتشرشده، و «قیمت قطعی» فقط وقتی قلم واقعاً
+		   آنلاین پرداخت‌پذیر است (موجود + قیمت معتبر). */
+		$found   = get_posts(
+			[
+				'post_type'      => 'product',
+				'name'           => $slug,
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+			]
+		);
+		$pricing  = $found ? cyh_product_pricing( $found[0]->ID ) : null;
+		$payable  = $pricing && $pricing['payable'];
+		$buy_mode = $payable ? 'cart' : 'rfq';
+		$unit     = $payable ? $pricing['effective'] : null;
 
 		$clean_items[] = [
 			'slug'     => $slug,
-			'name'     => sanitize_text_field( (string) ( $item['name'] ?? '' ) ),
-			'sku'      => sanitize_text_field( (string) ( $item['sku'] ?? '' ) ),
+			// نام و کد فنی از وردپرس، نه از مرورگر — روی پیش‌فاکتور چاپ می‌شوند.
+			// فقط وقتی محصول پیدا نشد، متن مرورگر (پاک‌سازی‌شده) می‌ماند.
+			'name'     => $pricing ? $pricing['name'] : sanitize_text_field( (string) ( $item['name'] ?? '' ) ),
+			'sku'      => $pricing ? $pricing['sku'] : sanitize_text_field( (string) ( $item['sku'] ?? '' ) ),
 			'qty'      => max( 1, min( 9999, (int) ( $item['qty'] ?? 1 ) ) ),
 			'buy_mode' => $buy_mode,
 			'unit'     => $unit,

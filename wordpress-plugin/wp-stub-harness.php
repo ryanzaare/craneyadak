@@ -441,7 +441,21 @@ function sanitize_title( $t, $fallback = '', $ctx = 'save' ) {
 }
 
 // ── پست و متا ──────────────────────────────────────────────────────────────
-function get_post( $p = null, $out = OBJECT ) { return $GLOBALS['cyh_test_posts'][ is_object( $p ) ? $p->ID : (int) $p ] ?? null; }
+/* ⚠️ شیء، نه آرایه — همان خانواده‌ی باگ get_posts (پایین‌تر). وردپرس
+   واقعی WP_Post برمی‌گرداند؛ نسخه‌ی قبلی این stub آرایه‌ی خام برمی‌گرداند،
+   پس هر `$post->post_type` در آزمون همیشه خالی بود و get_post_field هم
+   همیشه '' می‌داد. تا ۷ مهر ۱۴۰۵ هیچ آزمونی به این مسیر نرسیده بود. */
+function get_post( $p = null, $out = OBJECT ) {
+	$id = is_object( $p ) ? (int) $p->ID : (int) $p;
+	if ( ! isset( $GLOBALS['cyh_test_posts'][ $id ] ) ) {
+		return null;
+	}
+	return (object) array_merge(
+		[ 'post_type' => 'post', 'post_status' => 'publish', 'post_title' => '', 'post_name' => '', 'post_author' => 0, 'post_content' => '' ],
+		$GLOBALS['cyh_test_posts'][ $id ],
+		[ 'ID' => $id ]
+	);
+}
 /**
  * ⚠️ نسخه‌ی قبلی این stub همیشه *همه‌ی* نوشته‌ها را برمی‌گرداند، بدون
  * فیلتر — و همیشه به‌شکل آرایه‌ی خام (نه شیءِ WP_Post). هیچ‌کدام از
@@ -1381,6 +1395,105 @@ if ( is_wp_error( $w_rm ) || [] !== ( $w_rm['slugs'] ?? null ) ) {
 	$errors[] = 'حذف از علاقه‌مندی‌ها انجام نشد';
 } else {
 	echo "✓ حذف از علاقه‌مندی‌ها انجام شد\n";
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// بررسی ۳۹ تا ۵۱: cyh_product_pricing — هم‌رفتار با computePrice (src/lib/wp.ts)
+// ═══════════════════════════════════════════════════════════════════════════
+// هر مورد مرزی هم این‌جا و هم در تست TS آزموده می‌شود؛ واگرایی این دو همان
+// باگی است که این تابع برای رفعش ساخته شد.
+$now      = 1790000000; // زمان ثابت، تا نتیجه به ساعت اجرای آزمون بستگی نداشته باشد
+$day      = DAY_IN_SECONDS;
+$tehran_ymd = static function ( $ts ) { return gmdate( 'Y-m-d', $ts + 12600 ); };
+$mk = static function ( $slug, array $fields, $status = 'publish', $updated_days_ago = 1 ) use ( $now, $day ) {
+	$id = wp_insert_post( [ 'post_type' => 'product', 'post_title' => "محصول $slug", 'post_name' => $slug, 'post_status' => $status ] );
+	$GLOBALS['cyh_test_posts'][ $id ]['ID'] = $id;
+	foreach ( array_merge( [ 'buy_mode' => 'cart', 'stock_status' => 'in_stock', 'sku' => strtoupper( $slug ) ], $fields ) as $k => $v ) {
+		$GLOBALS['cyh_test_fields'][ (string) $id ][ $k ] = $v;
+	}
+	if ( null !== $updated_days_ago ) {
+		update_post_meta( $id, CYH_PRICE_UPDATED_META, $now - $updated_days_ago * $day );
+	}
+	return $id;
+};
+$price_cases = [
+	// [برچسب, شناسه, انتظار: payable, effective, reason, on_sale]
+	[ 'استعلامی قیمت ندارد', $mk( 'p-rfq', [ 'buy_mode' => 'rfq', 'price' => 1000 ] ), false, null, 'rfq', false ],
+	[ 'قیمت عادی، موجود، تازه', $mk( 'p-ok', [ 'price' => 5000000 ] ), true, 5000000.0, null, false ],
+	[ 'تخفیف در بازه', $mk( 'p-sale', [ 'price' => 5000, 'sale_price' => 4000, 'sale_start' => $tehran_ymd( $now - 3 * $day ), 'sale_end' => $tehran_ymd( $now + 3 * $day ) ] ), true, 4000.0, null, true ],
+	[ 'تخفیف ≥ قیمت عادی نادیده', $mk( 'p-bad-sale', [ 'price' => 5000, 'sale_price' => 6000 ] ), true, 5000.0, null, false ],
+	[ 'تخفیف منقضی (دیروز)', $mk( 'p-old-sale', [ 'price' => 5000, 'sale_price' => 4000, 'sale_end' => $tehran_ymd( $now - $day ) ] ), true, 5000.0, null, false ],
+	[ 'روز آخر تخفیف هنوز معتبر', $mk( 'p-last-day', [ 'price' => 5000, 'sale_price' => 4000, 'sale_end' => $tehran_ymd( $now ) ] ), true, 4000.0, null, true ],
+	[ 'تخفیف هنوز شروع نشده', $mk( 'p-future', [ 'price' => 5000, 'sale_price' => 4000, 'sale_start' => $tehran_ymd( $now + 2 * $day ) ] ), true, 5000.0, null, false ],
+	[ 'فقط قیمت تخفیف', $mk( 'p-sale-only', [ 'sale_price' => 3000 ] ), true, 3000.0, null, false ],
+	[ 'بدون قیمت', $mk( 'p-none', [] ), false, null, 'no_price', false ],
+	[ 'ناموجود — قیمت مرجع می‌ماند', $mk( 'p-order', [ 'price' => 5000, 'stock_status' => 'on_order' ] ), false, 5000.0, 'not_in_stock', false ],
+	[ 'بدون تاریخ قیمت = منقضی', $mk( 'p-nodate', [ 'price' => 5000 ], 'publish', null ), false, 5000.0, 'price_expired', false ],
+	[ '۱۱ روز پیش = منقضی', $mk( 'p-11d', [ 'price' => 5000 ], 'publish', 11 ), false, 5000.0, 'price_expired', false ],
+	[ '۹ روز پیش = معتبر', $mk( 'p-9d', [ 'price' => 5000 ], 'publish', 9 ), true, 5000.0, null, false ],
+	[ 'پیش‌نویس', $mk( 'p-draft', [ 'price' => 5000 ], 'draft' ), false, null, 'not_published', false ],
+	[ 'ارقام فارسی در قیمت', $mk( 'p-fa', [ 'price' => '۵۰۰۰' ] ), true, 5000.0, null, false ],
+];
+$price_fail = [];
+foreach ( $price_cases as [ $label, $pid, $want_pay, $want_eff, $want_reason, $want_sale ] ) {
+	$p = cyh_product_pricing( $pid, $now );
+	if ( $p['payable'] !== $want_pay || $p['effective'] !== $want_eff || $p['reason'] !== $want_reason || $p['on_sale'] !== $want_sale ) {
+		$price_fail[] = sprintf( '%s: payable=%s effective=%s reason=%s on_sale=%s', $label, var_export( $p['payable'], true ), var_export( $p['effective'], true ), var_export( $p['reason'], true ), var_export( $p['on_sale'], true ) );
+	}
+}
+// مدت اعتبار از تنظیمات: با ۳ روز، قیمت ۴ روزه منقضی است.
+update_option( CYH_PRICE_TTL_OPTION, 3 );
+$ttl_p = cyh_product_pricing( $mk( 'p-ttl', [ 'price' => 5000 ], 'publish', 4 ), $now );
+update_option( CYH_PRICE_TTL_OPTION, 10 );
+if ( 'price_expired' !== $ttl_p['reason'] ) {
+	$price_fail[] = 'مدت اعتبار از تنظیمات خوانده نشد (۳ روز، قیمت ۴ روزه باید منقضی باشد)';
+}
+if ( $price_fail ) {
+	$errors[] = "cyh_product_pricing:\n   - " . implode( "\n   - ", $price_fail );
+} else {
+	echo '✓ cyh_product_pricing هر ' . ( count( $price_cases ) + 1 ) . " مورد مرزی را درست حساب کرد (تخفیف، روز آخر، موجودی، اعتبار، پیش‌نویس، مدت از تنظیمات)\n";
+}
+
+/* بررسی ۵۰: تاریخ قیمت فقط با تغییر *مقدار* جلو می‌رود — نه با ذخیره‌ی
+   همان قیمت. وگرنه ذخیره‌ی نوشته برای اصلاح یک غلط تایپی، قیمت کهنه را
+   «تازه» می‌کرد و قاعده‌ی اعتبار بی‌اثر می‌شد. */
+$track_id = $mk( 'p-track', [ 'price' => 7000 ], 'publish', 20 );
+update_post_meta( $track_id, 'price', 7000 );
+$before = (int) get_post_meta( $track_id, CYH_PRICE_UPDATED_META, true );
+cyh_price_track_change( '7000', $track_id, [ 'name' => 'price' ] );
+$same_kept = (int) get_post_meta( $track_id, CYH_PRICE_UPDATED_META, true ) === $before;
+cyh_price_track_change( '8000', $track_id, [ 'name' => 'price' ] );
+$changed_moved = (int) get_post_meta( $track_id, CYH_PRICE_UPDATED_META, true ) > $before;
+if ( ! $same_kept || ! $changed_moved ) {
+	$errors[] = 'ردیابی تاریخ قیمت: ذخیره‌ی همان قیمت نباید تاریخ را جلو ببرد و قیمت تازه باید ببرد';
+} else {
+	echo "✓ تاریخ قیمت فقط با تغییر مقدار جلو می‌رود، نه با ذخیره‌ی دوباره‌ی همان قیمت\n";
+}
+
+/* بررسی ۵۱ (رگرسیون باگ استعلام): محصول پیش‌نویس «قیمت قطعی» نمی‌گیرد و
+   نام قلم از وردپرس خوانده می‌شود، نه از مرورگر. */
+delete_transient( 'cyh_rl_' . md5( '0.0.0.0' ) );
+$q_before = count( $GLOBALS['cyh_test_posts'] );
+$q = cyh_rest_submit_quote( new WP_REST_Request( [
+	'name'    => 'خریدار',
+	'phone'   => '09121234567',
+	'website' => '',
+	'items'   => [
+		[ 'slug' => 'p-ok', 'name' => 'نام جعلی از مرورگر', 'qty' => 2 ],
+		[ 'slug' => 'p-draft', 'qty' => 1 ],
+	],
+] ) );
+$q_id    = max( array_keys( $GLOBALS['cyh_test_posts'] ) );
+$q_items = get_post_meta( $q_id, 'cyh_items', true );
+if (
+	count( $GLOBALS['cyh_test_posts'] ) !== $q_before + 1
+	|| ( $q_items[0]['name'] ?? '' ) !== 'محصول p-ok'
+	|| ( $q_items[1]['buy_mode'] ?? '' ) !== 'rfq'
+) {
+	$errors[] = 'استعلام: نام باید از وردپرس بیاید و محصول پیش‌نویس نباید قیمت قطعی بگیرد';
+} else {
+	echo "✓ استعلام نام قلم را از وردپرس می‌خواند و به محصول پیش‌نویس قیمت نمی‌دهد\n";
 }
 
 

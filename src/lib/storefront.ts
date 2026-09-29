@@ -40,7 +40,7 @@ export async function getStorefront(): Promise<StorefrontSections> {
   const onSale = all.filter((p) => computePrice(p).onSale).sort(byModifiedDesc).slice(0, LIMIT);
 
   const inStock = all
-    .filter((p) => p.stockStatus === 'in_stock' && computePrice(p).hasPrice)
+    .filter((p) => computePrice(p).payable)
     .filter((p) => !onSale.some((s) => s.slug === p.slug))
     .sort(byModifiedDesc)
     .slice(0, LIMIT);
