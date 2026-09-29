@@ -1,0 +1,94 @@
+---
+// src/pages/checkout/result.astro
+// ---------------------------------------------------------------------------
+// نتیجه‌ی پرداخت. زرین‌پال خریدار را به وردپرس برمی‌گرداند
+// (cyh_rest_checkout_callback)؛ وردپرس verify می‌کند و این‌جا ریدایرکت
+// می‌کند با ?r=ok|fail|pending|error&code=…&ref=…
+//
+// ⚠️ پارامتر r را *سرور* پس از verify تعیین کرده، نه Status زرین‌پال. این
+// صفحه فقط نمایش است: کسی که دستی ?r=ok بنویسد، فقط به خودش پیام «موفق»
+// نشان داده — سفارش در پنل همچنان پرداخت‌نشده است. تنها اثر جانبی، خالی
+// شدن سبد خرید همان مرورگر است.
+// ---------------------------------------------------------------------------
+import Layout from '../../layouts/Layout.astro';
+import { SITE } from '../../data/site';
+
+const title = `نتیجه‌ی پرداخت | ${SITE.name}`;
+const description = 'نتیجه‌ی پرداخت آنلاین سفارش.';
+const box = 'rounded-lg border-2 p-6 space-y-3 text-center';
+const btn = 'inline-block bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-accent-ink transition-colors';
+---
+
+<Layout title={title} description={description} noindex>
+  <section class="bg-white px-4 py-12">
+    <div class="max-w-xl mx-auto">
+      <div data-result="ok" hidden class={`${box} border-emerald-600 bg-emerald-50`}>
+        <h1 class="text-2xl font-black text-emerald-900">پرداخت موفق بود</h1>
+        <p class="text-sm leading-7 text-steel-800">
+          کد سفارش: <strong dir="ltr" class="font-mono" data-code></strong><br />
+          شماره پیگیری پرداخت: <strong dir="ltr" class="font-mono" data-ref></strong>
+        </p>
+        <p class="text-sm leading-7 text-steel-700">سفارش برای ارسال آماده می‌شود. هزینه‌ی ارسال پس‌کرایه است.</p>
+        <a data-track class={btn} href="/track">پیگیری سفارش</a>
+      </div>
+
+      <div data-result="fail" hidden class={`${box} border-red-600 bg-red-50`}>
+        <h1 class="text-2xl font-black text-red-900">پرداخت انجام نشد</h1>
+        <p class="text-sm leading-7 text-steel-800">
+          پرداخت لغو شد یا ناموفق بود. سبد خرید شما دست‌نخورده است و می‌توانید دوباره تلاش کنید.
+        </p>
+        <a class={btn} href="/checkout">بازگشت به پرداخت</a>
+      </div>
+
+      {/* ⚠️ «در انتظار» با «ناموفق» یکی نیست: verify به زرین‌پال نرسید، پس
+          ممکن است پول کسر شده باشد. به خریدار «دوباره پرداخت کن» گفتن
+          یعنی خطر دوبار پرداخت. */}
+      <div data-result="pending" hidden class={`${box} border-amber-500 bg-amber-50`}>
+        <h1 class="text-2xl font-black text-amber-900">پرداخت در حال بررسی است</h1>
+        <p class="text-sm leading-7 text-steel-800">
+          نتیجه‌ی پرداخت سفارش <strong dir="ltr" class="font-mono" data-code></strong> هنوز قطعی نشده است.
+          <strong>پیش از پرداخت دوباره</strong>، اگر مبلغ از حسابتان کسر شده با همین کد سفارش با ما تماس بگیرید.
+        </p>
+        <a class={btn} href="/contact">تماس با ما</a>
+      </div>
+
+      <div data-result="error" class={`${box} border-steel-400 bg-steel-50`}>
+        <h1 class="text-2xl font-black text-steel-900">نتیجه‌ی پرداخت نامشخص است</h1>
+        <p class="text-sm leading-7 text-steel-800">
+          اگر مبلغی از حسابتان کسر شده، با ما تماس بگیرید.
+        </p>
+        <a class={btn} href="/contact">تماس با ما</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { browserStore, writeBasket } from '../../scripts/baskets';
+
+  const q = new URLSearchParams(location.search);
+  const r = ['ok', 'fail', 'pending'].includes(q.get('r') ?? '') ? (q.get('r') as string) : 'error';
+  const code = (q.get('code') ?? '').replace(/[^A-Z0-9-]/gi, '').slice(0, 20);
+  const ref = (q.get('ref') ?? '').replace(/[^0-9A-Za-z-]/g, '').slice(0, 40);
+
+  document.querySelectorAll<HTMLElement>('[data-result]').forEach((el) => (el.hidden = el.dataset.result !== r));
+  document.querySelectorAll('[data-code]').forEach((el) => (el.textContent = code || '—'));
+  document.querySelectorAll('[data-ref]').forEach((el) => (el.textContent = ref || '—'));
+  const track = document.querySelector<HTMLAnchorElement>('[data-track]');
+  if (track && code) track.href = `/track?code=${encodeURIComponent(code)}`;
+
+  // سبد فقط با پرداخت موفق خالی می‌شود؛ ناموفق/در انتظار دست‌نخورده.
+  if (r === 'ok') {
+    writeBasket(browserStore(), 'cart', []);
+    /* کد در فهرست کدهای همین دستگاه (صفحه‌ی پیگیری) — مثل استعلام. */
+    try {
+      const KEY = 'cy-quote-codes-v1';
+      const prev = JSON.parse(localStorage.getItem(KEY) || '[]');
+      const list = Array.isArray(prev) ? prev.filter((x) => x?.code !== code) : [];
+      if (code) list.unshift({ code, date: new Date().toLocaleDateString('fa-IR') });
+      localStorage.setItem(KEY, JSON.stringify(list.slice(0, 20)));
+    } catch {
+      /* کد روی صفحه نمایش داده شده. */
+    }
+  }
+</script>

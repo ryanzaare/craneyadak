@@ -1,0 +1,416 @@
+---
+// src/pages/checkout/index.astro
+// ---------------------------------------------------------------------------
+// صفحه‌ی پرداخت — ایست ۲، فاز ۴. سمت سرور: class-checkout.php.
+//
+// ⚠️ هیچ عددی در این صفحه از build نمی‌آید. سایت استاتیک است و قیمت
+// صفحه‌ی محصول ممکن است چند روز کهنه باشد؛ این صفحه با باز شدن، سبد را به
+// /checkout/session می‌فرستد و فقط اعدادی را نشان می‌دهد که *سرور* همان
+// لحظه داده و برای ۳۰ دقیقه نگه می‌دارد — همان مبلغی که کسر می‌شود (تصمیم
+// کارفرما: قیمت نشان‌داده‌شده محترم است).
+//
+// مالیات: فقط با تیک «درخواست فاکتور رسمی». عددش این‌جا فقط نمایش است؛
+// سرور خودش دوباره حساب می‌کند.
+// ---------------------------------------------------------------------------
+import Layout from '../../layouts/Layout.astro';
+import { SITE } from '../../data/site';
+
+const title = `پرداخت | ${SITE.name}`;
+const description = 'بررسی سفارش، نشانی ارسال و پرداخت آنلاین.';
+const input = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40 aria-[invalid=true]:border-red-600';
+const label = 'block text-sm font-bold text-steel-900 mb-1';
+const err = 'text-xs text-red-700 font-bold mt-1';
+---
+
+<Layout title={title} description={description} noindex>
+  <section class="bg-steel-900 text-white px-4 py-8">
+    <div class="max-w-5xl mx-auto">
+      <h1 class="text-2xl md:text-3xl font-black">پرداخت</h1>
+    </div>
+  </section>
+
+  <section class="bg-white px-4 py-8">
+    <div class="max-w-5xl mx-auto">
+      <p id="co-loading" class="text-steel-600 py-10 text-center">در حال بررسی قیمت‌ها…</p>
+
+      <div id="co-sandbox" hidden class="mb-4 text-sm leading-7 font-bold text-amber-900 bg-amber-50 border border-amber-300 rounded-md px-4 py-3">
+        حالت آزمایشی درگاه روشن است — هیچ پول واقعی گرفته نمی‌شود.
+      </div>
+      <p id="co-moved" hidden class="mb-4 text-sm leading-7 text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-4 py-3" role="status"></p>
+      <p id="co-fatal" hidden class="mb-4 text-sm leading-7 font-bold text-red-800 bg-red-50 border border-red-200 rounded-md px-4 py-3" role="alert"></p>
+
+      <div id="co-empty" hidden class="text-center py-10">
+        <p class="text-steel-700 mb-4">سبد خرید خالی است.</p>
+        <a href="/products" class="inline-block bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-accent-ink">مشاهده‌ی محصولات</a>
+      </div>
+
+      <form id="co-form" hidden novalidate class="grid md:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
+        <div class="min-w-0 space-y-6">
+          <fieldset class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+            <legend class="font-black text-steel-900 px-1">گیرنده و نشانی ارسال</legend>
+            <label class="cyh-honeypot" aria-hidden="true">وب‌سایت <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div>
+                <label for="c-name" class={label}>نام و نام خانوادگی</label>
+                <input id="c-name" data-field="name" autocomplete="name" required class={input} />
+                <p class={err} data-error="name"></p>
+              </div>
+              <div>
+                <label for="c-phone" class={label}>موبایل</label>
+                <input id="c-phone" data-field="phone" type="tel" inputmode="tel" dir="ltr" autocomplete="tel" required placeholder="09121234567" class={`${input} text-right`} />
+                <p class={err} data-error="phone"></p>
+              </div>
+              <div class="sm:col-span-2">
+                <label for="c-email" class={label}>ایمیل (اختیاری — برای رسید)</label>
+                <input id="c-email" data-field="email" type="email" dir="ltr" autocomplete="email" class={`${input} text-right`} />
+                <p class={err} data-error="email"></p>
+              </div>
+              <div>
+                <label for="c-province" class={label}>استان</label>
+                <input id="c-province" data-field="province" autocomplete="address-level1" required class={input} />
+                <p class={err} data-error="province"></p>
+              </div>
+              <div>
+                <label for="c-city" class={label}>شهر</label>
+                <input id="c-city" data-field="city" autocomplete="address-level2" required class={input} />
+                <p class={err} data-error="city"></p>
+              </div>
+              <div class="sm:col-span-2">
+                <label for="c-address" class={label}>نشانی کامل</label>
+                <textarea id="c-address" data-field="address" rows="2" autocomplete="street-address" required class={`${input} resize-y`}></textarea>
+                <p class={err} data-error="address"></p>
+              </div>
+              <div>
+                <label for="c-postal" class={label}>کد پستی ۱۰ رقمی</label>
+                <input id="c-postal" data-field="postal" inputmode="numeric" dir="ltr" autocomplete="postal-code" required class={`${input} text-right`} />
+                <p class={err} data-error="postal"></p>
+              </div>
+            </div>
+            <p class="text-xs text-steel-600 leading-6">هزینه‌ی ارسال <strong>پس‌کرایه</strong> است و هنگام تحویل به شرکت حمل پرداخت می‌شود.</p>
+          </fieldset>
+
+          <fieldset class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+            <legend class="font-black text-steel-900 px-1">فاکتور رسمی</legend>
+            <label class="flex items-start gap-2 text-sm font-bold text-steel-900">
+              <input id="inv-wanted" type="checkbox" class="mt-1" />
+              <span>درخواست فاکتور رسمی <span class="font-normal text-steel-600">(ارزش افزوده‌ی <span id="inv-rate">…</span>٪ به مبلغ اضافه می‌شود)</span></span>
+            </label>
+
+            {/* ⚠️ فیلدها فقط با تیک نمایان و اجباری‌اند؛ بدون تیک، سرور هم نادیده‌شان می‌گیرد. */}
+            <div id="inv-fields" hidden class="grid sm:grid-cols-2 gap-3 pt-2">
+              <div class="sm:col-span-2 flex gap-4 text-sm">
+                <label class="flex items-center gap-1.5"><input type="radio" name="inv-type" value="real" checked /> حقیقی</label>
+                <label class="flex items-center gap-1.5"><input type="radio" name="inv-type" value="legal" /> حقوقی</label>
+              </div>
+              <div class="sm:col-span-2">
+                <label for="i-name" class={label} data-inv-label="name">نام و نام خانوادگی</label>
+                <input id="i-name" data-inv="name" class={input} />
+                <p class={err} data-error="invoice.name"></p>
+              </div>
+              <div>
+                <label for="i-nid" class={label} data-inv-label="national_id">کد ملی ۱۰ رقمی</label>
+                <input id="i-nid" data-inv="national_id" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
+                <p class={err} data-error="invoice.national_id"></p>
+              </div>
+              <div>
+                <label for="i-eco" class={label}>کد اقتصادی</label>
+                <input id="i-eco" data-inv="economic_code" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
+                <p class={err} data-error="invoice.economic_code"></p>
+              </div>
+              <div data-legal-only hidden>
+                <label for="i-reg" class={label}>شماره ثبت</label>
+                <input id="i-reg" data-inv="reg_no" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
+                <p class={err} data-error="invoice.reg_no"></p>
+              </div>
+              <div>
+                <label for="i-postal" class={label}>کد پستی ۱۰ رقمی</label>
+                <input id="i-postal" data-inv="postal" inputmode="numeric" dir="ltr" class={`${input} text-right`} />
+                <p class={err} data-error="invoice.postal"></p>
+              </div>
+              <div>
+                <label for="i-land" class={label}>تلفن ثابت یا فکس (با پیش‌شماره)</label>
+                <input id="i-land" data-inv="landline" inputmode="tel" dir="ltr" placeholder="02112345678" class={`${input} text-right`} />
+                <p class={err} data-error="invoice.landline"></p>
+              </div>
+              <div class="sm:col-span-2">
+                <label for="i-address" class={label}>نشانی کامل (برای فاکتور)</label>
+                <textarea id="i-address" data-inv="address" rows="2" class={`${input} resize-y`}></textarea>
+                <p class={err} data-error="invoice.address"></p>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
+        <aside class="bg-white border-2 border-steel-900 rounded-lg p-5 space-y-3 md:sticky md:top-28">
+          <h2 class="font-black text-steel-900">سفارش شما</h2>
+          <ul id="co-lines" role="list" class="divide-y divide-steel-200 text-sm"></ul>
+          <dl class="text-sm space-y-1.5 border-t border-steel-300 pt-3">
+            <div class="flex justify-between gap-2"><dt>جمع اقلام</dt><dd id="co-subtotal" class="tabular-nums"></dd></div>
+            <div id="co-vat-row" hidden class="flex justify-between gap-2"><dt>ارزش افزوده</dt><dd id="co-vat" class="tabular-nums"></dd></div>
+            <div class="flex justify-between gap-2"><dt>ارسال</dt><dd>پس‌کرایه</dd></div>
+            <div class="flex justify-between gap-2 font-black text-base border-t border-steel-300 pt-2"><dt>قابل پرداخت</dt><dd id="co-total" class="tabular-nums"></dd></div>
+          </dl>
+          <p id="co-expiry" class="text-xs text-steel-600 leading-6"></p>
+
+          <label class="flex items-start gap-2 text-xs leading-6 text-steel-800">
+            <input id="co-terms" type="checkbox" class="mt-1" />
+            <span>
+              <a href="/legal/terms" target="_blank" class="text-accent-ink underline">قوانین و مقررات</a>،
+              <a href="/legal/returns" target="_blank" class="text-accent-ink underline">رویه‌ی بازگشت کالا</a> و
+              <a href="/legal/shipping" target="_blank" class="text-accent-ink underline">شرایط ارسال</a> را خواندم و می‌پذیرم.
+            </span>
+          </label>
+          <p class={err} data-error="terms"></p>
+
+          <button id="co-submit" type="submit" class="w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px] disabled:opacity-60">
+            پرداخت آنلاین
+          </button>
+          <p id="co-msg" class="text-xs leading-6 font-bold text-red-700" role="alert"></p>
+        </aside>
+      </form>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { browserStore, moveToQuote, readBasket } from '../../scripts/baskets';
+  import { api, errorMessage, getToken } from '../../scripts/account';
+
+  interface Line { slug: string; name: string; sku: string; qty: number; unit: number; total: number }
+  interface SessionData {
+    ok: boolean;
+    session: string | null;
+    lines: Line[];
+    moved: { slug: string; name: string; reason: string }[];
+    subtotal: number;
+    vatRate: number;
+    sandbox: boolean;
+    gatewayReady: boolean;
+    expiresAt: string | null;
+  }
+
+  const store = browserStore();
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
+  const rial = (n: number) => `${n.toLocaleString('fa-IR')} ریال`;
+  const form = $<HTMLFormElement>('co-form');
+  const wanted = $<HTMLInputElement>('inv-wanted');
+  let session: SessionData | null = null;
+
+  function show(id: string, on: boolean) {
+    const el = $(id);
+    if (el) el.hidden = !on;
+  }
+
+  function fatal(text: string) {
+    const el = $('co-fatal');
+    if (el) {
+      el.textContent = text;
+      el.hidden = !text;
+    }
+  }
+
+  function invoiceType(): 'real' | 'legal' {
+    return (document.querySelector<HTMLInputElement>('input[name="inv-type"]:checked')?.value as 'legal') === 'legal' ? 'legal' : 'real';
+  }
+
+  /** همان فرمول سرور (cyh_checkout_totals) — فقط برای نمایش. */
+  function totals() {
+    const sub = session?.subtotal ?? 0;
+    const vat = wanted?.checked ? Math.round((sub * (session?.vatRate ?? 0)) / 100) : 0;
+    return { sub, vat, total: sub + vat };
+  }
+
+  function renderTotals() {
+    const t = totals();
+    const set = (id: string, v: string) => { const el = $(id); if (el) el.textContent = v; };
+    set('co-subtotal', rial(t.sub));
+    set('co-vat', rial(t.vat));
+    set('co-total', rial(t.total));
+    show('co-vat-row', !!wanted?.checked);
+    const btn = $<HTMLButtonElement>('co-submit');
+    if (btn && !btn.disabled) btn.textContent = `پرداخت آنلاین ${rial(t.total)}`;
+  }
+
+  function renderInvoiceType() {
+    const legal = invoiceType() === 'legal';
+    document.querySelectorAll<HTMLElement>('[data-legal-only]').forEach((el) => (el.hidden = !legal));
+    const nameLabel = document.querySelector('[data-inv-label="name"]');
+    if (nameLabel) nameLabel.textContent = legal ? 'نام کامل شرکت' : 'نام و نام خانوادگی';
+    const idLabel = document.querySelector('[data-inv-label="national_id"]');
+    if (idLabel) idLabel.textContent = legal ? 'شناسه ملی ۱۱ رقمی' : 'کد ملی ۱۰ رقمی';
+  }
+
+  wanted?.addEventListener('change', () => {
+    show('inv-fields', wanted.checked);
+    renderTotals();
+  });
+  document.querySelectorAll('input[name="inv-type"]').forEach((r) => r.addEventListener('change', renderInvoiceType));
+
+  function renderLines(lines: Line[]) {
+    const ul = $('co-lines');
+    if (!ul) return;
+    ul.textContent = '';
+    for (const l of lines) {
+      const li = document.createElement('li');
+      li.className = 'py-2 flex justify-between gap-3';
+      const left = document.createElement('div');
+      left.className = 'min-w-0';
+      const name = document.createElement('p');
+      name.className = 'font-bold text-steel-900 leading-6';
+      name.textContent = l.name;
+      const meta = document.createElement('p');
+      meta.className = 'text-xs text-steel-600';
+      meta.textContent = `${l.qty.toLocaleString('fa-IR')} × ${rial(l.unit)}`;
+      left.append(name, meta);
+      const total = document.createElement('p');
+      total.className = 'shrink-0 tabular-nums font-bold';
+      total.textContent = rial(l.total);
+      li.append(left, total);
+      ul.appendChild(li);
+    }
+  }
+
+  async function loadSession(note = '') {
+    show('co-loading', true);
+    show('co-form', false);
+    fatal('');
+    const cart = readBasket(store, 'cart');
+    if (!cart.length) {
+      show('co-loading', false);
+      show('co-empty', true);
+      return;
+    }
+    const res = await api<SessionData>('/checkout/session', {
+      method: 'POST',
+      body: { items: cart.map(({ slug, qty }) => ({ slug, qty })) },
+    });
+    show('co-loading', false);
+    if (!res.ok) {
+      fatal(errorMessage(res, 'بررسی قیمت‌ها انجام نشد. صفحه را دوباره باز کنید.'));
+      return;
+    }
+    session = res.data;
+
+    /* تصمیم کارفرما: قلمی که دیگر پرداخت‌پذیر نیست، با پیام به سبد استعلام
+       می‌رود — نه حذف بی‌صدا، نه خطای کل صفحه. */
+    const movedEl = $('co-moved');
+    if (session.moved.length && movedEl) {
+      moveToQuote(store, session.moved.map((m) => m.slug));
+      movedEl.textContent =
+        'این اقلام دیگر آنلاین قابل پرداخت نیستند و به سبد استعلام منتقل شدند: ' +
+        session.moved.map((m) => `${m.name} (${m.reason})`).join('، ') +
+        '. برای آن‌ها از سبد استعلام پیش‌فاکتور بگیرید.';
+      movedEl.hidden = false;
+    } else if (note && movedEl) {
+      movedEl.textContent = note;
+      movedEl.hidden = false;
+    }
+
+    show('co-sandbox', session.sandbox);
+    if (!session.lines.length || !session.session) {
+      show('co-empty', true);
+      return;
+    }
+    if (!session.gatewayReady) {
+      fatal('درگاه پرداخت هنوز راه‌اندازی نشده است. برای این اقلام از سبد استعلام پیش‌فاکتور بگیرید یا تماس بگیرید.');
+    }
+
+    const rate = $('inv-rate');
+    if (rate) rate.textContent = session.vatRate.toLocaleString('fa-IR');
+    const exp = $('co-expiry');
+    if (exp && session.expiresAt) {
+      const at = new Date(session.expiresAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tehran' });
+      exp.textContent = `این قیمت‌ها تا ساعت ${at} برای شما نگه داشته می‌شوند.`;
+    }
+    renderLines(session.lines);
+    renderTotals();
+    show('co-form', true);
+  }
+
+  /** پیش‌پر کردن از حساب — اگر وارد شده است. شکستش هیچ چیز را نمی‌شکند. */
+  async function prefill() {
+    if (!getToken()) return;
+    // شکل پاسخ: cyh_rest_account_me → { profile: cyh_customer_profile() }
+    const me = await api<{ profile?: { name?: string; phone?: string | null; email?: string } }>('/account/me', { auth: true });
+    const u = me.ok ? me.data.profile : undefined;
+    if (!u) return;
+    const fill = (field: string, v?: string | null) => {
+      const el = document.querySelector<HTMLInputElement>(`[data-field="${field}"]`);
+      if (el && !el.value && v) el.value = v;
+    };
+    fill('name', u.name);
+    fill('phone', u.phone);
+    fill('email', u.email);
+  }
+
+  function clearErrors() {
+    document.querySelectorAll<HTMLElement>('[data-error]').forEach((el) => (el.textContent = ''));
+    document.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
+  }
+
+  function showErrors(errors: Record<string, string>) {
+    let first: HTMLElement | null = null;
+    for (const [key, text] of Object.entries(errors)) {
+      const slot = document.querySelector<HTMLElement>(`[data-error="${key}"]`);
+      if (slot) slot.textContent = text;
+      const field = key.startsWith('invoice.')
+        ? document.querySelector<HTMLElement>(`[data-inv="${key.slice(8)}"]`)
+        : key === 'terms'
+          ? $('co-terms')
+          : document.querySelector<HTMLElement>(`[data-field="${key}"]`);
+      field?.setAttribute('aria-invalid', 'true');
+      first ??= field;
+    }
+    first?.focus();
+  }
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!session?.session) return;
+    clearErrors();
+    const msg = $('co-msg');
+    if (msg) msg.textContent = '';
+
+    const customer: Record<string, string> = {};
+    document.querySelectorAll<HTMLInputElement>('[data-field]').forEach((el) => (customer[el.dataset.field!] = el.value));
+    const invoice: Record<string, string | boolean> = { wanted: !!wanted?.checked, type: invoiceType() };
+    document.querySelectorAll<HTMLInputElement>('[data-inv]').forEach((el) => (invoice[el.dataset.inv!] = el.value));
+
+    const btn = $<HTMLButtonElement>('co-submit');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'در حال اتصال به درگاه…';
+    }
+    const res = await api<{ ok?: boolean; redirect?: string; errors?: Record<string, string>; expired?: boolean; message?: string }>(
+      '/checkout/pay',
+      {
+        method: 'POST',
+        auth: true,
+        body: {
+          session: session.session,
+          customer,
+          invoice,
+          terms: !!$<HTMLInputElement>('co-terms')?.checked,
+          website: (form.querySelector<HTMLInputElement>('input[name="website"]')?.value ?? ''),
+        },
+      },
+    );
+
+    if (res.ok && res.data.redirect) {
+      // سبد تا نتیجه‌ی verify دست‌نخورده می‌ماند؛ فقط صفحه‌ی نتیجه‌ی موفق خالی‌اش می‌کند.
+      location.href = res.data.redirect;
+      return;
+    }
+    if (btn) btn.disabled = false;
+    renderTotals();
+    if (res.status === 410 && res.data.expired) {
+      await loadSession('مهلت قیمت‌های قبلی تمام شد و قیمت‌ها تازه شدند. لطفاً مبلغ را دوباره بررسی و پرداخت کنید.');
+      return;
+    }
+    if (res.data.errors) showErrors(res.data.errors);
+    if (msg) msg.textContent = errorMessage(res, 'پرداخت آغاز نشد. دوباره تلاش کنید.');
+  });
+
+  renderInvoiceType();
+  loadSession().then(prefill);
+</script>

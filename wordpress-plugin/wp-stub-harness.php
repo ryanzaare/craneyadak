@@ -116,6 +116,17 @@ function wp_unslash( $s ) { return $s; }
 function get_option( $key, $default = false ) { return $GLOBALS['cyh_test_options'][ $key ] ?? $default; }
 function update_option( $key, $value ) { $GLOBALS['cyh_test_options'][ $key ] = $value; return true; }
 function delete_option( $key ) { unset( $GLOBALS['cyh_test_options'][ $key ] ); return true; }
+/* وردپرس: add_option اگر کلید باشد false برمی‌گرداند (INSERT یکتا) — قفل
+   callback پرداخت (class-checkout.php) دقیقاً روی همین رفتار بنا شده. */
+function add_option( $key, $value = '', $deprecated = '', $autoload = 'yes' ) {
+	if ( array_key_exists( $key, $GLOBALS['cyh_test_options'] ?? [] ) ) {
+		return false;
+	}
+	$GLOBALS['cyh_test_options'][ $key ] = $value;
+	return true;
+}
+function untrailingslashit( $s ) { return rtrim( (string) $s, '/\\' ); }
+function rest_url( $path = '' ) { return 'https://cms.example.com/wp-json/' . ltrim( (string) $path, '/' ); }
 function add_options_page( ...$args ) {}
 function register_setting( ...$args ) {}
 function settings_fields( $group ) {}
@@ -163,8 +174,15 @@ function wp_remote_post( $url, $args = [] ) {
 	if ( ! filter_var( $url, FILTER_VALIDATE_URL ) ) {
 		return new WP_Error( 'http_request_failed', 'آدرس نامعتبر' );
 	}
+	/* پاسخ برنامه‌ریزی‌شده (آزمون زرین‌پال): هر فراخوانی یکی از صف برمی‌دارد.
+	   WP_Error در صف = شبکه نرسید. */
+	if ( ! empty( $GLOBALS['cyh_test_remote_queue'] ) ) {
+		$next = array_shift( $GLOBALS['cyh_test_remote_queue'] );
+		return $next instanceof WP_Error ? $next : [ 'response' => [ 'code' => 200 ], 'body' => wp_json_encode( $next ) ];
+	}
 	return [ 'response' => [ 'code' => 200 ] ]; // شبیه‌سازی موفقیت — این تابع در تست واقعاً به هیچ سروری وصل نمی‌شود
 }
+function wp_remote_retrieve_body( $res ) { return is_array( $res ) ? (string) ( $res['body'] ?? '' ) : ''; }
 
 /* ⚠️ `$wpdb` اصلاً وجود نداشت. `cyh_unique_slug()` مستقیم
    `$wpdb->update()` صدا می‌زند و بدون این، اولین بار که اسلاگ تکراری
@@ -222,6 +240,8 @@ class WP_REST_Response {
 	}
 	public function get_data() { return $this->data; }
 	public function get_status() { return $this->status; }
+	public $headers = [];
+	public function header( $key, $value, $replace = true ) { $this->headers[ $key ] = $value; }
 }
 
 class WP_REST_Request {
@@ -1618,6 +1638,210 @@ if (
 } else {
 	echo "✓ مسیر استعلام حتی با اقلام تماماً قیمت‌دار «سفارش» نمی‌سازد (سفارش فقط از پرداخت)\n";
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// بررسی ۶۰ تا ۷۱: پرداخت آنلاین (class-checkout.php، ایست ۲ فاز ۴)
+// ═══════════════════════════════════════════════════════════════════════════
+$co_check = static function ( $cond, $ok_msg, $err_msg ) use ( &$errors ) {
+	if ( $cond ) {
+		echo "✓ $ok_msg\n";
+	} else {
+		$errors[] = $err_msg;
+	}
+};
+$co_reset_rl = static function () {
+	foreach ( array_keys( $GLOBALS['cyh_test_transients'] ?? [] ) as $k ) {
+		if ( 0 === strpos( $k, 'cyh_corl_' ) ) {
+			unset( $GLOBALS['cyh_test_transients'][ $k ] );
+		}
+	}
+};
+
+// ۶۰–۶۱: رقم کنترل. 0499370899 و 10380284790 طبق فرمول معتبرند؛ یک رقم
+// تغییر = نامعتبر. ارقام فارسی پذیرفته می‌شوند (کیبورد فارسی).
+$co_check(
+	cyh_valid_national_code( '0499370899' ) && cyh_valid_national_code( '۰۴۹۹۳۷۰۸۹۹' )
+		&& ! cyh_valid_national_code( '0499370898' ) && ! cyh_valid_national_code( '1111111111' )
+		&& ! cyh_valid_national_code( '049937089' ),
+	'کد ملی: رقم کنترل، ارقام فارسی، ده رقم یکسان و طول کوتاه',
+	'اعتبارسنجی کد ملی نادرست است'
+);
+$co_check(
+	cyh_valid_legal_id( '10380284790' ) && ! cyh_valid_legal_id( '10380284791' )
+		&& ! cyh_valid_legal_id( '0499370899' ) && ! cyh_valid_legal_id( '11111111111' ),
+	'شناسه ملی حقوقی: رقم کنترل ۱۱ رقمی',
+	'اعتبارسنجی شناسه ملی نادرست است'
+);
+
+// ۶۲: فاکتور خاموش = نادیده (حتی با فیلد خراب)؛ روشن = همه اجباری.
+[ $inv_off, $inv_off_err ] = cyh_checkout_validate_invoice( [ 'wanted' => false, 'national_id' => 'خراب' ] );
+[ , $inv_err ]             = cyh_checkout_validate_invoice( [ 'wanted' => true, 'type' => 'legal' ] );
+$co_check(
+	null === $inv_off && [] === $inv_off_err && 7 === count( $inv_err ),
+	'فاکتور رسمی: خاموش نادیده، روشن هر ۷ فیلد حقوقی اجباری',
+	'اعتبارسنجی فاکتور: ' . wp_json_encode( [ $inv_off, $inv_off_err, array_keys( $inv_err ) ] )
+);
+
+// ۶۳: مالیات فقط با فاکتور رسمی.
+$t_off = cyh_checkout_totals( 1000000, false, 10 );
+$t_on  = cyh_checkout_totals( 1000000, true, 10 );
+$co_check(
+	0 === $t_off['vat'] && 1000000 === $t_off['total'] && 100000 === $t_on['vat'] && 1100000 === $t_on['total'],
+	'ارزش افزوده: ۰ بدون فاکتور، ۱۰٪ با فاکتور',
+	'محاسبه‌ی مالیات: ' . wp_json_encode( [ $t_off, $t_on ] )
+);
+
+// ۶۴: نشست — قلم پرداخت‌ناپذیر جدا می‌شود، تکراری ادغام می‌شود.
+// ⚠️ تاریخ قیمت نسبت به time() واقعی (همان دلیل بررسی ۵۹).
+$co_id = $mk( 'co-remote', [ 'price' => 3000000 ], 'publish', null );
+update_post_meta( $co_id, CYH_PRICE_UPDATED_META, time() - 3600 );
+$co_reset_rl();
+$co_sess = cyh_rest_checkout_session( new WP_REST_Request( [
+	'items' => [
+		[ 'slug' => 'co-remote', 'qty' => 1 ],
+		[ 'slug' => 'co-remote', 'qty' => 2 ],
+		[ 'slug' => 'p-rfq', 'qty' => 1 ],
+		[ 'slug' => 'p-draft', 'qty' => 1 ],
+	],
+] ) )->get_data();
+$co_check(
+	1 === count( $co_sess['lines'] ) && 3 === $co_sess['lines'][0]['qty'] && 9000000 === $co_sess['subtotal']
+		&& 2 === count( $co_sess['moved'] ) && '' !== (string) $co_sess['session'],
+	'نشست پرداخت: قلم استعلامی/پیش‌نویس جدا، تکراری ادغام، جمع از قیمت سرور',
+	'نشست پرداخت: ' . wp_json_encode( $co_sess )
+);
+
+// ۶۵: بدون merchant ID → ۵۰۳، و هیچ سفارشی ساخته نمی‌شود.
+$co_customer = [
+	'name'     => 'خریدار آزمون',
+	'phone'    => '۰۹۱۲۱۲۳۴۵۶۷',
+	'province' => 'تهران',
+	'city'     => 'تهران',
+	'address'  => 'خیابان آزادی، کوچه‌ی یک، پلاک ۲',
+	'postal'   => '1234567891',
+];
+$co_pay = static function ( $session, $invoice = [ 'wanted' => false ] ) use ( $co_customer ) {
+	return cyh_rest_checkout_pay( new WP_REST_Request( [
+		'session'  => $session,
+		'customer' => $co_customer,
+		'invoice'  => $invoice,
+		'terms'    => true,
+		'website'  => '',
+	] ) );
+};
+delete_option( CYH_ZP_MERCHANT_OPTION );
+$co_posts_before = count( $GLOBALS['cyh_test_posts'] );
+$co_r65          = $co_pay( $co_sess['session'] );
+$co_check(
+	503 === $co_r65->get_status() && count( $GLOBALS['cyh_test_posts'] ) === $co_posts_before,
+	'درگاه پیکربندی‌نشده: ۵۰۳ بدون ساختن سفارش',
+	'بدون merchant باید ۵۰۳ بدهد و سفارش نسازد (status ' . $co_r65->get_status() . ')'
+);
+
+/* ۶۶ (تصمیم کارفرما — قیمت نشان‌داده‌شده محترم است): قیمت در پنل پس از
+   باز شدن صفحه‌ی پرداخت عوض می‌شود؛ مبلغ ارسالی به زرین‌پال همان عکس نشست
+   است. sandbox پیش‌فرض است. */
+update_option( CYH_ZP_MERCHANT_OPTION, '11111111-2222-3333-4444-555555555555' );
+update_field( 'price', 9900000, $co_id );
+$GLOBALS['cyh_test_remote_post_calls'] = [];
+$GLOBALS['cyh_test_remote_queue']      = [ [ 'data' => [ 'code' => 100, 'authority' => 'S000000000000000000000000000000abcd' ], 'errors' => [] ] ];
+$co_r66  = $co_pay( $co_sess['session'] );
+$co_req  = json_decode( $GLOBALS['cyh_test_remote_post_calls'][0]['args']['body'] ?? '{}', true );
+$co_data = $co_r66->get_data();
+$co_oid  = max( array_keys( $GLOBALS['cyh_test_posts'] ) );
+$co_check(
+	200 === $co_r66->get_status() && 9000000 === ( $co_req['amount'] ?? null ) && 'IRR' === ( $co_req['currency'] ?? '' )
+		&& 0 === strpos( $GLOBALS['cyh_test_remote_post_calls'][0]['url'], 'https://sandbox.zarinpal.com/pg/v4/payment/request.json' )
+		&& 'https://sandbox.zarinpal.com/pg/StartPay/S000000000000000000000000000000abcd' === ( $co_data['redirect'] ?? '' )
+		&& 'pending' === get_post_meta( $co_oid, 'cyh_payment', true ) && 'order' === get_post_meta( $co_oid, 'cyh_kind', true )
+		&& '09121234567' === get_post_meta( $co_oid, 'cyh_phone', true ),
+	'قیمت عکس نشست محترم است (تغییر پنل وسط پرداخت اثر ندارد)؛ sandbox، IRR، StartPay',
+	'پرداخت: ' . wp_json_encode( [ $co_r66->get_status(), $co_req, $co_data ] )
+);
+
+// ۶۷: نشست یک‌بارمصرف — پس از گرفتن authority، همان نشست ۴۱۰ می‌دهد.
+$co_check(
+	410 === $co_pay( $co_sess['session'] )->get_status() && 410 === $co_pay( 'ساختگی' )->get_status(),
+	'نشست پرداخت یک‌بارمصرف است؛ نشست ساختگی ۴۱۰',
+	'استفاده‌ی دوباره از نشست پرداخت باید ۴۱۰ بدهد'
+);
+
+/* ۶۸: authority سفارش دیگر (یا جعلی) سفارش را نمی‌بندد — حتی با Status=OK
+   و حتی اگر زرین‌پال برای آن authority «موفق» بگوید. */
+$co_code = get_post_meta( $co_oid, 'cyh_code', true );
+$GLOBALS['cyh_test_remote_post_calls'] = [];
+$GLOBALS['cyh_test_remote_queue']      = [ [ 'data' => [ 'code' => 100, 'ref_id' => 999 ], 'errors' => [] ] ];
+$co_r68 = cyh_checkout_complete( $co_code, 'S-someone-elses-authority' );
+$co_check(
+	'error' === $co_r68['result'] && 'pending' === get_post_meta( $co_oid, 'cyh_payment', true ) && 0 === count( $GLOBALS['cyh_test_remote_post_calls'] ),
+	'authority نادرست: بدون verify، سفارش پرداخت‌نشده می‌ماند',
+	'authority نادرست نباید سفارش را ببندد: ' . wp_json_encode( $co_r68 )
+);
+$GLOBALS['cyh_test_remote_queue'] = [];
+
+// ۶۹: قفل گرفته‌شده (پردازش هم‌زمان) → pending بدون verify دوم.
+add_option( 'cyh_zp_lock_' . $co_oid, time() );
+$co_r69 = cyh_checkout_complete( $co_code, 'S000000000000000000000000000000abcd' );
+$co_check(
+	'pending' === $co_r69['result'] && 0 === count( $GLOBALS['cyh_test_remote_post_calls'] ),
+	'callback هم‌زمان: قفل، verify دوم نمی‌رود',
+	'قفل callback کار نکرد: ' . wp_json_encode( $co_r69 )
+);
+delete_option( 'cyh_zp_lock_' . $co_oid );
+
+// ۷۰: شبکه قطع → «در انتظار» (نه ناموفق — شاید پول کسر شده)؛ سپس verify
+// موفق → پرداخت‌شده؛ callback دوباره (رفرش) → ok بدون verify و ایمیل دوم.
+$GLOBALS['cyh_test_remote_queue'] = [ new WP_Error( 'http_request_failed', 'timeout' ) ];
+$co_r70a = cyh_checkout_complete( $co_code, 'S000000000000000000000000000000abcd' );
+$co_mail_before = count( $GLOBALS['cyh_test_mail_calls'] );
+$GLOBALS['cyh_test_remote_post_calls'] = [];
+$GLOBALS['cyh_test_remote_queue']      = [ [ 'data' => [ 'code' => 100, 'ref_id' => 201, 'card_pan' => '502229******5995' ], 'errors' => [] ] ];
+$co_r70b  = cyh_checkout_complete( $co_code, 'S000000000000000000000000000000abcd' );
+$co_verify = json_decode( $GLOBALS['cyh_test_remote_post_calls'][0]['args']['body'] ?? '{}', true );
+$co_r70c  = cyh_checkout_complete( $co_code, 'S000000000000000000000000000000abcd' );
+$co_check(
+	'pending' === $co_r70a['result']
+		&& 'ok' === $co_r70b['result'] && 9000000 === ( $co_verify['amount'] ?? null )
+		&& 'paid' === get_post_meta( $co_oid, 'cyh_payment', true ) && '201' === get_post_meta( $co_oid, 'cyh_ref_id', true )
+		&& 'ok' === $co_r70c['result'] && 1 === count( $GLOBALS['cyh_test_remote_post_calls'] )
+		&& count( $GLOBALS['cyh_test_mail_calls'] ) === $co_mail_before + 1
+		&& false !== strpos( $co_r70b['url'], '/checkout/result?r=ok&code=' ) && false === get_option( 'cyh_zp_lock_' . $co_oid ),
+	'verify: شبکه‌ی قطع = در انتظار؛ کد ۱۰۰ = پرداخت‌شده با مبلغ سفارش؛ رفرش بدون verify و ایمیل دوم؛ قفل آزاد',
+	'verify: ' . wp_json_encode( [ $co_r70a, $co_r70b, $co_r70c, $co_verify, count( $GLOBALS['cyh_test_remote_post_calls'] ) ] )
+);
+
+// ۷۱: فاکتور رسمی → +۱۰٪ در مبلغ درگاه؛ verify ناموفق (‎-51) → ناموفق.
+$co_reset_rl();
+$co_sess2 = cyh_rest_checkout_session( new WP_REST_Request( [ 'items' => [ [ 'slug' => 'co-remote', 'qty' => 1 ] ] ] ) )->get_data();
+$GLOBALS['cyh_test_remote_post_calls'] = [];
+$GLOBALS['cyh_test_remote_queue']      = [ [ 'data' => [ 'code' => 100, 'authority' => 'S0000000000000000000000000000000vat' ], 'errors' => [] ] ];
+$co_r71 = $co_pay(
+	$co_sess2['session'],
+	[
+		'wanted'        => true,
+		'type'          => 'legal',
+		'name'          => 'شرکت آزمون',
+		'national_id'   => '10380284790',
+		'economic_code' => '411111111111',
+		'reg_no'        => '12345',
+		'postal'        => '1234567891',
+		'address'       => 'تهران، خیابان آزادی، پلاک ۲',
+		'landline'      => '02146876980',
+	]
+);
+$co_req71 = json_decode( $GLOBALS['cyh_test_remote_post_calls'][0]['args']['body'] ?? '{}', true );
+$co_oid71 = max( array_keys( $GLOBALS['cyh_test_posts'] ) );
+$GLOBALS['cyh_test_remote_queue'] = [ [ 'data' => [], 'errors' => [ 'code' => -51, 'message' => 'Session is not valid' ] ] ];
+$co_r71v = cyh_checkout_complete( get_post_meta( $co_oid71, 'cyh_code', true ), 'S0000000000000000000000000000000vat' );
+$co_check(
+	200 === $co_r71->get_status() && 10890000 === ( $co_req71['amount'] ?? null )
+		&& 'fail' === $co_r71v['result'] && 'failed' === get_post_meta( $co_oid71, 'cyh_payment', true )
+		&& '-51' === get_post_meta( $co_oid71, 'cyh_pay_error', true ),
+	'فاکتور رسمی: ۱۰٪ در مبلغ درگاه (۹٬۹۰۰٬۰۰۰ → ۱۰٬۸۹۰٬۰۰۰)؛ خطای verify (errors.code) = ناموفق',
+	'فاکتور/verify ناموفق: ' . wp_json_encode( [ $co_r71->get_data(), $co_req71, $co_r71v ] )
+);
+$GLOBALS['cyh_test_remote_queue'] = [];
 
 
 // ═══════════════════════════════════════════════════════════════════════════
