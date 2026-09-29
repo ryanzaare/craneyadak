@@ -82,12 +82,14 @@ npm run build           # تاکسونومی → بررسی‌ها → build →
 `dist/` را روی ریشه‌ی سند منتشر کنید. جزئیات در
 `docs/deployment-guide.md`.
 
-⚠️ **ریدایرکت‌ها نیاز به تنظیم سرور دارند.** خروجی استاتیک برای مسیرهای
-قدیمی صفحه‌ی meta-refresh می‌سازد (کد ۲۰۰)، نه ۳۰۱ واقعی.
-`public/_redirects` را Netlify و Cloudflare Pages مستقیم می‌خوانند؛ روی
-nginx/Apache/ArvanCloud باید معادلش دستی اعمال شود. نگهبان معماری فقط
-**یکسان‌بودن دو فهرست** را تضمین می‌کند، نه پاسخ واقعی سرور را — آن را
-بعد از دیپلوی با `curl -I` بسنجید.
+⚠️ **ریدایرکت ۳۰۱ و HTTPS با `dist/.htaccess` انجام می‌شود** (cPanel/Apache).
+خروجی استاتیک Astro برای مسیرهای قدیمی فقط صفحه‌ی meta-refresh (کد ۲۰۰) می‌سازد؛
+`postbuild` فایل `dist/.htaccess` را از `src/data/legacy-redirects.mjs` می‌سازد
+(۳۰۱ یک‌مرحله‌ای، HTTPS، www→بدون‌www، ۴۰۴ سفارشی). **حتماً هنگام بارگذاری `dist/`
+فایل‌های مخفی هم منتقل شوند** — `.htaccess` مخفی است و File Manager آن را به‌طور
+پیش‌فرض نشان نمی‌دهد. نشانی‌های صفحه همه با «/» پایانی‌اند (canonical، sitemap،
+لینک‌ها). پس از دیپلوی بسنجید: `curl -I https://craneyadak.com/categories/crane-hook`
+(انتظار: ۳۰۱ به `/categories/lifting-rigging/crane-hook/`).
 
 ---
 

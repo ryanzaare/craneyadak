@@ -98,6 +98,16 @@ const canonical = `${SITE.url}${path}`;
 // این کار قدرت موضوعی (Topical Authority) را داخل سیلو نگه می‌دارد.
 const siblings = silo.categories.filter((c) => c.slug !== category.slug);
 
+// ⚠️ دسته‌ی بدون محصول → noindex (تصمیم کارفرما، ۷ مهر ۱۴۰۵): محتوای نازک نباید
+// ایندکس شود. این شرط *خودکار* است، نه فهرست دستی: با اولین محصول منتشرشده،
+// همان build بعدی noindex را برمی‌دارد و نشانی به sitemap برمی‌گردد
+// (scripts/prune-noindex-sitemap.mjs از روی HTML واقعی تصمیم می‌گیرد).
+// ⚠️ فراموش نشود: پیش از انتشار عمومی، وقتی محتوای دسته‌ها نهایی شد و می‌خواهیم
+// دسته‌ی بدون محصول هم ایندکس شود → `INDEX_EMPTY_CATEGORIES=1 npm run build`.
+// هر build فهرست دسته‌های noindex را چاپ می‌کند تا این قرارداد دیده بماند.
+const noindexEmpty =
+  products.length === 0 && (process.env.INDEX_EMPTY_CATEGORIES ?? import.meta.env.INDEX_EMPTY_CATEGORIES) !== '1';
+
 const breadcrumbItems = [
   { label: 'صفحه اصلی', href: '/' },
   { label: 'دسته‌بندی‌ها', href: '/categories' },
@@ -220,7 +230,7 @@ const contact = await getContact();
 
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexEmpty}>
   {/* ------------------------------- Hero ------------------------------- */}
   <section class="bg-crane-navy text-white pt-10 pb-16 px-4 border-b-[8px] border-crane-orange">
     <div class="max-w-7xl mx-auto">

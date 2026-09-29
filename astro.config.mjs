@@ -4,53 +4,21 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
 
-// ---------------------------------------------------------------------------
-// نقشه‌ی ریدایرکت: مسیرهای تخت قدیمی → مسیرهای تودرتوی سیلو.
-//
-// چرا لازم است: ساختار قبلی `/categories/[slug]` بود و ۸ دسته با آن آدرس‌ها
-// منتشر شده بودند. ساختار جدید `/categories/[silo]/[category]` است تا
-// سلسله‌مراتب سیلو در URL و بردکرامب منعکس شود. بدون 301، هر لینک خارجی و
-// هر ارزش خزش انباشته‌ی آن آدرس‌ها از بین می‌رود.
-//
-// ⚠️ محدودیت خروجی استاتیک: Astro در حالت static برای این‌ها صفحه‌ی
-// meta-refresh می‌سازد، نه پاسخ 301 واقعی. گوگل آن را دنبال می‌کند اما
-// 301 سمت سرور به‌مراتب تمیزتر است — به همین دلیل `public/_redirects` هم
-// وجود دارد و قوانین معادل nginx/apache در docs/deployment-guide.md آمده.
-//
-// ⚠️ `public/_redirects` **از روی این فایل تولید نمی‌شود.** کامنت پیشین
-// می‌گفت «تولید شده» و این نادرست بود: هیچ اسکریپتی نمی‌سازدش. هر دو
-// فهرست دستی نوشته می‌شوند، پس افزودن یک قاعده یعنی **دو** ویرایش.
-// همگام‌ماندنشان را `scripts/check-architecture.mjs` (بررسی ۶) تضمین
-// می‌کند و واگرایی، build را می‌شکند.
-//
-// ⚠️ صفحه‌های ریدایرکت عمداً از ایندکس جستجوی داخلی بیرون‌اند؛ هشدار
+// ریدایرکت‌های قدیمی از src/data/legacy-redirects.mjs می‌آیند (تنها منبع).
+// ⚠️ خروجی استاتیک Astro برای آن‌ها فقط صفحه‌ی meta-refresh (کد 200) می‌سازد؛
+// 301 واقعی را `scripts/generate-htaccess.mjs` در postbuild به dist/.htaccess
+// اضافه می‌کند. نگهبان: scripts/check-architecture.mjs (بررسی ۶).
+// صفحه‌های ریدایرکت عمداً از ایندکس جستجوی داخلی بیرون‌اند؛ هشدار
 // Pagefind درباره‌ی «صفحه بدون <html>» مربوط به همین‌هاست و
 // `scripts/check-pagefind.mjs` تعدادشان را با همین فهرست تطبیق می‌دهد.
-// ---------------------------------------------------------------------------
-const legacyCategoryRedirects = {
-  '/categories/remote-control': '/categories/control-safety/remote-control',
-  '/categories/conductor-bar': '/categories/power-supply/busbar-power-line',
-  '/categories/crane-wheels': '/categories/drive-units/crane-wheel',
-  '/categories/rope-guide': '/categories/hoist-accessories/rope-guide',
-  '/categories/crane-hook': '/categories/lifting-rigging/crane-hook',
-  '/categories/brake-disk': '/categories/brake/brake-wheel-disc',
-  // آدرس قدیمی «wire-rope-hoist» در واقع «موتور گیربکس و وینچ» بود (نه
-  // جرثقیل بکسلی) — طبق blurb همان صفحه. بنابراین به موتور گیربکس می‌رود.
-  '/categories/wire-rope-hoist': '/categories/drive-units/gearbox-motor',
-  // «جاروبک» در فهرست نهایی جا افتاده بود؛ کارفرما تایید کرد که فروخته
-  // می‌شود و صفحه‌ی اختصاصی خودش را نگه می‌دارد (زیر سیلوی برق‌رسانی).
-  // اسلاگ یکسان مانده و فقط یک سطح تودرتو شده است.
-  '/categories/current-collector': '/categories/power-supply/current-collector',
-  // بخش صنایع حذف شد — آدرس‌های قدیمی نباید ۴۰۴ بدهند.
-  '/industries': '/categories',
-};
+import { LEGACY_REDIRECTS, SITE_ORIGIN } from './src/data/legacy-redirects.mjs';
 
 // https://astro.build/config
 export default defineConfig({
   // ⚠️ حیاتی برای سئو: بدون این، canonical و sitemap آدرس درست تولید نمی‌کنند
-  site: 'https://craneyadak.com',
+  site: SITE_ORIGIN,
 
-  redirects: legacyCategoryRedirects,
+  redirects: LEGACY_REDIRECTS,
 
   build: {
     inlineStylesheets: 'auto',

@@ -217,6 +217,20 @@
 
 ---
 
+## فرانت‌اند: `dist/.htaccess` (ریدایرکت ۳۰۱، HTTPS، ۴۰۴)
+
+این راهنما درباره‌ی بک‌اند است، ولی فرانت‌اند هم روی همین cPanel منتشر می‌شود و
+یک نکته‌ی حیاتی دارد: `npm run build` فایل **`dist/.htaccess`** را می‌سازد (نه
+`public/_redirects`؛ آن فایل قالب Netlify بود و روی Apache اثری نداشت و حذف شد).
+
+1. `dist/` را کامل روی ریشه‌ی سند بارگذاری کنید — **با فایل‌های مخفی**
+   (در File Manager: Settings ← Show Hidden Files).
+2. بسنجید (باید ۳۰۱ و مقصدِ با «/» ببینید):
+   `curl -I https://craneyadak.com/categories/crane-hook`
+   `curl -I http://www.craneyadak.com/about` (یک ۳۰۱ مستقیم به `https://craneyadak.com/about/`)
+   `curl -I https://craneyadak.com/does-not-exist` (کد ۴۰۴)
+3. ریدایرکت جدید = فقط یک ویرایش در `src/data/legacy-redirects.mjs`؛ بقیه خودکار.
+
 ## مرحله ۸: اطلاعاتی که در پیام بعدی از شما می‌خواهم
 
 وقتی مراحل بالا را انجام دادید (مرحله‌ی ۷ را می‌توانید فعلاً رد کنید)،

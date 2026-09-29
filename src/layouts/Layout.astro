@@ -1,5 +1,6 @@
 ---
 import { clampDescription, clampTitle } from '../lib/seo-meta';
+import { normalizeJsonLdUrls, withTrailingSlash } from '../lib/urls.mjs';
 // src/layouts/Layout.astro
 import { SITE } from '../data/site';
 import Header from '../components/Header.astro';
@@ -33,8 +34,10 @@ const {
 const metaTitle = clampTitle(title, Astro.url.pathname);
 const metaDescription = clampDescription(description, Astro.url.pathname);
 
-const cleanPath = Astro.url.pathname.replace(/\/$/, '') || '/';
-const canonicalURL = new URL(cleanPath, SITE.url).toString();
+// ⚠️ canonical با «/» پایانی: همان شکلِ sitemap و همان نشانی‌ای که Apache واقعاً
+// سرو می‌کند (بدون «/» با ۳۰۱ به «/» می‌رود). نگاه کنید به src/lib/urls.mjs.
+const canonicalURL = new URL(withTrailingSlash(Astro.url.pathname || '/'), SITE.url).toString();
+const jsonLdOut = jsonLd ? normalizeJsonLdUrls(jsonLd, SITE.url) : undefined;
 ---
 
 <!DOCTYPE html>
@@ -76,7 +79,7 @@ const canonicalURL = new URL(cleanPath, SITE.url).toString();
     <meta name="twitter:description" content={metaDescription} />
     <meta name="twitter:image" content={ogImage} />
     
-    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    {jsonLdOut && <script type="application/ld+json" set:html={JSON.stringify(jsonLdOut)} />}
   </head>
   {/* ⚠️ رفع باگ هدر چسبان (Sticky):
       کلاس قبلی `overflow-x-hidden` روی <body> بود. این مقدار یک «زمینه‌ی

@@ -584,81 +584,66 @@ if (!existsSync('docs/architecture.md')) {
   problems.push('docs/architecture.md وجود ندارد — قرارداد معماری گم شده است.');
 }
 
-/* ═══ ۶) واگرایی ریدایرکت‌ها ═══════════════════════════════════════════
-   دو فهرست از یک واقعیت وجود دارد و هر دو دستی نوشته می‌شوند:
+/* ═══ ۶) ریدایرکت‌ها: یک منبع، ۳۰۱ واقعی، بدون زنجیره ═══════════════════
+   منبع واحد: `src/data/legacy-redirects.mjs`. از آن ساخته می‌شود:
+     • `astro.config.mjs` → صفحه‌ی meta-refresh (پشتیبان؛ کد ۲۰۰)
+     • `scripts/generate-htaccess.mjs` → ۳۰۱ واقعی Apache در dist/.htaccess
 
-     • `astro.config.mjs` → صفحه‌ی meta-refresh در خروجی استاتیک
-     • `public/_redirects` → ۳۰۱ واقعیِ سمت سرور
-
-   هیچ‌کدام دیگری را تولید نمی‌کند (کامنت داخل astro.config یک زمان ادعا
-   می‌کرد «تولید شده» — نمی‌شد، و همان ادعا اصلاح شد). پس افزودن یک قاعده
-   به یکی و فراموش‌کردن دیگری، دقیقاً همان «شکست بی‌صدا»یی است که این
-   پروژه بارها خورده — با این تفاوت که قربانی‌اش ارزش لینک آدرس‌های
-   منتشرشده است و هیچ‌جا خطایی چاپ نمی‌شود.
-
-   ⚠️ قواعد وایلدکارت (`/industries/*`) فقط در `_redirects` معنا دارند؛
-   خروجی استاتیک نمی‌تواند برای الگو صفحه بسازد. پس «اضافه‌بودن» آن‌ها
-   نقض نیست، ولی مقصدشان باید با قاعده‌ی پایه بخواند.
+   قبلاً دو فهرست دستی بود (astro.config + public/_redirects). `_redirects`
+   قالب Netlify است و روی cPanel/Apache هیچ اثری نداشت — یعنی «۳۰۱ واقعی»
+   وجود نداشت و نگهبان قدیمی فقط یکسان‌بودن دو فهرست را می‌سنجید، نه اثر
+   واقعی را. حالا: فایل مرده وجود ندارد، منبع یکی است، و خروجی .htaccess
+   قاعده‌ی هر ریدایرکت را دارد.
    ═══════════════════════════════════════════════════════════════════ */
-const REDIRECTS_FILE = 'public/_redirects';
-const astroConfig = read('astro.config.mjs');
-const redirectsTxt = read(REDIRECTS_FILE);
+const { LEGACY_REDIRECTS, LEGACY_WILDCARDS, SITE_ORIGIN } = await import('../src/data/legacy-redirects.mjs');
+const { buildHtaccess } = await import('./generate-htaccess.mjs');
 
-if (!astroConfig || !redirectsTxt) {
-  problems.push(`${!astroConfig ? 'astro.config.mjs' : REDIRECTS_FILE} خوانده نشد — بررسی ریدایرکت بی‌اعتبار است.`);
-} else {
-  // ── astro.config.mjs ──
-  // ⚠️ نام ثابت `legacyCategoryRedirects` است — الگوی حساس‌به‌حروفِ
-  // `redirects =` آن را نمی‌گرفت. `const` هم لازم است تا سطرِ ارجاعِ
-  // داخل defineConfig (`redirects: legacy…`) به‌اشتباه گرفته نشود.
-  const objMatch = /const\s+\w*[Rr]edirects\w*\s*=\s*\{([\s\S]*?)\n\};/.exec(astroConfig);
-  const fromConfig = new Map();
-  if (!objMatch) {
-    problems.push('شیء ریدایرکت در astro.config.mjs پیدا نشد — الگوی استخراج شکسته است.');
-  } else {
-    // کامنت‌ها اول حذف می‌شوند تا نقل‌قول داخلشان به‌اشتباه قاعده خوانده نشود.
-    const body = objMatch[1].replace(/\/\/[^\n]*/g, '');
-    for (const m of body.matchAll(/'([^']+)'\s*:\s*'([^']+)'/g)) {
-      fromConfig.set(m[1].replace(/\/$/, ''), m[2].replace(/\/$/, ''));
-    }
+/** مشکلات یک نقشه‌ی ریدایرکت (خالی = سالم). خالص، تا روی ورودی خراب آزمون شود. */
+function redirectMapProblems(map) {
+  const out = [];
+  const froms = new Set(Object.keys(map).map((f) => f.replace(/\/$/, '')));
+  for (const [from, to] of Object.entries(map)) {
+    if (!to.startsWith('/') || !to.endsWith('/')) out.push(`مقصد «${to}» (از «${from}») باید مسیر داخلی با «/» پایانی باشد.`);
+    if (froms.has(to.replace(/\/$/, ''))) out.push(`زنجیره: «${from}» → «${to}» و خودِ «${to}» هم ریدایرکت است.`);
+    if (from.replace(/\/$/, '') === to.replace(/\/$/, '')) out.push(`حلقه: «${from}» به خودش می‌رود.`);
   }
-
-  // ── public/_redirects ──
-  const fromFile = new Map();
-  const wildcards = new Map();
-  for (const line of redirectsTxt.split('\n')) {
-    const t = line.trim();
-    if (!t || t.startsWith('#')) continue;
-    const [from, to] = t.split(/\s+/);
-    if (!from || !to) continue;
-    const key = from.replace(/\/$/, '');
-    (key.includes('*') ? wildcards : fromFile).set(key, to.replace(/\/$/, ''));
-  }
-
-  if (fromConfig.size === 0 || fromFile.size === 0) {
-    problems.push('یکی از دو فهرست ریدایرکت خالی خوانده شد — بررسی بی‌اعتبار است.');
-  } else {
-    for (const [from, to] of fromConfig) {
-      if (!fromFile.has(from)) {
-        problems.push(`ریدایرکت «${from}» در astro.config.mjs هست ولی در ${REDIRECTS_FILE} نیست (۳۰۱ واقعی ندارد).`);
-      } else if (fromFile.get(from) !== to) {
-        problems.push(`ریدایرکت «${from}» در دو فایل به دو مقصد می‌رود: «${to}» در astro.config، «${fromFile.get(from)}» در ${REDIRECTS_FILE}.`);
-      }
-    }
-    for (const from of fromFile.keys()) {
-      if (!fromConfig.has(from)) {
-        problems.push(`ریدایرکت «${from}» در ${REDIRECTS_FILE} هست ولی در astro.config.mjs نیست (روی هاست بدون پشتیبانی ۳۰۱، ۴۰۴ می‌دهد).`);
-      }
-    }
-    // قاعده‌ی وایلدکارت باید مقصدش با قاعده‌ی پایه‌ی خودش یکی باشد.
-    for (const [pattern, to] of wildcards) {
-      const base = pattern.replace(/\/?\*+$/, '');
-      if (fromFile.has(base) && fromFile.get(base) !== to) {
-        problems.push(`وایلدکارت «${pattern}» به «${to}» می‌رود ولی قاعده‌ی پایه‌اش «${base}» به «${fromFile.get(base)}».`);
-      }
-    }
-  }
+  return out;
 }
+
+// ⚠️ اعتبارسنجی خودِ بررسی روی ورودی *خراب شناخته‌شده* (قاعده‌ی ۶ پروژه):
+// اگر این سه خطا دیده نشود، بررسی کور است و «سبز» بودنش معنایی ندارد.
+const selfTest = redirectMapProblems({ '/a': '/b/', '/b': '/c/', '/x': '/x/', '/y': '/z' });
+if (selfTest.length < 3) {
+  problems.push('بررسی ریدایرکت روی ورودی خراب زنجیره/حلقه/بی‌اسلش را نگرفت — خودِ بررسی شکسته است.');
+}
+
+problems.push(...redirectMapProblems(LEGACY_REDIRECTS));
+
+if (existsSync('public/_redirects')) {
+  problems.push('public/_redirects هنوز هست: قالب Netlify است و روی cPanel/Apache اثری ندارد؛ حذفش کنید (منبع: src/data/legacy-redirects.mjs).');
+}
+
+const astroConfig = read('astro.config.mjs');
+if (!/from\s+'\.\/src\/data\/legacy-redirects\.mjs'/.test(astroConfig) || !/redirects:\s*LEGACY_REDIRECTS/.test(astroConfig)) {
+  problems.push('astro.config.mjs ریدایرکت‌ها را از src/data/legacy-redirects.mjs نمی‌گیرد — دوباره دو فهرست واگرا می‌شود.');
+}
+if (!new RegExp(`site:\\s*SITE_ORIGIN`).test(astroConfig)) {
+  problems.push('astro.config.mjs مقدار site را از SITE_ORIGIN نمی‌گیرد.');
+}
+if (!read('src/data/site.ts').includes(`url: '${SITE_ORIGIN}'`)) {
+  problems.push(`SITE.url در src/data/site.ts با SITE_ORIGIN (${SITE_ORIGIN}) یکی نیست.`);
+}
+
+const htaccess = buildHtaccess();
+for (const [from, to] of Object.entries(LEGACY_REDIRECTS)) {
+  const key = from.replace(/\/$/, '');
+  const wildcard = LEGACY_WILDCARDS.includes(key);
+  const line = htaccess.split('\n').find((l) => l.startsWith('RedirectMatch 301 ') && l.endsWith(` ${SITE_ORIGIN}${to}`) && l.includes(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  if (!line) problems.push(`.htaccess تولیدی برای «${from}» قاعده‌ی RedirectMatch با مقصد «${to}» ندارد.`);
+  else if (wildcard !== line.includes('(/.*)?$')) problems.push(`.htaccess: وایلدکارت بودن «${from}» با LEGACY_WILDCARDS نمی‌خواند.`);
+}
+if (!/X-Forwarded-Proto/.test(htaccess)) problems.push('شرط HTTPS در .htaccess X-Forwarded-Proto را نمی‌بیند — پشت پروکسی حلقه‌ی ریدایرکت می‌شود.');
+if (!/ErrorDocument 404 \/404\.html/.test(htaccess)) problems.push('.htaccess ErrorDocument 404 ندارد.');
 
 // ═══ گزارش ══════════════════════════════════════════════════════════════
 if (problems.length) {

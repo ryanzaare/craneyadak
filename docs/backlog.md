@@ -605,22 +605,25 @@ build بیرون، فقط `dist/` بارگذاری — جزئیات در ایس�
 search/thank-you به‌جای robots، sitemap بدون صفحه‌ی noindex، بدون ادعای ساختگی). موارد
 زیر را در کد واقعی وارسی کردم؛ هیچ‌کدام هنوز پیاده نشده:
 
-- **P0؟ canonical ≠ sitemap:** ۷۰ از ۷۱ نشانی sitemap با «/» پایانی است
-  (`/about/`) ولی canonical همان صفحه بدون «/» (`/about`). روی Apache، مسیر بدون «/»
-  با 301 به «/» می‌رود → canonical به نشانیِ ریدایرکت‌شونده اشاره می‌کند.
-  🔶 با `curl -I https://craneyadak.com/about` روی سایت زنده تأیید شود. راه‌حل:
-  یک شکل واحد (پیشنهاد: با «/») در canonical، JSON-LD، sitemap و لینک‌های داخلی +
-  آزمون در `npm run check`.
-- **P0؟ ریدایرکت 301 واقعی وجود ندارد:** Astro استاتیک فقط meta-refresh می‌سازد؛
-  `public/_redirects` روی cPanel/Apache بی‌اثر است؛ و `docs/deployment-guide.md`
-  هیچ قاعده‌ی nginx/apache ندارد، هرچند کامنت `astro.config.mjs` می‌گوید دارد
-  (مستند نادرست — قاعده‌ی ۵). راه‌حل: یک فایل htaccess (پیشنهادی، هنوز ساخته نشده؛ در پوشه‌ی public) با `Redirect 301` برای ۹
-  آدرس قدیمی (و check-architecture همگام‌شان کند) + اصلاح کامنت/مستند.
-  🔶 با `curl -I https://craneyadak.com/categories/crane-hook` تأیید شود.
-- **P1 آمادگی دسته‌ها:** ۳۰ از ۳۱ صفحه‌ی دسته در build بدون محصول‌اند و همه
-  ایندکس‌پذیر و در sitemap‌اند. مدل «سطح آمادگی» PDF منطقی است: دسته‌ی بدون
-  محصول و بدون محتوای واقعی → `noindex` و بیرون از sitemap تا پر شود.
-  تصمیم کسب‌وکاری است (ریسک: از دست رفتن رتبه‌ی زودهنگام صفحه‌های اسکلت).
+- ✅ **canonical ≠ sitemap — رفع شد (۷ مهر ۱۴۰۵، تصمیم کارفرما: با «/»):** ۷۰ از ۷۱
+  صفحه canonical بدون «/» داشت ولی sitemap با «/» بود (Apache نسخه‌ی بدون «/» را ۳۰۱
+  می‌کند). حالا canonical، `url`/`item` در JSON-LD (`@id` عمداً دست‌نخورده) و لینک‌های
+  داخلی `<a href>` همه با «/» پایانی‌اند (`src/lib/urls.mjs`، آزمون `urls.test.mts`،
+  اسکریپت postbuild `normalize-links.mjs`). نگهبان: `check-sitemap-noindex.mjs` اکنون
+  canonical هر صفحه‌ی sitemap را عیناً با نشانی sitemap مقایسه می‌کند.
+- ✅ **ریدایرکت 301 واقعی — رفع شد:** `postbuild` فایل `dist/.htaccess` را از
+  `src/data/legacy-redirects.mjs` (تنها منبع) می‌سازد: ۹ ریدایرکت ۳۰۱ یک‌مرحله‌ای، HTTPS
+  (با شرط X-Forwarded-Proto)، www→بدون‌www، ErrorDocument 404. ~~`public/_redirects`~~
+  (قالب Netlify، بی‌اثر روی Apache) حذف شد. ⚠️ هنگام آپلود `dist/` فایل‌های مخفی هم
+  منتقل شوند. 🔶 هنوز روی سرور واقعی آزموده نشده (فرانت‌اند هنوز دیپلوی نشده)؛ با
+  Apache محلی آزموده شد و پس از دیپلوی `curl -I` (نگاه کنید به deployment-guide) لازم است.
+- ✅ **دسته‌ی بدون محصول → noindex (تصمیم کارفرما):** خودکار در `[category].astro`
+  (`products.length === 0`) و بیرون از sitemap (`prune-noindex-sitemap.mjs`)؛ با اولین
+  محصول، build بعدی خودکار ایندکس‌پذیرش می‌کند.
+  ⚠️⚠️ **فراموش نشود — پیش از انتشار عمومی:** این noindex موقت است. وقتی محتوای هر
+  دسته نهایی شد و می‌خواهیم گوگل ایندکسش کند: یا محصول واقعی اضافه شود، یا
+  `INDEX_EMPTY_CATEGORIES=1 npm run build` (همه‌ی دسته‌های بدون محصول ایندکس‌پذیر).
+  هر build فهرست دسته‌های noindex را چاپ می‌کند. در «گام‌های پیش از انتشار» بازبینی شود.
 - **P1 داده‌ی محصول:** JSON-LD محصول `sku`، `brand`، `offers`، `additionalProperty`
   دارد ولی `image` ندارد و صفحه‌ی نمونه هیچ `<img>` ندارد؛ `mpn` هم نیست. فقط با
   داده‌ی واقعی (عکس محصول؛ اگر شماره‌ی سازنده جدا از SKU است) — چیزی ساخته نشود.

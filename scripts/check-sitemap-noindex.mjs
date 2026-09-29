@@ -34,6 +34,11 @@ for (const map of maps) {
     if (/<meta[^>]+name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html)) {
       problems.push(`${loc}: noindex است ولی در sitemap آمده`);
     }
+    // ⚠️ canonical هر صفحه‌ی داخل sitemap باید *عیناً* همان نشانی sitemap باشد.
+    // بدون این، canonical بدون «/» و sitemap با «/» در ۷۰ از ۷۱ صفحه ناهمخوان بود
+    // و هیچ نگهبانی نمی‌دید (Apache نشانی بدون «/» را ۳۰۱ می‌کند).
+    const canon = /<link[^>]+rel=["']canonical["'][^>]*href=["']([^"']+)["']/i.exec(html)?.[1];
+    if (canon !== loc) problems.push(`${loc}: canonical («${canon ?? 'ندارد'}») با نشانی sitemap یکی نیست`);
   }
 }
 

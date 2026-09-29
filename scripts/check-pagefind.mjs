@@ -28,6 +28,7 @@
 // ---------------------------------------------------------------------------
 
 import { readFileSync, globSync, existsSync } from 'node:fs';
+import { LEGACY_REDIRECTS } from '../src/data/legacy-redirects.mjs';
 
 const DIST = 'dist';
 
@@ -39,21 +40,9 @@ if (!existsSync(DIST)) {
 const read = (f) => { try { return readFileSync(f, 'utf8'); } catch { return ''; } };
 
 /* ── ریدایرکت‌های اعلام‌شده ───────────────────────────────────────────────
-   منبع، خودِ astro.config.mjs است و نه فهرستی دستی اینجا: فهرست دستی
-   همان چیزی است که این پروژه بارها از آن ضربه خورده. واگراییِ این فایل
-   با `public/_redirects` را هم `check-architecture.mjs` می‌گیرد. */
-const config = read('astro.config.mjs');
-const objMatch = /const\s+\w*[Rr]edirects\w*\s*=\s*\{([\s\S]*?)\n\};/.exec(config);
-
-if (!objMatch) {
-  console.error('❌ شیء ریدایرکت در astro.config.mjs پیدا نشد — این بررسی بی‌اعتبار است.');
-  process.exit(1);
-}
-
-const expected = new Set();
-for (const m of objMatch[1].replace(/\/\/[^\n]*/g, '').matchAll(/'([^']+)'\s*:\s*'[^']+'/g)) {
-  expected.add(`${DIST}${m[1].replace(/\/$/, '')}/index.html`);
-}
+   منبع، src/data/legacy-redirects.mjs است (همان که astro.config و
+   .htaccess را می‌سازد) و نه فهرستی دستی اینجا. */
+const expected = new Set(Object.keys(LEGACY_REDIRECTS).map((from) => `${DIST}${from}/index.html`));
 
 /* ── صفحات بدون <html> ───────────────────────────────────────────────── */
 const pages = globSync(`${DIST}/**/*.html`);
