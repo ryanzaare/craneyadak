@@ -601,3 +601,12 @@
   color: var(--color-steel-600, #4b5563);
   text-align: center;
 }
+
+/* ⚠️ هدر موبایل زیر ۳۶۰px با هر دو سبد پر (Header.astro): جای نشان لوگو
+   نیست و نام برند رویش می‌افتاد. فقط در همین حالت نشان پنهان می‌شود؛ نام
+   برند می‌ماند. با یک سبد یا عرض ۳۶۰px به بالا، جا کافی است. */
+@media (max-width: 359px) {
+  header:has(#cart-open:not([hidden])):has(#quote-open:not([hidden])) .brand-mark {
+    display: none;
+  }
+}

@@ -1,0 +1,423 @@
+---
+// src/components/Baskets.astro
+// ---------------------------------------------------------------------------
+// کشوی «سبد خرید» و کشوی «سبد استعلام» — در Layout، روی همه‌ی صفحات.
+// منطق سبدها در src/scripts/baskets.ts است (آزمون: baskets.test.mts).
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// تاریخچه
+// ═══════════════════════════════════════════════════════════════════════════
+// جایگزین QuoteBasket.astro شد (ایست ۲، فاز ۳). آن نسخه یک سبد داشت که
+// اگر همه‌ی اقلامش قیمت‌دار بودند عنوانش «سبد سفارش» می‌شد — یعنی سبد
+// مخلوط با برچسب متغیر. مدیرعامل دو سبد جدا خواست و این شکل تمیزتر است:
+// خریدار همیشه می‌داند کدام دکمه به پرداخت می‌رسد و کدام به پیش‌فاکتور.
+//
+// ⚠️ ورودی‌ها در هدر است (#cart-open، #quote-open)، نه دکمه‌ی شناور. دکمه‌ی
+// شناور قبلی گوشه‌ی پایین روی نوار MobileCTA می‌افتاد، و کارفرما پیش‌تر
+// گفته بود پایین صفحه عملاً دیده نمی‌شود (همان دلیلِ آیکن حساب در هدر).
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// محافظ مرورگر (نسخه‌ی سبکِ اعتبار ۱۰ روزه)
+// ═══════════════════════════════════════════════════════════════════════════
+// صفحه‌ی استاتیک ممکن است از build چند روز پیش باشد. هر عنصر با
+// data-guard-until پس از آن لحظه عوض می‌شود:
+//   • data-payable-only  → پنهان (دکمه‌ی خرید، دکمه‌ی پیش‌فاکتور)
+//   • data-expired-only  → نمایان (دکمه‌ی استعلام، توضیح انقضا)
+// ⚠️ فقط دکمه عوض می‌شود، نه عدد قیمت — تا متن صفحه و JSON-LD از هم جدا
+// نشوند. و این راحتی کاربر است، نه امنیت: سرور هنگام پرداخت خودش
+// می‌سنجد (cyh_product_pricing).
+// ---------------------------------------------------------------------------
+const drawerClass = 'fixed inset-0 z-50 print:hidden';
+const panelClass = 'absolute inset-y-0 left-0 w-full max-w-md bg-white shadow-2xl flex flex-col';
+const headClass = 'flex items-center justify-between gap-3 px-4 py-3 bg-steel-900 text-white shrink-0';
+const closeClass = 'p-2 -m-2 hover:text-accent focus:outline-none focus:ring-2 focus:ring-white rounded';
+const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40';
+---
+
+{/* ═══ سبد خرید ═══ */}
+<div id="cart-drawer" hidden class={drawerClass} role="dialog" aria-modal="true" aria-labelledby="cart-title" data-basket-drawer="cart">
+  <div class="absolute inset-0 bg-steel-900/60" data-basket-close></div>
+  <div class={panelClass}>
+    <div class={headClass}>
+      <h2 id="cart-title" class="font-black">سبد خرید</h2>
+      <button type="button" class={closeClass} aria-label="بستن" data-basket-close>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4">
+      {/* پیام جابه‌جایی: قلمی که اعتبار قیمتش گذشت به سبد استعلام رفت. */}
+      <p id="cart-notice" hidden class="text-xs leading-6 text-amber-900 bg-amber-50 border border-amber-200 rounded-md p-3 mb-4" role="status" aria-live="polite"></p>
+
+      <ul id="cart-items" role="list" class="space-y-2"></ul>
+      <p id="cart-empty" class="text-sm text-steel-600 leading-7 text-center py-8">
+        سبد خرید خالی است.
+      </p>
+
+      <div id="cart-footer" hidden class="mt-5 space-y-3">
+        {/* ⚠️ عدد قیمت عمداً در کشو نیست. سبد در localStorage است و قیمتش
+            ممکن است از build چند روز پیش باشد؛ مبلغ قطعی را سرور در صفحه‌ی
+            پرداخت می‌دهد و همان را محترم می‌شمارد (تصمیم کارفرما). نشان‌دادن
+            دو عدد متفاوت در دو صفحه، همان «قیمت تغییر کرد» است که ممنوع شد. */}
+        <p class="text-xs text-steel-600 leading-6 bg-steel-50 border border-steel-300 rounded-md p-3">
+          مبلغ نهایی در صفحه‌ی پرداخت اعلام می‌شود. پرداخت آنلاین فقط بهای
+          قطعه است؛ هزینه‌ی ارسال پس‌کرایه است.
+        </p>
+        <a href="/checkout" class="block text-center w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+          ادامه و پرداخت
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* ═══ سبد استعلام ═══ */}
+<div id="quote-drawer" hidden class={drawerClass} role="dialog" aria-modal="true" aria-labelledby="quote-title" data-basket-drawer="quote">
+  <div class="absolute inset-0 bg-steel-900/60" data-basket-close></div>
+  <div class={panelClass}>
+    <div class={headClass}>
+      <h2 id="quote-title" class="font-black">سبد استعلام</h2>
+      <button type="button" class={closeClass} aria-label="بستن" data-basket-close>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-4">
+      <p class="text-xs text-steel-600 leading-6 bg-steel-50 border border-steel-300 rounded-md p-3 mb-4">
+        پس از ثبت، کارشناس سازگاری فنی را بررسی و پیش‌فاکتور رسمی صادر می‌کند.
+      </p>
+      <p id="quote-notice" hidden class="text-xs leading-6 text-amber-900 bg-amber-50 border border-amber-200 rounded-md p-3 mb-4" role="status" aria-live="polite"></p>
+
+      <ul id="quote-items" role="list" class="space-y-2"></ul>
+      <p id="quote-empty" class="text-sm text-steel-600 leading-7 text-center py-8">
+        سبد استعلام خالی است. از صفحه‌ی هر قطعه، «افزودن به سبد استعلام» یا
+        «دریافت پیش‌فاکتور» را بزنید.
+      </p>
+
+      {/* فرم — فقط همان چیزی که برای تماس لازم است.
+          ⚠️ عمداً بدون ثبت‌نام و رمز عبور: مهندس نت وسط توقف خط تولید
+          حساب کاربری نمی‌سازد. هر فیلد اضافه یک دلیل برای رها کردن است. */}
+      <form id="quote-form" class="mt-5 space-y-2" hidden>
+        <label class="cyh-honeypot" aria-hidden="true">
+          وب‌سایت <input type="text" name="website" tabindex="-1" autocomplete="off" />
+        </label>
+        <input type="text" name="name" required autocomplete="name" placeholder="نام و نام خانوادگی" class={inputClass} />
+        <input type="tel" name="phone" required autocomplete="tel" inputmode="tel" dir="ltr" placeholder="شماره تماس" class={`${inputClass} text-right`} />
+        <input type="text" name="organization" autocomplete="organization" placeholder="نام شرکت یا کارخانه (اختیاری)" class={inputClass} />
+        <textarea name="note" rows="2" placeholder="توضیح یا مدل دستگاه (اختیاری)" class={`${inputClass} resize-y`}></textarea>
+        <button type="submit" id="quote-submit" class="w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+          ثبت درخواست پیش‌فاکتور
+        </button>
+      </form>
+      {/* ⚠️ پیام بیرون از فرم است. در QuoteBasket.astro داخل فرم بود و فرم با
+          خالی‌شدن سبد پنهان می‌شود — یعنی پیام «ثبت شد، کد رهگیری …» درست
+          در لحظه‌ی موفقیت ناپدید می‌شد. */}
+      <p id="quote-msg" class="mt-2 text-xs leading-6" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  import {
+    addToCart,
+    addToQuote,
+    BASKET_EVENT,
+    browserStore,
+    isExpired,
+    readBasket,
+    removeItem,
+    setQty,
+    sweepExpiredCart,
+    writeBasket,
+    type BasketItem,
+    type BasketKind,
+  } from '../scripts/baskets';
+  import { wpBase } from '../scripts/account';
+
+  const store = browserStore();
+  const $ = (id: string) => document.getElementById(id);
+  let lastOpener: HTMLElement | null = null;
+
+  /* ─── کشوها ─── */
+  function openDrawer(kind: BasketKind) {
+    lastOpener = document.activeElement as HTMLElement | null;
+    for (const d of document.querySelectorAll<HTMLElement>('[data-basket-drawer]')) {
+      d.hidden = d.dataset.basketDrawer !== kind;
+    }
+    document.body.style.overflow = 'hidden';
+    $(`${kind}-drawer`)?.querySelector<HTMLElement>('button[data-basket-close]')?.focus();
+  }
+
+  function closeDrawers() {
+    let wasOpen = false;
+    for (const d of document.querySelectorAll<HTMLElement>('[data-basket-drawer]')) {
+      wasOpen ||= !d.hidden;
+      d.hidden = true;
+    }
+    if (!wasOpen) return;
+    document.body.style.overflow = '';
+    lastOpener?.focus();
+  }
+
+  document.querySelectorAll('[data-basket-close]').forEach((el) => el.addEventListener('click', closeDrawers));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDrawers();
+  });
+  $('cart-open')?.addEventListener('click', () => openDrawer('cart'));
+  $('quote-open')?.addEventListener('click', () => openDrawer('quote'));
+
+  function notice(kind: BasketKind, text: string) {
+    const el = $(`${kind}-notice`);
+    if (!el) return;
+    el.textContent = text;
+    el.hidden = !text;
+  }
+
+  /* ─── رندر ─── */
+  function renderList(kind: BasketKind, list: BasketItem[]) {
+    const ul = $(`${kind}-items`);
+    if (!ul) return;
+    ul.textContent = '';
+    for (const item of list) {
+      const li = document.createElement('li');
+      li.className = 'flex items-start gap-2 border border-steel-300 rounded-md p-2.5';
+
+      const info = document.createElement('div');
+      info.className = 'min-w-0 flex-1';
+      const name = document.createElement('a');
+      name.href = `/products/${encodeURIComponent(item.slug)}`;
+      name.className = 'block text-sm font-bold text-steel-900 leading-6 hover:text-accent-ink';
+      // textContent نه innerHTML — نام از localStorage است و دست‌کاری‌پذیر.
+      name.textContent = item.name || item.slug;
+      info.appendChild(name);
+      if (item.sku) {
+        const sku = document.createElement('p');
+        sku.className = 'text-xs text-steel-600 font-mono';
+        sku.dir = 'ltr';
+        sku.textContent = item.sku;
+        info.appendChild(sku);
+      }
+      if (kind === 'quote') {
+        /* برچسب مسیر، بدون عدد: قلم قیمت‌دار که برای پیش‌فاکتور آمده،
+           از قلمی که قیمتش را کارشناس تعیین می‌کند جداست. */
+        const priced = item.mode === 'cart';
+        const tag = document.createElement('span');
+        tag.className = priced
+          ? 'inline-block mt-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5'
+          : 'inline-block mt-1 text-[11px] font-bold text-steel-700 bg-steel-50 border border-steel-300 rounded px-1.5 py-0.5';
+        tag.textContent = priced ? 'قیمت‌دار' : 'نیازمند استعلام';
+        info.appendChild(tag);
+      }
+
+      const qty = document.createElement('input');
+      qty.type = 'number';
+      qty.min = '1';
+      qty.max = '9999';
+      qty.value = String(item.qty);
+      qty.className = 'w-16 shrink-0 text-sm border border-steel-300 rounded px-2 py-1 text-center';
+      qty.setAttribute('aria-label', `تعداد ${item.name || item.slug}`);
+      qty.addEventListener('change', () => setQty(store, kind, item.slug, qty.value));
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'shrink-0 text-steel-600 hover:text-red-700 p-1 focus:outline-none focus:ring-2 focus:ring-accent rounded';
+      del.setAttribute('aria-label', `حذف ${item.name || item.slug}`);
+      del.textContent = '✕';
+      del.addEventListener('click', () => removeItem(store, kind, item.slug));
+
+      li.append(info, qty, del);
+      ul.appendChild(li);
+    }
+  }
+
+  function syncButtons(attr: 'cartAdd' | 'quoteAdd', inBasket: Set<string>, doneLabel: string) {
+    const sel = attr === 'cartAdd' ? '[data-cart-add]' : '[data-quote-add]';
+    document.querySelectorAll<HTMLElement>(sel).forEach((btn) => {
+      const label = btn.querySelector<HTMLElement>('[data-basket-label]');
+      if (!label) return;
+      // برچسب اولیه‌ی هر دکمه («افزودن به سبد استعلام» یا «دریافت پیش‌فاکتور») حفظ می‌شود.
+      label.dataset.idle ??= label.textContent ?? '';
+      const has = inBasket.has(btn.dataset[attr] ?? '');
+      label.textContent = has ? doneLabel : label.dataset.idle;
+      btn.dataset.inBasket = has ? '1' : '0';
+    });
+  }
+
+  function render() {
+    const cart = readBasket(store, 'cart');
+    const quote = readBasket(store, 'quote');
+
+    for (const [kind, list] of [['cart', cart], ['quote', quote]] as const) {
+      renderList(kind, list);
+      const count = $(`${kind}-count`);
+      if (count) count.textContent = list.length.toLocaleString('fa-IR');
+      const opener = $(`${kind}-open`);
+      if (opener) opener.hidden = list.length === 0;
+      const empty = $(`${kind}-empty`);
+      if (empty) empty.hidden = list.length > 0;
+    }
+    const cartFooter = $('cart-footer');
+    if (cartFooter) cartFooter.hidden = cart.length === 0;
+    const form = $('quote-form');
+    if (form) form.hidden = quote.length === 0;
+
+    syncButtons('cartAdd', new Set(cart.map((x) => x.slug)), '✓ در سبد خرید');
+    syncButtons('quoteAdd', new Set(quote.map((x) => x.slug)), '✓ در سبد استعلام');
+  }
+
+  window.addEventListener(BASKET_EVENT, render);
+  // هم‌گامی بین زبانه‌ها: افزودن در یک زبانه، شمارنده‌ی زبانه‌ی دیگر را هم عوض کند.
+  window.addEventListener('storage', render);
+
+  /* ─── محافظ مرورگر ─── */
+  let guardTimer: number | undefined;
+  function guard() {
+    const now = new Date();
+    let next = Infinity;
+    document.querySelectorAll<HTMLElement>('[data-guard-until]').forEach((el) => {
+      const until = el.dataset.guardUntil || null;
+      const expired = isExpired(until, now);
+      el.hidden = el.hasAttribute('data-expired-only') ? !expired : expired;
+      if (!expired && until) next = Math.min(next, Date.parse(until) - now.getTime());
+    });
+
+    const moved = sweepExpiredCart(store, now);
+    if (moved.length) {
+      const names = moved.map((x) => x.name || x.slug).join('، ');
+      const text = `اعتبار قیمت این اقلام به پایان رسید و به سبد استعلام منتقل شدند: ${names}`;
+      notice('cart', text);
+      notice('quote', text);
+    }
+    for (const item of readBasket(store, 'cart')) {
+      if (item.validUntil) next = Math.min(next, Date.parse(item.validUntil) - now.getTime());
+    }
+
+    /* ⚠️ setTimeout بیش از ~۲۴٫۸ روز سرریز می‌کند و *فوراً* اجرا می‌شود
+       (عدد ۳۲ بیتی). قیمت ۱۰ روزه زیر این سقف است، ولی مدت اعتبار تنظیم
+       پنل است و تا ۹۰ روز می‌رود — بدون این سقف، حلقه‌ی بی‌وقفه می‌ساخت. */
+    window.clearTimeout(guardTimer);
+    if (Number.isFinite(next)) {
+      guardTimer = window.setTimeout(guard, Math.min(Math.max(next, 0) + 1000, 2_000_000_000));
+    }
+  }
+
+  /* ─── دکمه‌های افزودن، در هر صفحه‌ای که باشند ─── */
+  document.querySelectorAll<HTMLElement>('[data-cart-add]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const slug = btn.dataset.cartAdd;
+      if (!slug) return;
+      const went = addToCart(store, {
+        slug,
+        name: btn.dataset.basketName || slug,
+        sku: btn.dataset.basketSku || '',
+        mode: 'cart',
+        validUntil: btn.dataset.guardUntil || null,
+      });
+      if (went === 'quote') {
+        // قیمت همین حالا منقضی شد (صفحه مدتی باز مانده بود): دکمه‌ها هم عوض شوند.
+        notice('quote', 'اعتبار قیمت این قلم به پایان رسیده؛ برای قیمت روز به سبد استعلام افزوده شد.');
+        guard();
+      }
+      openDrawer(went);
+    });
+  });
+
+  document.querySelectorAll<HTMLElement>('[data-quote-add]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const slug = btn.dataset.quoteAdd;
+      if (!slug) return;
+      addToQuote(store, {
+        slug,
+        name: btn.dataset.basketName || slug,
+        sku: btn.dataset.basketSku || '',
+        mode: btn.dataset.quoteMode === 'cart' ? 'cart' : 'rfq',
+        validUntil: btn.dataset.guardUntil || null,
+      });
+      openDrawer('quote');
+    });
+  });
+
+  /* ─── ارسال استعلام ─── */
+  const form = $('quote-form') as HTMLFormElement | null;
+  const msg = $('quote-msg');
+  const say = (text: string, good = false) => {
+    if (!msg) return;
+    msg.className = `text-xs leading-6 font-bold ${good ? 'text-green-700' : 'text-red-700'}`;
+    msg.textContent = text;
+  };
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const base = wpBase();
+    if (!base) {
+      say('ارسال آنلاین در دسترس نیست. لطفاً تماس بگیرید.');
+      return;
+    }
+    const button = $('quote-submit') as HTMLButtonElement | null;
+    const data = new FormData(form);
+    /* ⚠️ فقط اسلاگ و تعداد به سرور می‌رود که معنا دارد؛ نام، کد و قیمت را
+       سرور خودش از وردپرس می‌خواند (class-quote-requests.php). */
+    const payload = {
+      name: String(data.get('name') || ''),
+      phone: String(data.get('phone') || ''),
+      organization: String(data.get('organization') || ''),
+      note: String(data.get('note') || ''),
+      website: String(data.get('website') || ''),
+      items: readBasket(store, 'quote').map(({ slug, name, sku, qty }) => ({ slug, name, sku, qty })),
+    };
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'در حال ارسال…';
+    }
+    if (msg) msg.textContent = '';
+    document.getElementById('quote-track-link')?.remove();
+
+    try {
+      const res = await fetch(`${base}/wp-json/crane-yadak/v1/quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.ok) {
+        say(json.message || 'درخواست ثبت شد.', true);
+        /* کد رهگیری روی همین دستگاه ذخیره می‌شود تا کاربر لازم نباشد
+           یادداشتش کند. ⚠️ شماره تماس عمداً ذخیره نمی‌شود — نگه‌داشتنش در
+           مرورگر یعنی هر کسی با دسترسی به دستگاه می‌تواند سفارش را ببیند. */
+        if (json.code) {
+          try {
+            const CODES = 'cy-quote-codes-v1';
+            const prev = JSON.parse(localStorage.getItem(CODES) || '[]');
+            const next = Array.isArray(prev) ? prev : [];
+            next.unshift({ code: json.code, date: new Date().toLocaleDateString('fa-IR') });
+            localStorage.setItem(CODES, JSON.stringify(next.slice(0, 20)));
+          } catch {
+            /* بدون حافظه هم کد در پیام بالا نشان داده شده. */
+          }
+          const link = document.createElement('a');
+          link.id = 'quote-track-link';
+          link.href = `/track?code=${encodeURIComponent(json.code)}`;
+          link.className = 'block mt-2 text-accent-ink font-bold underline text-sm';
+          link.textContent = 'پیگیری وضعیت این درخواست ←';
+          msg?.after(link);
+        }
+        // سبد فقط پس از ثبت *موفق* خالی می‌شود؛ شکست ارسال انتخاب‌ها را نمی‌برد.
+        writeBasket(store, 'quote', []);
+        form.reset();
+      } else {
+        say(json.message || 'ثبت نشد. لطفاً دوباره تلاش کنید.');
+      }
+    } catch {
+      say('ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.');
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = 'ثبت درخواست پیش‌فاکتور';
+      }
+    }
+  });
+
+  guard();
+  render();
+</script>

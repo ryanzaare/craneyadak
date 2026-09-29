@@ -49,18 +49,24 @@ const navLinks = [
   data-wp-base={wpBase}
 >
   <div class="w-full max-w-7xl mx-auto flex justify-between items-center px-4 md:px-8">
-    <a href="/" class="flex items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label={`صفحه اصلی ${SITE.name}`}>
+    <a href="/" class="flex min-w-0 items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label={`صفحه اصلی ${SITE.name}`}>
       {/* چینش راست‌به‌چپ: `items-start` به‌جای `items-end`.
           در ظرف flex عمودی، محور متقاطع همان محور افقی است و با dir="rtl"
           مقدار `start` یعنی سمت راست. نسخه‌ی قبل `items-end` بود که در
           RTL به لبه‌ی چپ نگاشت می‌شود — یعنی نام برند و شعار زیر آن روی
           لبه‌ی اشتباه تراز می‌شدند. `text-right` هم صریح اضافه شد تا اگر
           روزی شعار در نمایشگر باریک به دو خط شکست، خط دوم هم درست بماند. */}
-      <span class="flex flex-col items-start text-right leading-tight">
-        <span class="text-2xl md:text-3xl font-black text-crane-navy tracking-tight">{SITE.name}</span>
-        <span class="text-[10px] md:text-xs font-bold text-gray-600">{SITE.tagline}</span>
+      {/* ⚠️ min-w-0 + whitespace-nowrap + truncate: با آیکن‌های سبد در هدر
+          موبایل (۳۶۰px)، نام برند «کرین / یدک» دو خط و شعار سه خط می‌شد.
+          حالا نام هرگز نمی‌شکند و فقط شعار، اگر جا نبود، با «…» کوتاه
+          می‌شود. زیر ۳۶۰px (iPhone SE نسل اول) نام و نشان کمی کوچک‌ترند؛
+          و اگر هر دو سبد پر باشند، نشان پنهان می‌شود (global.css،
+          .brand-mark) — وگرنه نام ۱۴px روی نشان می‌افتاد (preview دیده شد). */}
+      <span class="flex min-w-0 flex-col items-start text-right leading-tight">
+        <span class="whitespace-nowrap text-xl min-[360px]:text-2xl md:text-3xl font-black text-crane-navy tracking-tight">{SITE.name}</span>
+        <span class="max-w-full truncate text-[10px] md:text-xs font-bold text-gray-600">{SITE.tagline}</span>
       </span>
-      <Logo class="w-12 h-12 md:w-14 md:h-14 text-crane-navy shrink-0" />
+      <Logo class="brand-mark w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 md:w-14 md:h-14 text-crane-navy shrink-0" />
     </a>
 
     {/* ------------------------- ناوبری دسکتاپ ------------------------- */}
@@ -95,7 +101,7 @@ const navLinks = [
       </ul>
     </nav>
 
-    <div class="flex items-center gap-1 md:gap-2">
+    <div class="flex shrink-0 items-center gap-1 md:gap-2">
       {/* ⚠️ حساب کاربری در هدر است، نه فقط فوتر — کارفرما درست گرفت که
           فوتر عملاً دیده نمی‌شود. برخلاف «پیگیری درخواست» (که کاربرش
           می‌داند دنبال چه می‌گردد و پایین صفحه را نگاه می‌کند)، ورود
@@ -105,6 +111,37 @@ const navLinks = [
           (فهرستش در src/data/account-menu.ts). سایت استاتیک است، پس
           اسکریپت پایین بر اساس توکن مرورگر یکی از این دو را نشان می‌دهد؛
           بدون جاوااسکریپت، لینک ورود می‌ماند. */}
+      {/* ورودی دو سبد (کشوها در Baskets.astro). تا سبد خالی است پنهان‌اند:
+          تا وقتی قیمتی در پنل تأیید نشده، سبد خرید هیچ‌وقت پر نمی‌شود و
+          آیکن همیشه‌خالی فقط شلوغی است.
+          ⚠️ روی موبایل کوچک‌تر از آیکن حساب (p-1.5، ۲۴px): با هر دو سبد پر،
+          در عرض ۳۶۰px نام «کرین یدک» دو خطی می‌شد (preview دیده شد). */}
+      <button
+        type="button"
+        id="quote-open"
+        hidden
+        class="relative rounded-md p-1.5 md:p-2 text-crane-navy hover:text-crane-orange transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange"
+        aria-label="سبد استعلام"
+        aria-controls="quote-drawer"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-6 0h.01M12 16h3m-6 0h.01" />
+        </svg>
+        <span id="quote-count" class="absolute -top-0.5 -left-0.5 bg-steel-900 text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center tabular-nums text-[11px] font-black">0</span>
+      </button>
+      <button
+        type="button"
+        id="cart-open"
+        hidden
+        class="relative rounded-md p-1.5 md:p-2 text-crane-navy hover:text-crane-orange transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange"
+        aria-label="سبد خرید"
+        aria-controls="cart-drawer"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+        </svg>
+        <span id="cart-count" class="absolute -top-0.5 -left-0.5 bg-crane-orange text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center tabular-nums text-[11px] font-black">0</span>
+      </button>
       <a
         id="account-link"
         href="/account/login"

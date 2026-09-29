@@ -81,6 +81,9 @@ const RETIRED = [
   { term: 'ADVANTAGES', why: 'آرایه‌ی هاردکد src/data/content.ts — به advantages در siteOptionsFields منتقل شد' },
   { term: 'AUTHORITY_BLOCK', why: 'ثابت هاردکد src/data/discovery.ts — به authorityHeading/authorityParagraphs/authorityHighlights منتقل شد' },
   { term: 'HIGH_WEAR_PARTS', why: 'ثابت هاردکد src/data/discovery.ts — به highWearParts در siteOptionsFields منتقل شد' },
+
+  // ── ایست ۲، فاز ۳: دو سبد جدا ─────────────────────────────────────────
+  { term: 'QuoteBasket.astro', why: 'سبد تکی با برچسب «سفارش/استعلام» — با Baskets.astro (دو سبد جدا) جایگزین شد' },
 ];
 
 const DOCS = [...globSync('docs/**/*.md'), 'CLAUDE.md', 'README.md'].filter((f) => {

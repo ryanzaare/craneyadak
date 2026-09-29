@@ -5,6 +5,7 @@ import { SITE } from '../data/site';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import MobileCTA from '../components/MobileCTA.astro';
+import Baskets from '../components/Baskets.astro';
 import '../styles/global.css';
 
 export interface Props {
@@ -92,5 +93,8 @@ const canonicalURL = new URL(cleanPath, SITE.url).toString();
     </main>
     <Footer />
     <MobileCTA />
+    {/* هر دو سبد روی همه‌ی صفحات: کالایی که از صفحه‌ی دسته افزوده شد باید
+        در صفحه‌ی تماس یا پرداخت هم دیده شود. */}
+    <Baskets />
   </body>
 </html>

@@ -1591,6 +1591,34 @@ if ( $att_after['soon'] - $att_before['soon'] !== 1 || $att_after['expired'] - $
 	echo "✓ بنر/ویجت: منقضی و «تا ۲ روز» درست شمرده می‌شوند؛ قلم ناموجود شمرده نمی‌شود\n";
 }
 
+/* ۵۹ (ایست ۲، فاز ۳ — دو سبد): مسیر استعلام حتی با اقلام تماماً قیمت‌دار
+   «سفارش» نمی‌سازد. سفارش فقط از مسیر پرداخت آنلاین می‌آید؛ قلم قیمت‌داری
+   که این‌جا می‌رسد با «دریافت پیش‌فاکتور» آمده.
+   ⚠️ تاریخ قیمت نسبت به time() واقعی است، نه $now ثابت: endpoint با
+   ساعت واقعی می‌سنجد و قیمتی که نسبت به $now تازه است، چند روز بعد از
+   نوشتن این آزمون منقضی می‌شد و آزمون را بی‌صدا کور می‌کرد (قلم دیگر
+   قیمت‌دار نبود، پس 'quote' به دلیل غلط درست درمی‌آمد). */
+$q59_id = $mk( 'q-paid', [ 'price' => 7000000 ], 'publish', null );
+update_post_meta( $q59_id, CYH_PRICE_UPDATED_META, time() - 3600 );
+delete_transient( 'cyh_rl_' . md5( '0.0.0.0' ) );
+$q59 = cyh_rest_submit_quote( new WP_REST_Request( [
+	'name'    => 'خریدار',
+	'phone'   => '09121234567',
+	'website' => '',
+	'items'   => [ [ 'slug' => 'q-paid', 'qty' => 2 ] ],
+] ) );
+$q59_post  = max( array_keys( $GLOBALS['cyh_test_posts'] ) );
+$q59_items = get_post_meta( $q59_post, 'cyh_items', true );
+if (
+	( $q59_items[0]['buy_mode'] ?? '' ) !== 'cart'
+	|| get_post_meta( $q59_post, 'cyh_kind', true ) !== 'quote'
+	|| (float) get_post_meta( $q59_post, 'cyh_estimate', true ) !== 14000000.0
+) {
+	$errors[] = 'استعلام با اقلام تماماً قیمت‌دار باید «quote» بماند (با مبلغ تقریبی): ' . wp_json_encode( [ $q59_items, get_post_meta( $q59_post, 'cyh_kind', true ) ] );
+} else {
+	echo "✓ مسیر استعلام حتی با اقلام تماماً قیمت‌دار «سفارش» نمی‌سازد (سفارش فقط از پرداخت)\n";
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // بررسی امضای هوک‌ها — همان چیزی که نسخه‌ی ۱.۳.۰ را کشت

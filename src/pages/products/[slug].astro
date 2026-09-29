@@ -25,7 +25,6 @@ import PartNumber from '../../components/PartNumber.astro';
 import TrustBadges from '../../components/TrustBadges.astro';
 import Community from '../../components/Community.astro';
 import ContentBlocks from '../../components/ContentBlocks.astro';
-import QuoteBasket from '../../components/QuoteBasket.astro';
 import { getBlocks } from '../../lib/content-blocks';
 import { aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
 import Questions from '../../components/Questions.astro';
@@ -290,26 +289,59 @@ const contact = await getContact();
           </ul>
           <PriceTag price={price} size="page" />
 
-          {/* ⚠️ «افزودن به سبد خرید» و «خرید آنلاین» حذف شدند.
-              آن دکمه به هیچ‌جا وصل نبود و کاری نمی‌کرد. دو راه وجود داشت:
-              ساختن تسویه‌حساب کامل، یا هم‌راستا کردن دکمه با فرایند واقعی
-              فروش. دومی انتخاب شد چون درگاه پرداخت و نماد اعتماد هنوز
-              وجود ندارند، و مهم‌تر: مدیرعامل قیمت‌ها را ناپایدار می‌داند
-              (به همین دلیل نمودار قیمت حذف شد). فروش قطعی با قیمت ثابت
-              با همان تشخیص در تناقض است.
-              قیمت — اگر ثبت شده باشد — همچنان بالا نمایش داده می‌شود، اما
-              به‌عنوان مرجع، نه تعهد. */}
+          {/* ═══ دکمه‌های خرید — دو سبد جدا (ایست ۲، فاز ۳) ═══
+              قلم پرداخت‌پذیر: «افزودن به سبد خرید» + دکمه‌ی فرعی «دریافت
+              پیش‌فاکتور» (خریدار صنعتی پیش از پرداخت تأیید داخلی می‌خواهد —
+              تأیید کارفرما). بقیه: فقط «افزودن به سبد استعلام».
+              ⚠️ data-guard-until: صفحه ممکن است از build چند روز پیش باشد.
+              پس از پایان اعتبار قیمت، محافظ مرورگر (Baskets.astro) دکمه‌های
+              data-payable-only را پنهان و data-expired-only را نمایان می‌کند
+              — بدون rebuild. سرور هنگام پرداخت خودش دوباره می‌سنجد. */}
+          {price.payable && (
+            <p data-guard-until={price.validUntil} data-expired-only hidden class="mt-4 text-sm leading-7 text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              اعتبار این قیمت به پایان رسیده است. برای قیمت روز، استعلام بگیرید.
+            </p>
+          )}
           <div class="flex flex-col sm:flex-row gap-3 mt-6">
-            <button
-              type="button"
-              data-quote-add={product.slug}
-              data-quote-name={product.name}
-              data-quote-sku={product.sku ?? ''}
-              data-quote-mode={price.payable ? 'cart' : 'rfq'}
-              class="flex-1 bg-crane-orange text-white px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px]"
-            >
-              <span data-quote-label>افزودن به سبد استعلام</span>
-            </button>
+            {price.payable ? (
+              <>
+                <button
+                  type="button"
+                  data-cart-add={product.slug}
+                  data-basket-name={product.name}
+                  data-basket-sku={product.sku ?? ''}
+                  data-guard-until={price.validUntil}
+                  data-payable-only
+                  class="flex-1 bg-crane-orange text-white px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px]"
+                >
+                  <span data-basket-label>افزودن به سبد خرید</span>
+                </button>
+                <button
+                  type="button"
+                  data-quote-add={product.slug}
+                  data-quote-mode="rfq"
+                  data-basket-name={product.name}
+                  data-basket-sku={product.sku ?? ''}
+                  data-guard-until={price.validUntil}
+                  data-expired-only
+                  hidden
+                  class="flex-1 bg-crane-orange text-white px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px]"
+                >
+                  <span data-basket-label>افزودن به سبد استعلام</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                data-quote-add={product.slug}
+                data-quote-mode="rfq"
+                data-basket-name={product.name}
+                data-basket-sku={product.sku ?? ''}
+                class="flex-1 bg-crane-orange text-white px-8 py-4 rounded-xl font-black hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px]"
+              >
+                <span data-basket-label>افزودن به سبد استعلام</span>
+              </button>
+            )}
             <a
               href={contact.whatsappHref}
               target="_blank"
@@ -319,6 +351,20 @@ const contact = await getContact();
               ارسال عکس قطعه در واتساپ
             </a>
           </div>
+          {price.payable && (
+            <button
+              type="button"
+              data-quote-add={product.slug}
+              data-quote-mode="cart"
+              data-basket-name={product.name}
+              data-basket-sku={product.sku ?? ''}
+              data-guard-until={price.validUntil}
+              data-payable-only
+              class="mt-3 w-full border-2 border-steel-300 text-steel-800 px-6 py-3 rounded-xl font-bold hover:border-crane-orange hover:text-crane-orange transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/30 min-h-[48px]"
+            >
+              <span data-basket-label>دریافت پیش‌فاکتور</span>
+            </button>
+          )}
 
           {/* علاقه‌مندی — وارد نشده: به ورود می‌رود و بعد به همین صفحه برمی‌گردد.
               وضعیت (پر/خالی) فقط برای کاربر واردشده از سرور خوانده می‌شود. */}
@@ -577,8 +623,25 @@ const contact = await getContact();
       <div class="min-w-0 flex-1">
         <PriceTag price={price} />
       </div>
+      {price.payable && (
+        <button
+          type="button"
+          data-cart-add={product.slug}
+          data-basket-name={product.name}
+          data-basket-sku={product.sku ?? ''}
+          data-guard-until={price.validUntil}
+          data-payable-only
+          class="bg-crane-orange text-white px-6 py-3 rounded-xl font-black text-sm shrink-0 min-h-[48px] flex items-center focus:outline-none focus:ring-4 focus:ring-crane-orange/40"
+        >
+          <span data-basket-label>افزودن به سبد خرید</span>
+        </button>
+      )}
+      {/* بدون قیمت پرداخت‌پذیر، یا پس از انقضای آن (محافظ مرورگر). */}
       <a
         href={inquiryHref(product)}
+        data-guard-until={price.payable ? price.validUntil : undefined}
+        data-expired-only={price.payable ? '' : undefined}
+        hidden={price.payable}
         class="bg-crane-orange text-white px-6 py-3 rounded-xl font-black text-sm shrink-0 min-h-[48px] flex items-center focus:outline-none focus:ring-4 focus:ring-crane-orange/40"
       >
         استعلام قیمت
@@ -586,7 +649,6 @@ const contact = await getContact();
     </div>
   </div>
 
-  <QuoteBasket wpBase={wpBase} />
 </Layout>
 
 <script>
