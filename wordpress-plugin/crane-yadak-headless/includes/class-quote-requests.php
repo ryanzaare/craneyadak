@@ -484,7 +484,12 @@ function cyh_quote_statuses() {
 }
 
 /** جعبه‌ی پاسخ واحد فروش. */
-function cyh_quote_response_metabox() {
+function cyh_quote_response_metabox( $post_type = '', $post = null ) {
+	// ⚠️ «پاسخ واحد فروش» گردش‌کار استعلام است؛ سفارش آنلاین (دارای cyh_payment) جعبه‌ی
+	// «رسیدگی به سفارش» را دارد (class-order-fulfilment.php).
+	if ( is_object( $post ) && '' !== (string) get_post_meta( $post->ID, 'cyh_payment', true ) ) {
+		return;
+	}
 	add_meta_box(
 		'cyh_quote_response',
 		'پاسخ واحد فروش',
@@ -552,7 +557,7 @@ function cyh_quote_response_metabox() {
 		'high'
 	);
 }
-add_action( 'add_meta_boxes', 'cyh_quote_response_metabox' );
+add_action( 'add_meta_boxes', 'cyh_quote_response_metabox', 10, 2 );
 
 /** بارگذاری آپلودر رسانه فقط در صفحه‌ی همین نوع محتوا. */
 function cyh_quote_admin_assets( $hook ) {
@@ -695,6 +700,8 @@ function cyh_rest_quote_status( $request ) {
 			// باید وضعیت پرداخت را نشان بدهد. خالی = استعلام.
 			'payment'      => (string) get_post_meta( $post->ID, 'cyh_payment', true ),
 			'paymentLabel' => cyh_payment_labels()[ (string) get_post_meta( $post->ID, 'cyh_payment', true ) ] ?? '',
+			// رسیدگی/رهگیری/فاکتور رسمی فقط برای سفارش پرداخت‌شده (null = استعلام یا پرداخت‌نشده).
+			'fulfilment'   => cyh_order_fulfilment_view( $post->ID ),
 			'shipping'     => (string) get_post_meta( $post->ID, 'cyh_shipping_label', true ),
 			'submittedAt' => get_the_date( 'c', $post ),
 			'items'       => array_map(
@@ -743,6 +750,12 @@ add_filter( 'manage_' . CYH_QUOTE_CPT . '_posts_columns', 'cyh_quote_status_colu
 
 function cyh_quote_status_column_content( $column, $post_id ) {
 	if ( 'cyh_status' !== $column ) {
+		return;
+	}
+	// سفارش: وضعیت رسیدگی (ارسال)، نه وضعیت استعلام. پرداخت‌نشده = «—».
+	if ( '' !== (string) get_post_meta( $post_id, 'cyh_payment', true ) ) {
+		$view = cyh_order_fulfilment_view( $post_id );
+		echo $view ? esc_html( $view['statusLabel'] ) : '—';
 		return;
 	}
 	$statuses = cyh_quote_statuses();

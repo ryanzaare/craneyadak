@@ -878,7 +878,13 @@ function cyh_quote_admin_filter_query( $query ) {
 	if ( ! is_admin() || ! $query->is_main_query() || CYH_QUOTE_CPT !== $query->get( 'post_type' ) ) {
 		return;
 	}
-	$query->set( 'meta_query', [ cyh_quote_view_meta_query( cyh_admin_quote_view() ) ] );
+	$meta_query = [ cyh_quote_view_meta_query( cyh_admin_quote_view() ) ];
+	// ?cyh_fulfil=processing|shipped|delivered (فقط در فهرست سفارش‌ها؛ مقدار ناشناخته نادیده).
+	$fulfil = 'orders' === cyh_admin_quote_view() && isset( $_GET['cyh_fulfil'] ) ? cyh_fulfilment_filter_meta_query( sanitize_key( (string) $_GET['cyh_fulfil'] ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification
+	if ( $fulfil ) {
+		$meta_query[] = $fulfil;
+	}
+	$query->set( 'meta_query', $meta_query );
 }
 add_action( 'pre_get_posts', 'cyh_quote_admin_filter_query' );
 

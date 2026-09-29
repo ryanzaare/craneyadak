@@ -67,6 +67,12 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
     in_progress: 'در حال بررسی',
     answered: 'پاسخ داده شده',
     closed: 'بسته‌شده',
+    // سفارش آنلاین: وضعیت رسیدگی (پرداخت‌شده) یا وضعیت پرداخت.
+    processing: 'در حال آماده‌سازی',
+    shipped: 'ارسال شد',
+    delivered: 'تحویل شد',
+    pay_pending: 'در انتظار پرداخت',
+    pay_failed: 'پرداخت ناموفق',
   };
 
   const $ = (id: string) => document.getElementById(id);
@@ -123,7 +129,7 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
       meta.className = 'text-steel-600';
       meta.textContent = `${order.kind === 'order' ? 'سفارش' : 'استعلام'} — ${
         STATUS_LABEL[order.status ?? ''] || order.status || ''
-      } — ${order.date || ''}`;
+      } — ${order.date ? new Date(order.date).toLocaleDateString('fa-IR', { timeZone: 'UTC' }) : ''}`;
       li.append(code, meta);
       list.appendChild(li);
     }

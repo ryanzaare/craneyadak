@@ -2346,6 +2346,168 @@ $co_check(
 	'ستون‌ها: ' . wp_json_encode( [ $co_cols, $co_ph, $co_co, $co_ord, $co_ord0, $co_section ] )
 );
 
+// ۹۱–۹۹: فاز ۵ — رسیدگی به سفارش پرداخت‌شده (وضعیت ارسال، رهگیری، فاکتور رسمی، ایمیل، ویجت)
+$co_quote_id = 8802; // استعلام (بدون cyh_payment)
+$GLOBALS['cyh_test_posts'][ $co_quote_id ] = [ 'post_type' => CYH_QUOTE_CPT, 'post_status' => 'publish', 'post_title' => 'q', 'post_author' => 0 ];
+update_post_meta( $co_quote_id, 'cyh_code', 'CY-QUOTE1' );
+update_post_meta( $co_quote_id, 'cyh_kind', 'quote' );
+update_post_meta( $co_quote_id, 'cyh_status', 'answered' );
+
+// ۹۱: نمای رسیدگی — پرداخت‌شده پیش‌فرض «در حال آماده‌سازی»؛ ناموفق/استعلام null.
+$co_v_paid = cyh_order_fulfilment_view( $co_oid );
+$co_check(
+	'processing' === ( $co_v_paid['status'] ?? '' ) && 'در حال آماده‌سازی' === ( $co_v_paid['statusLabel'] ?? '' ) && '' === $co_v_paid['trackingCode']
+		&& null === cyh_order_fulfilment_view( $co_oid71 ) && null === cyh_order_fulfilment_view( $co_quote_id ),
+	'رسیدگی: پرداخت‌شده پیش‌فرض «در حال آماده‌سازی»؛ پرداخت‌نشده و استعلام null',
+	'نمای رسیدگی: ' . wp_json_encode( [ $co_v_paid, cyh_order_fulfilment_view( $co_oid71 ) ] )
+);
+
+// ۹۲: کدام جعبه روی کدام رکورد — سفارش پرداخت‌شده «رسیدگی»، سفارش ناموفق هیچ‌کدام
+// («پاسخ واحد فروش» استعلام است)، استعلام فقط «پاسخ واحد فروش».
+$box_ids = static function ( $id ) {
+	$GLOBALS['cyh_test_metaboxes'] = [];
+	$post = (object) [ 'ID' => $id ];
+	cyh_quote_response_metabox( CYH_QUOTE_CPT, $post );
+	cyh_fulfilment_metabox( CYH_QUOTE_CPT, $post );
+	return array_keys( $GLOBALS['cyh_test_metaboxes'] );
+};
+$co_check(
+	[ 'cyh_fulfilment' ] === $box_ids( $co_oid ) && [] === $box_ids( $co_oid71 ) && [ 'cyh_quote_response' ] === $box_ids( $co_quote_id ),
+	'جعبه‌ها: سفارش پرداخت‌شده فقط «رسیدگی»؛ سفارش ناموفق هیچ؛ استعلام فقط «پاسخ واحد فروش»',
+	'جعبه‌ها: ' . wp_json_encode( [ $box_ids( $co_oid ), $box_ids( $co_oid71 ), $box_ids( $co_quote_id ) ] )
+);
+
+// ۹۳: ذخیره — وضعیت/رهگیری (ارقام فارسی→لاتین)/توضیح/فاکتور رسمی؛ javascript: پاک می‌شود؛
+// وضعیت ناشناخته → processing؛ بدون nonce و سفارش پرداخت‌نشده هیچ‌چیز ذخیره نمی‌شود.
+$GLOBALS['cyh_test_mail_calls'] = [];
+$_POST = [ 'cyh_fulfil_nonce' => 'x', 'cyh_fulfilment' => 'shipped', 'cyh_tracking_code' => '۱۲۳۴۵', 'cyh_fulfil_note' => 'باربری آزمون <b>x</b>', 'cyh_official_invoice_url' => 'javascript:alert(1)' ];
+cyh_save_fulfilment( $co_oid );
+$co_v1     = cyh_order_fulfilment_view( $co_oid );
+$co_mails1 = count( $GLOBALS['cyh_test_mail_calls'] );
+$_POST['cyh_official_invoice_url'] = 'https://cms.example.com/wp-content/uploads/inv.pdf';
+cyh_save_fulfilment( $co_oid ); // ذخیره‌ی دوباره: ایمیل تکراری نه
+$co_v2     = cyh_order_fulfilment_view( $co_oid );
+$co_mails2 = count( $GLOBALS['cyh_test_mail_calls'] );
+$_POST['cyh_fulfilment'] = 'hacked';
+cyh_save_fulfilment( $co_oid );
+$co_v3 = cyh_order_fulfilment_view( $co_oid );
+$_POST = [ 'cyh_fulfilment' => 'delivered' ]; // بدون nonce
+cyh_save_fulfilment( $co_oid );
+$co_v4 = cyh_order_fulfilment_view( $co_oid );
+$_POST = [ 'cyh_fulfil_nonce' => 'x', 'cyh_fulfilment' => 'shipped', 'cyh_tracking_code' => 'HACK' ];
+cyh_save_fulfilment( $co_oid71 ); // سفارش ناموفق
+$_POST = [];
+$co_check(
+	'shipped' === $co_v1['status'] && '12345' === $co_v1['trackingCode'] && 'باربری آزمون x' === $co_v1['note'] && '' === $co_v1['officialInvoiceUrl']
+		&& 'https://cms.example.com/wp-content/uploads/inv.pdf' === $co_v2['officialInvoiceUrl']
+		&& 'processing' === $co_v3['status'] && 'processing' === $co_v4['status'] && 'processing' === get_post_meta( $co_oid, 'cyh_fulfilment', true )
+		&& '' === (string) get_post_meta( $co_oid71, 'cyh_tracking_code', true ) && '' === (string) get_post_meta( $co_oid71, 'cyh_fulfilment', true ),
+	'ذخیره‌ی رسیدگی: ارقام رهگیری لاتین، HTML توضیح پاک، javascript: خالی، وضعیت ناشناخته → processing، بدون nonce و سفارش ناموفق دست‌نخورده',
+	'ذخیره: ' . wp_json_encode( [ $co_v1, $co_v2, $co_v3, $co_v4 ] )
+);
+$co_check(
+	1 === $co_mails1 && 1 === $co_mails2,
+	'ایمیل «ارسال شد»: فقط اولین گذار به shipped؛ ذخیره‌ی دوباره ایمیل تکراری نمی‌فرستد',
+	'ایمیل ارسال: ' . wp_json_encode( [ $co_mails1, $co_mails2 ] )
+);
+
+// ۹۴: متن ایمیل ارسال — کد سفارش، روش ارسال، رهگیری، توضیح escape، لینک سفارش‌ها؛
+// بدون گیرنده false و پرچم «ارسال شد» ثبت نمی‌شود (ذخیره‌ی بعدی دوباره تلاش می‌کند).
+update_post_meta( $co_evil_id, 'cyh_payment', 'paid' );
+update_post_meta( $co_evil_id, 'cyh_tracking_code', 'TRK-9' );
+update_post_meta( $co_evil_id, 'cyh_fulfil_note', '<script>alert(1)</script> تحویل باربری' );
+$GLOBALS['cyh_test_mail_calls'] = [];
+$co_ship_ok = cyh_order_notify_shipped( $co_evil_id );
+$co_ship_m  = end( $GLOBALS['cyh_test_mail_calls'] );
+$GLOBALS['cyh_test_posts'][ $co_evil_id ]['post_author'] = 0;
+$cust_e = get_post_meta( $co_evil_id, 'cyh_customer', true ); $cust_e['email'] = ''; update_post_meta( $co_evil_id, 'cyh_customer', $cust_e );
+$co_ship_none = cyh_order_notify_shipped( $co_evil_id );
+$_POST = [ 'cyh_fulfil_nonce' => 'x', 'cyh_fulfilment' => 'shipped' ];
+cyh_save_fulfilment( $co_evil_id );
+$_POST = [];
+$co_check(
+	true === $co_ship_ok && false !== strpos( $co_ship_m['subject'], 'CY-EVIL01' ) && false !== strpos( $co_ship_m['body'], 'TRK-9' ) && false !== strpos( $co_ship_m['body'], 'تیپاکس' )
+		&& false !== strpos( $co_ship_m['body'], 'https://craneyadak.com/account/orders/' ) && false === strpos( $co_ship_m['body'], '<script' ) && false !== strpos( $co_ship_m['body'], '&lt;script&gt;' )
+		&& false === $co_ship_none && '' === (string) get_post_meta( $co_evil_id, 'cyh_shipped_mail_sent', true ),
+	'ایمیل ارسال: کد، روش، رهگیری، لینک؛ توضیح escape؛ بدون گیرنده false و پرچم ثبت نمی‌شود',
+	'ایمیل ارسال: ' . wp_json_encode( [ $co_ship_ok, $co_ship_m, $co_ship_none ] )
+);
+$GLOBALS['cyh_test_posts'][ $co_evil_id ]['post_author'] = $co_uid_a;
+
+// ۹۵: REST — «سفارش‌های من» و /track وضعیت رسیدگی را برای پرداخت‌شده می‌دهند، برای ناموفق null.
+update_post_meta( $co_oid, 'cyh_fulfilment', 'shipped' );
+update_post_meta( $co_oid, 'cyh_tracking_code', '12345' );
+$co_as( $co_tok_a );
+$co_own3 = cyh_rest_account_orders( new WP_REST_Request( [] ) );
+$co_by3  = [];
+foreach ( $co_own3['orders'] as $co_o3 ) { $co_by3[ $co_o3['code'] ] = $co_o3; }
+$co_tr3 = $co_track( '509594101', '09121234567' )->get_data();
+$co_tr_q = $co_track( 'CY-QUOTE1', '09121234567' );
+update_post_meta( $co_quote_id, 'cyh_phone', '09121234567' );
+$co_tr_q = $co_track( 'CY-QUOTE1', '09121234567' )->get_data();
+$co_check(
+	'shipped' === ( $co_by3[ $co_code ]['fulfilment']['status'] ?? '' ) && '12345' === ( $co_by3[ $co_code ]['fulfilment']['trackingCode'] ?? '' )
+		&& null === $co_by3[ get_post_meta( $co_oid71, 'cyh_code', true ) ]['fulfilment']
+		&& 'shipped' === ( $co_tr3['fulfilment']['status'] ?? '' ) && '12345' === ( $co_tr3['fulfilment']['trackingCode'] ?? '' )
+		&& array_key_exists( 'fulfilment', $co_tr_q ) && null === $co_tr_q['fulfilment'],
+	'REST: سفارش‌های من و /track وضعیت/رهگیری را برای پرداخت‌شده می‌دهند؛ ناموفق و استعلام null',
+	'REST رسیدگی: ' . wp_json_encode( [ $co_by3[ $co_code ]['fulfilment'] ?? null, $co_tr3['fulfilment'] ?? null, $co_tr_q['fulfilment'] ?? 'x' ] )
+);
+
+// ۹۶: داشبورد حساب — سفارش پرداخت‌شده: وضعیت رسیدگی؛ ناموفق: pay_failed؛ استعلام: وضعیت استعلام.
+$co_me3 = cyh_rest_account_me( new WP_REST_Request( [] ) );
+$co_me_by = [];
+foreach ( $co_me3['orders'] as $co_m3 ) { $co_me_by[ $co_m3['code'] ] = $co_m3['status']; }
+$co_check(
+	'shipped' === ( $co_me_by[ $co_code ] ?? '' ) && 'pay_failed' === ( $co_me_by[ get_post_meta( $co_oid71, 'cyh_code', true ) ] ?? '' ),
+	'/account/me: وضعیت سفارش = رسیدگی/پرداخت، نه وضعیت استعلام («جدید»)',
+	'me orders: ' . wp_json_encode( $co_me_by )
+);
+
+// ۹۷: ستون وضعیت رسیدگی در فهرست سفارش‌ها.
+ob_start(); cyh_quote_status_column_content( 'cyh_status', $co_oid ); $col_paid = ob_get_clean();
+ob_start(); cyh_quote_status_column_content( 'cyh_status', $co_oid71 ); $col_fail = ob_get_clean();
+ob_start(); cyh_quote_status_column_content( 'cyh_status', $co_quote_id ); $col_quote = ob_get_clean();
+$co_check(
+	'ارسال شد' === $col_paid && '—' === $col_fail && false !== strpos( $col_quote, 'پاسخ داده شد' ),
+	'ستون وضعیت: سفارش پرداخت‌شده = وضعیت رسیدگی، ناموفق «—»، استعلام = وضعیت استعلام',
+	'ستون: ' . wp_json_encode( [ $col_paid, $col_fail, $col_quote ] )
+);
+
+// ۹۸: فیلتر فهرست سفارش‌ها با ?cyh_fulfil — فقط در نمای سفارش‌ها و فقط مقدار شناخته‌شده.
+$GLOBALS['cyh_test_is_admin'] = true;
+$mq = static function ( $view, $fulfil ) {
+	$_GET = [];
+	if ( null !== $view ) { $_GET['cyh_view'] = $view; }
+	if ( null !== $fulfil ) { $_GET['cyh_fulfil'] = $fulfil; }
+	$q = new WP_Query( [ 'post_type' => CYH_QUOTE_CPT ] );
+	cyh_quote_admin_filter_query( $q );
+	$_GET = [];
+	return $q->get( 'meta_query' );
+};
+$co_mq_proc = $mq( 'orders', 'processing' );
+$co_check(
+	2 === count( $co_mq_proc ) && 'OR' === ( $co_mq_proc[1]['relation'] ?? '' ) && 2 === count( $mq( 'orders', 'shipped' ) ) && 'shipped' === $mq( 'orders', 'shipped' )[1]['value']
+		&& 1 === count( $mq( 'orders', 'bogus' ) ) && 1 === count( $mq( 'orders', null ) ) && 1 === count( $mq( null, 'shipped' ) ),
+	'فیلتر سفارش‌ها: processing شامل سفارش بی‌متا (OR)، shipped مقدار دقیق؛ مقدار ناشناخته و نمای استعلام نادیده',
+	'فیلتر رسیدگی: ' . wp_json_encode( [ $co_mq_proc, $mq( 'orders', 'bogus' ) ] )
+);
+$GLOBALS['cyh_test_is_admin'] = false;
+
+// ۹۹: ویجت داشبورد — فقط پرداخت‌شده‌ی «در حال آماده‌سازی»؛ ارسال‌شده و ناموفق نه.
+update_post_meta( $co_evil_id, 'cyh_fulfilment', 'processing' );
+ob_start(); cyh_orders_dashboard_widget(); $w1 = ob_get_clean();
+update_post_meta( $co_evil_id, 'cyh_fulfilment', 'delivered' );
+ob_start(); cyh_orders_dashboard_widget(); $w2 = ob_get_clean();
+$GLOBALS['cyh_test_dashboard_widgets'] = [];
+cyh_register_orders_widget();
+$co_check(
+	false !== strpos( $w1, 'CY-EVIL01' ) && false === strpos( $w1, $co_code . '<' ) && false === strpos( $w1, get_post_meta( $co_oid71, 'cyh_code', true ) )
+		&& false !== strpos( $w2, 'در انتظار رسیدگی نیست' ) && isset( $GLOBALS['cyh_test_dashboard_widgets']['cyh_orders_widget'] ),
+	'ویجت داشبورد: فقط پرداخت‌شده‌ی در حال آماده‌سازی؛ ارسال‌شده/ناموفق نه؛ ویجت ثبت شد',
+	'ویجت: ' . $w1 . ' | ' . $w2
+);
+
 // ═══════════════════════════════════════════════════════════════════════════
 // بررسی امضای هوک‌ها — همان چیزی که نسخه‌ی ۱.۳.۰ را کشت
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2360,7 +2522,7 @@ $hook_arity = [
 	'pre_term_slug' => 2, 'pre_term_name' => 2, 'pre_term_description' => 2,
 	'wp_insert_term_data' => 3, 'wp_update_term_data' => 4, 'term_name' => 2,
 	'save_post' => 3, 'wp_insert_post_data' => 4, 'wp_unique_post_slug' => 6,
-	'add_meta_boxes' => 2, 'pre_get_posts' => 1, 'parent_file' => 1, 'pre_comment_approved' => 2,
+	'add_meta_boxes' => 2, 'wp_dashboard_setup' => 0, 'pre_get_posts' => 1, 'parent_file' => 1, 'pre_comment_approved' => 2,
 	'manage_comments_custom_column' => 2, 'manage_edit-comments_columns' => 1,
 	'init' => 0, 'admin_init' => 0, 'admin_menu' => 0, 'admin_notices' => 0,
 	'admin_enqueue_scripts' => 1, 'rest_api_init' => 1,

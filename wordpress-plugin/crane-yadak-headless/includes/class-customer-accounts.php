@@ -525,7 +525,10 @@ function cyh_rest_account_me( $request ) {
 					return [
 						'code'   => get_post_meta( $post->ID, 'cyh_code', true ),
 						'kind'   => get_post_meta( $post->ID, 'cyh_kind', true ) ?: 'quote',
-						'status' => get_post_meta( $post->ID, 'cyh_status', true ) ?: 'new',
+						// سفارش پرداخت‌شده: وضعیت رسیدگی؛ سفارش دیگر: وضعیت پرداخت؛ استعلام: وضعیت استعلام.
+						'status' => '' !== (string) get_post_meta( $post->ID, 'cyh_payment', true )
+							? ( cyh_order_fulfilment_view( $post->ID )['status'] ?? 'pay_' . (string) get_post_meta( $post->ID, 'cyh_payment', true ) )
+							: ( get_post_meta( $post->ID, 'cyh_status', true ) ?: 'new' ),
 						'date'   => get_the_date( 'Y-m-d', $post ),
 					];
 				},
@@ -584,6 +587,8 @@ function cyh_rest_account_orders( $request ) {
 			'shipping'     => (string) get_post_meta( $post->ID, 'cyh_shipping_label', true ),
 			'refId'        => 'paid' === $payment ? (string) get_post_meta( $post->ID, 'cyh_ref_id', true ) : '',
 			'sandbox'      => (bool) get_post_meta( $post->ID, 'cyh_sandbox', true ),
+			// رسیدگی/رهگیری/فاکتور رسمی — فقط سفارش پرداخت‌شده، null وگرنه.
+			'fulfilment'   => cyh_order_fulfilment_view( $post->ID ),
 			'items'        => array_map(
 				static function ( $item ) {
 					return [

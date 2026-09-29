@@ -211,7 +211,8 @@ function cyh_rest_account_invoice( $request ) {
  * دارد). هیچ‌کدام معتبر نبود → ارسال نمی‌شود، بدون خطا: شکست ایمیل هرگز
  * نباید نتیجه‌ی پرداخت را خراب کند.
  */
-function cyh_checkout_notify_customer( $post_id ) {
+/** ایمیل مشتری برای این سفارش: ایمیل فرم پرداخت، وگرنه ایمیل حساب؛ معتبر نبود = ''. */
+function cyh_order_recipient( $post_id ) {
 	$customer = get_post_meta( $post_id, 'cyh_customer', true );
 	$to       = is_array( $customer ) ? sanitize_email( (string) ( $customer['email'] ?? '' ) ) : '';
 	if ( ! is_email( $to ) ) {
@@ -219,7 +220,13 @@ function cyh_checkout_notify_customer( $post_id ) {
 		$user = $post && ! empty( $post->post_author ) ? get_userdata( (int) $post->post_author ) : null;
 		$to   = $user ? (string) $user->user_email : '';
 	}
-	if ( ! is_email( $to ) ) {
+	return is_email( $to ) ? $to : '';
+}
+
+function cyh_checkout_notify_customer( $post_id ) {
+	$customer = get_post_meta( $post_id, 'cyh_customer', true );
+	$to       = cyh_order_recipient( $post_id );
+	if ( '' === $to ) {
 		return false;
 	}
 

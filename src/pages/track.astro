@@ -246,15 +246,37 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
       }
 
       if (isOrder) {
+        const f = data.fulfilment; // فقط سفارش پرداخت‌شده؛ کارشناس دستی می‌نویسد
+        if (f) {
+          const st = document.createElement('p');
+          st.className = 'inline-block text-sm font-bold border rounded-md px-3 py-1.5 mr-2 bg-sky-50 text-sky-900 border-sky-200';
+          st.textContent = f.statusLabel;
+          badge.after(st);
+        }
         const p = document.createElement('p');
         p.className = 'text-sm text-steel-600 leading-7';
         p.textContent =
           data.payment === 'paid'
-            ? `پرداخت شما ثبت شد و سفارش برای ارسال آماده می‌شود.${data.shipping ? ` روش ارسال: ${data.shipping}.` : ''}`
+            ? `پرداخت شما ثبت شد.${data.shipping ? ` روش ارسال: ${data.shipping}.` : ''}${f?.trackingCode ? ` کد رهگیری مرسوله: ${f.trackingCode}.` : ''}`
             : data.payment === 'pending'
               ? 'پرداخت این سفارش هنوز قطعی نشده است. اگر مبلغ از حسابتان کسر شده، پیش از پرداخت دوباره با ما تماس بگیرید.'
               : 'پرداخت این سفارش انجام نشد.';
         body.appendChild(p);
+        if (f?.note) {
+          const n = document.createElement('p');
+          n.className = 'text-sm text-steel-700 leading-7 bg-steel-50 border border-steel-300 rounded-md p-3 whitespace-pre-line';
+          n.textContent = f.note;
+          body.appendChild(n);
+        }
+        if (f && /^https?:\/\//i.test(f.officialInvoiceUrl || '')) {
+          const a = document.createElement('a');
+          a.href = f.officialInvoiceUrl;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.className = 'inline-flex items-center gap-2 bg-accent text-white px-5 py-3 rounded-md font-black text-sm hover:bg-accent-ink transition-colors';
+          a.textContent = 'دریافت فاکتور رسمی';
+          body.appendChild(a);
+        }
       } else if (!data.response && data.status !== 'answered') {
         const p = document.createElement('p');
         p.className = 'text-sm text-steel-600 leading-7';

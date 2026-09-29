@@ -63,6 +63,14 @@ const description = 'تاریخچه‌ی سفارش‌ها و وضعیت پرد�
     shipping: string;
     refId: string;
     sandbox: boolean;
+    /** فقط سفارش پرداخت‌شده؛ null وگرنه. */
+    fulfilment: {
+      status: 'processing' | 'shipped' | 'delivered';
+      statusLabel: string;
+      trackingCode: string;
+      note: string;
+      officialInvoiceUrl: string;
+    } | null;
     items: OrderItem[];
   }
 
@@ -72,6 +80,12 @@ const description = 'تاریخچه‌ی سفارش‌ها و وضعیت پرد�
     paid: 'bg-emerald-100 text-emerald-900 border-emerald-600',
     pending: 'bg-amber-100 text-amber-900 border-amber-500',
     failed: 'bg-red-100 text-red-900 border-red-600',
+  };
+
+  const FULFIL_BADGE: Record<string, string> = {
+    processing: 'bg-sky-100 text-sky-900 border-sky-500',
+    shipped: 'bg-indigo-100 text-indigo-900 border-indigo-500',
+    delivered: 'bg-emerald-100 text-emerald-900 border-emerald-600',
   };
 
   function el(tag: string, cls: string, text = ''): HTMLElement {
@@ -98,6 +112,7 @@ const description = 'تاریخچه‌ی سفارش‌ها و وضعیت پرد�
     code.setAttribute('dir', 'ltr');
     const badges = el('div', 'flex flex-wrap items-center gap-2');
     badges.append(el('span', `text-xs font-bold border rounded-full px-2.5 py-0.5 ${BADGE[o.payment] ?? BADGE.pending}`, o.paymentLabel));
+    if (o.fulfilment) badges.append(el('span', `text-xs font-bold border rounded-full px-2.5 py-0.5 ${FULFIL_BADGE[o.fulfilment.status] ?? FULFIL_BADGE.processing}`, o.fulfilment.statusLabel));
     if (o.sandbox) badges.append(el('span', 'text-xs font-bold border border-amber-500 bg-amber-50 text-amber-900 rounded-full px-2.5 py-0.5', 'آزمایشی'));
     head.append(code, badges);
     li.append(head);
@@ -124,13 +139,25 @@ const description = 'تاریخچه‌ی سفارش‌ها و وضعیت پرد�
     if (o.invoice) dl.append(row('فاکتور', 'فاکتور رسمی درخواست شده'));
     if (o.shipping) dl.append(row('روش ارسال', o.shipping));
     if (o.refId) dl.append(row('شماره پیگیری پرداخت', o.refId, true));
+    // رهگیری مرسوله و توضیح را کارشناس دستی می‌نویسد؛ textContent (row) — متن آزاد است.
+    if (o.fulfilment?.trackingCode) dl.append(row('رهگیری مرسوله', o.fulfilment.trackingCode, true));
+    if (o.fulfilment?.note) dl.append(row('توضیح', o.fulfilment.note));
     li.append(dl);
 
     const actions = el('div', 'flex flex-wrap items-center gap-x-5 gap-y-2');
     if (o.payment === 'paid') {
-      const inv = el('a', 'inline-block bg-accent text-white px-4 py-2 rounded-md text-sm font-black hover:bg-accent-ink', 'دریافت فاکتور') as HTMLAnchorElement;
+      const inv = el('a', 'inline-block bg-accent text-white px-4 py-2 rounded-md text-sm font-black hover:bg-accent-ink', 'دریافت فاکتور (غیررسمی)') as HTMLAnchorElement;
       inv.href = `/account/invoice?code=${encodeURIComponent(o.code)}`;
       actions.append(inv);
+    }
+    // فقط نشانی http(s) لینک می‌شود (سرور هم همین را می‌سنجد؛ این‌جا دفاع دوم).
+    const official = o.fulfilment?.officialInvoiceUrl ?? '';
+    if (/^https?:\/\//i.test(official)) {
+      const off = el('a', 'inline-block border border-steel-400 bg-white text-steel-900 px-4 py-2 rounded-md text-sm font-black hover:border-accent', 'دریافت فاکتور رسمی') as HTMLAnchorElement;
+      off.href = official;
+      off.target = '_blank';
+      off.rel = 'noopener noreferrer';
+      actions.append(off);
     }
     const link = el('a', 'inline-block text-sm text-accent-ink font-bold hover:underline', 'پیگیری سفارش ←') as HTMLAnchorElement;
     link.href = `/track?code=${encodeURIComponent(o.code)}`;
