@@ -93,6 +93,11 @@ const btn = 'inline-block bg-accent text-white px-6 py-3 rounded-md font-black h
   // سبد فقط با پرداخت موفق خالی می‌شود؛ ناموفق/در انتظار دست‌نخورده.
   if (r === 'ok') {
     writeBasket(browserStore(), 'cart', []);
+    try {
+      sessionStorage.removeItem('cy-checkout-draft-v1'); // پیش‌نویس فرم پرداخت دیگر لازم نیست
+    } catch {
+      /* بدون sessionStorage پیش‌نویسی هم نبوده. */
+    }
     /* کد در فهرست کدهای همین دستگاه (صفحه‌ی پیگیری) — مثل استعلام. */
     try {
       const KEY = 'cy-quote-codes-v1';

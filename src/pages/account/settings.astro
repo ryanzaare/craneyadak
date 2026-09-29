@@ -52,6 +52,19 @@ const button = 'bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-ac
           <p id="profile-msg" class="text-sm leading-7" role="status" aria-live="polite"></p>
         </form>
 
+        {/* مشخصات ذخیره‌شده‌ی پرداخت: پس از هر پرداخت موفق به‌روز می‌شود و سفارش بعدی را
+            پیش‌پر می‌کند. ویرایش = همان فرم پرداخت؛ اینجا فقط دیدن و حذف. */}
+        <div id="saved-box" hidden class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+          <h2 class="font-black text-steel-900">مشخصات ذخیره‌شده برای پرداخت</h2>
+          <p class="text-sm leading-7 text-steel-700">
+            پس از هر پرداخت موفق، مشخصات گیرنده و فاکتور (در صورت درخواست) ذخیره می‌شود تا سفارش بعدی را
+            سریع‌تر ثبت کنید. برای تغییر، هنگام پرداخت ویرایششان کنید؛ با پرداخت بعدی به‌روز می‌شوند.
+          </p>
+          <dl id="saved-summary" class="text-sm space-y-1.5"></dl>
+          <button type="button" id="saved-clear" class="border border-red-600 text-red-700 bg-white px-5 py-2.5 rounded-md text-sm font-black hover:bg-red-50">حذف مشخصات ذخیره‌شده</button>
+          <p id="saved-msg" class="text-sm leading-7" role="status" aria-live="polite"></p>
+        </div>
+
         <form id="password-form" class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
           <h2 class="font-black text-steel-900">تغییر رمز عبور</h2>
           <div>
@@ -102,7 +115,10 @@ const button = 'bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-ac
   async function init() {
     if (!requireLogin()) return;
 
-    const me = await api<{ profile?: { name?: string; email?: string; phone?: string | null; company?: string | null } }>(
+    const me = await api<{
+      profile?: { name?: string; email?: string; phone?: string | null; company?: string | null };
+      saved?: { customer?: Record<string, string>; invoice?: Record<string, string> } | null;
+    }>(
       '/account/me',
       { auth: true },
     );
@@ -119,7 +135,45 @@ const button = 'bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-ac
     $<HTMLInputElement>('set-name').value = p.name ?? '';
     $<HTMLInputElement>('set-phone').value = p.phone ?? '';
     $<HTMLInputElement>('set-company').value = p.company ?? '';
+    showSaved(me.data.saved ?? null);
   }
+
+  function showSaved(saved: { customer?: Record<string, string>; invoice?: Record<string, string> } | null) {
+    const box = $('saved-box');
+    box.hidden = !saved?.customer;
+    if (!saved?.customer) return;
+    const c = saved.customer;
+    const dl = $('saved-summary');
+    dl.textContent = '';
+    const row = (label: string, value: string) => {
+      const div = document.createElement('div');
+      div.className = 'flex gap-2';
+      const dt = document.createElement('dt');
+      dt.className = 'text-steel-600 w-24 shrink-0';
+      dt.textContent = label;
+      const dd = document.createElement('dd');
+      dd.className = 'text-steel-900 min-w-0 break-words';
+      dd.textContent = value; // textContent: مقدار را خود کاربر نوشته است
+      div.append(dt, dd);
+      dl.append(div);
+    };
+    row('گیرنده', [c.name, c.phone].filter(Boolean).join(' — '));
+    row('نشانی', [c.province, c.city, c.address].filter(Boolean).join('، '));
+    if (saved.invoice) row('فاکتور رسمی', `${saved.invoice.type === 'legal' ? 'حقوقی' : 'حقیقی'} — ${saved.invoice.name ?? ''}`);
+  }
+
+  $('saved-clear').addEventListener('click', async () => {
+    const msg = $('saved-msg');
+    const res = await busy($<HTMLButtonElement>('saved-clear'), 'در حال حذف…', () =>
+      api('/account/saved-checkout/clear', { method: 'POST', auth: true, body: {} }),
+    );
+    if (res.status === 401) return requireLogin();
+    if (res.ok) {
+      showSaved(null);
+      return;
+    }
+    say(msg, false, errorMessage(res, 'حذف انجام نشد.'));
+  });
 
   $<HTMLFormElement>('profile-form').addEventListener('submit', async (e) => {
     e.preventDefault();

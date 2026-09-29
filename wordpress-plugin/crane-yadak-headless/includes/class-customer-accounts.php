@@ -251,6 +251,31 @@ function cyh_customer_valid_phone( $digits ) {
 	return (bool) preg_match( '/^(0)?9\d{9}$/', $digits );
 }
 
+/** 9121234567 و 09121234567 یک شماره‌اند؛ ذخیره همیشه با صفر اول. */
+function cyh_customer_phone_canonical( $digits ) {
+	return '0' . ltrim( (string) $digits, '0' );
+}
+
+/**
+ * آیا حساب دیگری (غیر از $except_id) این شماره را دارد؟
+ * ⚠️ هر دو شکل با/بدون صفر اول جست‌وجو می‌شود: حساب‌های ساخته‌شده پیش از
+ * یکتایی ممکن است بدون صفر ذخیره شده باشند.
+ */
+function cyh_customer_phone_taken( $phone, $except_id = 0 ) {
+	$canonical = cyh_customer_phone_canonical( $phone );
+	$found     = get_users(
+		[
+			'meta_query' => [ // phpcs:ignore WordPress.DB.SlowDBQuery
+				[ 'key' => 'cyh_phone', 'value' => [ $canonical, ltrim( $canonical, '0' ) ], 'compare' => 'IN' ],
+			],
+			'exclude'    => [ (int) $except_id ],
+			'number'     => 1,
+			'fields'     => 'ID',
+		]
+	);
+	return ! empty( $found );
+}
+
 function cyh_customer_profile( $user ) {
 	return [
 		'id'      => (int) $user->ID,
@@ -283,6 +308,7 @@ function cyh_register_customer_routes() {
 		[ 'methods' => 'GET', 'permission_callback' => '__return_true', 'callback' => 'cyh_rest_account_orders' ]
 	);
 	register_rest_route( 'crane-yadak/v1', '/account/profile', array_merge( $public, [ 'callback' => 'cyh_rest_account_profile' ] ) );
+	register_rest_route( 'crane-yadak/v1', '/account/saved-checkout/clear', array_merge( $public, [ 'callback' => 'cyh_rest_account_saved_clear' ] ) );
 	register_rest_route( 'crane-yadak/v1', '/account/change-password', array_merge( $public, [ 'callback' => 'cyh_rest_account_change_password' ] ) );
 	register_rest_route(
 		'crane-yadak/v1',
@@ -335,6 +361,12 @@ function cyh_rest_account_register( $request ) {
 	// و تا سرویس پیامک نیامده تنها راه تماس با مشتری بدون ایمیل است.
 	if ( '' === $phone || ! cyh_customer_valid_phone( $phone ) ) {
 		return new WP_Error( 'cyh_bad_phone', 'شماره موبایل معتبر لازم است (مثل ۰۹۱۲۱۲۳۴۵۶۷).', [ 'status' => 400 ] );
+	}
+	// ⚠️ یک شماره = یک حساب (آزمون کارفرما: چند حساب با یک شماره ساخته شد). بدون
+	// این، بازیابی رمز با پیامک و «حساب من» به شماره‌ی مشترک گره می‌خورد.
+	$phone = cyh_customer_phone_canonical( $phone );
+	if ( cyh_customer_phone_taken( $phone ) ) {
+		return new WP_Error( 'cyh_phone_taken', 'حسابی با این شماره موبایل قبلاً ساخته شده — وارد شوید یا رمز را بازیابی کنید.', [ 'status' => 409 ] );
 	}
 
 	$user_id = wp_insert_user(
@@ -487,6 +519,7 @@ function cyh_rest_account_me( $request ) {
 	return rest_ensure_response(
 		[
 			'profile' => cyh_customer_profile( get_userdata( $user_id ) ),
+			'saved'   => cyh_checkout_saved( (int) $user_id ),
 			'orders'  => array_map(
 				static function ( $post ) {
 					return [
@@ -595,6 +628,11 @@ function cyh_rest_account_profile( $request ) {
 	// ⚠️ حذف شماره ممنوع است (همان قاعده‌ی ثبت‌نام).
 	if ( '' === $phone || ! cyh_customer_valid_phone( $phone ) ) {
 		return new WP_Error( 'cyh_bad_phone', 'شماره موبایل معتبر لازم است (مثل ۰۹۱۲۱۲۳۴۵۶۷).', [ 'status' => 400 ] );
+	}
+
+	$phone = cyh_customer_phone_canonical( $phone );
+	if ( cyh_customer_phone_taken( $phone, (int) $user_id ) ) {
+		return new WP_Error( 'cyh_phone_taken', 'این شماره موبایل برای حساب دیگری ثبت شده است.', [ 'status' => 409 ] );
 	}
 
 	wp_update_user( [ 'ID' => $user_id, 'display_name' => $name ] );
@@ -725,3 +763,70 @@ function cyh_get_frontend_url() {
 	$origins = function_exists( 'cyh_get_allowed_origins' ) ? cyh_get_allowed_origins() : [];
 	return $origins[0] ?? 'https://craneyadak.com';
 }
+
+function cyh_rest_account_saved_clear( $request ) {
+	$user_id = cyh_customer_authenticate_request( $request );
+	if ( is_wp_error( $user_id ) ) {
+		return $user_id;
+	}
+	delete_user_meta( $user_id, CYH_SAVED_CHECKOUT_META );
+	return rest_ensure_response( [ 'success' => true ] );
+}
+
+/* =========================================================================
+   پنل وردپرس: «کاربران» فقط نام و ایمیل نشان می‌داد
+   ========================================================================= */
+function cyh_user_paid_orders( $user_id ) {
+	return get_posts(
+		[
+			'post_type'      => CYH_QUOTE_CPT,
+			'post_status'    => 'publish',
+			'author'         => (int) $user_id,
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'meta_query'     => [ [ 'key' => 'cyh_payment', 'value' => 'paid' ] ], // phpcs:ignore WordPress.DB.SlowDBQuery
+		]
+	);
+}
+
+function cyh_users_columns( $columns ) {
+	$columns['cyh_phone']   = 'موبایل';
+	$columns['cyh_company'] = 'شرکت';
+	$columns['cyh_orders']  = 'سفارش پرداخت‌شده';
+	return $columns;
+}
+add_filter( 'manage_users_columns', 'cyh_users_columns' );
+
+function cyh_users_column_content( $value, $column, $user_id ) {
+	if ( 'cyh_phone' === $column ) {
+		$phone = (string) get_user_meta( $user_id, 'cyh_phone', true );
+		return '' === $phone ? '—' : sprintf( '<a href="tel:%s" dir="ltr">%s</a>', esc_attr( $phone ), esc_html( $phone ) );
+	}
+	if ( 'cyh_company' === $column ) {
+		return esc_html( (string) get_user_meta( $user_id, 'cyh_company', true ) ?: '—' );
+	}
+	if ( 'cyh_orders' === $column ) {
+		$count = count( cyh_user_paid_orders( $user_id ) );
+		return $count > 0
+			? sprintf( '<a href="%s">%d</a>', esc_url( admin_url( 'edit.php?post_type=' . CYH_QUOTE_CPT . '&cyh_view=orders&author=' . (int) $user_id ) ), $count )
+			: '0';
+	}
+	return $value;
+}
+add_filter( 'manage_users_custom_column', 'cyh_users_column_content', 10, 3 );
+
+/** بخش فقط‌خواندنی «مشخصات مشتری» در صفحه‌ی ویرایش کاربر. */
+function cyh_user_profile_section( $user ) {
+	$phone   = (string) get_user_meta( $user->ID, 'cyh_phone', true );
+	$company = (string) get_user_meta( $user->ID, 'cyh_company', true );
+	$saved   = cyh_checkout_saved( (int) $user->ID );
+	$addr    = is_array( $saved ) ? implode( '، ', array_filter( [ $saved['customer']['province'] ?? '', $saved['customer']['city'] ?? '', $saved['customer']['address'] ?? '' ] ) ) : '';
+	echo '<h2>مشخصات مشتری (کرین یدک)</h2><table class="form-table" role="presentation">';
+	printf( '<tr><th>موبایل</th><td dir="ltr" style="text-align:right">%s</td></tr>', esc_html( '' === $phone ? '—' : $phone ) );
+	printf( '<tr><th>شرکت</th><td>%s</td></tr>', esc_html( '' === $company ? '—' : $company ) );
+	printf( '<tr><th>سفارش پرداخت‌شده</th><td>%d</td></tr>', count( cyh_user_paid_orders( $user->ID ) ) );
+	printf( '<tr><th>نشانی ذخیره‌شده</th><td>%s</td></tr>', esc_html( '' === $addr ? '—' : $addr ) );
+	echo '</table>';
+}
+add_action( 'show_user_profile', 'cyh_user_profile_section' );
+add_action( 'edit_user_profile', 'cyh_user_profile_section' );

@@ -785,6 +785,7 @@ function cyh_checkout_complete( $code, $authority ) {
 			update_post_meta( $id, 'cyh_paid_at', time() );
 			cyh_checkout_notify_paid( $id );
 			cyh_checkout_notify_customer( $id );
+			cyh_checkout_save_profile( $id );
 			return $done( 'ok', $ref );
 		}
 		update_post_meta( $id, 'cyh_payment', 'failed' );
@@ -1025,3 +1026,53 @@ function cyh_order_metabox( $post_type = '', $post = null ) {
 	);
 }
 add_action( 'add_meta_boxes', 'cyh_order_metabox', 10, 2 );
+
+/* =========================================================================
+   ذخیره‌ی مشخصات برای سفارش بعدی
+   ========================================================================= */
+const CYH_SAVED_CHECKOUT_META = 'cyh_saved_checkout';
+
+/**
+ * پس از پرداخت *موفق* مشخصات همین سفارش روی حساب ذخیره می‌شود تا سفارش بعدی
+ * پیش‌پر باشد. مشخصات فاکتور فقط وقتی فاکتور رسمی خواسته شده به‌روز می‌شود؛
+ * سفارش بدون فاکتور، مشخصات ذخیره‌ی قبلی را پاک نمی‌کند. روش ارسال عمداً ذخیره
+ * نمی‌شود: انتخاب آگاهانه است (ارسال هوایی شرط حقوقی دارد).
+ */
+function cyh_checkout_save_profile( $post_id ) {
+	$post = get_post( $post_id );
+	$uid  = $post && ! empty( $post->post_author ) ? (int) $post->post_author : 0;
+	if ( $uid <= 0 ) {
+		return;
+	}
+	$customer = get_post_meta( $post_id, 'cyh_customer', true );
+	if ( ! is_array( $customer ) ) {
+		return;
+	}
+	$saved             = cyh_checkout_saved( $uid ) ?: [];
+	$saved['customer'] = $customer;
+	$invoice           = get_post_meta( $post_id, 'cyh_invoice', true );
+	if ( is_array( $invoice ) ) {
+		$saved['invoice'] = $invoice;
+	}
+	update_user_meta( $uid, CYH_SAVED_CHECKOUT_META, $saved );
+}
+
+/** مشخصات ذخیره‌شده یا null. فقط کلیدهای شناخته‌شده برگردانده می‌شود. */
+function cyh_checkout_saved( $user_id ) {
+	$raw = get_user_meta( $user_id, CYH_SAVED_CHECKOUT_META, true );
+	if ( ! is_array( $raw ) || empty( $raw['customer'] ) || ! is_array( $raw['customer'] ) ) {
+		return null;
+	}
+	$pick = static function ( $src, $keys ) {
+		$out = [];
+		foreach ( $keys as $k ) {
+			$out[ $k ] = isset( $src[ $k ] ) ? (string) $src[ $k ] : '';
+		}
+		return $out;
+	};
+	$out = [ 'customer' => $pick( $raw['customer'], [ 'name', 'phone', 'email', 'province', 'city', 'address', 'postal' ] ) ];
+	if ( ! empty( $raw['invoice'] ) && is_array( $raw['invoice'] ) ) {
+		$out['invoice'] = $pick( $raw['invoice'], [ 'type', 'name', 'national_id', 'economic_code', 'reg_no', 'postal', 'landline', 'address' ] );
+	}
+	return $out;
+}

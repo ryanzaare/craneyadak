@@ -698,9 +698,19 @@ function wp_authenticate( $username, $password ) {
 function get_users( $args = [] ) {
 	$out = [];
 	foreach ( $GLOBALS['cyh_test_users'] as $u ) {
+		if ( in_array( (int) $u->ID, array_map( 'intval', (array) ( $args['exclude'] ?? [] ) ), true ) ) { continue; }
 		if ( isset( $args['meta_key'] ) ) {
 			$meta = $GLOBALS['cyh_test_user_meta'][ $u->ID ] ?? [];
 			if ( ! array_key_exists( $args['meta_key'], $meta ) ) { continue; }
+		}
+		// ⚠️ meta_query واقعاً اعمال می‌شود (یکتایی موبایل به همین وابسته است): فقط
+		// key + compare IN / = ؛ هر compare دیگری خطا می‌دهد تا بی‌صدا نگذرد.
+		foreach ( (array) ( $args['meta_query'] ?? [] ) as $clause ) {
+			$cmp = $clause['compare'] ?? '=';
+			if ( ! in_array( $cmp, [ 'IN', '=' ], true ) ) { throw new Exception( "get_users stub: compare «$cmp» پشتیبانی نمی‌شود" ); }
+			$have = $GLOBALS['cyh_test_user_meta'][ $u->ID ][ $clause['key'] ] ?? null;
+			$want = (array) $clause['value'];
+			if ( null === $have || ! in_array( (string) $have, array_map( 'strval', $want ), true ) ) { continue 2; }
 		}
 		$out[] = ( 'ID' === ( $args['fields'] ?? '' ) ) ? $u->ID : $u;
 		if ( isset( $args['number'] ) && count( $out ) >= (int) $args['number'] ) { break; }
@@ -2220,6 +2230,120 @@ $co_check(
 		&& 404 === $co_t_wrong->get_status() && 404 === $co_t_none->get_status(),
 	'/track: شماره پیگیری پرداخت (لاتین/فارسی) و کد CY-… (با فاصله/حرف کوچک) هر دو پیدا می‌کنند؛ شماره تماس نادرست یا عدد ناشناخته ۴۰۴',
 	'track: ' . wp_json_encode( [ $co_t_ref->get_status(), $co_t_ref_d, $co_t_fa->get_status(), $co_t_code->get_status(), $co_t_wrong->get_status(), $co_t_none->get_status() ] )
+);
+
+// ۸۷: یکتایی موبایل در ثبت‌نام — با/بدون صفر اول و ارقام فارسی یکی حساب می‌شوند؛
+// ثبت‌نام تکراری ۴۰۹ است و کاربری نمی‌سازد؛ ذخیره همیشه با صفر اول.
+$co_reg = static function ( $email, $phone ) {
+	foreach ( array_keys( $GLOBALS['cyh_test_transients'] ?? [] ) as $k ) {
+		if ( 0 === strpos( $k, 'cyh_reg' ) || 0 === strpos( $k, 'cyh_rl_' ) || 0 === strpos( $k, 'cyh_corl_' ) ) { unset( $GLOBALS['cyh_test_transients'][ $k ] ); }
+	}
+	return cyh_rest_account_register( new WP_REST_Request( [ 'name' => 'مشتری آزمون', 'email' => $email, 'password' => 'Jarsaghil2026', 'phone' => $phone, 'website' => '' ] ) );
+};
+$co_users_before = count( $GLOBALS['cyh_test_users'] );
+$co_r_first = $co_reg( 'phone-a@example.com', '9351112233' );
+$co_dups    = [];
+foreach ( [ '09351112233', '9351112233', '۰۹۳۵۱۱۱۲۲۳۳', '٩٣٥١١١٢٢٣٣' ] as $co_dup_phone ) {
+	$co_r_dup = $co_reg( 'dup-' . count( $co_dups ) . '@example.com', $co_dup_phone );
+	$co_dups[] = is_wp_error( $co_r_dup ) ? [ $co_r_dup->get_error_code(), $co_r_dup->get_error_data()['status'] ?? 0 ] : 'created';
+}
+$co_uid_pa = get_user_by( 'email', 'phone-a@example.com' )->ID ?? 0;
+$co_check(
+	! is_wp_error( $co_r_first ) && '09351112233' === get_user_meta( $co_uid_pa, 'cyh_phone', true )
+		&& array_fill( 0, 4, [ 'cyh_phone_taken', 409 ] ) === $co_dups
+		&& count( $GLOBALS['cyh_test_users'] ) === $co_users_before + 1,
+	'ثبت‌نام: شماره‌ی تکراری (با/بدون صفر، فارسی/عربی) ۴۰۹ و بدون ساخت کاربر؛ شماره با صفر اول ذخیره می‌شود',
+	'یکتایی موبایل: ' . wp_json_encode( [ $co_dups, count( $GLOBALS['cyh_test_users'] ) - $co_users_before ] )
+);
+// حساب قدیمی که شماره را بدون صفر ذخیره کرده هم شناخته می‌شود.
+$co_uid_legacy = wp_insert_user( [ 'user_email' => 'legacy@example.com', 'user_pass' => 'abc12345', 'display_name' => 'قدیمی' ] );
+update_user_meta( $co_uid_legacy, 'cyh_phone', '9127778899' );
+$co_r_legacy = $co_reg( 'new-legacy@example.com', '09127778899' );
+$co_check(
+	is_wp_error( $co_r_legacy ) && 'cyh_phone_taken' === $co_r_legacy->get_error_code(),
+	'ثبت‌نام: شماره‌ی ذخیره‌شده‌ی قدیمی (بدون صفر اول) هم تکراری شناخته می‌شود',
+	'حساب قدیمی بدون صفر باید مانع شود'
+);
+
+// ۸۸: ویرایش پروفایل — شماره‌ی حساب دیگر ۴۰۹؛ شماره‌ی خودِ کاربر آزاد؛ شماره‌ی تازه با صفر.
+$co_r_b = $co_reg( 'phone-b@example.com', '09361110000' );
+$co_uid_pb = get_user_by( 'email', 'phone-b@example.com' )->ID ?? 0;
+$co_as( cyh_customer_issue_token( $co_uid_pb ) );
+$co_prof = static function ( $phone ) {
+	return cyh_rest_account_profile( new WP_REST_Request( [ 'name' => 'مشتری بی', 'phone' => $phone, 'company' => '' ] ) );
+};
+$co_p_taken = $co_prof( '9351112233' );
+$co_p_own   = $co_prof( '9361110000' );
+$co_p_new   = $co_prof( '9362221111' );
+$co_check(
+	is_wp_error( $co_p_taken ) && 'cyh_phone_taken' === $co_p_taken->get_error_code() && 409 === ( $co_p_taken->get_error_data()['status'] ?? 0 )
+		&& ! is_wp_error( $co_p_own ) && ! is_wp_error( $co_p_new ) && '09362221111' === get_user_meta( $co_uid_pb, 'cyh_phone', true ),
+	'پروفایل: شماره‌ی حساب دیگر ۴۰۹؛ شماره‌ی خودِ کاربر آزاد؛ شماره‌ی تازه با صفر اول ذخیره می‌شود',
+	'یکتایی در پروفایل: ' . wp_json_encode( [ $co_p_taken, $co_p_own, $co_p_new ] )
+);
+$co_as( $co_tok_a );
+
+// ۸۹: مشخصات ذخیره‌شده — فقط پس از پرداخت *موفق*؛ سفارش ناموفق چیزی ذخیره نمی‌کند؛
+// سفارش بدون فاکتور فاکتور ذخیره‌شده را پاک نمی‌کند؛ /account/me آن را برمی‌گرداند؛
+// پاک‌کردن فقط برای خودِ کاربر.
+$co_saved_paid = cyh_checkout_saved( $co_uid_a );
+$co_check(
+	is_array( $co_saved_paid ) && 'خریدار آزمون' === $co_saved_paid['customer']['name'] && '09121234567' === $co_saved_paid['customer']['phone']
+		&& 'تهران' === $co_saved_paid['customer']['city'] && ! isset( $co_saved_paid['invoice'] ),
+	'ذخیره‌ی مشخصات: پس از پرداخت موفق (verify) مشخصات گیرنده روی حساب ماند؛ سفارش ناموفق/بدون فاکتور فاکتوری نساخت',
+	'saved پس از پرداخت: ' . wp_json_encode( $co_saved_paid )
+);
+$GLOBALS['cyh_test_posts'][ $co_evil_id ]['post_author'] = $co_uid_a;
+update_post_meta( $co_evil_id, 'cyh_customer', [ 'name' => 'نام تازه', 'phone' => '09121234567', 'email' => 'a@example.com', 'province' => 'اصفهان', 'city' => 'اصفهان', 'address' => 'نشانی تازه', 'postal' => '1234567891' ] );
+update_post_meta( $co_evil_id, 'cyh_invoice', [ 'wanted' => true, 'type' => 'legal', 'name' => 'شرکت الف', 'national_id' => '10380284790', 'economic_code' => '411111111111', 'reg_no' => '12345', 'postal' => '1234567891', 'landline' => '02112345678', 'address' => 'نشانی فاکتور' ] );
+cyh_checkout_save_profile( $co_evil_id );
+$co_saved_inv = cyh_checkout_saved( $co_uid_a );
+cyh_checkout_save_profile( $co_oid );
+$co_saved_keep = cyh_checkout_saved( $co_uid_a );
+$co_me = cyh_rest_account_me( new WP_REST_Request( [] ) );
+$co_check(
+	'اصفهان' === $co_saved_inv['customer']['city'] && 'legal' === ( $co_saved_inv['invoice']['type'] ?? '' ) && '10380284790' === ( $co_saved_inv['invoice']['national_id'] ?? '' )
+		&& 'تهران' === $co_saved_keep['customer']['city'] && 'شرکت الف' === ( $co_saved_keep['invoice']['name'] ?? '' )
+		&& 'تهران' === ( $co_me['saved']['customer']['city'] ?? '' ),
+	'ذخیره‌ی مشخصات: مشخصات تازه جایگزین می‌شود؛ سفارش بدون فاکتور فاکتور ذخیره‌شده را نگه می‌دارد؛ /account/me آن را می‌دهد',
+	'saved: ' . wp_json_encode( [ $co_saved_inv, $co_saved_keep ] )
+);
+$co_as( $co_tok_b );
+$co_clear_b = cyh_rest_account_saved_clear( new WP_REST_Request( [] ) );
+$co_still   = cyh_checkout_saved( $co_uid_a );
+$co_as( null );
+$co_clear_guest = cyh_rest_account_saved_clear( new WP_REST_Request( [] ) );
+$co_as( $co_tok_a );
+$co_clear_a = cyh_rest_account_saved_clear( new WP_REST_Request( [] ) );
+$co_me_after = cyh_rest_account_me( new WP_REST_Request( [] ) );
+$co_check(
+	null !== $co_still && is_wp_error( $co_clear_guest ) && 401 === ( $co_clear_guest->get_error_data()['status'] ?? 0 )
+		&& ! is_wp_error( $co_clear_a ) && null === cyh_checkout_saved( $co_uid_a ) && array_key_exists( 'saved', $co_me_after ) && null === $co_me_after['saved'],
+	'پاک‌کردن مشخصات ذخیره‌شده: کاربر دیگر نمی‌تواند پاک کند، مهمان ۴۰۱، خودِ کاربر می‌تواند',
+	'پاک‌کردن: ' . wp_json_encode( [ $co_clear_b, $co_clear_guest, $co_clear_a ] )
+);
+
+// ۹۰: پنل «کاربران» — ستون‌های موبایل/شرکت/سفارش پرداخت‌شده و بخش پروفایل؛ همه escape.
+update_user_meta( $co_uid_a, 'cyh_phone', '09121234567' );
+update_user_meta( $co_uid_a, 'cyh_company', '<b>شرکت</b>' );
+cyh_checkout_save_profile( $co_oid );
+$co_cols = cyh_users_columns( [ 'name' => 'n' ] );
+$co_ph   = cyh_users_column_content( '', 'cyh_phone', $co_uid_a );
+$co_co   = cyh_users_column_content( '', 'cyh_company', $co_uid_a );
+$co_ord  = cyh_users_column_content( '', 'cyh_orders', $co_uid_a );
+$co_ord0 = cyh_users_column_content( '', 'cyh_orders', $co_uid_pb );
+$co_none = cyh_users_column_content( 'x', 'other', $co_uid_a );
+$co_phone_empty = cyh_users_column_content( '', 'cyh_phone', $co_uid_legacy + 999 );
+ob_start();
+cyh_user_profile_section( get_userdata( $co_uid_a ) );
+$co_section = ob_get_clean();
+$co_check(
+	isset( $co_cols['cyh_phone'], $co_cols['cyh_company'], $co_cols['cyh_orders'] ) && false !== strpos( $co_ph, 'tel:09121234567' )
+		&& false === strpos( $co_co, '<b>' ) && false !== strpos( $co_co, '&lt;b&gt;' )
+		&& false !== strpos( $co_ord, 'cyh_view=orders' ) && false !== strpos( $co_ord, '>2<' ) && '0' === $co_ord0 && 'x' === $co_none && '—' === $co_phone_empty
+		&& false !== strpos( $co_section, '09121234567' ) && false !== strpos( $co_section, 'تهران' ) && false === strpos( $co_section, '<b>شرکت' ),
+	'پنل کاربران: ستون موبایل/شرکت/سفارش پرداخت‌شده (با لینک به سفارش‌ها) و بخش مشخصات مشتری؛ escape؛ ستون ناشناس دست‌نخورده',
+	'ستون‌ها: ' . wp_json_encode( [ $co_cols, $co_ph, $co_co, $co_ord, $co_ord0, $co_section ] )
 );
 
 // ═══════════════════════════════════════════════════════════════════════════

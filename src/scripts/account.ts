@@ -66,6 +66,8 @@ export function clearToken(): void {
   try {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(NAME_KEY);
+    // پیش‌نویس فرم پرداخت (نشانی، فاکتور…) روی دستگاه مشترک نباید برای کاربر بعدی بماند.
+    sessionStorage.removeItem('cy-checkout-draft-v1');
   } catch {
     /* مرورگری که localStorage را بسته، از ابتدا توکنی نداشت. */
   }

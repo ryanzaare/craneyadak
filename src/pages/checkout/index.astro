@@ -54,6 +54,10 @@ const err = 'text-xs text-red-700 font-bold mt-1';
 
       <form id="co-form" hidden novalidate class="grid md:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
         <div class="min-w-0 space-y-6">
+          <p id="co-saved-note" hidden class="text-xs text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2 leading-6">
+            مشخصات از آخرین سفارش شما پر شد. اگر چیزی عوض شده ویرایشش کنید؛ با پرداخت موفق دوباره ذخیره می‌شود.
+            (حذف مشخصات ذخیره‌شده: <a href="/account/settings" class="underline font-bold">تنظیمات حساب</a>)
+          </p>
           <fieldset class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
             <legend class="font-black text-steel-900 px-1">گیرنده و نشانی ارسال</legend>
             <label class="cyh-honeypot" aria-hidden="true">وب‌سایت <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
@@ -519,22 +523,124 @@ const err = 'text-xs text-red-700 font-bold mt-1';
     show('co-form', true);
   }
 
-  /** پیش‌پر کردن از حساب. شکستش هیچ چیز را نمی‌شکند؛ خطا هم نشان داده نمی‌شود. */
+  /* ------------------- پیش‌نویس فرم (sessionStorage) -------------------
+     ⚠️ آزمون کارفرما: کاربر وسط پر کردن فرم روی «شرایط ارسال» (لینک فوتر) زد، برگشت
+     و همه‌چیز پاک شده بود. لینک‌های تیک قوانین از قبل در تب تازه باز می‌شوند؛
+     لینک‌های فوتر هم پایین‌تر تب تازه شد. ولی ریشه‌ی مشکل «رفتن از صفحه» است
+     (دکمه‌ی برگشت، تازه‌سازی، لینک هدر)، پس فرم همیشه خودکار ذخیره می‌شود.
+     sessionStorage نه localStorage: با بستن تب پاک می‌شود و برای دستگاه مشترک
+     ماندگار نیست. رمز/توکن اینجا نمی‌آید؛ تیک قوانین هم عمداً ذخیره نمی‌شود
+     (پذیرش باید هر بار آگاهانه باشد). */
+  const DRAFT_KEY = 'cy-checkout-draft-v1';
+  interface Draft {
+    fields: Record<string, string>;
+    inv: Record<string, string>;
+    wanted: boolean;
+    type: InvoiceType;
+    shipping: string | null;
+  }
+
+  function saveDraft() {
+    try {
+      const fields: Record<string, string> = {};
+      document.querySelectorAll<HTMLInputElement>('[data-field]').forEach((el) => (fields[el.dataset.field!] = el.value));
+      const inv: Record<string, string> = {};
+      document.querySelectorAll<HTMLInputElement>('[data-inv]').forEach((el) => (inv[el.dataset.inv!] = el.value));
+      const draft: Draft = { fields, inv, wanted: !!wanted?.checked, type: invoiceType(), shipping: shippingCode() };
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      /* حالت خصوصی/حافظه‌ی پر: فرم بدون پیش‌نویس هم کار می‌کند. */
+    }
+  }
+
+  function restoreDraft(): boolean {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (!raw) return false;
+      const d = JSON.parse(raw) as Partial<Draft>;
+      let any = false;
+      for (const [k, v] of Object.entries(d.fields ?? {})) {
+        const el = document.querySelector<HTMLInputElement>(`[data-field="${k}"]`);
+        if (el && typeof v === 'string' && v) {
+          el.value = v;
+          any = true;
+        }
+      }
+      const typeRadio = document.querySelector<HTMLInputElement>(`input[name="inv-type"][value="${d.type === 'legal' ? 'legal' : 'real'}"]`);
+      if (typeRadio) typeRadio.checked = true;
+      for (const [k, v] of Object.entries(d.inv ?? {})) {
+        const el = document.querySelector<HTMLInputElement>(`[data-inv="${k}"]`);
+        if (el && typeof v === 'string' && v) {
+          el.value = v;
+          any = true;
+        }
+      }
+      if (wanted && d.wanted) {
+        wanted.checked = true;
+        show('inv-fields', true);
+      }
+      const ship = [...document.querySelectorAll<HTMLInputElement>('input[name="shipping"]')].find((r) => r.value === d.shipping);
+      if (ship) ship.checked = true;
+      applyInvoiceType();
+      renderShipping();
+      renderTotals();
+      return any;
+    } catch {
+      return false;
+    }
+  }
+
+  let draftTimer: ReturnType<typeof setTimeout> | undefined;
+  const scheduleDraft = () => {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 300);
+  };
+  form?.addEventListener('input', scheduleDraft);
+  form?.addEventListener('change', scheduleDraft);
+  window.addEventListener('pagehide', saveDraft);
+
+  /** لینک‌های قانونی فوتر در تب تازه باز شوند تا فرم نیمه‌پر از دست نرود. */
+  document.querySelectorAll<HTMLAnchorElement>('footer a[href^="/legal/"]').forEach((a) => {
+    a.target = '_blank';
+    a.rel = 'noopener';
+  });
+
+  /** پیش‌پر کردن: پیش‌نویس (پیشتر اعمال شده) > مشخصات ذخیره‌شده‌ی آخرین سفارش > مشخصات حساب.
+      فقط فیلدهای خالی پر می‌شوند. شکستش هیچ چیز را نمی‌شکند؛ خطا هم نشان داده نمی‌شود. */
   async function prefill() {
     if (!getToken()) return;
-    // شکل پاسخ: cyh_rest_account_me → { profile: cyh_customer_profile() }
-    const me = await api<{ profile?: { name?: string; phone?: string | null; email?: string } }>('/account/me', { auth: true });
-    const u = me.ok ? me.data.profile : undefined;
-    if (!u) return;
-    const fill = (field: string, v?: string | null) => {
-      const el = document.querySelector<HTMLInputElement>(`[data-field="${field}"]`);
-      if (!el || el.value || !v) return;
+    // شکل پاسخ: cyh_rest_account_me → { profile, saved: {customer, invoice?} | null }
+    const me = await api<{
+      profile?: { name?: string; phone?: string | null; email?: string };
+      saved?: { customer?: Record<string, string>; invoice?: Record<string, string> } | null;
+    }>('/account/me', { auth: true });
+    if (!me.ok) return;
+    const fill = (selector: string, v?: string | null) => {
+      const el = document.querySelector<HTMLInputElement>(selector);
+      if (!el || el.value || !v) return false;
       el.value = v;
-      if (el.matches('[data-digits]')) normalizeDigits(el); // پروفایل ممکن است ارقام فارسی داشته باشد
+      if (el.matches('[data-digits]')) normalizeDigits(el); // ارقام فارسی ذخیره‌شده
+      return true;
     };
-    fill('name', u.name);
-    fill('phone', u.phone);
-    fill('email', u.email);
+    const saved = me.data.saved;
+    let usedSaved = false;
+    for (const f of CUSTOMER_FIELDS) usedSaved = fill(`[data-field="${f}"]`, saved?.customer?.[f]) || usedSaved;
+    if (saved?.invoice) {
+      const filledType = !document.querySelector<HTMLInputElement>('[data-inv="name"]')?.value;
+      if (filledType) {
+        const r = document.querySelector<HTMLInputElement>(`input[name="inv-type"][value="${saved.invoice.type === 'legal' ? 'legal' : 'real'}"]`);
+        if (r) r.checked = true;
+      }
+      for (const f of INVOICE_FIELDS) usedSaved = fill(`[data-inv="${f}"]`, saved.invoice[f]) || usedSaved;
+      applyInvoiceType();
+    }
+    // حساب: فقط جاهایی که هنوز خالی است (مثلاً ایمیل، وقتی ذخیره‌شده‌ای نبود).
+    const u = me.data.profile;
+    fill('[data-field="name"]', u?.name);
+    fill('[data-field="phone"]', u?.phone);
+    fill('[data-field="email"]', u?.email);
+    show('co-saved-note', usedSaved);
+    saveDraft();
   }
 
   form?.addEventListener('submit', async (e) => {
@@ -604,6 +710,9 @@ const err = 'text-xs text-red-700 font-bold mt-1';
   if (requireLogin()) {
     applyInvoiceType();
     renderShipping();
-    loadSession().then(prefill);
+    loadSession().then(() => {
+      restoreDraft();
+      return prefill();
+    });
   }
 </script>
