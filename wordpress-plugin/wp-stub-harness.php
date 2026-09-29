@@ -148,8 +148,8 @@ function wp_insert_post( $args ) {
 }
 function is_wp_error( $thing ) { return $thing instanceof WP_Error; }
 $GLOBALS['cyh_test_mail_calls'] = [];
-function wp_mail( $to, $subject, $body ) {
-	$GLOBALS['cyh_test_mail_calls'][] = [ 'to' => $to, 'subject' => $subject, 'body' => $body ];
+function wp_mail( $to, $subject, $body, $headers = '' ) {
+	$GLOBALS['cyh_test_mail_calls'][] = [ 'to' => $to, 'subject' => $subject, 'body' => $body, 'headers' => $headers ];
 	return true;
 }
 function get_post_type( $id ) { return $GLOBALS['cyh_test_posts'][ $id ]['post_type'] ?? false; }
@@ -1845,9 +1845,9 @@ $co_check(
 		&& 'ok' === $co_r70b['result'] && 9000000 === ( $co_verify['amount'] ?? null )
 		&& 'paid' === get_post_meta( $co_oid, 'cyh_payment', true ) && '201' === get_post_meta( $co_oid, 'cyh_ref_id', true )
 		&& 'ok' === $co_r70c['result'] && 1 === count( $GLOBALS['cyh_test_remote_post_calls'] )
-		&& count( $GLOBALS['cyh_test_mail_calls'] ) === $co_mail_before + 1
+		&& count( $GLOBALS['cyh_test_mail_calls'] ) === $co_mail_before + 2
 		&& false !== strpos( $co_r70b['url'], '/checkout/result?r=ok&code=' ) && false === get_option( 'cyh_zp_lock_' . $co_oid ),
-	'verify: شبکه‌ی قطع = در انتظار؛ کد ۱۰۰ = پرداخت‌شده با مبلغ سفارش؛ رفرش بدون verify و ایمیل دوم؛ قفل آزاد',
+	'verify: شبکه‌ی قطع = در انتظار؛ کد ۱۰۰ = پرداخت‌شده با مبلغ سفارش؛ دو ایمیل (داخلی + مشتری)، رفرش بدون verify و بدون ایمیل تازه؛ قفل آزاد',
 	'verify: ' . wp_json_encode( [ $co_r70a, $co_r70b, $co_r70c, $co_verify, count( $GLOBALS['cyh_test_remote_post_calls'] ) ] )
 );
 
@@ -2091,6 +2091,136 @@ $co_check(
 	"pay=$pay_html ref=$ref_html box=" . var_export( $has_box, true ) . ' quote_box=' . var_export( $has_box_quote, true )
 );
 $GLOBALS['cyh_test_is_admin'] = false;
+
+// ۸۱: تاریخ شمسی — نوروز ۱۴۰۴ و ۱۴۰۵، آخر سال کبیسه‌ی ۱۴۰۳ و تاریخ سفارش واقعی
+// آزمون کارفرما (۲۰۲۶-۰۹-۲۹ = ۱۴۰۵/۰۷/۰۷). ورودی نامعتبر = ''.
+$co_check(
+	[ 1405, 7, 7 ] === cyh_gregorian_to_jalali( 2026, 9, 29 )
+		&& [ 1405, 1, 1 ] === cyh_gregorian_to_jalali( 2026, 3, 21 )
+		&& [ 1404, 12, 29 ] === cyh_gregorian_to_jalali( 2026, 3, 20 )
+		&& [ 1404, 1, 1 ] === cyh_gregorian_to_jalali( 2025, 3, 21 )
+		&& [ 1403, 12, 30 ] === cyh_gregorian_to_jalali( 2025, 3, 20 )
+		&& [ 1403, 1, 1 ] === cyh_gregorian_to_jalali( 2024, 3, 20 ) && [ 1402, 12, 11 ] === cyh_gregorian_to_jalali( 2024, 3, 1 ) && [ 1402, 12, 10 ] === cyh_gregorian_to_jalali( 2024, 2, 29 )
+		&& '۱۴۰۵/۰۷/۰۷' === cyh_jalali_date_string( '2026-09-29' ) && '' === cyh_jalali_date_string( 'بی‌معنی' ) && '' === cyh_jalali_date_string( '2026-13-01' )
+		&& '۲۴٬۱۹۹٬۹۹۸' === cyh_fa_number( 24199998 ),
+	'تاریخ شمسی و قالب عدد فارسی: نوروز، سال کبیسه، تاریخ واقعی سفارش، ورودی نامعتبر',
+	'شمسی: ' . wp_json_encode( [ cyh_gregorian_to_jalali( 2026, 9, 29 ), cyh_gregorian_to_jalali( 2026, 3, 21 ), cyh_gregorian_to_jalali( 2026, 3, 20 ), cyh_gregorian_to_jalali( 2025, 3, 21 ), cyh_gregorian_to_jalali( 2025, 3, 20 ) ] )
+);
+
+// ۸۲: محتوای فاکتور — اعداد سفارش، بدون ردیف مالیات وقتی فاکتور رسمی نخواسته،
+// هشدار «رسمی نیست»، و escape نام کالا/نشانی (XSS).
+$co_evil_id = 8801;
+$GLOBALS['cyh_test_posts'][ $co_evil_id ] = [ 'post_type' => CYH_QUOTE_CPT, 'post_status' => 'publish', 'post_title' => 'evil', 'post_author' => $co_uid_a ];
+foreach ( [
+	'cyh_code' => 'CY-EVIL01', 'cyh_payment' => 'paid', 'cyh_ref_id' => '777', 'cyh_subtotal' => 1000000, 'cyh_vat' => 0, 'cyh_total' => 1000000,
+	'cyh_vat_rate' => 0, 'cyh_shipping_label' => 'تیپاکس', 'cyh_sandbox' => 0, 'cyh_return_origin' => 'https://craneyadak.com',
+	'cyh_customer' => [ 'name' => '<b>x</b>', 'phone' => '09121234567', 'province' => 'تهران', 'city' => 'تهران', 'address' => '<script>alert(1)</script> خیابان', 'postal' => '1234567891', 'email' => '' ],
+	'cyh_items' => [ [ 'name' => '<img src=x onerror=alert(1)>', 'sku' => 'A-1', 'qty' => 2, 'unit' => 500000, 'total' => 1000000 ] ],
+] as $co_k => $co_v ) {
+	update_post_meta( $co_evil_id, $co_k, $co_v );
+}
+$co_inv_plain = cyh_order_invoice_html( $co_evil_id );
+update_post_meta( $co_evil_id, 'cyh_invoice', [ 'wanted' => true, 'type' => 'real' ] );
+update_post_meta( $co_evil_id, 'cyh_vat', 100000 );
+update_post_meta( $co_evil_id, 'cyh_vat_rate', 10 );
+update_post_meta( $co_evil_id, 'cyh_total', 1100000 );
+$co_inv_off = cyh_order_invoice_html( $co_evil_id );
+update_post_meta( $co_evil_id, 'cyh_sandbox', 1 );
+$co_inv_sbx = cyh_order_invoice_html( $co_evil_id );
+update_post_meta( $co_evil_id, 'cyh_sandbox', 0 );
+$co_check(
+	false === strpos( $co_inv_plain, '<script' ) && false === strpos( $co_inv_plain, '<img' ) && false !== strpos( $co_inv_plain, '&lt;script&gt;' )
+		&& false !== strpos( $co_inv_plain, 'CY-EVIL01' ) && false !== strpos( $co_inv_plain, '۱٬۰۰۰٬۰۰۰' ) && false !== strpos( $co_inv_plain, '۵۰۰٬۰۰۰' )
+		&& false === strpos( $co_inv_plain, 'ارزش افزوده' ) && false !== strpos( $co_inv_plain, 'فاکتور رسمی نیست' ) && false === strpos( $co_inv_plain, 'حالت آزمایشی' )
+		&& false !== strpos( $co_inv_sbx, 'حالت آزمایشی' )
+		&& false !== strpos( $co_inv_off, 'ارزش افزوده (۱۰٪)' ) && false !== strpos( $co_inv_off, '۱٬۱۰۰٬۰۰۰' ) && false !== strpos( $co_inv_off, 'جداگانه از سوی واحد مالی' ),
+	'فاکتور: اعداد سفارش، هشدار «رسمی نیست»؛ ردیف مالیات و جمله‌ی فاکتور رسمی فقط با درخواست فاکتور رسمی؛ HTML کالا/نشانی escape',
+	'فاکتور: ' . $co_inv_plain
+);
+
+// ۸۳: مسیر /account/invoice — مهمان ۴۰۱؛ سفارش خود کاربر ۲۰۰ با html؛ سفارش
+// دیگری، پرداخت‌نشده و کد ناشناخته همگی ۴۰۴ با پیام یکسان.
+$co_inv_req = static function ( $code ) {
+	return cyh_rest_account_invoice( new WP_REST_Request( [ 'code' => $code ] ) );
+};
+$co_as( null );
+$co_inv_guest = $co_inv_req( 'CY-EVIL01' );
+$co_as( $co_tok_a );
+$co_inv_own   = $co_inv_req( 'cy-evil01' );
+$co_inv_fail  = $co_inv_req( get_post_meta( $co_oid71, 'cyh_code', true ) );
+$co_inv_none  = $co_inv_req( 'CY-NOPE99' );
+$co_as( $co_tok_b );
+$co_inv_other = $co_inv_req( 'CY-EVIL01' );
+$co_as( $co_tok_a );
+$co_check(
+	is_wp_error( $co_inv_guest ) && 401 === ( $co_inv_guest->get_error_data()['status'] ?? 0 )
+		&& ! is_wp_error( $co_inv_own ) && 'CY-EVIL01' === ( $co_inv_own['code'] ?? '' ) && false !== strpos( (string) ( $co_inv_own['html'] ?? '' ), 'CY-EVIL01' )
+		&& is_wp_error( $co_inv_fail ) && is_wp_error( $co_inv_none ) && is_wp_error( $co_inv_other )
+		&& 404 === ( $co_inv_fail->get_error_data()['status'] ?? 0 ) && 404 === ( $co_inv_other->get_error_data()['status'] ?? 0 )
+		&& $co_inv_fail->get_error_message() === $co_inv_none->get_error_message() && $co_inv_none->get_error_message() === $co_inv_other->get_error_message(),
+	'/account/invoice: مهمان ۴۰۱؛ سفارش خود ۲۰۰ (کد حرف‌کوچک هم)؛ پرداخت‌نشده/دیگران/ناشناخته ۴۰۴ با پیام یکسان',
+	'فاکتور مسیر: ' . wp_json_encode( [ $co_inv_guest, $co_inv_own, $co_inv_fail, $co_inv_none, $co_inv_other ] )
+);
+
+// ۸۴: ایمیل مشتری — گیرنده‌ی فرم پرداخت؛ نبودش → ایمیل حساب؛ هیچ‌کدام → بی‌صدا
+// ارسال نمی‌شود. HTML، عنوان با کد سفارش، فاکتور داخل بدنه، لینک «سفارش‌های من».
+$GLOBALS['cyh_test_mail_calls'] = [];
+$cust = get_post_meta( $co_evil_id, 'cyh_customer', true );
+$cust['email'] = 'buyer@example.com';
+update_post_meta( $co_evil_id, 'cyh_customer', $cust );
+$co_m1 = cyh_checkout_notify_customer( $co_evil_id );
+$co_mail1 = end( $GLOBALS['cyh_test_mail_calls'] );
+$cust['email'] = '';
+update_post_meta( $co_evil_id, 'cyh_customer', $cust );
+$co_m2 = cyh_checkout_notify_customer( $co_evil_id );
+$co_mail2 = end( $GLOBALS['cyh_test_mail_calls'] );
+$GLOBALS['cyh_test_posts'][ $co_evil_id ]['post_author'] = 0;
+$co_count_before = count( $GLOBALS['cyh_test_mail_calls'] );
+$co_m3 = cyh_checkout_notify_customer( $co_evil_id );
+$co_guest_find = cyh_find_paid_order( 0, 'CY-EVIL01' );
+$co_check(
+	true === $co_m1 && 'buyer@example.com' === $co_mail1['to'] && false !== strpos( $co_mail1['subject'], 'CY-EVIL01' )
+		&& false !== strpos( implode( ';', (array) $co_mail1['headers'] ), 'text/html' ) && false !== strpos( $co_mail1['body'], 'فاکتور فروش (غیررسمی)' )
+		&& false !== strpos( $co_mail1['body'], 'https://craneyadak.com/account/orders' ) && false === strpos( $co_mail1['body'], '<script' )
+		&& true === $co_m2 && (string) get_userdata( $co_uid_a )->user_email === $co_mail2['to']
+		&& false === $co_m3 && count( $GLOBALS['cyh_test_mail_calls'] ) === $co_count_before && null === $co_guest_find,
+	'ایمیل مشتری: گیرنده‌ی فرم → ایمیل حساب → هیچ (بی‌صدا)؛ HTML با فاکتور و لینک سفارش‌ها؛ HTML کالا escape',
+	'ایمیل: ' . wp_json_encode( [ $co_m1, $co_mail1, $co_m2, $co_mail2, $co_m3 ] )
+);
+
+// ۸۵: پرداخت موفق واقعی (callback) ایمیل مشتری را هم می‌فرستد — همان ایمیل داخلی + یکی به مشتری.
+$co_paid_mails = array_values( array_filter( $GLOBALS['cyh_test_mail_calls'], static function ( $m ) { return false !== strpos( (string) $m['subject'], 'تأیید سفارش' ); } ) );
+$co_check(
+	count( $co_paid_mails ) >= 2,
+	'ایمیل مشتری در جریان واقعی پرداخت هم فرستاده شد',
+	'ایمیل «تأیید سفارش» باید در جریان پرداخت هم رفته باشد'
+);
+$GLOBALS['cyh_test_is_admin'] = false;
+
+// ۸۶: پیگیری با «شماره پیگیری پرداخت» (عدد زرین‌پال) — همان اشتباهی که کارفرما در
+// آزمون کرد. شماره تماس همچنان لازم است؛ استعلام با عدد پیدا نمی‌شود؛ پاسخ
+// کد واقعی سفارش را برمی‌گرداند نه ورودی را.
+$co_track = static function ( $code, $phone ) {
+	foreach ( array_keys( $GLOBALS['cyh_test_transients'] ?? [] ) as $k ) {
+		if ( 0 === strpos( $k, 'cyh_track_' ) ) { unset( $GLOBALS['cyh_test_transients'][ $k ] ); }
+	}
+	return cyh_rest_quote_status( new WP_REST_Request( [ 'code' => $code, 'phone' => $phone ] ) );
+};
+update_post_meta( $co_oid, 'cyh_ref_id', '509594101' );
+update_post_meta( $co_evil_id, 'cyh_phone', '09121234567' );
+$co_t_ref   = $co_track( '509594101', '09121234567' );
+$co_t_fa    = $co_track( '۵۰۹۵۹۴۱۰۱', '۰۹۱۲۱۲۳۴۵۶۷' );
+$co_t_code  = $co_track( ' cy-evil01 ', '09121234567' );
+$co_t_wrong = $co_track( '509594101', '09999999999' );
+$co_t_none  = $co_track( '509594102', '09121234567' );
+$co_t_ref_d = $co_t_ref->get_data();
+$co_check(
+	200 === $co_t_ref->get_status() && $co_code === ( $co_t_ref_d['code'] ?? '' ) && 'paid' === ( $co_t_ref_d['payment'] ?? '' ) && 'پرداخت‌شده' === ( $co_t_ref_d['paymentLabel'] ?? '' )
+		&& 200 === $co_t_fa->get_status() && 200 === $co_t_code->get_status() && 'CY-EVIL01' === ( $co_t_code->get_data()['code'] ?? '' )
+		&& 404 === $co_t_wrong->get_status() && 404 === $co_t_none->get_status(),
+	'/track: شماره پیگیری پرداخت (لاتین/فارسی) و کد CY-… (با فاصله/حرف کوچک) هر دو پیدا می‌کنند؛ شماره تماس نادرست یا عدد ناشناخته ۴۰۴',
+	'track: ' . wp_json_encode( [ $co_t_ref->get_status(), $co_t_ref_d, $co_t_fa->get_status(), $co_t_code->get_status(), $co_t_wrong->get_status(), $co_t_none->get_status() ] )
+);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // بررسی امضای هوک‌ها — همان چیزی که نسخه‌ی ۱.۳.۰ را کشت

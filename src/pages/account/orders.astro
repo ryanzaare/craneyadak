@@ -115,7 +115,10 @@ const description = 'تاریخچه‌ی سفارش‌ها و وضعیت پرد�
     li.append(ul);
 
     const dl = el('dl', 'text-sm space-y-1.5');
-    dl.append(row('تاریخ', o.date ? new Date(o.date).toLocaleDateString('fa-IR') : '—'));
+    // ⚠️ timeZone: 'UTC' — سرور فقط «YYYY-MM-DD» می‌فرستد که به‌عنوان نیمه‌شب UTC
+    // خوانده می‌شود؛ بدون این، مرورگری در منطقه‌ی زمانی منفی (مثلاً با VPN) روز را
+    // یکی عقب نشان می‌داد و ۱۴۰۵/۷/۷ می‌شد ۱۴۰۵/۷/۶ (آزمون کارفرما).
+    dl.append(row('تاریخ', o.date ? new Date(o.date).toLocaleDateString('fa-IR', { timeZone: 'UTC' }) : '—'));
     if (o.vat > 0) dl.append(row('ارزش افزوده', rial(o.vat)));
     dl.append(row('مبلغ کل', rial(o.total)));
     if (o.invoice) dl.append(row('فاکتور', 'فاکتور رسمی درخواست شده'));
@@ -123,9 +126,16 @@ const description = 'تاریخچه‌ی سفارش‌ها و وضعیت پرد�
     if (o.refId) dl.append(row('شماره پیگیری پرداخت', o.refId, true));
     li.append(dl);
 
+    const actions = el('div', 'flex flex-wrap items-center gap-x-5 gap-y-2');
+    if (o.payment === 'paid') {
+      const inv = el('a', 'inline-block bg-accent text-white px-4 py-2 rounded-md text-sm font-black hover:bg-accent-ink', 'دریافت فاکتور') as HTMLAnchorElement;
+      inv.href = `/account/invoice?code=${encodeURIComponent(o.code)}`;
+      actions.append(inv);
+    }
     const link = el('a', 'inline-block text-sm text-accent-ink font-bold hover:underline', 'پیگیری سفارش ←') as HTMLAnchorElement;
     link.href = `/track?code=${encodeURIComponent(o.code)}`;
-    li.append(link);
+    actions.append(link);
+    li.append(actions);
     return li;
   }
 

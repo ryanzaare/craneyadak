@@ -53,15 +53,19 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
       <form id="track-form" class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
         <div class="grid sm:grid-cols-2 gap-3">
           <div>
-            <label for="track-code" class="block text-sm font-bold text-steel-900 mb-1">کد رهگیری</label>
+            <label for="track-code" class="block text-sm font-bold text-steel-900 mb-1">کد رهگیری / کد سفارش</label>
             <input
               id="track-code"
               name="code"
               required
               dir="ltr"
               placeholder="CY-XXXXXX"
+              aria-describedby="track-code-hint"
               class="w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 text-center font-mono uppercase focus:outline-none focus:ring-4 focus:ring-accent/40"
             />
+            <p id="track-code-hint" class="text-xs text-steel-600 mt-1 leading-6">
+              مثل CY-ABC123. برای سفارش پرداخت‌شده، «شماره پیگیری پرداخت» (عدد) هم پذیرفته می‌شود.
+            </p>
           </div>
           <div>
             <label for="track-phone" class="block text-sm font-bold text-steel-900 mb-1">شماره تماس</label>
@@ -190,7 +194,13 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
       badge.className = `inline-block text-sm font-bold border rounded-md px-3 py-1.5 ${
         STATUS_STYLE[data.status] || STATUS_STYLE.closed
       }`;
-      badge.textContent = data.statusLabel;
+      const isOrder = Boolean(data.payment);
+      badge.textContent = isOrder ? data.paymentLabel || data.payment : data.statusLabel;
+      if (isOrder) {
+        badge.className = `inline-block text-sm font-bold border rounded-md px-3 py-1.5 ${
+          data.payment === 'paid' ? STATUS_STYLE.answered : data.payment === 'pending' ? STATUS_STYLE.new : 'bg-red-50 text-red-900 border-red-200'
+        }`;
+      }
       body.appendChild(badge);
 
       if (Array.isArray(data.items) && data.items.length) {
@@ -235,7 +245,17 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
         body.appendChild(a);
       }
 
-      if (!data.response && data.status !== 'answered') {
+      if (isOrder) {
+        const p = document.createElement('p');
+        p.className = 'text-sm text-steel-600 leading-7';
+        p.textContent =
+          data.payment === 'paid'
+            ? `پرداخت شما ثبت شد و سفارش برای ارسال آماده می‌شود.${data.shipping ? ` روش ارسال: ${data.shipping}.` : ''}`
+            : data.payment === 'pending'
+              ? 'پرداخت این سفارش هنوز قطعی نشده است. اگر مبلغ از حسابتان کسر شده، پیش از پرداخت دوباره با ما تماس بگیرید.'
+              : 'پرداخت این سفارش انجام نشد.';
+        body.appendChild(p);
+      } else if (!data.response && data.status !== 'answered') {
         const p = document.createElement('p');
         p.className = 'text-sm text-steel-600 leading-7';
         p.textContent =

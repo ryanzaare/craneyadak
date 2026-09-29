@@ -28,8 +28,14 @@ const btn = 'inline-block bg-accent text-white px-6 py-3 rounded-md font-black h
           کد سفارش: <strong dir="ltr" class="font-mono" data-code></strong><br />
           شماره پیگیری پرداخت: <strong dir="ltr" class="font-mono" data-ref></strong>
         </p>
-        <p class="text-sm leading-7 text-steel-700">سفارش برای ارسال آماده می‌شود. هزینه‌ی ارسال پس‌کرایه است.</p>
-        <a data-track class={btn} href="/track">پیگیری سفارش</a>
+        <p class="text-sm leading-7 text-steel-700">
+          سفارش برای ارسال آماده می‌شود. هزینه‌ی ارسال پس‌کرایه است. تأیید سفارش و فاکتور غیررسمی به ایمیل شما
+          فرستاده می‌شود و از «سفارش‌های من» هم قابل دانلود است.
+        </p>
+        <div class="flex flex-wrap justify-center gap-3">
+          <a data-invoice hidden class={btn} href="/account/orders">دریافت فاکتور</a>
+          <a data-track class={btn} href="/track">پیگیری سفارش</a>
+        </div>
       </div>
 
       <div data-result="fail" hidden class={`${box} border-red-600 bg-red-50`}>
@@ -65,6 +71,7 @@ const btn = 'inline-block bg-accent text-white px-6 py-3 rounded-md font-black h
 
 <script>
   import { browserStore, writeBasket } from '../../scripts/baskets';
+  import { getToken } from '../../scripts/account';
 
   const q = new URLSearchParams(location.search);
   const r = ['ok', 'fail', 'pending'].includes(q.get('r') ?? '') ? (q.get('r') as string) : 'error';
@@ -76,6 +83,12 @@ const btn = 'inline-block bg-accent text-white px-6 py-3 rounded-md font-black h
   document.querySelectorAll('[data-ref]').forEach((el) => (el.textContent = ref || '—'));
   const track = document.querySelector<HTMLAnchorElement>('[data-track]');
   if (track && code) track.href = `/track?code=${encodeURIComponent(code)}`;
+  // پرداخت فقط با ورود ممکن است؛ اگر توکن هنوز هست، دکمه‌ی فاکتور مستقیم می‌رود.
+  const invoice = document.querySelector<HTMLAnchorElement>('[data-invoice]');
+  if (invoice && code && getToken()) {
+    invoice.href = `/account/invoice?code=${encodeURIComponent(code)}`;
+    invoice.hidden = false;
+  }
 
   // سبد فقط با پرداخت موفق خالی می‌شود؛ ناموفق/در انتظار دست‌نخورده.
   if (r === 'ok') {

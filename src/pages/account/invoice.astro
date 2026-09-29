@@ -1,0 +1,105 @@
+---
+// src/pages/account/invoice.astro
+// ---------------------------------------------------------------------------
+// فاکتور غیررسمی یک سفارش پرداخت‌شده — نمایش، چاپ (ذخیره به‌صورت PDF) و دانلود.
+//
+// ⚠️ این «فاکتور رسمی» نیست؛ متن هشدار خودِ سند این را می‌گوید. HTML را سرور
+// می‌سازد (class-order-invoice.php) — همان که در ایمیل می‌رود — تا عدد صفحه و
+// ایمیل هرگز فرق نکند.
+//
+// ⚠️ امنیت: HTML سرور در iframe با sandbox بدون allow-scripts نمایش داده می‌شود؛
+// حتی اگر نام کالا یا نشانی روزی escape نشود، هیچ اسکریپتی اجرا نمی‌شود.
+// allow-same-origin فقط برای اینکه دکمه‌ی چاپ به iframe دسترسی داشته باشد.
+// ---------------------------------------------------------------------------
+import Layout from '../../layouts/Layout.astro';
+import AccountNav from '../../components/AccountNav.astro';
+import { SITE } from '../../data/site';
+
+const title = `فاکتور سفارش | ${SITE.name}`;
+const description = 'فاکتور غیررسمی سفارش پرداخت‌شده.';
+const btn = 'inline-block bg-accent text-white px-5 py-2.5 rounded-md text-sm font-black hover:bg-accent-ink transition-colors';
+const btn2 = 'inline-block border border-steel-400 bg-white text-steel-900 px-5 py-2.5 rounded-md text-sm font-black hover:border-accent transition-colors';
+---
+
+<Layout title={title} description={description} noindex>
+  <section class="bg-steel-900 text-white px-4 py-10">
+    <div class="max-w-5xl mx-auto">
+      <h1 class="text-2xl md:text-3xl font-black">فاکتور سفارش</h1>
+    </div>
+  </section>
+
+  <section class="bg-white px-4 py-10">
+    <div class="max-w-5xl mx-auto grid grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
+      <AccountNav />
+
+      <div class="min-w-0">
+        <p id="inv-loading" class="text-steel-600">در حال بارگذاری…</p>
+        <p id="inv-error" hidden class="text-sm leading-7 text-red-700 font-bold bg-red-50 border border-red-200 rounded-md p-4" role="alert"></p>
+
+        <div id="inv-view" hidden class="space-y-4">
+          <div class="flex flex-wrap gap-3">
+            <button type="button" id="inv-print" class={btn}>چاپ / ذخیره به‌صورت PDF</button>
+            <button type="button" id="inv-download" class={btn2}>دانلود فایل فاکتور</button>
+            <a href="/account/orders" class="self-center text-sm text-accent-ink font-bold hover:underline">← سفارش‌های من</a>
+          </div>
+          <iframe
+            id="inv-frame"
+            title="فاکتور غیررسمی سفارش"
+            sandbox="allow-same-origin allow-modals"
+            class="w-full min-h-[640px] border border-steel-300 rounded-lg bg-white"></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { api, errorMessage, requireLogin } from '../../scripts/account';
+
+  const $ = (id: string) => document.getElementById(id)!;
+
+  async function load() {
+    if (!requireLogin()) return;
+    const code = (new URLSearchParams(location.search).get('code') ?? '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 20);
+    const fail = (text: string) => {
+      $('inv-loading').hidden = true;
+      const err = $('inv-error');
+      err.textContent = text;
+      err.hidden = false;
+    };
+    if (!code) return fail('کد سفارش مشخص نیست. از «سفارش‌های من» وارد شوید.');
+
+    const res = await api<{ html?: string; code?: string }>(`/account/invoice?code=${encodeURIComponent(code)}`, { auth: true });
+    if (res.status === 401) {
+      requireLogin();
+      return;
+    }
+    if (!res.ok || !res.data.html) return fail(errorMessage(res, 'فاکتور پیدا نشد. فقط سفارش پرداخت‌شده‌ی همین حساب فاکتور دارد.'));
+
+    const html = res.data.html;
+    const doc = `<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>فاکتور ${res.data.code ?? code}</title></head><body style="margin:16px">${html}</body></html>`;
+    const frame = $('inv-frame') as HTMLIFrameElement;
+    frame.srcdoc = doc;
+    frame.addEventListener('load', () => {
+      const h = frame.contentDocument?.documentElement.scrollHeight;
+      if (h) frame.style.height = `${h + 24}px`;
+    });
+
+    $('inv-print').addEventListener('click', () => frame.contentWindow?.print());
+    $('inv-download').addEventListener('click', () => {
+      const url = URL.createObjectURL(new Blob([doc], { type: 'text/html;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${res.data.code ?? code}.html`;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+    $('inv-loading').hidden = true;
+    $('inv-view').hidden = false;
+  }
+
+  void load();
+</script>

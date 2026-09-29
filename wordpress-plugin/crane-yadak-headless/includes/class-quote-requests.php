@@ -641,7 +641,7 @@ function cyh_rest_quote_status( $request ) {
 	}
 	set_transient( $key, $hits + 1, 10 * MINUTE_IN_SECONDS );
 
-	$code  = strtoupper( sanitize_text_field( (string) $request->get_param( 'code' ) ) );
+	$code  = strtoupper( trim( sanitize_text_field( cyh_to_latin_digits( (string) $request->get_param( 'code' ) ) ) ) );
 	$phone = preg_replace( '/\D/', '', cyh_to_latin_digits( (string) $request->get_param( 'phone' ) ) );
 
 	if ( '' === $code || '' === $phone ) {
@@ -651,14 +651,20 @@ function cyh_rest_quote_status( $request ) {
 		);
 	}
 
-	$found = get_posts(
+	// ⚠️ خریدار «شماره پیگیری پرداخت» (عدد زرین‌پال) را با «کد سفارش» (CY-…)
+	// اشتباه می‌گیرد — هر دو روی صفحه‌ی نتیجه دیده می‌شوند و در آزمون واقعی
+	// همین اتفاق افتاد. عدد ≥۶ رقمی = شماره پیگیری پرداخت؛ cyh_ref_id فقط
+	// برای سفارش پرداخت‌شده ثبت می‌شود، پس استعلام هرگز با آن پیدا نمی‌شود.
+	// شماره تماس همچنان لازم است، پس امنیت پیگیری عوض نمی‌شود.
+	$by_ref = (bool) preg_match( '/^\d{6,20}$/', $code );
+	$found  = get_posts(
 		[
 			'post_type'      => CYH_QUOTE_CPT,
 			'post_status'    => 'publish',
 			'posts_per_page' => 1,
 			'meta_query'     => [ // phpcs:ignore WordPress.DB.SlowDBQuery
 				'relation' => 'AND',
-				[ 'key' => 'cyh_code', 'value' => $code ],
+				[ 'key' => $by_ref ? 'cyh_ref_id' : 'cyh_code', 'value' => $code ],
 				[ 'key' => 'cyh_phone', 'value' => $phone ],
 			],
 		]
@@ -681,10 +687,15 @@ function cyh_rest_quote_status( $request ) {
 	return new WP_REST_Response(
 		[
 			'ok'          => true,
-			'code'        => $code,
+			'code'        => (string) get_post_meta( $post->ID, 'cyh_code', true ),
 			'status'      => $status,
 			'statusLabel' => $statuses[ $status ] ?? $status,
 			'kind'        => get_post_meta( $post->ID, 'cyh_kind', true ) ?: 'quote',
+			// ⚠️ سفارش آنلاین گردش‌کار استعلام (جدید/پاسخ داده شد) را ندارد؛ پیگیری
+			// باید وضعیت پرداخت را نشان بدهد. خالی = استعلام.
+			'payment'      => (string) get_post_meta( $post->ID, 'cyh_payment', true ),
+			'paymentLabel' => cyh_payment_labels()[ (string) get_post_meta( $post->ID, 'cyh_payment', true ) ] ?? '',
+			'shipping'     => (string) get_post_meta( $post->ID, 'cyh_shipping_label', true ),
 			'submittedAt' => get_the_date( 'c', $post ),
 			'items'       => array_map(
 				static function ( $item ) {

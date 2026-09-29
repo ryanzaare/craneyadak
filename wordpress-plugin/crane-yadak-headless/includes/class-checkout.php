@@ -784,6 +784,7 @@ function cyh_checkout_complete( $code, $authority ) {
 			update_post_meta( $id, 'cyh_card_pan', sanitize_text_field( (string) ( $zp['data']['card_pan'] ?? '' ) ) );
 			update_post_meta( $id, 'cyh_paid_at', time() );
 			cyh_checkout_notify_paid( $id );
+			cyh_checkout_notify_customer( $id );
 			return $done( 'ok', $ref );
 		}
 		update_post_meta( $id, 'cyh_payment', 'failed' );
