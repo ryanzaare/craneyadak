@@ -23,7 +23,13 @@ export async function getStaticPaths() {
 const { page } = Astro.props;
 
 const title = buildTitle([page.label, SITE.name], `/legal/${page.slug}/`);
-const description = page.excerpt;
+// ⚠️ excerpt وردپرس گاهی زباله است («۱.» — اولین سطر یک فهرست شماره‌دار): چهار صفحه‌ی
+// حقوقی با همان توضیح یکسان ایندکس می‌شدند و check-build-audit آن را گرفت.
+// زیر ۴۰ کاراکتر = بی‌معنا؛ توضیح یکتای ساخته‌شده از عنوان (بدون ادعای تازه).
+const description =
+  (page.excerpt ?? '').trim().length >= 40
+    ? page.excerpt
+    : `${page.label} سایت ${SITE.name} — شرایط و رویه‌ی مربوط به خرید و پرداخت آنلاین.`;
 const canonicalUrl = `${SITE.url}/legal/${page.slug}`;
 
 const jsonLd = {

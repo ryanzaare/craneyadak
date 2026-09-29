@@ -8,10 +8,10 @@
   "scripts": {
     "dev": "node scripts/generate-taxonomy.mjs --allow-stale && astro dev",
     "build": "npm run taxonomy && npm run check && npm run check:plugin && astro build",
-    "postbuild": "node scripts/normalize-links.mjs && node scripts/generate-htaccess.mjs && node scripts/prune-noindex-sitemap.mjs && pagefind --site dist && npm run check:pagefind && node scripts/check-product-offers.mjs && node scripts/check-sitemap-noindex.mjs",
+    "postbuild": "node scripts/normalize-links.mjs && node scripts/generate-htaccess.mjs && node scripts/prune-noindex-sitemap.mjs && pagefind --site dist && npm run check:pagefind && node scripts/check-product-offers.mjs && node scripts/check-sitemap-noindex.mjs && node scripts/check-build-audit.mjs",
     "preview": "astro preview",
     "astro": "astro",
-    "check": "node scripts/check-architecture.mjs && node scripts/check-docs-fresh.mjs && node scripts/check-imports.mjs && node scripts/check-wp-hooks.mjs && node scripts/check-cors-headers.mjs && node scripts/check-braces.mjs src/lib/*.ts src/data/*.ts && node scripts/check-astro-tags.mjs src/components/*.astro src/pages/**/*.astro && npm run test:blocks && npm run test:seo && npm run test:pricing && npm run test:checkout && npm run test:baskets && npm run test:urls",
+    "check": "node scripts/check-architecture.mjs && node scripts/check-docs-fresh.mjs && node scripts/check-imports.mjs && node scripts/check-wp-hooks.mjs && node scripts/check-cors-headers.mjs && node scripts/check-braces.mjs src/lib/*.ts src/data/*.ts && node scripts/check-astro-tags.mjs src/components/*.astro src/pages/**/*.astro && npm run test:blocks && npm run test:seo && npm run test:pricing && npm run test:checkout && npm run test:baskets && npm run test:urls && npm run test:build-audit",
     "taxonomy": "node scripts/generate-taxonomy.mjs",
     "test:taxonomy": "node scripts/generate-taxonomy.test.mjs",
     "check:hooks": "node scripts/check-wp-hooks.mjs",
@@ -22,6 +22,7 @@
     "test:pricing": "node --experimental-strip-types --no-warnings src/lib/pricing.test.mts",
     "test:checkout": "node --experimental-strip-types --no-warnings src/lib/checkout.test.mts",
     "test:baskets": "node --experimental-strip-types --no-warnings src/scripts/baskets.test.mts",
+    "test:build-audit": "node scripts/build-audit.test.mjs",
     "test:urls": "node --experimental-strip-types --no-warnings src/lib/urls.test.mts"
   },
   "dependencies": {
