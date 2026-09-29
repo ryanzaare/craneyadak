@@ -361,6 +361,10 @@ function add_meta_box( $id, $title, $cb, $screen = null, $ctx = 'advanced', $pri
 	$GLOBALS['cyh_test_metaboxes'][ $id ] = [ 'screen' => $screen, 'cb' => $cb ];
 	return $id;
 }
+function wp_add_dashboard_widget( $id, $title, $cb, $control = null, $args = null, $context = 'normal', $priority = 'core' ) {
+	if ( ! is_callable( $cb ) ) { throw new Exception( "wp_add_dashboard_widget($id): callback تعریف نشده" ); }
+	$GLOBALS['cyh_test_dashboard_widgets'][ $id ] = [ 'title' => $title, 'cb' => $cb ];
+}
 function get_current_screen() { return (object) [ 'id' => $GLOBALS['cyh_test_screen'] ?? 'dashboard', 'base' => 'edit' ]; }
 function check_admin_referer( $action = -1, $q = '_wpnonce' ) { return true; }
 function wp_nonce_url( $url, $action = -1, $name = '_wpnonce' ) { return $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . '_wpnonce=test'; }
@@ -774,8 +778,23 @@ function acf_add_local_field_group( $group ) {
 	$GLOBALS['cyh_test_acf_groups'][ $group['key'] ] = $group;
 	return $group;
 }
-function get_field( $sel, $post_id = false, $format = true ) { return $GLOBALS['cyh_test_fields'][ (string) $post_id ][ $sel ] ?? ''; }
-function update_field( $sel, $val, $post_id = false ) { $GLOBALS['cyh_test_fields'][ (string) $post_id ][ $sel ] = $val; return true; }
+/* ⚠️ ACF واقعی مقدار فیلد نوشته را در متای همان نوشته نگه می‌دارد؛
+   get_field و get_post_meta یک مقدار را می‌بینند. نسخه‌ی قبلی این stubها
+   دو انبار جدا داشت، و کدی که مقدار قبلی را با یکی و مقدار تازه را با
+   دیگری می‌خواند، در هارنس رفتاری می‌دید که وردپرس هرگز ندارد. */
+function get_field( $sel, $post_id = false, $format = true ) {
+	if ( isset( $GLOBALS['cyh_test_fields'][ (string) $post_id ][ $sel ] ) ) {
+		return $GLOBALS['cyh_test_fields'][ (string) $post_id ][ $sel ];
+	}
+	return is_numeric( $post_id ) ? ( $GLOBALS['cyh_test_meta'][ (int) $post_id ][ $sel ] ?? '' ) : '';
+}
+function update_field( $sel, $val, $post_id = false ) {
+	$GLOBALS['cyh_test_fields'][ (string) $post_id ][ $sel ] = $val;
+	if ( is_numeric( $post_id ) ) {
+		$GLOBALS['cyh_test_meta'][ (int) $post_id ][ $sel ] = $val;
+	}
+	return true;
+}
 
 // گروه‌های فیلد ACF «در پایگاه داده» — آزمون‌ها این را پر می‌کنند.
 $GLOBALS['cyh_test_acf_groups'] = [];
@@ -1494,6 +1513,82 @@ if (
 	$errors[] = 'استعلام: نام باید از وردپرس بیاید و محصول پیش‌نویس نباید قیمت قطعی بگیرد';
 } else {
 	echo "✓ استعلام نام قلم را از وردپرس می‌خواند و به محصول پیش‌نویس قیمت نمی‌دهد\n";
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// بررسی ۵۲ تا ۵۸: صفحه‌ی «قیمت‌ها» (class-price-admin.php)
+// ═══════════════════════════════════════════════════════════════════════════
+$pa_id = $mk( 'pa-remote', [ 'price' => 12000000 ], 'publish', 20 );
+update_field( 'price', 12000000, $pa_id );
+update_field( 'stock_status', 'in_stock', $pa_id );
+$pa_date = static function () use ( $pa_id ) { return (int) get_post_meta( $pa_id, CYH_PRICE_UPDATED_META, true ); };
+
+// ۵۲: ارقام فارسی و جداکننده پذیرفته می‌شوند
+$pa_parse = cyh_prices_parse_rial( '۱۲٬۵۰۰٬۰۰۰' ) === 12500000 && cyh_prices_parse_rial( '' ) === null && cyh_prices_parse_rial( '12,500,000' ) === 12500000;
+if ( ! $pa_parse ) {
+	$errors[] = 'cyh_prices_parse_rial ارقام فارسی/جداکننده را درست نخواند';
+} else {
+	echo "✓ قیمت با ارقام فارسی و جداکننده‌ی هزارگان درست خوانده می‌شود\n";
+}
+
+/* ۵۳ (خطای ۱۰ برابری): تغییر بیش از ٪۳۰ بدون تأیید صریح رد می‌شود — سمت
+   سرور، نه فقط دیالوگ مرورگر. ۱۲ میلیون → ۱٫۲ میلیون (یک صفر کم). */
+$before53 = $pa_date();
+$r53 = cyh_prices_apply_row( $pa_id, [ 'action' => 'save', 'price' => '1200000', 'stock_status' => 'in_stock' ], 1 );
+if ( $r53['ok'] || (int) get_post_meta( $pa_id, 'price', true ) !== 12000000 || $pa_date() !== $before53 ) {
+	$errors[] = 'تغییر بیش از ٪۳۰ بدون تأیید باید رد شود و قیمت و تاریخ دست‌نخورده بمانند';
+} else {
+	echo "✓ تغییر بیش از ٪۳۰ (مثلاً یک صفر کم) بدون تأیید صریح ذخیره نمی‌شود\n";
+}
+
+// ۵۴: با تأیید صریح ذخیره و تاریخ تازه می‌شود
+$r54 = cyh_prices_apply_row( $pa_id, [ 'action' => 'save', 'price' => '1200000', 'stock_status' => 'in_stock', 'confirm_big' => true ], 1 );
+if ( ! $r54['ok'] || (int) get_post_meta( $pa_id, 'price', true ) !== 1200000 || $pa_date() <= $before53 ) {
+	$errors[] = 'تغییر بزرگ با تأیید صریح باید ذخیره و تاریخ قیمت تازه شود';
+} else {
+	echo "✓ با تأیید صریح، تغییر بزرگ ذخیره و تاریخ قیمت تازه می‌شود\n";
+}
+
+// ۵۵: ذخیره‌ی همان قیمت، تاریخ را جلو نمی‌برد (فقط تغییر موجودی)
+update_post_meta( $pa_id, CYH_PRICE_UPDATED_META, $now - 5 * $day );
+$r55 = cyh_prices_apply_row( $pa_id, [ 'action' => 'save', 'price' => '1,200,000', 'stock_status' => 'on_order' ], 1 );
+if ( ! $r55['ok'] || $pa_date() !== $now - 5 * $day || get_post_meta( $pa_id, 'stock_status', true ) !== 'on_order' ) {
+	$errors[] = 'ذخیره‌ی همان قیمت نباید تاریخ را جلو ببرد؛ موجودی باید ذخیره شود';
+} else {
+	echo "✓ ذخیره‌ی همان قیمت تاریخ را جلو نمی‌برد؛ تغییر موجودی ذخیره می‌شود\n";
+}
+
+// ۵۶: «تأیید قیمت فعلی» تاریخ و تأییدکننده را ثبت می‌کند
+$r56 = cyh_prices_apply_row( $pa_id, [ 'action' => 'confirm' ], 7 );
+if ( ! $r56['ok'] || $pa_date() <= $now - 5 * $day || (int) get_post_meta( $pa_id, CYH_PRICE_CONFIRMED_META, true ) !== 7 ) {
+	$errors[] = 'تأیید قیمت باید تاریخ و شناسه‌ی تأییدکننده را ثبت کند';
+} else {
+	echo "✓ «تأیید قیمت فعلی» تاریخ و نام تأییدکننده را ثبت می‌کند\n";
+}
+
+// ۵۷: محصول بی‌قیمت قابل «تأیید» نیست — تأییدِ هیچ، تأیید نیست
+$pa_empty = $mk( 'pa-empty', [], 'publish', null );
+$r57 = cyh_prices_apply_row( $pa_empty, [ 'action' => 'confirm' ], 1 );
+if ( $r57['ok'] || '' !== get_post_meta( $pa_empty, CYH_PRICE_UPDATED_META, true ) ) {
+	$errors[] = 'تأیید محصول بدون قیمت باید رد شود';
+} else {
+	echo "✓ محصول بدون قیمت قابل «تأیید» نیست\n";
+}
+
+/* ۵۸: شمارش توجه — فقط اقلام موجودِ قیمت‌دار. منقضی و «تا ۲ روز» جدا
+   شمرده می‌شوند؛ ناموجود در شمارش نیست (از فروش آنلاین نمی‌افتد چون
+   اصلاً در آن نبوده). */
+$att_before = cyh_prices_attention( $now );
+$mk( 'pa-soon', [ 'price' => 9000 ], 'publish', 9 );          // ۱ روز مانده
+$mk( 'pa-gone', [ 'price' => 9000 ], 'publish', 30 );         // منقضی
+$mk( 'pa-out', [ 'price' => 9000, 'stock_status' => 'on_order' ], 'publish', 30 ); // ناموجود
+// $mk فیلدها را در cyh_test_fields می‌گذارد؛ cyh_product_pricing از get_field می‌خواند.
+$att_after = cyh_prices_attention( $now );
+if ( $att_after['soon'] - $att_before['soon'] !== 1 || $att_after['expired'] - $att_before['expired'] !== 1 ) {
+	$errors[] = 'شمارش قیمت‌های نیازمند توجه: ' . wp_json_encode( [ $att_before, $att_after ] );
+} else {
+	echo "✓ بنر/ویجت: منقضی و «تا ۲ روز» درست شمرده می‌شوند؛ قلم ناموجود شمرده نمی‌شود\n";
 }
 
 

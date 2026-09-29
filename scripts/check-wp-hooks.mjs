@@ -82,6 +82,7 @@ const HOOK_ARITY = {
   parent_file: 1,
   submenu_file: 2,
   admin_notices: 0,
+  wp_dashboard_setup: 0,
   admin_enqueue_scripts: 1,
   rest_api_init: 1,
 

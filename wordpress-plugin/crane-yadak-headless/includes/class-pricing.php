@@ -119,9 +119,7 @@ function cyh_product_pricing( $post_id, $now = null ) {
 	}
 
 	$field = static function ( $name ) use ( $post_id ) {
-		// ⚠️ گارد ACF — همان دلیل class-quote-requests.php: بدون ACF،
-		// get_field وجود ندارد و خطای مرگبار یعنی شکست ثبت سفارش.
-		return function_exists( 'get_field' ) ? get_field( $name, $post_id ) : get_post_meta( $post_id, $name, true );
+		return cyh_product_field( $post_id, $name );
 	};
 
 	$out['exists']    = true;
@@ -187,6 +185,16 @@ function cyh_product_pricing( $post_id, $now = null ) {
 	$out['payable'] = true;
 	$out['reason']  = null;
 	return $out;
+}
+
+/**
+ * خواندن یک فیلد محصول — یک راه برای همه‌ی فایل‌ها.
+ * ⚠️ گارد ACF — همان دلیل class-quote-requests.php: بدون ACF، get_field
+ * وجود ندارد و خطای مرگبار یعنی شکست ثبت سفارش. ACF همان متای نوشته را
+ * می‌نویسد، پس جایگزین get_post_meta همان مقدار خام را می‌دهد.
+ */
+function cyh_product_field( $post_id, $name ) {
+	return function_exists( 'get_field' ) ? get_field( $name, $post_id ) : get_post_meta( $post_id, $name, true );
 }
 
 /** پیام کاربرپسند برای هر reason — همان متنی که هنگام جابه‌جایی به سبد استعلام دیده می‌شود. */
