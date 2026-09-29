@@ -203,6 +203,17 @@ class CYH_Test_Wpdb {
 }
 $GLOBALS['wpdb'] = new CYH_Test_Wpdb();
 
+class WP_Query {
+	public $vars;
+	public $main;
+	public function __construct( $vars = [], $main = true ) {
+		$this->vars = $vars;
+		$this->main = $main;
+	}
+	public function is_main_query() { return $this->main; }
+	public function get( $key, $default = '' ) { return $this->vars[ $key ] ?? $default; }
+	public function set( $key, $value ) { $this->vars[ $key ] = $value; }
+}
 class WP_Post {
 	public $post_type;
 	public $post_status;
@@ -1659,7 +1670,7 @@ if (
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// بررسی ۶۰ تا ۷۷: پرداخت آنلاین (class-checkout.php، ایست ۲ فاز ۴ + اصلاح‌های UX)
+// بررسی ۶۰ تا ۸۰: پرداخت آنلاین (class-checkout.php، ایست ۲ فاز ۴ + اصلاح‌های UX)
 // ═══════════════════════════════════════════════════════════════════════════
 $co_check = static function ( $cond, $ok_msg, $err_msg ) use ( &$errors ) {
 	if ( $cond ) {
@@ -1992,6 +2003,94 @@ $co_check(
 );
 $GLOBALS['cyh_test_headers'] = [];
 
+// ۷۸-۸۰: پنل — «سفارش‌ها» جدا از «درخواست‌های استعلام»
+$_GET = [];
+$GLOBALS['cyh_test_is_admin'] = true;
+$q_ord = new WP_Query( [ 'post_type' => CYH_QUOTE_CPT ] );
+$_GET['cyh_view'] = 'orders';
+cyh_quote_admin_filter_query( $q_ord );
+$q_quo = new WP_Query( [ 'post_type' => CYH_QUOTE_CPT ] );
+$_GET = [];
+cyh_quote_admin_filter_query( $q_quo );
+$q_other = new WP_Query( [ 'post_type' => 'product' ] );
+cyh_quote_admin_filter_query( $q_other );
+$q_sub = new WP_Query( [ 'post_type' => CYH_QUOTE_CPT ], false );
+cyh_quote_admin_filter_query( $q_sub );
+$_GET = [ 'cyh_view' => 'ORDERS' ];
+$q_bad = new WP_Query( [ 'post_type' => CYH_QUOTE_CPT ] );
+cyh_quote_admin_filter_query( $q_bad );
+$_GET = [];
+$co_check(
+	[ [ 'key' => 'cyh_payment', 'compare' => 'EXISTS' ] ] === $q_ord->get( 'meta_query' )
+		&& [ [ 'key' => 'cyh_payment', 'compare' => 'NOT EXISTS' ] ] === $q_quo->get( 'meta_query' ),
+	'پنل: cyh_view=orders فقط سفارش‌های دارای cyh_payment؛ پیش‌فرض فقط استعلام (NOT EXISTS)',
+	'meta_query: ' . wp_json_encode( [ $q_ord->get( 'meta_query' ), $q_quo->get( 'meta_query' ) ] )
+);
+$co_check(
+	'' === $q_other->get( 'meta_query' ) && '' === $q_sub->get( 'meta_query' )
+		&& [ [ 'key' => 'cyh_payment', 'compare' => 'NOT EXISTS' ] ] === $q_bad->get( 'meta_query' ),
+	'پنل: نوع پست دیگر و کوئری فرعی دست‌نخورده؛ مقدار ناشناخته (ORDERS) به استعلام برمی‌گردد',
+	'other/sub/bad: ' . wp_json_encode( [ $q_other->get( 'meta_query' ), $q_sub->get( 'meta_query' ), $q_bad->get( 'meta_query' ) ] )
+);
+
+// ستون‌ها و زبانه‌ها
+$_GET = [ 'cyh_view' => 'orders' ];
+$cols_orders = cyh_orders_columns( [ 'cb' => 'x', 'title' => 't' ] );
+$views_orders = cyh_quote_views( [ 'all' => 'a', 'publish' => 'p', 'trash' => 'T' ] );
+$_GET = [];
+$cols_quotes = cyh_orders_columns( [ 'cb' => 'x', 'title' => 't', 'cyh_items' => 'i' ] );
+$views_quotes = cyh_quote_views( [ 'all' => 'a' ] );
+$co_check(
+	isset( $cols_orders['cyh_pay'], $cols_orders['cyh_total'], $cols_orders['cyh_ref'] ) && ! isset( $cols_quotes['cyh_pay'] ) && isset( $cols_quotes['cyh_items'] ),
+	'پنل: ستون‌های پرداخت/مبلغ/شماره پیگیری فقط در فهرست سفارش‌ها',
+	'ستون‌ها: ' . wp_json_encode( [ array_keys( $cols_orders ), array_keys( $cols_quotes ) ] )
+);
+$co_check(
+	array_keys( $views_orders ) === [ 'cyh_quotes', 'cyh_orders', 'trash' ]
+		&& false !== strpos( $views_orders['cyh_orders'], 'class="current"' ) && false === strpos( $views_orders['cyh_quotes'], 'current' )
+		&& false !== strpos( $views_orders['cyh_orders'], 'cyh_view=orders' ) && false === strpos( $views_orders['cyh_quotes'], 'cyh_view' )
+		&& false !== strpos( $views_quotes['cyh_quotes'], 'class="current"' ) && ! isset( $views_quotes['trash'] ),
+	'پنل: دو زبانه‌ی «استعلام‌ها» و «سفارش‌ها»؛ زبانه‌ی فعال درست، سطل زباله حفظ',
+	'views: ' . wp_json_encode( [ $views_orders, $views_quotes ] )
+);
+
+// منوی سفارش‌ها + ستون پرداخت + جزئیات
+$GLOBALS['cyh_test_menus'] = [];
+cyh_orders_menu();
+$co_check(
+	isset( $GLOBALS['cyh_test_menus'][ 'edit.php?post_type=' . CYH_QUOTE_CPT . '&cyh_view=orders' ] ),
+	'پنل: منوی سطح‌بالای «سفارش‌ها» ثبت شد',
+	'منوها: ' . wp_json_encode( array_keys( $GLOBALS['cyh_test_menus'] ) )
+);
+$_GET = [ 'post' => (string) $co_oid71 ];
+$co_pf_order = cyh_orders_parent_file( 'edit.php?post_type=' . CYH_QUOTE_CPT );
+$_GET = [ 'post' => '1' ];
+$GLOBALS['cyh_test_posts'][1] = [ 'post_type' => CYH_QUOTE_CPT, 'post_status' => 'publish', 'post_title' => 'q' ];
+$co_pf_quote = cyh_orders_parent_file( 'edit.php?post_type=' . CYH_QUOTE_CPT );
+$_GET = [];
+$co_check(
+	'edit.php?post_type=' . CYH_QUOTE_CPT . '&cyh_view=orders' === $co_pf_order && 'edit.php?post_type=' . CYH_QUOTE_CPT === $co_pf_quote,
+	'پنل: ویرایش یک سفارش منوی «سفارش‌ها» را فعال می‌کند، ویرایش استعلام منوی استعلام را',
+	'parent_file: ' . wp_json_encode( [ $co_pf_order, $co_pf_quote ] )
+);
+ob_start();
+cyh_orders_column_content( 'cyh_pay', $co_oid71 );
+$pay_html = ob_get_clean();
+ob_start();
+cyh_orders_column_content( 'cyh_ref', $co_oid71 );
+$ref_html = ob_get_clean();
+$GLOBALS['cyh_test_metaboxes'] = [];
+cyh_order_metabox( CYH_QUOTE_CPT, (object) [ 'ID' => $co_oid71 ] );
+$has_box = isset( $GLOBALS['cyh_test_metaboxes']['cyh_order_details'] );
+$GLOBALS['cyh_test_metaboxes'] = [];
+cyh_order_metabox( CYH_QUOTE_CPT, (object) [ 'ID' => 1 ] );
+$has_box_quote = isset( $GLOBALS['cyh_test_metaboxes']['cyh_order_details'] );
+$co_check(
+	false !== strpos( $pay_html, 'ناموفق' ) && false !== strpos( $ref_html, '—' ) && false === strpos( $ref_html, '<code>' ) && $has_box && ! $has_box_quote,
+	'پنل: ستون پرداخت وضعیت را نشان می‌دهد، شماره پیگیری فقط برای پرداخت‌شده؛ جعبه‌ی سفارش فقط روی سفارش',
+	"pay=$pay_html ref=$ref_html box=" . var_export( $has_box, true ) . ' quote_box=' . var_export( $has_box_quote, true )
+);
+$GLOBALS['cyh_test_is_admin'] = false;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // بررسی امضای هوک‌ها — همان چیزی که نسخه‌ی ۱.۳.۰ را کشت
@@ -2007,7 +2106,7 @@ $hook_arity = [
 	'pre_term_slug' => 2, 'pre_term_name' => 2, 'pre_term_description' => 2,
 	'wp_insert_term_data' => 3, 'wp_update_term_data' => 4, 'term_name' => 2,
 	'save_post' => 3, 'wp_insert_post_data' => 4, 'wp_unique_post_slug' => 6,
-	'add_meta_boxes' => 2, 'pre_comment_approved' => 2,
+	'add_meta_boxes' => 2, 'pre_get_posts' => 1, 'parent_file' => 1, 'pre_comment_approved' => 2,
 	'manage_comments_custom_column' => 2, 'manage_edit-comments_columns' => 1,
 	'init' => 0, 'admin_init' => 0, 'admin_menu' => 0, 'admin_notices' => 0,
 	'admin_enqueue_scripts' => 1, 'rest_api_init' => 1,
@@ -2016,7 +2115,7 @@ $hook_arity = [
 	'graphql_register_types' => 1,
 ];
 $dynamic_arity = [ '/^saved_/' => 4, '/^created_/' => 4, '/^edited_/' => 4,
-	'/^delete_/' => 5, '/^admin_post_/' => 0, '/^wp_ajax_/' => 0 ];
+	'/^views_edit-/' => 1, '/^delete_/' => 5, '/^admin_post_/' => 0, '/^wp_ajax_/' => 0 ];
 
 $sig_checked = 0;
 foreach ( $GLOBALS['cyh_test_hook_reg'] ?? [] as $reg ) {

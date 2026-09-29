@@ -833,3 +833,194 @@ function cyh_checkout_notify_paid( $post_id ) {
 		)
 	);
 }
+
+/* =========================================================================
+   پنل: «سفارش‌ها» جدا از «درخواست‌های استعلام»
+   =========================================================================
+   ⚠️ هر دو در همان CPT (cyh_quote) می‌مانند، نه CPT تازه: کد رهگیری،
+   /track، callback زرین‌پال و «سفارش‌های من» همه با همین CPT کار می‌کنند و
+   جداکردنش یعنی مهاجرت داده‌ی پرداخت‌شده. تفکیک با یک ملاک است: **متای
+   cyh_payment** (فقط checkout آن را می‌گذارد). سفارش‌های قدیمیِ /quote با
+   kind=order ولی بدون cyh_payment استعلام حساب می‌شوند — پرداختی نداشته‌اند. */
+
+// ⚠️ ثابت CYH_QUOTE_CPT همین‌جا در نام هوک‌ها به کار می‌رود (زمان بارگذاری، نه
+// زمان فراخوانی). ترتیب بارگذاری افزونه درست است، ولی هارنس فایل‌ها را الفبایی
+// می‌خواند و class-checkout زودتر می‌آید — require_once وابستگی را صریح می‌کند.
+require_once __DIR__ . '/class-quote-requests.php';
+
+function cyh_payment_labels() {
+	return [
+		'pending' => 'در انتظار پرداخت',
+		'paid'    => 'پرداخت‌شده',
+		'failed'  => 'ناموفق',
+	];
+}
+
+/** کدام فهرست: 'orders' یا 'quotes'. هر مقدار دیگری = استعلام (پیش‌فرض امن). */
+function cyh_admin_quote_view() {
+	return ( isset( $_GET['cyh_view'] ) && 'orders' === $_GET['cyh_view'] ) ? 'orders' : 'quotes'; // phpcs:ignore WordPress.Security.NonceVerification
+}
+
+function cyh_quote_view_meta_query( $view ) {
+	return [
+		'key'     => 'cyh_payment',
+		'compare' => 'orders' === $view ? 'EXISTS' : 'NOT EXISTS',
+	];
+}
+
+function cyh_quote_view_url( $view ) {
+	return admin_url( 'edit.php?post_type=' . CYH_QUOTE_CPT . ( 'orders' === $view ? '&cyh_view=orders' : '' ) );
+}
+
+function cyh_quote_admin_filter_query( $query ) {
+	if ( ! is_admin() || ! $query->is_main_query() || CYH_QUOTE_CPT !== $query->get( 'post_type' ) ) {
+		return;
+	}
+	$query->set( 'meta_query', [ cyh_quote_view_meta_query( cyh_admin_quote_view() ) ] );
+}
+add_action( 'pre_get_posts', 'cyh_quote_admin_filter_query' );
+
+function cyh_quote_view_count( $view ) {
+	return count(
+		get_posts(
+			[
+				'post_type'      => CYH_QUOTE_CPT,
+				'post_status'    => 'publish',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'meta_query'     => [ cyh_quote_view_meta_query( $view ) ], // phpcs:ignore WordPress.DB.SlowDBQuery
+			]
+		)
+	);
+}
+
+/** «همه | منتشرشده» وردپرس هر دو نوع را با هم می‌شمرد؛ جایش دو زبانه‌ی جدا. */
+function cyh_quote_views( $views ) {
+	$current = cyh_admin_quote_view();
+	$out     = [];
+	foreach ( [ 'quotes' => 'استعلام‌ها', 'orders' => 'سفارش‌ها' ] as $view => $label ) {
+		$out[ 'cyh_' . $view ] = sprintf(
+			'<a href="%s"%s>%s <span class="count">(%d)</span></a>',
+			esc_url( cyh_quote_view_url( $view ) ),
+			$view === $current ? ' class="current" aria-current="page"' : '',
+			esc_html( $label ),
+			cyh_quote_view_count( $view )
+		);
+	}
+	if ( isset( $views['trash'] ) ) {
+		$out['trash'] = $views['trash'];
+	}
+	return $out;
+}
+add_filter( 'views_edit-' . CYH_QUOTE_CPT, 'cyh_quote_views' );
+
+function cyh_orders_menu() {
+	add_menu_page(
+		'سفارش‌ها',
+		'سفارش‌ها',
+		'edit_posts',
+		'edit.php?post_type=' . CYH_QUOTE_CPT . '&cyh_view=orders',
+		'',
+		'dashicons-cart',
+		28
+	);
+}
+add_action( 'admin_menu', 'cyh_orders_menu' );
+
+/** منوی فعال: فهرست سفارش‌ها یا صفحه‌ی ویرایش خودِ یک سفارش. */
+function cyh_orders_parent_file( $parent_file ) {
+	$on_orders = 'orders' === cyh_admin_quote_view() && 'edit.php?post_type=' . CYH_QUOTE_CPT === $parent_file;
+	$post_id   = isset( $_GET['post'] ) ? (int) $_GET['post'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
+	$on_edit   = $post_id > 0 && CYH_QUOTE_CPT === get_post_type( $post_id ) && '' !== (string) get_post_meta( $post_id, 'cyh_payment', true );
+	return ( $on_orders || $on_edit ) ? 'edit.php?post_type=' . CYH_QUOTE_CPT . '&cyh_view=orders' : $parent_file;
+}
+add_filter( 'parent_file', 'cyh_orders_parent_file' );
+
+function cyh_orders_columns( $columns ) {
+	if ( 'orders' !== cyh_admin_quote_view() ) {
+		return $columns;
+	}
+	return [
+		'cb'          => $columns['cb'] ?? '',
+		'title'       => 'سفارش',
+		'cyh_pay'     => 'پرداخت',
+		'cyh_total'   => 'مبلغ کل (ریال)',
+		'cyh_phone'   => 'تلفن',
+		'cyh_ship'    => 'روش ارسال',
+		'cyh_ref'     => 'شماره پیگیری',
+		'cyh_status'  => 'وضعیت رسیدگی',
+		'date'        => 'تاریخ',
+	];
+}
+add_filter( 'manage_' . CYH_QUOTE_CPT . '_posts_columns', 'cyh_orders_columns', 30 );
+
+function cyh_orders_column_content( $column, $post_id ) {
+	$labels = cyh_payment_labels();
+	switch ( $column ) {
+		case 'cyh_pay':
+			$pay    = (string) get_post_meta( $post_id, 'cyh_payment', true );
+			$colors = [ 'paid' => '#00a32a', 'pending' => '#996800', 'failed' => '#d63638' ];
+			printf(
+				'<span style="color:%s;font-weight:700">%s</span>%s',
+				esc_attr( $colors[ $pay ] ?? '#646970' ),
+				esc_html( $labels[ $pay ] ?? $pay ),
+				get_post_meta( $post_id, 'cyh_sandbox', true ) ? ' <em>(آزمایشی)</em>' : ''
+			);
+			break;
+		case 'cyh_total':
+			echo esc_html( number_format( (int) get_post_meta( $post_id, 'cyh_total', true ) ) );
+			break;
+		case 'cyh_ship':
+			echo esc_html( (string) get_post_meta( $post_id, 'cyh_shipping_label', true ) ?: '—' );
+			break;
+		case 'cyh_ref':
+			$ref = 'paid' === get_post_meta( $post_id, 'cyh_payment', true ) ? (string) get_post_meta( $post_id, 'cyh_ref_id', true ) : '';
+			echo '' === $ref ? '—' : '<code>' . esc_html( $ref ) . '</code>';
+			break;
+	}
+}
+add_action( 'manage_' . CYH_QUOTE_CPT . '_posts_custom_column', 'cyh_orders_column_content', 10, 2 );
+
+function cyh_order_metabox( $post_type = '', $post = null ) {
+	if ( CYH_QUOTE_CPT !== $post_type || ! is_object( $post ) || '' === (string) get_post_meta( $post->ID, 'cyh_payment', true ) ) {
+		return;
+	}
+	add_meta_box(
+		'cyh_order_details',
+		'سفارش و پرداخت',
+		function ( $post ) {
+			$labels   = cyh_payment_labels();
+			$pay      = (string) get_post_meta( $post->ID, 'cyh_payment', true );
+			$customer = get_post_meta( $post->ID, 'cyh_customer', true );
+			$invoice  = get_post_meta( $post->ID, 'cyh_invoice', true );
+			$row      = static function ( $label, $value ) {
+				printf( '<p><strong>%s:</strong> %s</p>', esc_html( $label ), esc_html( (string) $value ) );
+			};
+			$row( 'وضعیت پرداخت', ( $labels[ $pay ] ?? $pay ) . ( get_post_meta( $post->ID, 'cyh_sandbox', true ) ? ' (آزمایشی — پول واقعی نیست)' : '' ) );
+			$row( 'شماره پیگیری زرین‌پال', 'paid' === $pay ? get_post_meta( $post->ID, 'cyh_ref_id', true ) : '—' );
+			$row( 'جمع اقلام (ریال)', number_format( (int) get_post_meta( $post->ID, 'cyh_subtotal', true ) ) );
+			$row( 'ارزش افزوده (ریال)', number_format( (int) get_post_meta( $post->ID, 'cyh_vat', true ) ) );
+			$row( 'مبلغ کل (ریال)', number_format( (int) get_post_meta( $post->ID, 'cyh_total', true ) ) );
+			$row( 'روش ارسال', get_post_meta( $post->ID, 'cyh_shipping_label', true ) ?: '—' );
+			if ( is_array( $customer ) ) {
+				$row( 'نشانی گیرنده', implode( '، ', array_filter( [ $customer['province'] ?? '', $customer['city'] ?? '', $customer['address'] ?? '' ] ) ) );
+				$row( 'کد پستی', $customer['postal'] ?? '' );
+			}
+			if ( is_array( $invoice ) ) {
+				echo '<hr><p><strong>فاکتور رسمی</strong></p>';
+				$row( 'نوع', 'legal' === ( $invoice['type'] ?? '' ) ? 'حقوقی' : 'حقیقی' );
+				$row( 'نام', $invoice['name'] ?? '' );
+				$row( 'کد ملی / شناسه ملی', $invoice['national_id'] ?? '' );
+				$row( 'کد اقتصادی', $invoice['economic_code'] ?? '' );
+				$row( 'شماره ثبت', $invoice['reg_no'] ?? '' );
+				$row( 'کد پستی', $invoice['postal'] ?? '' );
+				$row( 'تلفن ثابت', $invoice['landline'] ?? '' );
+				$row( 'نشانی', $invoice['address'] ?? '' );
+			}
+		},
+		CYH_QUOTE_CPT,
+		'normal',
+		'high'
+	);
+}
+add_action( 'add_meta_boxes', 'cyh_order_metabox', 10, 2 );
