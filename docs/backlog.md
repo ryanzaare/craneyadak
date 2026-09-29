@@ -614,7 +614,7 @@ search/thank-you به‌جای robots، sitemap بدون صفحه‌ی noindex،
 - **P0؟ ریدایرکت 301 واقعی وجود ندارد:** Astro استاتیک فقط meta-refresh می‌سازد؛
   `public/_redirects` روی cPanel/Apache بی‌اثر است؛ و `docs/deployment-guide.md`
   هیچ قاعده‌ی nginx/apache ندارد، هرچند کامنت `astro.config.mjs` می‌گوید دارد
-  (مستند نادرست — قاعده‌ی ۵). راه‌حل: `public/.htaccess` با `Redirect 301` برای ۹
+  (مستند نادرست — قاعده‌ی ۵). راه‌حل: یک فایل htaccess (پیشنهادی، هنوز ساخته نشده؛ در پوشه‌ی public) با `Redirect 301` برای ۹
   آدرس قدیمی (و check-architecture همگام‌شان کند) + اصلاح کامنت/مستند.
   🔶 با `curl -I https://craneyadak.com/categories/crane-hook` تأیید شود.
 - **P1 آمادگی دسته‌ها:** ۳۰ از ۳۱ صفحه‌ی دسته در build بدون محصول‌اند و همه
