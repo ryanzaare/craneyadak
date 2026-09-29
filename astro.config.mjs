@@ -103,7 +103,14 @@ export default defineConfig({
         !page.includes('/search') &&
         !page.includes('/thank-you') &&
         // The tracking page is noindex and has no public content.
-        !page.includes('/track')
+        !page.includes('/track') &&
+        // ⚠️ حساب کاربری و پرداخت noindex هستند. نبودشان در این فهرست ۷
+        // صفحه‌ی /account را هفته‌ها در sitemap نگه داشت (ایست ۶). حالا
+        // scripts/check-sitemap-noindex.mjs در postbuild هر نشانی sitemap را
+        // با متای robots همان صفحه می‌سنجد — این فهرست دستی دیگر تنها
+        // نگهبان نیست.
+        !page.includes('/account/') &&
+        !page.includes('/checkout/')
     }),
   ],
 
