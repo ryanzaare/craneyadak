@@ -7,7 +7,11 @@
     "",
     "⚠️ `git push` عمداً در allow نیست. یک بار در این پروژه با",
     "`npm run check` قرمز کامیت شد و دیده نشد. کامیت محلی برگشت‌پذیر است؛",
-    "push تاریخچه‌ی مشترک را عوض می‌کند. یک تأیید، ارزشش را دارد."
+    "push تاریخچه‌ی مشترک را عوض می‌کند. یک تأیید، ارزشش را دارد.",
+    "",
+    "هوک‌ها (.claude/hooks/، آزمون: hooks.test.mjs): PreToolUse ← Bash: پیش از git commit، npm run check (و check:plugin اگر افزونه تغییر کرده) اجرا می‌شود؛ قرمز = کامیت مسدود. اضطراری: SKIP_PRECOMMIT_CHECK=1 git commit …",
+    "PreToolUse ← Edit|Write: ویرایش taxonomy.generated.ts، dist/، public/_redirects، .env (نه .env.example) و .git مسدود. ⚠️ فقط ابزارهای Edit/Write؛ `sed -i` در Bash را نمی‌بیند.",
+    "gh: خواندن (run list/view/watch، workflow view) آزاد؛ هرچه اثر بیرونی دارد (workflow run، secret، api، rerun، cancel) ask."
   ],
   "permissions": {
     "allow": [
@@ -40,7 +44,15 @@
       "Bash(unzip -l:*)",
       "Read(//Users/mathew/Documents/web design/craneyadak 5/**)",
       "Edit(//Users/mathew/Documents/web design/craneyadak 5/**)",
-      "WebFetch"
+      "WebFetch",
+      "Bash(gh auth status)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run watch:*)",
+      "Bash(gh workflow view:*)",
+      "Bash(gh workflow list:*)",
+      "Bash(node .claude/hooks/*)",
+      "Bash(node scripts/plugin-release.mjs:*)"
     ],
     "ask": [
       "Bash(git push:*)",
@@ -50,12 +62,41 @@
       "Bash(rm:*)",
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
-      "Bash(brew:*)"
+      "Bash(brew:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(gh secret:*)",
+      "Bash(gh api:*)",
+      "Bash(gh run rerun:*)",
+      "Bash(gh run cancel:*)"
     ],
     "deny": [
       "Read(//Users/mathew/Documents/web design/craneyadak 5/.env)",
       "Bash(curl:*)",
       "Bash(wget:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-check.mjs\"",
+            "timeout": 300
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-files.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

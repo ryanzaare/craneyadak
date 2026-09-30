@@ -69,6 +69,17 @@ Astro استاتیک (`output: 'static'`) + وردپرس هدلس با WPGraphQL
 **وردپرس مرجع یگانه‌ی تاکسونومی است** — `src/data/taxonomy.generated.ts` یک
 خروجی build است، نه فایلی که دستی ویرایش شود.
 
+## هوک‌ها، فرمان و gh (ابزار Claude Code)
+
+- **پیش از هر `git commit`** هوک `.claude/hooks/pre-commit-check.mjs` خودش `npm run check` (و اگر
+  افزونه تغییر کرده `check:plugin`) را اجرا می‌کند؛ قرمز = کامیت مسدود. اضطراری و دیده‌شونده:
+  `SKIP_PRECOMMIT_CHECK=1 git commit …`.
+- هوک `protect-files.mjs` ویرایش `taxonomy.generated.ts`، `dist/`، ~~`public/_redirects`~~ و `.env` را
+  مسدود می‌کند (فقط ابزار Edit/Write؛ `sed -i` را نمی‌بیند).
+- فرمان `/plugin-release <نسخه>`: انتشار افزونه (bump + zip + حذف zip قدیمی + تأیید + مستندات + کامیت).
+- `gh` (احراز هویت‌شده) برای لاگ اجرای Actions: `gh run list`، `gh run view <id> --log-failed`.
+  اجرای workflow/secret/api ask است.
+
 ## دستورهای اصلی
 
 ```bash
