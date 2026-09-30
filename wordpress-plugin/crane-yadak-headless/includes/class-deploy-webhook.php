@@ -30,14 +30,46 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 define( 'CYH_DEPLOY_CRON_HOOK', 'cyh_trigger_deploy_event' );
 
+/**
+ * مقصد GitHub Actions (repository_dispatch): مخزن `owner/repo` از تنظیمات، و توکن
+ * **فقط از ثابت CYH_GITHUB_TOKEN در wp-config.php** — هرگز در پایگاه داده (نسخه‌ی
+ * پشتیبان یا خروجی گرفتن از پایگاه داده توکن را لو نمی‌دهد).
+ */
+/**
+ * owner: حرف/عدد/خط‌تیره (بدون شروع با نقطه)؛ repo: حرف/عدد/._- ولی نه «.» و «..».
+ * ⚠️ الگوی ساده‌ی [\w.-]+ کلمه‌ی «../x» را می‌پذیرفت و به نشانی /repos/../x/dispatches می‌رسید.
+ */
+function cyh_valid_github_repo( $value ) {
+	$value = trim( (string) $value );
+	if ( ! preg_match( '#^[A-Za-z0-9][A-Za-z0-9-]*/([A-Za-z0-9_.-]+)$#', $value, $m ) ) {
+		return '';
+	}
+	return in_array( $m[1], [ '.', '..' ], true ) ? '' : $value;
+}
+
+function cyh_github_repo() {
+	return cyh_valid_github_repo( get_option( 'cyh_github_repo', '' ) );
+}
+
+function cyh_github_token() {
+	return defined( 'CYH_GITHUB_TOKEN' ) ? trim( (string) CYH_GITHUB_TOKEN ) : '';
+}
+
+function cyh_github_configured() {
+	return '' !== cyh_github_repo() && '' !== cyh_github_token();
+}
+
+/** حداقل یک مقصد انتشار (Deploy Hook یا GitHub) تنظیم شده؟ */
+function cyh_deploy_configured() {
+	return '' !== trim( (string) get_option( 'cyh_deploy_hook_url', '' ) ) || cyh_github_configured();
+}
+
 function cyh_maybe_schedule_deploy() {
 	if ( ! (bool) get_option( 'cyh_deploy_hook_enabled', false ) ) {
 		return;
 	}
 
-	$hook_url = trim( (string) get_option( 'cyh_deploy_hook_url', '' ) );
-
-	if ( empty( $hook_url ) ) {
+	if ( ! cyh_deploy_configured() ) {
 		return;
 	}
 
@@ -100,26 +132,63 @@ add_action( 'delete_crane_category', 'cyh_on_term_save', 10, 3 );
  */
 function cyh_execute_deploy_webhook() {
 	$hook_url = trim( (string) get_option( 'cyh_deploy_hook_url', '' ) );
+	$errors   = [];
 
-	if ( empty( $hook_url ) ) {
+	if ( ! cyh_deploy_configured() ) {
 		return;
 	}
 
-	$response = wp_remote_post(
-		$hook_url,
-		[
-			'timeout'  => 10,
-			'blocking' => false, // منتظر پاسخ نمی‌مانیم؛ فقط فراخوانی را شلیک می‌کنیم.
-			'body'     => [ 'source' => 'crane-yadak-headless', 'triggered_at' => current_time( 'mysql' ) ],
-		]
-	);
+	if ( '' !== $hook_url ) {
+		$response = wp_remote_post(
+			$hook_url,
+			[
+				'timeout'  => 10,
+				'blocking' => false, // منتظر پاسخ نمی‌مانیم؛ فقط فراخوانی را شلیک می‌کنیم.
+				'body'     => [ 'source' => 'crane-yadak-headless', 'triggered_at' => current_time( 'mysql' ) ],
+			]
+		);
+		if ( is_wp_error( $response ) ) {
+			$errors[] = $response->get_error_message();
+		}
+	}
+
+	// GitHub Actions: POST /repos/{owner}/{repo}/dispatches → ۲۰۴ = پذیرفته شد. برخلاف
+	// Deploy Hook ساده، اینجا منتظر پاسخ می‌مانیم (داخل WP-Cron است، نه درخواست کاربر) تا
+	// توکن نامعتبر/مخزن اشتباه در پنل دیده شود، نه اینکه بی‌صدا هیچ انتشاری اتفاق نیفتد.
+	if ( cyh_github_configured() ) {
+		$gh = wp_remote_post(
+			'https://api.github.com/repos/' . cyh_github_repo() . '/dispatches',
+			[
+				'timeout' => 10,
+				'headers' => [
+					'Authorization'        => 'Bearer ' . cyh_github_token(),
+					'Accept'               => 'application/vnd.github+json',
+					'X-GitHub-Api-Version' => '2022-11-28',
+					'User-Agent'           => 'crane-yadak-headless',
+					'Content-Type'         => 'application/json',
+				],
+				'body'    => wp_json_encode( [ 'event_type' => 'wp-content-changed' ] ),
+			]
+		);
+		if ( is_wp_error( $gh ) ) {
+			$errors[] = 'GitHub: ' . $gh->get_error_message();
+		} else {
+			$code = wp_remote_retrieve_response_code( $gh );
+			if ( 204 !== $code ) {
+				// توکن هرگز در پیام خطا نمی‌آید.
+				$errors[] = 401 === $code || 403 === $code
+					? "GitHub کد {$code}: توکن نامعتبر است یا دسترسی «Contents: write» ندارد."
+					: ( 404 === $code ? 'GitHub کد 404: مخزن اشتباه است یا توکن به آن دسترسی ندارد.' : "GitHub کد {$code}" );
+			}
+		}
+	}
 
 	// ثبت زمان آخرین تلاش برای نمایش در پنل ادمین (بازخورد به کاربر
 	// غیرفنی که "آیا واقعاً دیپلوی زده شد؟" را می‌خواهد ببیند).
 	update_option( 'cyh_deploy_last_triggered', current_time( 'mysql' ) );
 
-	if ( is_wp_error( $response ) ) {
-		update_option( 'cyh_deploy_last_error', $response->get_error_message() );
+	if ( $errors ) {
+		update_option( 'cyh_deploy_last_error', implode( ' | ', $errors ) );
 	} else {
 		delete_option( 'cyh_deploy_last_error' );
 	}

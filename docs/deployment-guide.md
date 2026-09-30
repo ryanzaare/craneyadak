@@ -214,11 +214,17 @@ Build (سبز = داده و تست‌ها سالم)، Upload (سبز = فایل�
 Verify (سبز = سرور واقعاً ۳۰۱/HTTPS/۴۰۴ را درست می‌دهد). قرمزِ Verify یعنی فایل آپلود شده ولی
 سرور آن را اجرا نمی‌کند (مثلاً `AllowOverride` خاموش است یا دامنه هنوز به این هاست اشاره نمی‌کند).
 
-**گام ۵ (هنوز ساخته نشده): وبهوک وردپرس ← GitHub.** وبهوک فعلی پلاگین یک POST ساده بدون
-احراز هویت می‌زند و API گیت‌هاب توکن می‌خواهد؛ پس برای انتشار خودکار پس از هر ویرایش محتوا،
-باید یک توکن GitHub (فقط برای همین مخزن، دسترسی حداقلی) بسازید و من پلاگین را برای
-`repository_dispatch` با `event_type = wp-content-changed` گسترش دهم. تا آن موقع:
-دکمه‌ی دستی یا اجرای شبانه.
+**گام ۵ — انتشار خودکار پس از ویرایش محتوا (وردپرس ← GitHub).** فقط پس از اینکه یک اجرای دستی کاملاً سبز شد:
+1. GitHub ← Settings (حساب شما) ← Developer settings ← **Fine-grained personal access tokens** ← Generate.
+   Repository access = **Only select repositories** ← فقط همین مخزن. Permissions ← Repository permissions ←
+   **Contents: Read and write** (برای `repository_dispatch` لازم است). مدت اعتبار را ثبت کنید (پیش از پایانش تمدید کنید).
+2. توکن را **فقط** در `wp-config.php` هاست بگذارید (File Manager cPanel ← `wp-config.php` ← Edit)، پیش از خط
+   «That's all, stop editing!»: `define( 'CYH_GITHUB_TOKEN', 'github_pat_…' );` — نه در تنظیمات وردپرس، نه در چت.
+3. وردپرس ← تنظیمات ← کرین یدک Headless: «مخزن GitHub» = `ryanzaare/craneyadak`، تیک «انتشار خودکار» را روشن،
+   ذخیره. خط «وضعیت» باید «مخزن و توکن تنظیم است ✓» شود.
+4. دکمه‌ی «همین حالا دیپلوی کن» بزنید: در GitHub ← Actions باید یک اجرای Deploy (event: repository_dispatch) ببینید.
+   خطای توکن/مخزن (۴۰۱/۴۰۴) زیر همان فیلد در پنل نوشته می‌شود؛ توکن هرگز در پیام خطا نمی‌آید.
+از این به بعد هر انتشار/ویرایش محصول، برند، دسته یا مقاله، ۶۰ ثانیه بعد (جمع‌شده در یک درخواست) یک انتشار می‌سازد.
 
 ## فرانت‌اند: `dist/.htaccess` (ریدایرکت ۳۰۱، HTTPS، ۴۰۴)
 

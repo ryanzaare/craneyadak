@@ -178,10 +178,14 @@ function wp_remote_post( $url, $args = [] ) {
 	   WP_Error در صف = شبکه نرسید. */
 	if ( ! empty( $GLOBALS['cyh_test_remote_queue'] ) ) {
 		$next = array_shift( $GLOBALS['cyh_test_remote_queue'] );
+		if ( is_array( $next ) && isset( $next['__code'] ) ) {
+			return [ 'response' => [ 'code' => $next['__code'] ], 'body' => '' ]; // فقط کد وضعیت (مثل ۲۰۴ گیت‌هاب)
+		}
 		return $next instanceof WP_Error ? $next : [ 'response' => [ 'code' => 200 ], 'body' => wp_json_encode( $next ) ];
 	}
 	return [ 'response' => [ 'code' => 200 ] ]; // شبیه‌سازی موفقیت — این تابع در تست واقعاً به هیچ سروری وصل نمی‌شود
 }
+function wp_remote_retrieve_response_code( $res ) { return is_array( $res ) ? (int) ( $res['response']['code'] ?? 0 ) : 0; }
 function wp_remote_retrieve_body( $res ) { return is_array( $res ) ? (string) ( $res['body'] ?? '' ) : ''; }
 
 /* ⚠️ `$wpdb` اصلاً وجود نداشت. `cyh_unique_slug()` مستقیم
@@ -1111,6 +1115,97 @@ if ( empty( $GLOBALS['cyh_test_remote_post_calls'] ) ) {
 } else {
 	echo "✓ اجرای وبهوک به‌درستی به آدرس تنظیم‌شده POST می‌زند\n";
 }
+
+// بررسی ۱۶-الف تا ۱۶-ز: مقصد GitHub Actions (repository_dispatch) — ایست ۲ فاز ۶.
+// توکن فقط از ثابت CYH_GITHUB_TOKEN؛ بدون آن، حتی با مخزن معتبر، «تنظیم‌شده» نیست.
+$gh_hook_url_backup = get_option( 'cyh_deploy_hook_url' );
+update_option( 'cyh_deploy_hook_url', '' );
+update_option( 'cyh_github_repo', 'ryanzaare/craneyadak' );
+$GLOBALS['cyh_test_cron_events'] = [];
+$GLOBALS['cyh_test_remote_post_calls'] = [];
+cyh_maybe_schedule_deploy();
+$gh_no_token_sched = (bool) wp_next_scheduled( CYH_DEPLOY_CRON_HOOK );
+$gh_no_token_conf  = cyh_github_configured();
+update_option( 'cyh_deploy_last_triggered', 'before' );
+cyh_execute_deploy_webhook();
+$gh_no_token_calls = count( $GLOBALS['cyh_test_remote_post_calls'] ) + ( 'before' === get_option( 'cyh_deploy_last_triggered' ) ? 0 : 100 );
+
+define( 'CYH_GITHUB_TOKEN', 'ghp_SECRET_TOKEN_123' );
+$gh_repos = [];
+foreach ( [ 'ryanzaare/craneyadak', 'a/b/c', 'evil repo; x', '../x', 'a/..', '.hidden/x', 'noslash', '' ] as $gh_r ) {
+	update_option( 'cyh_github_repo', $gh_r );
+	$gh_repos[ $gh_r ] = cyh_github_repo();
+}
+update_option( 'cyh_github_repo', 'ryanzaare/craneyadak' );
+$GLOBALS['cyh_test_cron_events'] = [];
+cyh_maybe_schedule_deploy();
+$gh_only_sched = (bool) wp_next_scheduled( CYH_DEPLOY_CRON_HOOK );
+
+$GLOBALS['cyh_test_remote_post_calls'] = [];
+$GLOBALS['cyh_test_remote_queue']      = [ [ '__code' => 204 ] ];
+cyh_execute_deploy_webhook();
+$gh_call = $GLOBALS['cyh_test_remote_post_calls'][0] ?? [];
+$gh_ok_error = get_option( 'cyh_deploy_last_error', 'none' );
+
+$gh_fail = [];
+foreach ( [ 401 => [ '__code' => 401 ], 404 => [ '__code' => 404 ], 500 => [ '__code' => 500 ], 'net' => new WP_Error( 'http_request_failed', 'timeout' ) ] as $k => $resp ) {
+	$GLOBALS['cyh_test_remote_queue'] = [ $resp ];
+	cyh_execute_deploy_webhook();
+	$gh_fail[ $k ] = (string) get_option( 'cyh_deploy_last_error', '' );
+}
+
+update_option( 'cyh_deploy_hook_url', 'https://api.example.com/deploy-hook/abc123' );
+$GLOBALS['cyh_test_remote_post_calls'] = [];
+$GLOBALS['cyh_test_remote_queue']      = [ [ '__code' => 200 ], [ '__code' => 204 ] ];
+cyh_execute_deploy_webhook();
+$gh_both = array_column( $GLOBALS['cyh_test_remote_post_calls'], 'url' );
+
+$co_check = static function ( $cond, $ok, $err ) use ( &$errors ) {
+	if ( $cond ) { echo "✓ $ok\n"; } else { $errors[] = $err; }
+};
+$co_check(
+	false === $gh_no_token_sched && false === $gh_no_token_conf && 0 === $gh_no_token_calls,
+	'GitHub: بدون ثابت توکن در wp-config، مخزن به‌تنهایی کافی نیست (نه زمان‌بندی، نه درخواست)',
+	'بدون توکن نباید چیزی اجرا شود: ' . wp_json_encode( [ $gh_no_token_sched, $gh_no_token_conf, $gh_no_token_calls ] )
+);
+$co_check(
+	'ryanzaare/craneyadak' === $gh_repos['ryanzaare/craneyadak'] && '' === $gh_repos['a/b/c'] && '' === $gh_repos['evil repo; x'] && '' === $gh_repos['../x'] && '' === $gh_repos['a/..'] && '' === $gh_repos['.hidden/x'] && '' === $gh_repos['noslash'] && '' === $gh_repos[''],
+	'GitHub: فقط قالب owner/repo پذیرفته می‌شود؛ سه‌بخشی، فاصله، ../ و بی‌اسلش خالی',
+	'اعتبارسنجی مخزن: ' . wp_json_encode( $gh_repos )
+);
+$co_check(
+	true === $gh_only_sched && 'https://api.github.com/repos/ryanzaare/craneyadak/dispatches' === ( $gh_call['url'] ?? '' )
+		&& 'Bearer ghp_SECRET_TOKEN_123' === ( $gh_call['args']['headers']['Authorization'] ?? '' )
+		&& 'application/vnd.github+json' === ( $gh_call['args']['headers']['Accept'] ?? '' )
+		&& '' !== ( $gh_call['args']['headers']['User-Agent'] ?? '' )
+		&& [ 'event_type' => 'wp-content-changed' ] === json_decode( $gh_call['args']['body'] ?? '', true )
+		&& 'none' === $gh_ok_error,
+	'GitHub: فقط با مخزن+توکن (بدون Deploy Hook) زمان‌بندی می‌شود؛ POST به dispatches با Bearer/Accept/User-Agent و event_type=wp-content-changed؛ ۲۰۴ = بدون خطا',
+	'درخواست GitHub: ' . wp_json_encode( [ $gh_only_sched, $gh_call, $gh_ok_error ] )
+);
+$co_check(
+	false !== strpos( $gh_fail[401], '401' ) && false !== strpos( $gh_fail[404], '404' ) && false !== strpos( $gh_fail[500], '500' ) && false !== strpos( $gh_fail['net'], 'timeout' ),
+	'GitHub: کدهای ۴۰۱/۴۰۴/۵۰۰ و خطای شبکه در پنل ثبت می‌شود (نه سکوت)',
+	'خطاهای GitHub: ' . wp_json_encode( $gh_fail )
+);
+$co_check(
+	false === strpos( implode( '|', $gh_fail ), 'ghp_SECRET_TOKEN_123' ) && false === strpos( (string) get_option( 'cyh_deploy_last_error', '' ), 'ghp_SECRET' ),
+	'GitHub: توکن هرگز در پیام خطای ذخیره‌شده در پایگاه داده نمی‌آید',
+	'توکن در خطا لو رفت'
+);
+$co_check(
+	[ 'https://api.example.com/deploy-hook/abc123', 'https://api.github.com/repos/ryanzaare/craneyadak/dispatches' ] === $gh_both,
+	'GitHub: با Deploy Hook و GitHub هر دو، هر دو مقصد (به این ترتیب) فراخوانی می‌شوند',
+	'مقصدها: ' . wp_json_encode( $gh_both )
+);
+$co_check(
+	'ryanzaare/craneyadak' === cyh_sanitize_github_repo( "  ryanzaare/craneyadak \n" ) && '' === cyh_sanitize_github_repo( 'https://github.com/a/b' ) && '' === cyh_sanitize_github_repo( '<script>/x' ),
+	'تنظیمات: cyh_sanitize_github_repo فقط owner/repo را نگه می‌دارد',
+	'sanitize مخزن'
+);
+update_option( 'cyh_deploy_hook_url', $gh_hook_url_backup );
+$GLOBALS['cyh_test_remote_queue'] = [];
+$GLOBALS['cyh_test_cron_events']  = [];
 
 
 // ═══════════════════════════════════════════════════════════════════════════

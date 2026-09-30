@@ -24,12 +24,18 @@ function cyh_register_settings_page() {
 }
 add_action( 'admin_menu', 'cyh_register_settings_page' );
 
+/** فقط «owner/repo»؛ هر چیز دیگر خالی می‌شود. */
+function cyh_sanitize_github_repo( $value ) {
+	return cyh_valid_github_repo( $value );
+}
+
 function cyh_register_settings() {
 	register_setting( 'cyh_settings_group', 'cyh_notification_email', [ 'sanitize_callback' => 'sanitize_email' ] );
 	register_setting( 'cyh_settings_group', 'cyh_allowed_origins', [ 'sanitize_callback' => 'sanitize_textarea_field' ] );
 	register_setting( 'cyh_settings_group', 'cyh_trust_proxy_headers', [ 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => false ] );
 	register_setting( 'cyh_settings_group', 'cyh_deploy_hook_enabled', [ 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => false ] );
 	register_setting( 'cyh_settings_group', 'cyh_deploy_hook_url', [ 'sanitize_callback' => 'esc_url_raw' ] );
+	register_setting( 'cyh_settings_group', 'cyh_github_repo', [ 'sanitize_callback' => 'cyh_sanitize_github_repo' ] );
 }
 add_action( 'admin_init', 'cyh_register_settings' );
 
@@ -114,7 +120,7 @@ function cyh_render_settings_page() {
 						<p class="description">
 							این گزینه دقیقاً همان چیزی است که به شما اجازه می‌دهد بدون دانش کدنویسی، محتوا اضافه/ویرایش کنید و
 							سایت زنده خودش را در عرض ۱ تا ۲ دقیقه به‌روز کند. برای فعال‌سازی، ابتدا آدرس Deploy Hook زیر را
-							از پنل میزبان فرانت‌اند (Cloudflare Pages یا Netlify) وارد کنید.
+							از پنل میزبان فرانت‌اند وارد کنید — یا (پیشنهادی) مخزن GitHub و توکن را تنظیم کنید.
 						</p>
 					</td>
 				</tr>
@@ -146,11 +152,38 @@ function cyh_render_settings_page() {
 						<?php endif; ?>
 					</td>
 				</tr>
+				<tr>
+					<th scope="row"><label for="cyh_github_repo">مخزن GitHub (انتشار با GitHub Actions)</label></th>
+					<td>
+						<input type="text" id="cyh_github_repo" name="cyh_github_repo" dir="ltr"
+							value="<?php echo esc_attr( get_option( 'cyh_github_repo', '' ) ); ?>"
+							class="regular-text code" placeholder="ryanzaare/craneyadak" />
+						<p class="description">
+							به شکل <code>owner/repo</code>. وقتی این مخزن و توکن تنظیم باشد، هر انتشار/ویرایش محتوا
+							workflow «Deploy» را اجرا می‌کند (event: <code>wp-content-changed</code>).
+							<br><strong>توکن</strong> را <u>اینجا وارد نکنید</u>؛ فقط در فایل <code>wp-config.php</code> روی هاست، پیش از خط
+							«That's all, stop editing!»:
+							<code dir="ltr">define( 'CYH_GITHUB_TOKEN', 'github_pat_…' );</code>
+							(توکن باریک fine-grained فقط برای همین مخزن، دسترسی <em>Contents: Read and write</em>).
+						</p>
+						<p class="description">
+							وضعیت:
+							<?php if ( cyh_github_configured() ) : ?>
+								<span style="color:#00a32a;">مخزن و توکن تنظیم است ✓</span>
+							<?php else : ?>
+								<span style="color:#996800;">
+									<?php echo '' === cyh_github_repo() ? 'مخزن تنظیم نیست. ' : ''; ?>
+									<?php echo '' === cyh_github_token() ? 'توکن در wp-config.php تعریف نشده.' : ''; ?>
+								</span>
+							<?php endif; ?>
+						</p>
+					</td>
+				</tr>
 			</table>
 			<?php submit_button( 'ذخیره تنظیمات' ); ?>
 		</form>
 
-		<?php if ( get_option( 'cyh_deploy_hook_url', '' ) ) : ?>
+		<?php if ( cyh_deploy_configured() ) : ?>
 			<hr />
 			<h2>دیپلوی دستی</h2>
 			<p>اگر می‌خواهید همین الان (بدون ویرایش هیچ محتوایی) سایت را دوباره منتشر کنید:</p>
