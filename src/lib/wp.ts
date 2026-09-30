@@ -130,8 +130,7 @@ export interface CraneProduct {
   /**
    * از کوئری اختیاریِ جدا (fetchAuthenticity) می‌آید، نه کوئری اصلی: فیلد تازه‌ی
    * وابسته به نسخه‌ی افزونه است و نبودنش نباید کل سایت را بخواباند. null = ثبت‌نشده
-   * یا افزونه هنوز قدیمی است؛ audit ساخت (check-build-audit) صفحه‌ی بدون برچسب را
-   * *رد* می‌کند تا محصولِ بدون برچسب بی‌صدا منتشر نشود.
+   * یا افزونه هنوز قدیمی است. اختیاری است: بدون برچسب چیزی نمایش داده نمی‌شود.
    */
   authenticity: Authenticity | null;
 
@@ -994,7 +993,7 @@ async function fetchAuthenticity(): Promise<Map<string, Authenticity | null>> {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(
       `\n🏷️ برچسب «اصلی / غیر اصلی» از وردپرس خوانده نشد — هیچ محصولی برچسب ندارد.\n` +
-        `   آخرین نسخه‌ی افزونه را نصب کنید. (تا آن موقع check-build-audit ساخت را رد می‌کند.)\n` +
+        `   آخرین نسخه‌ی افزونه را نصب کنید (برچسب اختیاری است؛ سایت بدون آن ساخته می‌شود).\n` +
         `   جزئیات: ${message.slice(0, 200)}\n`,
     );
   }

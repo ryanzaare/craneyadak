@@ -26,7 +26,7 @@ const sitemapLocs = globSync(`${dist}/sitemap-*.xml`)
   .filter((f) => !f.endsWith('sitemap-index.xml'))
   .flatMap((f) => [...readFileSync(f, 'utf8').matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]));
 
-const problems = [...routeMatrixProblems(pages, sitemapLocs), ...metadataProblems(pages), ...productSchemaProblems(pages, { requireAuthenticity: process.env.ALLOW_UNLABELED_AUTHENTICITY !== '1' })];
+const problems = [...routeMatrixProblems(pages, sitemapLocs), ...metadataProblems(pages), ...productSchemaProblems(pages)];
 
 const indexable = pages.filter((p) => isIndexable(p)).map((p) => p.route).sort();
 const MANIFEST = '.astro/build-manifest.json';

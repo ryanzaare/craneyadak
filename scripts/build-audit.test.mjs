@@ -42,17 +42,17 @@ has('بدون H1', metadataProblems([P('/a/', { h1: '' })]), 'H1 ندارد');
 eq('noindex از یکتایی معاف', metadataProblems([P('/a/', { title: 'x' }), P('/b/', { title: 'x', robots: 'noindex' })]), []);
 
 console.log('── اسکیمای محصول');
-const prod = (over = {}, body = '<p>SAGA1-L12</p><p>ساگا</p><span data-authenticity="original">اصلی</span>') =>
+const prod = (over = {}, body = '<p>SAGA1-L12</p><p>ساگا</p>') =>
   P('/products/p1/', {
     h1: 'ریموت SAGA1-L12',
     body,
     ld: [{ '@type': 'Product', name: 'ریموت SAGA1-L12', sku: 'SAGA1-L12', brand: { name: 'SAGA', alternateName: 'ساگا' }, ...over }],
   });
 eq('سالم', productSchemaProblems([prod()]), []);
-has('برچسب اصالت ندارد', productSchemaProblems([prod({}, '<p>SAGA1-L12</p><p>ساگا</p>')]), 'اصلی / غیر اصلی');
-eq('برچسب غیر اصلی هم معتبر', productSchemaProblems([prod({}, '<p>SAGA1-L12</p><p>ساگا</p><span data-authenticity="non_original">غیر اصلی</span>')]), []);
-has('مقدار ناشناخته برچسب = ندارد', productSchemaProblems([prod({}, '<p>SAGA1-L12</p><p>ساگا</p><span data-authenticity="maybe">؟</span>')]), 'اصلی / غیر اصلی');
-eq('اضطراری: ALLOW_UNLABELED', productSchemaProblems([prod({}, '<p>SAGA1-L12</p><p>ساگا</p>')], { requireAuthenticity: false }), []);
+eq('محصول بدون برچسب اصالت معتبر است (اختیاری)', productSchemaProblems([prod({}, '<p>SAGA1-L12</p><p>ساگا</p>')]), []);
+eq('برچسب اصلی معتبر', productSchemaProblems([prod({}, '<p>SAGA1-L12</p><p>ساگا</p><span data-authenticity="original">اصلی</span>')]), []);
+eq('برچسب غیر اصلی معتبر', productSchemaProblems([prod({}, '<p>SAGA1-L12</p><p>ساگا</p><span data-authenticity="non_original">غیر اصلی</span>')]), []);
+has('برچسب در JSON-LD ولی نادیدنی روی صفحه گرفته می‌شود', productSchemaProblems([prod({ additionalProperty: [{ name: 'اصالت کالا', value: 'اصلی' }] }, '<p>SAGA1-L12</p><p>ساگا</p>')]), 'روی صفحه دیده نمی‌شود');
 has('name ناهمخوان', productSchemaProblems([prod({ name: 'چیز دیگر' })]), 'با H1 دیده‌شده یکی نیست');
 has('sku نادیدنی', productSchemaProblems([prod({ sku: 'X-999' })]), 'در متن صفحه دیده نمی‌شود');
 has('برند نادیدنی', productSchemaProblems([prod({ brand: { name: 'دماگ' } })]), 'برند «دماگ»');

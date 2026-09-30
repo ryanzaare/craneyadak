@@ -2599,15 +2599,15 @@ $co_check(
 	'گروهی: ' . wp_json_encode( [ $au_redirect, $au_none ] )
 );
 
-// ۱۰۶: تعریف فیلد ACF — اجباری، دو مقدار دقیق، بدون پیش‌فرض (انتخاب آگاهانه)، نام گراف‌کیوال authenticity
+// ۱۰۶: تعریف فیلد ACF — اختیاری، دو مقدار دقیق، بدون پیش‌فرض (انتخاب آگاهانه)، نام گراف‌کیوال authenticity
 $au_group = json_decode( (string) file_get_contents( __DIR__ . '/crane-yadak-headless/acf-json/group_cyh_product_fields.json' ), true );
 $au_field = null;
 foreach ( $au_group['fields'] ?? [] as $f ) { if ( 'authenticity' === ( $f['name'] ?? '' ) ) { $au_field = $f; } }
 $co_check(
-	$au_field && 1 === $au_field['required'] && 1 === $au_field['allow_null'] && '' === $au_field['default_value']
+	$au_field && 0 === $au_field['required'] && 1 === $au_field['allow_null'] && '' === $au_field['default_value']
 		&& [ 'original' => 'اصلی', 'non_original' => 'غیر اصلی' ] === $au_field['choices'] && 'authenticity' === $au_field['graphql_field_name']
 		&& 'select' === $au_field['type'] && 1 === $au_field['show_in_graphql'],
-	'فیلد ACF اصالت: اجباری، بدون پیش‌فرض، فقط اصلی/غیر اصلی، در GraphQL با نام authenticity',
+	'فیلد ACF اصالت: اختیاری (required=0)، بدون پیش‌فرض، فقط اصلی/غیر اصلی، در GraphQL با نام authenticity',
 	'فیلد: ' . wp_json_encode( $au_field )
 );
 

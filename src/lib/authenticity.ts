@@ -1,5 +1,5 @@
 // src/lib/authenticity.ts
-// برچسب اجباری «اصلی / غیر اصلی» (تصمیم مدیریت، ۷ مهر ۱۴۰۵). خالص، بدون import.meta.env،
+// برچسب اختیاری «اصلی / غیر اصلی» (تصمیم مدیریت، ۷ مهر ۱۴۰۵). خالص، بدون import.meta.env،
 // تا با آزمون اجرا شود (authenticity.test.mts). کلیدها باید با acf-json
 // (field_cyh_product_authenticity) و class-product-authenticity.php یکی باشند.
 

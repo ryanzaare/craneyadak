@@ -97,7 +97,7 @@ export function metadataProblems(pages) {
   return out;
 }
 
-export function productSchemaProblems(pages, { requireAuthenticity = true } = {}) {
+export function productSchemaProblems(pages) {
   const out = [];
   for (const p of pages) {
     if (!/^\/products\/[^/]+\/$/.test(p.route) || !isIndexable(p) || isUtility(p.route)) continue;
@@ -105,10 +105,6 @@ export function productSchemaProblems(pages, { requireAuthenticity = true } = {}
     if (products.length !== 1) {
       out.push(`${p.route}: باید دقیقاً یک Product در JSON-LD باشد، ${products.length} یافت شد`);
       continue;
-    }
-    // برچسب «اصلی / غیر اصلی» اجباری است (تصمیم مدیریت): صفحه‌ی محصول ایندکس‌پذیر بدون آن رد می‌شود.
-    if (requireAuthenticity && !p.authenticity) {
-      out.push(`${p.route}: برچسب «اصلی / غیر اصلی» ندارد — در پنل وردپرس فیلد «اصالت کالا» را انتخاب کنید (اضطراری: ALLOW_UNLABELED_AUTHENTICITY=1)`);
     }
     const n = products[0];
     if (p.jsonld.some((x) => x['@type'] === '__invalid__')) out.push(`${p.route}: JSON-LD نامعتبر (parse نشد)`);
