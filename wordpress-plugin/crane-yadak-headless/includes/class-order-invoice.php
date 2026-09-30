@@ -85,6 +85,21 @@ function cyh_find_paid_order( $user_id, $code ) {
 	return $found ? $found[0] : null;
 }
 
+function cyh_authenticity_labels() {
+	return [
+		'original'     => 'اصلی',
+		'non_original' => 'غیر اصلی',
+	];
+}
+
+/** «<br>اصالت کالا: اصلی» یا '' (برچسب ثبت‌نشده = هیچ، نه حدس). */
+function cyh_authenticity_invoice_line( $value ) {
+	$labels = cyh_authenticity_labels();
+	return isset( $labels[ $value ] )
+		? '<br><span style="color:#475467;font-size:12px">اصالت کالا: <strong>' . esc_html( $labels[ $value ] ) . '</strong></span>'
+		: '';
+}
+
 /**
  * HTML کامل فاکتور غیررسمی. همه‌ی مقادیر متنی esc_html می‌شوند (نام کالا و
  * نشانی را خود مشتری/پنل نوشته است).
@@ -117,7 +132,8 @@ function cyh_order_invoice_html( $post_id ) {
 			$td,
 			cyh_fa_digits( $i ),
 			$e( (string) ( $item['name'] ?? '' ) ),
-			! empty( $item['sku'] ) ? '<br><span dir="ltr" style="color:#667085;font-size:12px">' . $e( (string) $item['sku'] ) . '</span>' : '',
+			( ! empty( $item['sku'] ) ? '<br><span dir="ltr" style="color:#667085;font-size:12px">' . $e( (string) $item['sku'] ) . '</span>' : '' )
+				. cyh_authenticity_invoice_line( (string) ( $item['authenticity'] ?? '' ) ),
 			cyh_fa_number( (int) ( $item['qty'] ?? 0 ) ),
 			cyh_fa_number( (int) ( $item['unit'] ?? 0 ) ),
 			cyh_fa_number( (int) ( $item['total'] ?? 0 ) )

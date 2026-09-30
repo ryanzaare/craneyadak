@@ -2508,6 +2508,109 @@ $co_check(
 	'ویجت: ' . $w1 . ' | ' . $w2
 );
 
+// ۱۰۰–۱۰۶: برچسب اصالت «اصلی / غیر اصلی» (تصمیم مدیریت، ۷ مهر ۱۴۰۵)
+update_field( 'authenticity', 'original', $co_id );
+$au_a = cyh_product_pricing( $co_id )['authenticity'];
+update_field( 'authenticity', 'non_original', $co_id );
+$au_b = cyh_product_pricing( $co_id )['authenticity'];
+update_field( 'authenticity', 'fake-value', $co_id );
+$au_c = cyh_product_pricing( $co_id )['authenticity'];
+update_field( 'authenticity', '', $co_id );
+$au_d = cyh_product_pricing( $co_id )['authenticity'];
+$co_check(
+	'original' === $au_a && 'non_original' === $au_b && '' === $au_c && '' === $au_d,
+	'اصالت: original/non_original خوانده می‌شود؛ مقدار ناشناخته یا خالی = ثبت‌نشده (هرگز حدس «اصلی» نه)',
+	'اصالت: ' . wp_json_encode( [ $au_a, $au_b, $au_c, $au_d ] )
+);
+
+// ۱۰۱: عکس اصالت در خطوط نشست پرداخت (و در پاسخ نشست به مرورگر)
+update_field( 'authenticity', 'non_original', $co_id );
+$co_reset_rl();
+$co_as( $co_tok_a );
+$au_lines = cyh_checkout_build( [ [ 'slug' => 'co-remote', 'qty' => 1 ] ] )['lines'];
+$au_sess  = cyh_rest_checkout_session( new WP_REST_Request( [ 'items' => [ [ 'slug' => 'co-remote', 'qty' => 1 ] ] ] ) )->get_data();
+update_field( 'authenticity', 'original', $co_id ); // بعد از نشست عوض شد؛ سفارش همان قبلی را نگه می‌دارد
+$co_check(
+	'non_original' === ( $au_lines[0]['authenticity'] ?? '' ) && 'non_original' === ( $au_sess['lines'][0]['authenticity'] ?? '' ),
+	'اصالت: در خطوط نشست پرداخت ذخیره و به مرورگر داده می‌شود (عکس لحظه‌ی خرید)',
+	'خطوط: ' . wp_json_encode( [ $au_lines, $au_sess['lines'] ?? null ] )
+);
+
+// ۱۰۲: فاکتور — برچسب هر قلم؛ ثبت‌نشده/ناشناخته = هیچ خطی
+update_post_meta( $co_evil_id, 'cyh_items', [
+	[ 'name' => 'الف', 'sku' => 'A-1', 'qty' => 1, 'unit' => 10, 'total' => 10, 'authenticity' => 'original' ],
+	[ 'name' => 'ب', 'sku' => 'B-1', 'qty' => 1, 'unit' => 10, 'total' => 10, 'authenticity' => 'non_original' ],
+	[ 'name' => 'ج', 'sku' => 'C-1', 'qty' => 1, 'unit' => 10, 'total' => 10 ],
+	[ 'name' => 'د', 'sku' => 'D-1', 'qty' => 1, 'unit' => 10, 'total' => 10, 'authenticity' => '<script>x</script>' ],
+] );
+$au_inv = cyh_order_invoice_html( $co_evil_id );
+$co_check(
+	2 === substr_count( $au_inv, 'اصالت کالا:' ) && false !== strpos( $au_inv, '<strong>اصلی</strong>' ) && false !== strpos( $au_inv, '<strong>غیر اصلی</strong>' )
+		&& false === strpos( $au_inv, '<script>x' ),
+	'فاکتور: «اصالت کالا: اصلی / غیر اصلی» برای هر قلم برچسب‌دار؛ ثبت‌نشده یا مقدار ناشناخته خط ندارد',
+	'فاکتور اصالت: ' . substr_count( $au_inv, 'اصالت کالا:' )
+);
+
+// ۱۰۳: ستون فهرست محصولات پنل
+$au_cols = cyh_product_authenticity_column( [ 'cb' => 'x', 'title' => 't', 'date' => 'd' ] );
+update_field( 'authenticity', 'original', $co_id );
+ob_start(); cyh_product_authenticity_column_content( 'cyh_authenticity', $co_id ); $au_col_o = ob_get_clean();
+update_field( 'authenticity', '', $co_id );
+ob_start(); cyh_product_authenticity_column_content( 'cyh_authenticity', $co_id ); $au_col_u = ob_get_clean();
+update_field( 'authenticity', 'non_original', $co_id );
+ob_start(); cyh_product_authenticity_column_content( 'cyh_authenticity', $co_id ); $au_col_n = ob_get_clean();
+ob_start(); cyh_product_authenticity_column_content( 'other', $co_id ); $au_col_x = ob_get_clean();
+$co_check(
+	[ 'cb', 'title', 'cyh_authenticity', 'date' ] === array_keys( $au_cols ) && false !== strpos( $au_col_o, '>اصلی<' )
+		&& false !== strpos( $au_col_u, 'ثبت نشده' ) && '' === $au_col_x && false !== strpos( $au_col_n, '#996800' ) && false !== strpos( $au_col_o, '#00a32a' ),
+	'ستون اصالت: بعد از عنوان؛ «اصلی» / «ثبت نشده» (قرمز)؛ ستون دیگر دست‌نخورده',
+	'ستون: ' . wp_json_encode( [ array_keys( $au_cols ), $au_col_o, $au_col_u ] )
+);
+
+// ۱۰۴: فیلتر فهرست محصولات (?cyh_auth=) — فقط product، فقط ادمین، فقط مقدار شناخته‌شده
+$GLOBALS['cyh_test_is_admin'] = true;
+$au_q = static function ( $type, $value ) {
+	$_GET = null === $value ? [] : [ 'cyh_auth' => $value ];
+	$q = new WP_Query( [ 'post_type' => $type ] );
+	cyh_authenticity_apply_filter( $q );
+	$_GET = [];
+	return $q->get( 'meta_query' );
+};
+$au_unset = $au_q( 'product', 'unset' );
+$co_check(
+	'OR' === ( $au_unset[0]['relation'] ?? '' ) && [ [ 'key' => 'authenticity', 'value' => 'original' ] ] === $au_q( 'product', 'original' )
+		&& '' === $au_q( 'product', 'bogus' ) && '' === $au_q( 'product', null ) && '' === $au_q( CYH_QUOTE_CPT, 'original' ),
+	'فیلتر اصالت: unset شامل بدون‌متا (OR)؛ original مقدار دقیق؛ مقدار ناشناخته و نوع پست دیگر نادیده',
+	'فیلتر اصالت: ' . wp_json_encode( [ $au_unset, $au_q( 'product', 'original' ) ] )
+);
+$GLOBALS['cyh_test_is_admin'] = false;
+
+// ۱۰۵: ویرایش گروهی — عمل شناخته‌شده فقط روی product؛ شناسه‌ی غیرمحصول دست‌نخورده؛ عمل ناشناخته بدون تغییر
+$au_p1 = $mk( 'au-1', [], 'publish', null );
+$au_p2 = $mk( 'au-2', [], 'publish', null );
+$au_redirect = cyh_authenticity_handle_bulk( 'https://x/edit.php', 'cyh_set_non_original', [ $au_p1, $au_p2, $co_quote_id ] );
+$au_none     = cyh_authenticity_handle_bulk( 'https://x/edit.php', 'trash', [ $au_p1 ] );
+$co_check(
+	'non_original' === cyh_product_authenticity( $au_p1 ) && 'non_original' === cyh_product_authenticity( $au_p2 )
+		&& '' === (string) get_post_meta( $co_quote_id, 'authenticity', true )
+		&& false !== strpos( $au_redirect, 'cyh_bulk_auth=2' ) && 'https://x/edit.php' === $au_none
+		&& isset( cyh_authenticity_bulk_actions( [] )['cyh_set_original'], cyh_authenticity_bulk_actions( [] )['cyh_set_non_original'] ),
+	'ویرایش گروهی اصالت: فقط محصول‌ها (۲ مورد)، شناسه‌ی استعلام دست‌نخورده، عمل ناشناخته بدون تغییر، هر دو عمل ثبت',
+	'گروهی: ' . wp_json_encode( [ $au_redirect, $au_none ] )
+);
+
+// ۱۰۶: تعریف فیلد ACF — اجباری، دو مقدار دقیق، بدون پیش‌فرض (انتخاب آگاهانه)، نام گراف‌کیوال authenticity
+$au_group = json_decode( (string) file_get_contents( __DIR__ . '/crane-yadak-headless/acf-json/group_cyh_product_fields.json' ), true );
+$au_field = null;
+foreach ( $au_group['fields'] ?? [] as $f ) { if ( 'authenticity' === ( $f['name'] ?? '' ) ) { $au_field = $f; } }
+$co_check(
+	$au_field && 1 === $au_field['required'] && 1 === $au_field['allow_null'] && '' === $au_field['default_value']
+		&& [ 'original' => 'اصلی', 'non_original' => 'غیر اصلی' ] === $au_field['choices'] && 'authenticity' === $au_field['graphql_field_name']
+		&& 'select' === $au_field['type'] && 1 === $au_field['show_in_graphql'],
+	'فیلد ACF اصالت: اجباری، بدون پیش‌فرض، فقط اصلی/غیر اصلی، در GraphQL با نام authenticity',
+	'فیلد: ' . wp_json_encode( $au_field )
+);
+
 // ═══════════════════════════════════════════════════════════════════════════
 // بررسی امضای هوک‌ها — همان چیزی که نسخه‌ی ۱.۳.۰ را کشت
 // ═══════════════════════════════════════════════════════════════════════════

@@ -221,7 +221,7 @@ const err = 'text-xs text-red-700 font-bold mt-1';
     type InvoiceType,
   } from '../../lib/checkout';
 
-  interface Line { slug: string; name: string; sku: string; qty: number; unit: number; total: number }
+  interface Line { slug: string; name: string; sku: string; authenticity?: string; qty: number; unit: number; total: number }
   interface SessionData {
     ok: boolean;
     session: string | null;
@@ -451,7 +451,8 @@ const err = 'text-xs text-red-700 font-bold mt-1';
       name.textContent = l.name;
       const meta = document.createElement('p');
       meta.className = 'text-xs text-steel-600';
-      meta.textContent = `${l.qty.toLocaleString('fa-IR')} × ${rial(l.unit)}`;
+      const authLabel = l.authenticity === 'original' ? 'اصلی' : l.authenticity === 'non_original' ? 'غیر اصلی' : '';
+      meta.textContent = `${l.qty.toLocaleString('fa-IR')} × ${rial(l.unit)}${authLabel ? ` — اصالت: ${authLabel}` : ''}`;
       left.append(name, meta);
       const total = document.createElement('p');
       total.className = 'shrink-0 tabular-nums font-bold';

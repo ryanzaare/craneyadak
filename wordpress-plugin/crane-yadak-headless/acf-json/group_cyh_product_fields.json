@@ -37,6 +37,28 @@
             "graphql_field_name": "brand"
         },
         {
+            "key": "field_cyh_product_authenticity",
+            "label": "اصالت کالا (اصلی / غیر اصلی)",
+            "name": "authenticity",
+            "type": "select",
+            "instructions": "برچسب اجباری هر محصول (تصمیم مدیریت). «اصلی» فقط برای قطعه‌ای که واقعاً ساخت خود سازنده‌ی نام‌برده است؛ هر قطعه‌ی دیگر (مشابه، سازگار، بازارپسند) «غیر اصلی». این برچسب روی صفحه، کارت محصول و فاکتور سفارش دیده می‌شود. حدسی انتخاب نکنید.",
+            "required": 1,
+            "wrapper": {
+                "width": "50"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "authenticity",
+            "choices": {
+                "original": "اصلی",
+                "non_original": "غیر اصلی"
+            },
+            "default_value": "",
+            "allow_null": 1,
+            "multiple": 0,
+            "ui": 0,
+            "return_format": "value"
+        },
+        {
             "key": "field_cyh_product_buy_mode",
             "label": "روش خرید",
             "name": "buy_mode",

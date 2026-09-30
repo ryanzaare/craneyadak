@@ -398,6 +398,9 @@ function cyh_checkout_build( $items, $now = null ) {
 			'slug'     => $slug,
 			'name'     => $pricing['name'],
 			'sku'      => $pricing['sku'],
+			// عکس اصالت لحظه‌ی خرید: بعداً هم که برچسب محصول عوض شود، سفارش و فاکتور
+			// همان چیزی را نشان می‌دهند که مشتری هنگام پرداخت دید.
+			'authenticity' => $pricing['authenticity'],
 			'qty'      => $n,
 			'unit'     => $unit,
 			'buy_mode' => 'cart',
@@ -513,6 +516,7 @@ function cyh_rest_checkout_session( $request ) {
 				'slug'  => $l['slug'],
 				'name'  => $l['name'],
 				'sku'   => $l['sku'],
+				'authenticity' => $l['authenticity'] ?? '',
 				'qty'   => $l['qty'],
 				'unit'  => $l['unit'],
 				'total' => $l['unit'] * $l['qty'],

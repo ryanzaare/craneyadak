@@ -97,6 +97,11 @@ export interface CompatibleModel {
  * پرداخت. «افزودن به سبد» فقط برای اقلام موجودِ کم‌ریسک منطقی است. اگر
  * وردپرس چیزی نگوید، امن‌ترین حالت استعلام است، نه ادعای فروش فوری.
  */
+// اصالت کالا (اصلی / غیر اصلی) — منطق خالص در authenticity.ts (آزمون‌شده).
+import { parseAuthenticity, AUTHENTICITY_LABEL, type Authenticity } from './authenticity';
+export { parseAuthenticity, AUTHENTICITY_LABEL };
+export type { Authenticity };
+
 export interface CraneProduct {
   name: string;
   slug: string;
@@ -121,6 +126,14 @@ export interface CraneProduct {
 
   buyMode: BuyMode;
   stockStatus: StockStatus;
+
+  /**
+   * از کوئری اختیاریِ جدا (fetchAuthenticity) می‌آید، نه کوئری اصلی: فیلد تازه‌ی
+   * وابسته به نسخه‌ی افزونه است و نبودنش نباید کل سایت را بخواباند. null = ثبت‌نشده
+   * یا افزونه هنوز قدیمی است؛ audit ساخت (check-build-audit) صفحه‌ی بدون برچسب را
+   * *رد* می‌کند تا محصولِ بدون برچسب بی‌صدا منتشر نشود.
+   */
+  authenticity: Authenticity | null;
 
   /**
    * آخرین تغییر/تأیید مقدار قیمت و پایان اعتبارش (ISO) — از کوئری
@@ -484,6 +497,7 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
 
     buyMode: parseBuyMode(f?.buyMode),
     stockStatus: parseStockStatus(f?.stockStatus),
+    authenticity: null,
     priceUpdatedAt: null,
     priceValidUntil: null,
 
@@ -946,13 +960,62 @@ async function fetchPriceValidity(): Promise<Map<string, { updatedAt: string | n
 
 let validityPromise: ReturnType<typeof fetchPriceValidity> | null = null;
 
+/*
+ * اصالت کالا (اصلی / غیر اصلی) — کوئری اختیاریِ **جدا**، همان دلیل اعتبار قیمت:
+ * افزونه‌ی قدیمی این فیلد را نمی‌شناسد و نباید پرسش‌وپاسخ یا قیمت را با خود ببرد.
+ * شکست = هیچ برچسبی نمایش داده نمی‌شود (هرگز پیش‌فرض «اصلی» نه) و audit ساخت خطا می‌دهد.
+ */
+const AUTHENTICITY_QUERY = `
+  query CraneAuthenticity($first: Int!, $after: String) {
+    craneProducts(first: $first, after: $after, where: { status: PUBLISH }) {
+      pageInfo { hasNextPage endCursor }
+      nodes { slug productFields { authenticity } }
+    }
+  }
+`;
+
+async function fetchAuthenticity(): Promise<Map<string, Authenticity | null>> {
+  const map = new Map<string, Authenticity | null>();
+  if (!isWpConfigured()) return map;
+  try {
+    let after: string | null = null;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const data: any = await wpQuery(AUTHENTICITY_QUERY, { first: PAGE_SIZE, after });
+      const conn = data?.craneProducts;
+      if (!conn) break;
+      for (const node of conn.nodes ?? []) {
+        const slug = cleanText(node?.slug);
+        if (slug) map.set(slug, parseAuthenticity(node?.productFields?.authenticity));
+      }
+      if (!conn.pageInfo?.hasNextPage) break;
+      after = conn.pageInfo.endCursor ?? null;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `\n🏷️ برچسب «اصلی / غیر اصلی» از وردپرس خوانده نشد — هیچ محصولی برچسب ندارد.\n` +
+        `   آخرین نسخه‌ی افزونه را نصب کنید. (تا آن موقع check-build-audit ساخت را رد می‌کند.)\n` +
+        `   جزئیات: ${message.slice(0, 200)}\n`,
+    );
+  }
+  return map;
+}
+
+let authenticityPromise: ReturnType<typeof fetchAuthenticity> | null = null;
+
 export async function getAllProducts(): Promise<CraneProduct[]> {
   catalogPromise ??= fetchAllProducts();
   extrasPromise ??= fetchOptionalExtras();
   validityPromise ??= fetchPriceValidity();
+  authenticityPromise ??= fetchAuthenticity();
 
-  const [products, extras, validity] = await Promise.all([catalogPromise, extrasPromise, validityPromise]);
-  if (extras.size === 0 && validity.size === 0) return products;
+  const [products, extras, validity, authenticity] = await Promise.all([
+    catalogPromise,
+    extrasPromise,
+    validityPromise,
+    authenticityPromise,
+  ]);
+  if (extras.size === 0 && validity.size === 0 && authenticity.size === 0) return products;
 
   // ادغام — بدون تغییر آرایه‌ی اصلی.
   return products.map((product) => {
@@ -962,6 +1025,7 @@ export async function getAllProducts(): Promise<CraneProduct[]> {
       ...product,
       ...(extra ? { community: extra.community, wpId: extra.wpId } : {}),
       ...(v ? { priceUpdatedAt: v.updatedAt, priceValidUntil: v.validUntil } : {}),
+      authenticity: authenticity.get(product.slug) ?? null,
     };
   });
 }
@@ -1046,6 +1110,10 @@ export function productJsonLd(
   // کدهای معادل OEM + مدل‌های سازگار + مشخصات فنی → additionalProperty.
   // این‌ها واقعی و قابل راستی‌آزمایی‌اند و ارزش سئویی بالایی دارند.
   const properties = [
+    // برچسب اصالت (مدیریت): روی صفحه هم دیده می‌شود، پس مجاز است. ثبت‌نشده = نیامدن.
+    ...(product.authenticity
+      ? [{ '@type': 'PropertyValue', name: 'اصالت کالا', value: AUTHENTICITY_LABEL[product.authenticity] }]
+      : []),
     ...product.oemCrossReference.map((r) => ({
       '@type': 'PropertyValue',
       name: `کد معادل ${r.oemBrand}`,

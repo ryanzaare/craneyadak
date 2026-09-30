@@ -101,6 +101,8 @@ function cyh_product_pricing( $post_id, $now = null ) {
 		'published'   => false,
 		'name'        => '',
 		'sku'         => '',
+		// 'original' | 'non_original' | '' (ثبت‌نشده). ثبت‌نشده *حدس زده نمی‌شود*.
+		'authenticity' => '',
 		'slug'        => '',
 		'buy_mode'    => 'rfq',
 		'stock'       => 'unknown',
@@ -127,6 +129,8 @@ function cyh_product_pricing( $post_id, $now = null ) {
 	$out['name']      = (string) ( $post->post_title ?? '' );
 	$out['slug']      = (string) ( $post->post_name ?? '' );
 	$out['sku']       = trim( (string) $field( 'sku' ) );
+	$auth             = (string) $field( 'authenticity' );
+	$out['authenticity'] = in_array( $auth, [ 'original', 'non_original' ], true ) ? $auth : '';
 	$out['buy_mode']  = 'cart' === $field( 'buy_mode' ) ? 'cart' : 'rfq';
 	$stock            = (string) $field( 'stock_status' );
 	$out['stock']     = in_array( $stock, [ 'in_stock', 'on_order' ], true ) ? $stock : 'unknown';

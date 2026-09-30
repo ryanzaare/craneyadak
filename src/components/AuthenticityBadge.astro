@@ -1,0 +1,33 @@
+---
+// src/components/AuthenticityBadge.astro
+// ---------------------------------------------------------------------------
+// برچسب اجباری «اصلی / غیر اصلی» هر محصول (تصمیم مدیریت، ۷ مهر ۱۴۰۵).
+//
+// ⚠️ مقدار ثبت‌نشده (null) *هیچ‌چیز* رندر نمی‌کند — هرگز پیش‌فرض «اصلی» نه: ادعای
+// اصالت باید صریح باشد. نبودِ برچسب روی صفحه‌ی ایندکس‌پذیر را audit ساخت
+// (scripts/check-build-audit.mjs) از روی `data-authenticity` رد می‌کند.
+// ---------------------------------------------------------------------------
+import { AUTHENTICITY_LABEL, type Authenticity } from '../lib/authenticity';
+
+export interface Props {
+  authenticity: Authenticity | null;
+  /** «کامل» = «اصالت کالا: اصلی» (صفحه‌ی محصول)؛ «کوتاه» فقط برچسب (کارت). */
+  full?: boolean;
+}
+
+const { authenticity, full = false } = Astro.props;
+const label = authenticity ? AUTHENTICITY_LABEL[authenticity] : null;
+const cls =
+  authenticity === 'original'
+    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+    : 'bg-amber-50 text-amber-900 border-amber-300';
+---
+
+{
+  authenticity && label && (
+    <span data-authenticity={authenticity} class={`inline-flex items-center gap-1 border text-[11px] md:text-xs font-bold px-2 py-1 rounded ${cls}`}>
+      {full && <span class="font-normal">اصالت کالا:</span>}
+      {label}
+    </span>
+  )
+}
