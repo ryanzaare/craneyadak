@@ -44,6 +44,8 @@ export function buildHtaccess(redirects = LEGACY_REDIRECTS, wildcards = LEGACY_W
     const pattern = wildcards.includes(fromClean) ? `^${escapeRe(fromClean)}(/.*)?$` : `^${escapeRe(fromClean)}/?$`;
     lines.push(`RedirectMatch 301 ${pattern} ${origin}${to}`);
   }
+  // فایل وضعیت انتشار FTP (فهرست همه‌ی فایل‌های سایت) از بیرون قابل‌خواندن نباشد.
+  lines.push('# فایل وضعیت GitHub Actions (SamKirkland/FTP-Deploy-Action) از بیرون 410 شود', 'RedirectMatch gone ^/\\.ftp-deploy-sync-state\\.json$');
   lines.push('</IfModule>', '', 'ErrorDocument 404 /404.html', '');
   return lines.join('\n');
 }

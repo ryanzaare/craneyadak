@@ -645,6 +645,27 @@ for (const [from, to] of Object.entries(LEGACY_REDIRECTS)) {
 if (!/X-Forwarded-Proto/.test(htaccess)) problems.push('شرط HTTPS در .htaccess X-Forwarded-Proto را نمی‌بیند — پشت پروکسی حلقه‌ی ریدایرکت می‌شود.');
 if (!/ErrorDocument 404 \/404\.html/.test(htaccess)) problems.push('.htaccess ErrorDocument 404 ندارد.');
 
+/* ═══ ۷) قرارداد workflow انتشار ═══════════════════════════════════════
+   .github/workflows/deploy.yml: (الف) روی push اجرا نشود — هر کامیت نباید سایت زنده را
+   عوض کند؛ (ب) هر secret که به آن ارجاع می‌شود در docs/deployment-guide.md مستند باشد،
+   وگرنه کارفرما نمی‌داند چه چیزی بسازد و اولین اجرا با خطای مبهم می‌ماند. */
+function workflowProblems(yml, guide) {
+  const out = [];
+  if (/^\s{2}push\s*:/m.test(yml)) out.push('workflow انتشار روی push اجرا می‌شود — هر کامیت سایت زنده را عوض می‌کند.');
+  if (!/^\s{2}workflow_dispatch\s*:/m.test(yml)) out.push('workflow انتشار دکمه‌ی دستی (workflow_dispatch) ندارد.');
+  for (const name of new Set([...yml.matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1]))) {
+    if (!guide.includes(name)) out.push(`secret «${name}» در deploy.yml هست ولی در docs/deployment-guide.md مستند نیست.`);
+  }
+  return out;
+}
+// ⚠️ خودآزمایی روی ورودی خراب (قاعده‌ی ۶): push-trigger و secret نامستند باید گرفته شوند.
+if (workflowProblems('on:\n  push:\n    branches: [main]\njobs:\n  x: ${{ secrets.NEW_SECRET }}', 'x').length < 3) {
+  problems.push('بررسی workflow روی ورودی خراب (push + بدون workflow_dispatch + secret نامستند) کور است.');
+}
+const wf = read('.github/workflows/deploy.yml');
+if (!wf) problems.push('.github/workflows/deploy.yml وجود ندارد.');
+else problems.push(...workflowProblems(wf, read('docs/deployment-guide.md')));
+
 // ═══ گزارش ══════════════════════════════════════════════════════════════
 if (problems.length) {
   console.error(`❌ ${problems.length} نقض معماری (docs/architecture.md):`);
