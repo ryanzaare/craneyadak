@@ -188,7 +188,16 @@
   ۳.۲۳.۰ اختیاری شد؛ audit و ALLOW_UNLABELED_AUTHENTICITY حذف شدند). 🔶 ستون/فیلتر/ویرایش گروهی روی وردپرس
   زنده آزموده نشده. تصمیم‌های باز: آیا محصول بدون برچسب اجازه‌ی پرداخت آنلاین نداشته باشد؟
   (فعلاً دارد؛ سفارش برچسب خالی ثبت می‌کند.)
-  فاز ۶ (GitHub Actions) — **کد آماده، منتظر اقدام کارفرما**: `.github/workflows/deploy.yml`
+  ✅ **فاز ۶ — اولین انتشار واقعی موفق (۹ مهر ۱۴۰۵، اجرای 36861565551):** build در GitHub (به
+  admin.craneyadak.com/graphql می‌رسد)، آپلود FTPS به `public_html` با حساب `deploy@craneyadak.com`
+  (Directory = `public_html`، `FTP_SERVER=ftp.craneyadak.com`، `FTP_SERVER_DIR=./`) و ۲۰ بررسی verify-deploy
+  روی دامنه‌ی زنده همه سبز: ۹ ریدایرکت ۳۰۱ واقعی، HTTP→HTTPS و www با یک مرحله، اسلش پایانی، ۴�043
+  واقعی، `.htaccess` و فایل وضعیت FTP بسته. ⚠️ درس: `gh secret set NAME --body -` مقدار را «-» می‌گذارد
+  (دو اجرا با 530 شکست خورد)؛ مقدار را از stdin بدهید (`printf … | gh secret set NAME`) یا بدون --body.
+  🔶 رمز FTP در گفتگو نوشته شد → در cPanel عوض و دوباره `gh secret set FTP_PASSWORD` شود.
+  🔶 هشدار GitHub: اکشن‌ها روی Node 20 منسوخ‌اند (فعلاً روی 24 اجبار می‌شوند؛ نسخه‌ها را بعداً به‌روز کنید).
+  باقی: وبهوک وردپرس ← GitHub (گام ۵ راهنما)، سپس Lighthouse CI و Search Console (پس از زنده‌شدن).
+  (سابقه) فاز ۶ — کد آماده بود: `.github/workflows/deploy.yml`
   (دستی + شبانه + `repository_dispatch`؛ عمداً نه روی push)، `scripts/verify-deploy.mjs` (پس از
   آپلود: ۳۰۱ واقعی، HTTPS، www، اسلش، ۴۰۴، فایل‌های داخلی بسته)، و `.htaccess` فایل وضعیت FTP را
   ۴۱۰ می‌کند. راهنمای گام‌به‌گام: `docs/deployment-guide.md` مرحله‌ی ۷. **لازم از کارفرما:** حساب FTP در
