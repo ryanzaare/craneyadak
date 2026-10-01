@@ -643,6 +643,7 @@ for (const [from, to] of Object.entries(LEGACY_REDIRECTS)) {
   else if (wildcard !== line.includes('(/.*)?$')) problems.push(`.htaccess: وایلدکارت بودن «${from}» با LEGACY_WILDCARDS نمی‌خواند.`);
 }
 if (!/X-Forwarded-Proto/.test(htaccess)) problems.push('شرط HTTPS در .htaccess X-Forwarded-Proto را نمی‌بیند — پشت پروکسی حلقه‌ی ریدایرکت می‌شود.');
+if (!/RewriteCond %\{REQUEST_URI\} !\^\/\\\.well-known\//.test(htaccess)) problems.push('شرط HTTPS در .htaccess /.well-known/ را مستثنا نکرده — تمدید خودکار SSL می‌شکند.');
 if (!/ErrorDocument 404 \/404\.html/.test(htaccess)) problems.push('.htaccess ErrorDocument 404 ندارد.');
 
 /* ═══ ۷) قرارداد workflow انتشار ═══════════════════════════════════════
