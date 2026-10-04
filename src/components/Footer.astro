@@ -1,6 +1,7 @@
 ---
 // src/components/Footer.astro
 import { SITE } from '../data/site';
+import { ENAMAD } from '../data/trust';
 import { SILOS, siloPath } from '../data/taxonomy';
 import { getContact, getSiteOptions } from '../lib/site-options';
 import { getLegalPages } from '../lib/legal-pages';
@@ -175,14 +176,27 @@ const footerSilos = SILOS.slice(0, 6);
       </p>
 
       <div class="flex items-center gap-3 order-1 md:order-none">
-        <div
-          class="w-[68px] h-[82px] shrink-0 rounded border-2 border-dashed border-white/20 flex items-center justify-center text-center p-1"
-          aria-hidden="true"
+        {/* نماد اعتماد الکترونیکی (اینماد) — قطعه‌کد رسمی؛ ظرف ابعاد ثابت دارد (CLS=0). */}
+        <a
+          referrerpolicy="origin"
+          target="_blank"
+          href={ENAMAD.href}
+          class="w-[68px] h-[82px] shrink-0 rounded bg-white p-1 flex items-center justify-center"
         >
-          <span class="text-[9px] leading-3 text-gray-400 font-bold">محل درج<br />کد اینماد</span>
-        </div>
+          <img
+            referrerpolicy="origin"
+            src={ENAMAD.img}
+            alt="نماد اعتماد الکترونیکی (اینماد)"
+            width="60"
+            height="74"
+            loading="lazy"
+            decoding="async"
+            style="cursor:pointer;max-width:100%;max-height:100%;object-fit:contain"
+            code={ENAMAD.code}
+          />
+        </a>
         <p class="leading-6 max-w-[16rem] text-right">
-          نماد اعتماد الکترونیکی پس از تایید دامنه در همین محل درج می‌شود.
+          این سایت دارای نماد اعتماد الکترونیکی است.
         </p>
       </div>
     </div>

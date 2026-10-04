@@ -15,6 +15,12 @@ const t = (name, got, wantError) => {
 };
 const res = (status, location = '', body = '') => ({ status, location, body });
 
+const enamad = by('اینماد')[0];
+const seal = `<a referrerpolicy="origin" target="_blank" href="https://trustseal.enamad.ir/?id=8029676&amp;Code=abc123"><img referrerpolicy="origin" src="https://trustseal.enamad.ir/logo.aspx?id=8029676&Code=abc123" code="abc123"></a>`;
+t('اینماد سالم', enamad.check(res(200, '', seal)), false);
+t('اینماد: نبودن قطعه‌کد', enamad.check(res(200, '', '<html>')), true);
+t('اینماد: بدون referrerpolicy', enamad.check(res(200, '', seal.replaceAll('referrerpolicy="origin"', ''))), true);
+t('اینماد: بدون code', enamad.check(res(200, '', seal.replace(' code="abc123"', ''))), true);
 const home = by('صفحه‌ی اصلی')[0];
 t('اصلی سالم', home.check(res(200, '', `<link rel="canonical" href="${O}/">`)), false);
 t('اصلی ۵۰۰', home.check(res(500)), true);

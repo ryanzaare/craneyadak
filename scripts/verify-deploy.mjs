@@ -26,6 +26,16 @@ export function buildChecks(origin = SITE_ORIGIN) {
           ? null
           : 'canonical صفحه‌ی اصلی پیدا نشد',
   });
+  // ⚠️ نماد اینماد باید در HTML صفحه‌ی اصلی باشد: خزنده‌ی اینماد با کد نماد روی دامنه تأیید می‌کند.
+  checks.push({
+    name: 'نماد اینماد (قطعه‌کد رسمی) در صفحه‌ی اصلی',
+    url: `${origin}/`,
+    redirect: 'follow',
+    check: (r) =>
+      /trustseal\.enamad\.ir\/\?id=\d+&(?:amp;)?Code=[A-Za-z0-9]+/.test(r.body) && /referrerpolicy="origin"/.test(r.body) && /code="[A-Za-z0-9]+"/.test(r.body)
+        ? null
+        : 'قطعه‌کد اینماد (لینک trustseal، referrerpolicy، code) پیدا نشد',
+  });
   for (const path of ['/robots.txt', '/sitemap-index.xml', '/sitemap-0.xml']) {
     checks.push({ name: `${path} ۲۰۰`, url: `${origin}${path}`, redirect: 'follow', check: (r) => (r.status === 200 ? null : `کد ${r.status}`) });
   }

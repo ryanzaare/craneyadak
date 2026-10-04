@@ -103,14 +103,27 @@ export interface TrustBadge {
  * جای آن یک ظرف با ابعاد نهایی درست رزرو شده تا با دریافت کد واقعی،
  * چیدمان تکان نخورد (جلوگیری از CLS).
  */
+/**
+ * اینمادِ واقعی دامنه (دریافت‌شده ۱۲ مهر ۱۴۰۵). id و code همان‌هایی‌اند که اینماد در
+ * قطعه‌کد رسمی داده؛ عمومی‌اند (در HTML هر سایت دارای نماد دیده می‌شوند)، محرمانه نیستند.
+ * ⚠️ قطعه‌کد رسمی عیناً حفظ شود (`referrerpolicy="origin"`، `code`، `target="_blank"`): خزنده‌ی
+ * اینماد با همین‌ها تأیید می‌کند نماد روی دامنه است. فقط alt (دسترس‌پذیری) و lazy-loading افزوده شده.
+ */
+export const ENAMAD = {
+  id: '8029676',
+  code: 'nXGyxCMZMum5AEsSIFZLhYASxrQaEmyQ',
+  href: 'https://trustseal.enamad.ir/?id=8029676&Code=nXGyxCMZMum5AEsSIFZLhYASxrQaEmyQ',
+  img: 'https://trustseal.enamad.ir/logo.aspx?id=8029676&Code=nXGyxCMZMum5AEsSIFZLhYASxrQaEmyQ',
+} as const;
+
 export const TRUST_BADGES: TrustBadge[] = [
   {
     id: 'enamad',
     title: 'نماد اعتماد الکترونیکی',
     description: 'ثبت‌شده در سامانه‌ی اینماد وزارت صنعت، معدن و تجارت',
     icon: 'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751A11.959 11.959 0 0112 2.714z',
-    href: '',
-    verified: false,
+    href: ENAMAD.href,
+    verified: true,
   },
   {
     id: 'oem-guarantee',
