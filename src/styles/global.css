@@ -13,7 +13,11 @@
   src: url("/fonts/Vazirmatn-Variable.woff2") format("woff2-variations");
   font-weight: 100 900;
   font-style: normal;
-  font-display: swap;
+  /* ⚠️ optional، نه swap (۱۵ مهر ۱۴۰۵): با CSS درون‌خطی صفحه پیش از رسیدن فونت رنگ می‌شود و جایگزینی فونت
+     پاراگراف هیرو را جابه‌جا می‌کرد (CLS موبایل ۰٫۱۸۴، نمره‌ی ۹۶ → ۸۹). optional: اگر فونتِ preload‌شده
+     در ~۱۰۰ms نرسید، همان بازدید با فونت سیستم می‌ماند و هرگز جابه‌جا نمی‌شود؛ بازدید بعد (کش یک‌ساله) با
+     Vazirmatn است. اگر آزمون زنده نشان داد فونت سیستم زیاد دیده می‌شود، به swap + fallback متریک‌دار برگردید. */
+  font-display: optional;
   /* بازه کاراکترهای فارسی و لاتین پایه برای رندر بهینه */
   unicode-range: U+0600-06FF, U+0750-077F, U+200C-200E, U+2010-2011,
     U+FB50-FDFF, U+FE70-FEFF, U+0000-00FF, U+2000-206F, U+20AC, U+2212;
