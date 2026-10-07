@@ -20,6 +20,25 @@ import { LEGACY_REDIRECTS, LEGACY_WILDCARDS, SITE_ORIGIN } from '../src/data/leg
 
 const escapeRe = (p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/**
+ * فایل‌های کوچک .htaccess داخل پوشه‌ها: هدر کش بلندمدت. چرا فایل جدا داخل پوشه، نه
+ * FilesMatch در فایل ریشه: پوشه‌ی /_astro/ نام‌هایش هش‌دار است (تغییر محتوا = نام تازه) پس
+ * یک‌ساله و immutable امن است؛ ولی /fonts/ نام ثابت دارد و فایل ریشه نمی‌تواند این دو را
+ * بدون <If> (که همه‌ی سرورها پشتیبانی نمی‌کنند) از هم جدا کند.
+ */
+export const CACHE_DIRS = {
+  '_astro': 'public, max-age=31536000, immutable',
+  fonts: 'public, max-age=31536000, immutable',
+};
+
+export function buildCacheHtaccess(value) {
+  return `# تولیدشده توسط scripts/generate-htaccess.mjs — دستی ویرایش نکنید.
+<IfModule mod_headers.c>
+Header set Cache-Control "${value}"
+</IfModule>
+`;
+}
+
 export function buildHtaccess(redirects = LEGACY_REDIRECTS, wildcards = LEGACY_WILDCARDS, origin = SITE_ORIGIN) {
   const host = new URL(origin).host;
   const lines = [
@@ -59,5 +78,8 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     process.exit(1);
   }
   writeFileSync(`${dist}/.htaccess`, buildHtaccess());
+  for (const [dir, value] of Object.entries(CACHE_DIRS)) {
+    if (existsSync(`${dist}/${dir}`)) writeFileSync(`${dist}/${dir}/.htaccess`, buildCacheHtaccess(value));
+  }
   console.log(`✅ ${dist}/.htaccess ساخته شد — ${Object.keys(LEGACY_REDIRECTS).length} ریدایرکت ۳۰۱ + HTTPS + www + 404.`);
 }

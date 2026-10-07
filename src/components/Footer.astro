@@ -193,7 +193,11 @@ const footerSilos = SILOS.slice(0, 6);
             decoding="async"
             style="cursor:pointer;max-width:100%;max-height:100%;object-fit:contain"
             code={ENAMAD.code}
+            onerror="this.style.display='none';this.nextElementSibling.style.display='block'"
           />
+          {/* ⚠️ سرور تصویر اینماد (در ایران) از بیرون ایران یا با VPN گاهی جواب نمی‌دهد؛ تصویر شکسته
+              با متن alt روی صفحه زشت است. در این حالت یک متن لینک‌دار کوتاه جایش می‌نشیند. */}
+          <span style="display:none" class="text-[11px] leading-4 text-gray-700 text-center font-bold">نماد اعتماد الکترونیکی</span>
         </a>
         <p class="leading-6 max-w-[16rem] text-right">
           این سایت دارای نماد اعتماد الکترونیکی است.

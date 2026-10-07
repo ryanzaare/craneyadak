@@ -72,6 +72,13 @@ export function buildChecks(origin = SITE_ORIGIN) {
     redirect: 'manual',
     check: (r) => (r.status !== 404 ? `کد ${r.status} (انتظار ۴۰۴)` : /<html/i.test(r.body) ? null : 'بدنه‌ی ۴۰۴ صفحه‌ی HTML سایت نیست'),
   });
+  // ⚠️ دارایی‌های هش‌دار و فونت باید کش یک‌ساله بگیرند (Lighthouse «cache lifetime»؛ بازدید دوم بدون شبکه).
+  checks.push({
+    name: 'فونت: Cache-Control یک‌ساله',
+    url: `${origin}/fonts/Vazirmatn-Variable.woff2`,
+    redirect: 'follow',
+    check: (r) => (r.status !== 200 ? `کد ${r.status}` : /max-age=31536000/.test(r.cacheControl ?? '') ? null : `Cache-Control = «${r.cacheControl ?? ''}»`),
+  });
   for (const path of ['/.htaccess', '/.ftp-deploy-sync-state.json']) {
     checks.push({
       name: `${path} از بیرون خوانده نشود`,
@@ -90,8 +97,8 @@ async function main() {
     let error;
     try {
       const res = await fetch(c.url, { redirect: c.redirect, headers: { 'user-agent': 'craneyadak-verify-deploy' } });
-      const body = res.status === 200 || res.status === 404 ? await res.text() : '';
-      error = c.check({ status: res.status, location: res.headers.get('location') ?? '', body });
+      const body = (res.status === 200 || res.status === 404) && !/font|image/.test(res.headers.get('content-type') ?? '') ? await res.text() : '';
+      error = c.check({ status: res.status, location: res.headers.get('location') ?? '', body, cacheControl: res.headers.get('cache-control') ?? '' });
     } catch (e) {
       error = `اتصال ناموفق: ${e instanceof Error ? e.message : e}`;
     }
