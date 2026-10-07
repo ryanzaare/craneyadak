@@ -1,0 +1,124 @@
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": "./dist",
+      "url": [
+        "/index.html",
+        "/products/saga-saga1-l12/index.html",
+        "/categories/index.html",
+        "/brands/index.html",
+        "/about/index.html",
+        "/contact/index.html",
+        "/blog/index.html"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "onlyCategories": [
+          "performance",
+          "accessibility",
+          "best-practices",
+          "seo"
+        ],
+        "chromeFlags": "--headless=new --no-sandbox"
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": [
+          "error",
+          {
+            "minScore": 0.9
+          }
+        ],
+        "categories:accessibility": [
+          "error",
+          {
+            "minScore": 0.9
+          }
+        ],
+        "categories:seo": [
+          "error",
+          {
+            "minScore": 0.95
+          }
+        ],
+        "categories:best-practices": [
+          "warn",
+          {
+            "minScore": 0.9
+          }
+        ],
+        "cumulative-layout-shift": [
+          "error",
+          {
+            "maxNumericValue": 0.05
+          }
+        ],
+        "total-blocking-time": [
+          "error",
+          {
+            "maxNumericValue": 200
+          }
+        ],
+        "largest-contentful-paint": [
+          "error",
+          {
+            "maxNumericValue": 2500
+          }
+        ],
+        "meta-description": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "document-title": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "canonical": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "hreflang": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "link-text": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "crawlable-anchors": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "image-alt": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ],
+        "html-has-lang": [
+          "error",
+          {
+            "minScore": 1
+          }
+        ]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": "./.astro/lhci-mobile"
+    }
+  }
+}

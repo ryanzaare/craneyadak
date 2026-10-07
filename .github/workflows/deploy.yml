@@ -70,6 +70,10 @@ jobs:
           INDEX_EMPTY_CATEGORIES: ${{ vars.INDEX_EMPTY_CATEGORIES }}
           ALLOW_SHRINK: ${{ inputs.allow_shrink && '1' || '' }}
 
+      # گیت کیفیت پیش از آپلود: Lighthouse روی همین dist (دسکتاپ+موبایل). قرمز = انتشار انجام نمی‌شود.
+      - name: Lighthouse CI (quality gate)
+        run: npm run lighthouse
+
       # dist/ شامل فایل مخفی .htaccess است (۳۰۱ واقعی، HTTPS، ۴۰۴) — باید آپلود شود.
       - name: Upload dist/ to cPanel
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5

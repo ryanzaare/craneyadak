@@ -27,6 +27,7 @@
     "test:deploy": "node scripts/verify-deploy.test.mjs",
     "test:hooks": "node .claude/hooks/hooks.test.mjs",
     "test:plugin-release": "node scripts/plugin-release.test.mjs",
+    "lighthouse": "node scripts/run-lhci.mjs",
     "test:urls": "node --experimental-strip-types --no-warnings src/lib/urls.test.mts"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.15.1",
     "pagefind": "^1.0.0"
   }
 }

@@ -728,3 +728,13 @@ Lighthouse زنده (اجرای دستیار): دسکتاپ ۹۲، موبایل 
 **نتیجه‌ی بازسنجی (زنده، سه بار):** دسکتاپ ۹۲ → **۹۷** (FCP/LCP ۰٫۶، Speed Index ۱٫۶ ثانیه، CLS ۰)، موبایل ۹۶ → **۹۸**
 (CLS ۰). مسیر: کش یک‌ساله ← CSS درون‌خطی (دسکتاپ ۹۷ ولی CLS موبایل ۰٫۱۸۴ و نمره‌ی ۸۹ از جایگزینی فونت) ←
 `font-display: optional` (CLS ۰). ⚠️ پیامد optional: بازدید اول در شبکه‌ی کند ممکن است با فونت سیستم دیده شود.
+
+### Lighthouse CI برپا شد (۱۵ مهر ۱۴۰۵) ✅
+`npm run lighthouse` (روی dist پس از build؛ lighthouserc.desktop.json و lighthouserc.mobile.json؛ ۳ اجرا × ۷ صفحه ×
+دو حالت) و مرحله‌ی «Lighthouse CI (quality gate)» در deploy.yml **پیش از آپلود** — قرمز = انتشار انجام نمی‌شود.
+آستانه‌ها: performance/accessibility ≥ ۰٫۹، seo ≥ ۰٫۹۵، CLS ≤ ۰٫۰۵، TBT ≤ ۲۰۰ms، LCP ≤ ۲٫۵ثانیه، و
+meta-description/title/canonical/hreflang/link-text/crawlable-anchors/alt/html-lang کامل. اجرای پایه (محلی): هر دو حالت
+سبز؛ روی صفحه‌ی خراب عمدی (بدون title/alt/lang، حلقه‌ی سنگین) شکست خورد (قاعده‌ی ۶). عمداً بیرون از گیت: فشرده‌سازی،
+کش، TTFB، HTTPS (وابسته به سرور؛ verify-deploy روی دامنه‌ی زنده می‌سنجد). گزارش‌ها: `.astro/lhci-*`.
+🔶 روی runner گیت‌هاب آزموده نشده (Chrome نصب‌شده‌ی ubuntu-latest). صفحات دسته‌ی بدون محصول noindex‌اند و عمداً در
+فهرست نیستند؛ با پر شدن کاتالوگ یک دسته و یک محصول دیگر به `url`ها اضافه شود.

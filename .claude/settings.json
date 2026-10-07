@@ -52,7 +52,8 @@
       "Bash(gh workflow view:*)",
       "Bash(gh workflow list:*)",
       "Bash(node .claude/hooks/*)",
-      "Bash(node scripts/plugin-release.mjs:*)"
+      "Bash(node scripts/plugin-release.mjs:*)",
+      "Bash(npm run lighthouse)"
     ],
     "ask": [
       "Bash(git push:*)",
