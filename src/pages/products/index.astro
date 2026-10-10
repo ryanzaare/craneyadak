@@ -19,9 +19,11 @@
 //   ۲) دکمه‌ی بازگشت مرورگر رفتار منطقی دارد.
 //   ۳) رفرش صفحه فیلترها را از دست نمی‌دهد.
 //
-// سئو: این صفحه عمداً `noindex` نیست — صفحه‌ی پایه ارزش دارد. اما هر
-// ترکیب فیلتر canonical را به همین آدرس پایه برمی‌گرداند تا میلیون‌ها
-// آدرس پارامتردار محتوای تکراری نسازند.
+// سئو: وقتی دست‌کم یک محصولِ *کامل* هست، صفحه ایندکس‌پذیر است — صفحه‌ی
+// پایه ارزش دارد. اما هر ترکیب فیلتر canonical را به همین آدرس پایه
+// برمی‌گرداند تا میلیون‌ها آدرس پارامتردار محتوای تکراری نسازند.
+// ⚠️ بدون هیچ محصول کامل، این آرشیو یک فروشگاه خالی است (محتوای نازک) → noindex؛
+// با اولین محصول کامل در build بعدی خودکار ایندکس‌پذیر می‌شود (src/lib/indexability.ts).
 // ---------------------------------------------------------------------------
 import Layout from '../../layouts/Layout.astro';
 import ProductCard from '../../components/ProductCard.astro';
@@ -29,6 +31,7 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getAllProducts, computePrice } from '../../lib/wp';
 import { SILOS, BRANDS, ALL_CATEGORIES } from '../../data/taxonomy';
 import { SITE } from '../../data/site';
+import { productReadiness } from '../../lib/indexability';
 
 const all = await getAllProducts();
 
@@ -49,6 +52,8 @@ const activeSilos = SILOS.map((silo) => ({
   silo,
   categories: silo.categories.filter((c) => categoryCounts.has(c.slug)),
 })).filter((g) => g.categories.length > 0);
+
+const noindexArchive = !products.some((p) => productReadiness(p).ready);
 
 const inStockCount = products.filter((p) => p.stockStatus === 'in_stock').length;
 const withPriceCount = products.filter((p) => computePrice(p).payable).length;
@@ -99,7 +104,7 @@ function facetAttrs(p: (typeof products)[number]) {
 }
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexArchive}>
   <Breadcrumb items={crumbs} />
 
   <div class="max-w-7xl mx-auto px-4 py-8">

@@ -22,6 +22,7 @@ import { getBrands, type EnrichedBrand } from '../../lib/brands';
 import { getProductsByBrand, computePrice, productJsonLd, type CraneProduct } from '../../lib/wp';
 import ContentBlocks from '../../components/ContentBlocks.astro';
 import { getBlocks } from '../../lib/content-blocks';
+import { brandReadiness, productReadiness, blocksWordCount } from '../../lib/indexability';
 
 export async function getStaticPaths() {
   // برندها از وردپرس غنی می‌شوند: رنگ، متن لوگو، انکرتکست و توضیح سئو
@@ -157,9 +158,16 @@ const contact = await getContact();
 
 const blocks = await getBlocks('brand', brand.slug);
 
+// ⚠️ برند بدون محصولِ کامل و بدون پروفایل تخصصی نهایی (≥ ۱۵۰ کلمه) → noindex؛ با کامل‌شدن خودکار
+// ایندکس‌پذیر می‌شود (src/lib/indexability.ts). `seoDesc` پیکربندی متاست و شمرده نمی‌شود.
+const noindexBrand = !brandReadiness({
+  readyProducts: products.filter((p) => productReadiness(p).ready).length,
+  contentWords: blocksWordCount(blocks),
+}).ready;
+
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexBrand}>
   {/* نوار پایین هدر با رنگ اختصاصی برند. اگر برند رنگی ثبت نکرده باشد،
       `var(--brand, …)` به رنگ پیش‌فرض سایت برمی‌گردد. */}
   <section

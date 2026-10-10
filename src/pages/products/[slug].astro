@@ -31,6 +31,7 @@ import { aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
 import Questions from '../../components/Questions.astro';
 import { getQuestions, questionsJsonLd } from '../../lib/questions';
 import { autolinkHtml } from '../../lib/autolink';
+import { productReadiness } from '../../lib/indexability';
 import { buildTitle, buildDescription } from '../../lib/seo-meta';
 import { SITE } from '../../data/site';
 import { findCategory, categoryPath, siloPath, findBrand } from '../../data/taxonomy';
@@ -172,7 +173,7 @@ const contact = await getContact();
 
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd} ogImage={heroImage?.url} noindex={product.isDemo}>
+<Layout title={title} description={description} jsonLd={jsonLd} ogImage={heroImage?.url} noindex={!productReadiness(product).ready}>
   {product.isDemo && (
     /* رکورد نمایشی — عمداً پررنگ و غیرقابل‌چشم‌پوشی. اگر روزی سهواً روی
        سایت زنده بماند، هم بازدیدکننده و هم تیم بلافاصله متوجه می‌شوند. */
@@ -390,7 +391,7 @@ const contact = await getContact();
 
           {/* بلوک اطمینان — دقیقاً کنار دکمه، جایی که تردید خرید رخ می‌دهد. */}
           <div class="mt-5 pt-4 border-t border-steel-300">
-            <TrustBadges variant="compact" />
+            <TrustBadges variant="compact" authenticity={product.authenticity} />
           </div>
 
           <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 pt-5 border-t border-steel-300" role="list">

@@ -42,8 +42,15 @@ for (const map of maps) {
 }
 
 console.log(`✅ sitemap: ${kept} نشانی ایندکس‌پذیر؛ ${pruned.length} نشانی noindex برداشته شد.`);
-const cats = pruned.filter((u) => u.includes('/categories/'));
-if (cats.length) {
-  console.log(`⚠️ ${cats.length} دسته‌ی بدون محصول noindex است (موقت). پیش از انتشار عمومی بازبینی کنید:`);
-  for (const u of cats) console.log(`   • ${u}`);
+// ⚠️ هر نوع صفحه‌ی noindex جدا چاپ می‌شود تا «صفحه‌ی ناقص» دیده شود نه فراموش.
+// دلیل ناقص‌بودن هر محصول در لاگ `[seo]` مرحله‌ی واکشی هست (src/lib/indexability.ts).
+for (const [label, re] of [
+  ['دسته', /\/categories\//],
+  ['برند', /\/brands\/[^/]+\/$/],
+  ['محصول', /\/products\/[^/]+\/$/],
+]) {
+  const list = pruned.filter((u) => re.test(u));
+  if (!list.length) continue;
+  console.log(`⚠️ ${list.length} ${label}ی ناقص/خالی noindex است (موقت؛ با کامل‌شدن خودکار ایندکس می‌شود):`);
+  for (const u of list) console.log(`   • ${u}`);
 }

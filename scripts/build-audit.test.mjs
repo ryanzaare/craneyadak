@@ -46,7 +46,7 @@ const prod = (over = {}, body = '<p>SAGA1-L12</p><p>ساگا</p>') =>
   P('/products/p1/', {
     h1: 'ریموت SAGA1-L12',
     body,
-    ld: [{ '@type': 'Product', name: 'ریموت SAGA1-L12', sku: 'SAGA1-L12', brand: { name: 'SAGA', alternateName: 'ساگا' }, ...over }],
+    ld: [{ '@type': 'Product', name: 'ریموت SAGA1-L12', sku: 'SAGA1-L12', brand: { name: 'SAGA', alternateName: 'ساگا' }, image: ['https://craneyadak.com/x.jpg'], ...over }],
   });
 eq('سالم', productSchemaProblems([prod()]), []);
 eq('محصول بدون برچسب اصالت معتبر است (اختیاری)', productSchemaProblems([prod({}, '<p>SAGA1-L12</p><p>ساگا</p>')]), []);
@@ -58,6 +58,8 @@ has('sku نادیدنی', productSchemaProblems([prod({ sku: 'X-999' })]), 'در
 has('برند نادیدنی', productSchemaProblems([prod({ brand: { name: 'دماگ' } })]), 'برند «دماگ»');
 has('OEM نادیدنی', productSchemaProblems([prod({ additionalProperty: [{ name: 'کد معادل', value: 'ZZ-1' }] })]), 'ZZ-1');
 has('امتیاز بی‌پشتوانه', productSchemaProblems([prod({ aggregateRating: { ratingValue: 5 } })]), 'aggregateRating');
+has('محصول ایندکس‌پذیر بدون تصویر گرفته می‌شود', productSchemaProblems([prod({ image: undefined })]), 'هیچ تصویری ندارد');
+has('تصویر خالی هم تصویر نیست', productSchemaProblems([prod({ image: [] })]), 'هیچ تصویری ندارد');
 has('دو Product', productSchemaProblems([P('/products/p2/', { ld: [{ '@type': 'Product' }, { '@type': 'Product' }] })]), 'دقیقاً یک Product');
 has('بدون Product', productSchemaProblems([P('/products/p3/')]), 'دقیقاً یک Product');
 

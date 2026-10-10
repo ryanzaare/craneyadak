@@ -30,6 +30,7 @@ import Questions from '../../../components/Questions.astro';
 import { getQuestions, questionsJsonLd } from '../../../lib/questions';
 import { getProductsByCategory, computePrice, productJsonLd, type CraneProduct } from '../../../lib/wp';
 import { getBlocks, specsToJsonLd } from '../../../lib/content-blocks';
+import { categoryReadiness, productReadiness, blocksWordCount } from '../../../lib/indexability';
 import { resolveCategoryTerm, type CategoryTerm } from '../../../lib/categories';
 
 export async function getStaticPaths() {
@@ -105,8 +106,14 @@ const siblings = silo.categories.filter((c) => c.slug !== category.slug);
 // ⚠️ فراموش نشود: پیش از انتشار عمومی، وقتی محتوای دسته‌ها نهایی شد و می‌خواهیم
 // دسته‌ی بدون محصول هم ایندکس شود → `INDEX_EMPTY_CATEGORIES=1 npm run build`.
 // هر build فهرست دسته‌های noindex را چاپ می‌کند تا این قرارداد دیده بماند.
-const noindexEmpty =
-  products.length === 0 && (process.env.INDEX_EMPTY_CATEGORIES ?? import.meta.env.INDEX_EMPTY_CATEGORIES) !== '1';
+// ⚠️ «آماده» یعنی محصولِ *کامل* (کد فنی، برند، تصویر، متن) یا محتوای تخصصی نهایی ≥ ۳۰۰ کلمه —
+// نه «هر محصولی»: محصول آزمایشی/ناقص دسته را ایندکس‌پذیر نمی‌کند (src/lib/indexability.ts).
+const readiness = categoryReadiness({
+  readyProducts: products.filter((p) => productReadiness(p).ready).length,
+  contentWords: blocksWordCount(blocks),
+  override: (process.env.INDEX_EMPTY_CATEGORIES ?? import.meta.env.INDEX_EMPTY_CATEGORIES) === '1',
+});
+const noindexEmpty = !readiness.ready;
 
 const breadcrumbItems = [
   { label: 'صفحه اصلی', href: '/' },

@@ -119,6 +119,11 @@ export function productSchemaProblems(pages) {
         out.push(`${p.route}: مقدار «${prop.value}» (${prop.name}) در JSON-LD هست ولی روی صفحه دیده نمی‌شود`);
       }
     }
+    // ⚠️ صفحه‌ی محصولِ ایندکس‌پذیر بدون تصویر واقعی یعنی قاعده‌ی «آمادگی ایندکس» (src/lib/indexability.ts)
+    // و قالب صفحه از هم جدا شده‌اند؛ محصول بی‌عکس نباید ایندکس شود (کارفرما: «صفحه‌ی خالی noindex بماند»).
+    if (!(Array.isArray(n.image) ? n.image.length : n.image)) {
+      out.push(`${p.route}: ایندکس‌پذیر است ولی Product در JSON-LD هیچ تصویری ندارد — محصول ناقص باید noindex باشد`);
+    }
     if (n.aggregateRating || n.review) {
       out.push(`${p.route}: aggregateRating/review در JSON-LD است — فقط با نظر واقعیِ دیده‌شده روی صفحه مجاز است (بازبینی دستی)`);
     }

@@ -28,6 +28,7 @@ const WP_BASE_URL: string | null =
   nodeEnv?.WP_GRAPHQL_URL || (import.meta.env.WP_GRAPHQL_URL as string | undefined) || null;
 
 import { normalizeCommunity, type CommunityEntry } from './community';
+import { productReadiness } from './indexability';
 // ⚠️ نوع‌ها و محاسبه‌ی قیمت در pricing.ts (بدون وابستگی، قابل آزمون با node).
 import { computePrice, schemaPriceValidUntil, type BuyMode, type StockStatus, type PriceState } from './pricing';
 export { computePrice, schemaPriceValidUntil };
@@ -794,6 +795,15 @@ function reportCatalogHealth(products: CraneProduct[]): void {
   if (noSku) console.warn(`[wp] ⚠ ${noSku} محصول بدون کد فنی — جستجوی Part Number آن‌ها را پیدا نمی‌کند.`);
   if (noImage) console.warn(`[wp] ⚠ ${noImage} محصول بدون تصویر.`);
   if (noBrand) console.warn(`[wp] ⚠ ${noBrand} محصول بدون برند.`);
+
+  // محصول ناقص → noindex و خارج از sitemap؛ دلیلش را همین‌جا ببین تا «چرا ایندکس نمی‌شود؟» حدس نباشد.
+  const notReady = products.filter((p) => !p.isDemo && !productReadiness(p).ready);
+  if (notReady.length) {
+    console.warn(
+      `[seo] ${notReady.length} محصول ناقص است و noindex می‌ماند تا کامل شود:\n` +
+        notReady.map((p) => `    • ${p.sku || p.slug}: نیاز دارد به ${productReadiness(p).missing.join('، ')}`).join('\n')
+    );
+  }
 
   // این یکی جدی است: حالت «افزودن به سبد» بدون قیمت واقعی یعنی دکمه‌ی خرید
   // بدون مبلغ — هم بی‌معنا برای کاربر، هم داده‌ی متناقض برای اسکیما.

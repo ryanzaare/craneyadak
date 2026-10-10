@@ -21,6 +21,7 @@
 // از این پس وردپرس مرجع است.
 // ---------------------------------------------------------------------------
 
+import { whatsappDigits } from './phone';
 import { acfString, acfList } from './acf';
 import { wpQueryPublic } from './wp';
 
@@ -478,7 +479,7 @@ export async function getContact(): Promise<ContactView> {
   const digits = (value: string | null) => (value ? value.replace(/[^0-9+]/g, '') : null);
   const primary = digits(contact.phonePrimary);
   const secondary = digits(contact.phoneSecondary);
-  const wa = contact.whatsapp ? contact.whatsapp.replace(/[^0-9]/g, '') : null;
+  const wa = whatsappDigits(contact.whatsapp);
 
   const addressParts = [contact.city, contact.street].filter(Boolean);
 

@@ -20,13 +20,17 @@ import { TRUST_BADGES } from '../data/trust';
 interface Props {
   variant?: 'footer' | 'compact';
   class?: string;
+  /** اصالت محصول (فقط صفحه‌ی محصول): نشان‌های `onlyIfAuthenticity` فقط با برچسب مطابق می‌آیند. */
+  authenticity?: 'original' | 'non_original' | null;
 }
 
-const { variant = 'footer', class: className = '' } = Astro.props;
+const { variant = 'footer', class: className = '', authenticity = null } = Astro.props;
 
 /** حالت فشرده فقط نشان‌های تاییدشده را نشان می‌دهد — ادعای تاییدنشده در
     جعبه‌ی خرید، ادعای نادرست است نه «جای‌گذار». */
-const compactBadges = TRUST_BADGES.filter((b) => b.verified);
+const compactBadges = TRUST_BADGES.filter(
+  (b) => b.verified && b.compact !== false && (!b.onlyIfAuthenticity || b.onlyIfAuthenticity === authenticity),
+);
 ---
 
 {
