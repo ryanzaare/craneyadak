@@ -329,6 +329,32 @@ add_action( 'rest_api_init', 'cyh_register_customer_routes' );
  * کانالی است که «فراموشی رمز» می‌تواند از آن عبور کند؛ حساب فقط-شماره
  * یعنی حسابی که هرگز نمی‌تواند رمزش را بازیابی کند.
  */
+/**
+ * ایمیل‌های حساب مشتری (فقط متن ساده — بهترین تحویل‌پذیری؛ لینک‌ها همان نشانی‌های فرانت‌اند).
+ *   registered       : خوش‌آمد پس از ثبت‌نام
+ *   password_changed : هشدار امنیتی پس از هر تغییر رمز (بازیابی یا تغییر در حساب)
+ * ⚠️ شکست ایمیل هرگز عملیات اصلی را رد نمی‌کند: حساب ساخته شده/رمز عوض شده، گفتن «خطا» دروغ است.
+ * متن «اگر شما نبودید» عمداً راه عمل می‌دهد (بازیابی رمز)؛ هشدار بدون راه عمل فقط می‌ترساند.
+ */
+function cyh_customer_notify( $user_id = 0, $kind = '' ) {
+	$user = get_userdata( (int) $user_id );
+	if ( ! $user || ! is_email( (string) $user->user_email ) ) {
+		return false;
+	}
+	$origin = trailingslashit( cyh_get_frontend_url() );
+	$name   = '' !== trim( (string) $user->display_name ) ? trim( (string) $user->display_name ) : 'مشتری گرامی';
+	if ( 'registered' === $kind ) {
+		$subject = 'به کرین یدک خوش آمدید';
+		$body    = "{$name} عزیز،\n\nحساب شما در کرین یدک ساخته شد. از این پس می‌توانید سفارش‌ها و پیش‌فاکتورهایتان را پیگیری کنید و اطلاعات تحویل را ذخیره کنید:\n\n{$origin}account/\n\nاگر این حساب را شما نساخته‌اید، فقط به این پیام پاسخ ندهید و ما را از راه صفحه‌ی تماس مطلع کنید:\n{$origin}contact/";
+	} elseif ( 'password_changed' === $kind ) {
+		$subject = 'رمز عبور حساب شما تغییر کرد';
+		$body    = "{$name} عزیز،\n\nرمز عبور حساب شما در کرین یدک هم‌اکنون تغییر کرد و ورودهای قبلی بسته شدند.\n\nاگر این کار را شما نکرده‌اید، همین حالا از این نشانی رمز را بازیابی کنید و سپس با ما تماس بگیرید:\n{$origin}account/forgot-password\n{$origin}contact/";
+	} else {
+		return false;
+	}
+	return (bool) wp_mail( (string) $user->user_email, $subject, $body );
+}
+
 function cyh_rest_account_register( $request ) {
 	$ip = cyh_client_ip();
 	if ( '' !== trim( (string) $request->get_param( 'website' ) ) ) {
@@ -386,6 +412,7 @@ function cyh_rest_account_register( $request ) {
 	if ( '' !== $org ) {
 		update_user_meta( $user_id, 'cyh_company', $org );
 	}
+	cyh_customer_notify( $user_id, 'registered' );
 
 	$token = cyh_customer_issue_token( $user_id );
 	return rest_ensure_response(
@@ -494,6 +521,7 @@ function cyh_rest_account_reset_password( $request ) {
 	delete_user_meta( $user->ID, CYH_RESET_EXPIRY_META );
 	// ⚠️ تغییر رمز یعنی «همه‌جا خارج شو» — نشست‌های قبلی باطل می‌شوند.
 	cyh_customer_revoke_all_tokens( $user->ID );
+	cyh_customer_notify( $user->ID, 'password_changed' );
 
 	return rest_ensure_response( [ 'success' => true ] );
 }
@@ -678,6 +706,7 @@ function cyh_rest_account_change_password( $request ) {
 
 	wp_set_password( $new, $user_id );
 	cyh_customer_revoke_all_tokens( $user_id );
+	cyh_customer_notify( $user_id, 'password_changed' );
 
 	return rest_ensure_response( [ 'success' => true, 'token' => cyh_customer_issue_token( $user_id ) ] );
 }

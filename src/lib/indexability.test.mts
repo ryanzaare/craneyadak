@@ -1,5 +1,5 @@
 // src/lib/indexability.test.mts — node --experimental-strip-types --no-warnings src/lib/indexability.test.mts
-import { productReadiness, categoryReadiness, brandReadiness, siloReadiness, blocksWordCount, THRESHOLDS } from './indexability.ts';
+import { productReadiness, categoryReadiness, brandReadiness, siloReadiness, blocksWordCount, THRESHOLDS, POLICY } from './indexability.ts';
 
 let failed = 0;
 const t = (name: string, ok: boolean, extra = '') => {
@@ -32,11 +32,15 @@ console.log('── دسته و برند');
 t('خالی → noindex', !categoryReadiness({ readyProducts: 0, contentWords: 0 }).ready);
 t('یک محصول آماده → ایندکس', categoryReadiness({ readyProducts: 1, contentWords: 0 }).ready);
 t('محصول ناقص دسته را ایندکس نمی‌کند (readyProducts=0)', !categoryReadiness({ readyProducts: 0, contentWords: 10 }).ready);
-t('محتوای نهایی ≥۳۰۰ کلمه → ایندکس', categoryReadiness({ readyProducts: 0, contentWords: THRESHOLDS.categoryWords }).ready);
-t('۲۹۹ کلمه → noindex', !categoryReadiness({ readyProducts: 0, contentWords: THRESHOLDS.categoryWords - 1 }).ready);
+t('سیاست فعلی: محتوا به‌تنهایی ایندکس نمی‌کند', POLICY.contentAloneCanIndex === false);
+t('محتوای ۳۰۰ کلمه‌ای و حتی ۵۰۰۰ کلمه‌ای بدون محصول → noindex', !categoryReadiness({ readyProducts: 0, contentWords: THRESHOLDS.categoryWords }).ready && !categoryReadiness({ readyProducts: 0, contentWords: 5000 }).ready);
+t('(کلید روشن) محتوای نهایی ≥۳۰۰ کلمه → ایندکس', categoryReadiness({ readyProducts: 0, contentWords: THRESHOLDS.categoryWords, contentAlone: true }).ready);
+t('(کلید روشن) ۲۹۹ کلمه → noindex', !categoryReadiness({ readyProducts: 0, contentWords: THRESHOLDS.categoryWords - 1, contentAlone: true }).ready);
 t('بازنویسی عمدی', categoryReadiness({ readyProducts: 0, contentWords: 0, override: true }).ready);
-t('برند: ۱۵۰ کلمه → ایندکس', brandReadiness({ readyProducts: 0, contentWords: THRESHOLDS.brandWords }).ready);
-t('برند: ۱۴۹ کلمه → noindex', !brandReadiness({ readyProducts: 0, contentWords: THRESHOLDS.brandWords - 1 }).ready);
+t('برند: ۱۵۰ کلمه بدون محصول → noindex (سیاست فعلی)', !brandReadiness({ readyProducts: 0, contentWords: THRESHOLDS.brandWords }).ready);
+t('برند (کلید روشن): ۱۵۰ کلمه → ایندکس', brandReadiness({ readyProducts: 0, contentWords: THRESHOLDS.brandWords, contentAlone: true }).ready);
+t('برند (کلید روشن): ۱۴۹ کلمه → noindex', !brandReadiness({ readyProducts: 0, contentWords: THRESHOLDS.brandWords - 1, contentAlone: true }).ready);
+t('برند با یک محصول کامل → ایندکس', brandReadiness({ readyProducts: 1, contentWords: 0 }).ready);
 t('برند خالی → noindex', !brandReadiness({ readyProducts: 0, contentWords: 0 }).ready);
 
 console.log('── blocksWordCount');
@@ -47,7 +51,7 @@ t('جدول، پرسش، قطعه و مشخصات', blocksWordCount([{ rows: [{ 
 t('تهی/undefined', blocksWordCount(undefined) === 0 && blocksWordCount([]) === 0);
 const mixed = blocksWordCount([{ bodyHtml: w(200) }, { needsReview: true, bodyHtml: w(200) }, { bodyHtml: w(150) }]);
 t('جمع بلوک‌های نهایی بدون پیش‌نویس‌ها', mixed === 350, String(mixed));
-t('آستانه‌ی دسته با بلوک‌ها', categoryReadiness({ readyProducts: 0, contentWords: mixed }).ready);
+t('آستانه‌ی دسته با بلوک‌ها (کلید روشن)', categoryReadiness({ readyProducts: 0, contentWords: mixed, contentAlone: true }).ready);
 
 if (failed) { console.error(`\n❌ ${failed} مورد ناموفق`); process.exit(1); }
 console.log('── سیلو');

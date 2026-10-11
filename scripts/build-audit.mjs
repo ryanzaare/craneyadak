@@ -58,6 +58,7 @@ export function parsePage(route, html) {
     h1: squash((/<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] ?? '').replace(/<[^>]+>/g, ' ')),
     text: squash(html.replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ')),
     jsonld,
+    productLinks: [...new Set([...html.matchAll(/href=["']\/products\/([^"'\/?#]+)\/["']/g)].map((m) => `/products/${m[1]}/`))],
     authenticity: /data-authenticity=["'](original|non_original)["']/.exec(html)?.[1] ?? '',
   };
 }
@@ -66,6 +67,26 @@ const UTILITY = ['/account/', '/checkout/', '/track/', '/search/', '/thank-you/'
 const isUtility = (route) => UTILITY.some((p) => route.startsWith(p));
 /** صفحه‌ای که باید در ایندکس بیاید: نه ریدایرکت، نه 404، نه noindex. */
 export const isIndexable = (p) => !p.isRedirect && !p.noindex && p.route !== '/404.html' && p.route !== '/404/';
+
+const LISTING = [/^\/brands\/$/, /^\/brands\/[^/]+\/$/, /^\/categories\/$/, /^\/categories\/[^/]+\/$/, /^\/categories\/[^/]+\/[^/]+\/$/, /^\/products\/$/];
+
+/**
+ * ⚠️ سیاست کارفرما (۱۹ مهر ۱۴۰۵): برند/دسته/سیلو/فهرست فقط با «محصولِ کامل» ایندکس‌پذیرند. این نگهبان از *خروجی واقعی* می‌سنجد
+ * (نه از منطق خود src/lib/indexability.ts که ممکن است خودش باگ داشته باشد): صفحه‌ی فهرستِ ایندکس‌پذیر باید به دست‌کم یک
+ * صفحه‌ی محصولِ ایندکس‌پذیر لینک بدهد. `allowEmpty` = INDEX_EMPTY_CATEGORIES=1 (بازنویسی عمدی).
+ */
+export function emptyListingProblems(pages, { allowEmpty = false } = {}) {
+  if (allowEmpty) return [];
+  const indexableProducts = new Set(pages.filter((p) => /^\/products\/[^/]+\/$/.test(p.route) && isIndexable(p) && !isUtility(p.route)).map((p) => p.route));
+  const out = [];
+  for (const p of pages) {
+    if (!isIndexable(p) || !LISTING.some((re) => re.test(p.route))) continue;
+    if (!(p.productLinks ?? []).some((l) => indexableProducts.has(l))) {
+      out.push(`${p.route}: ایندکس‌پذیر است ولی به هیچ صفحه‌ی محصولِ ایندکس‌پذیر لینک نمی‌دهد — صفحه‌ی خالی باید noindex باشد`);
+    }
+  }
+  return out;
+}
 
 export function routeMatrixProblems(pages, sitemapLocs) {
   const out = [];

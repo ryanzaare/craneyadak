@@ -14,6 +14,11 @@ import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { SITE } from '../../data/site';
 import { SILOS, ALL_CATEGORIES, categoryPath, siloPath } from '../../data/taxonomy';
+import { getAllProducts } from '../../lib/wp';
+import { productReadiness } from '../../lib/indexability';
+
+// ⚠️ فهرست بدون هیچ محصولِ کامل = صفحه‌ی خالی → noindex (تصمیم کارفرما ۱۹ مهر ۱۴۰۵)؛ با اولین محصول کامل خودکار ایندکس‌پذیر می‌شود.
+const noindexHub = !(await getAllProducts()).some((p) => productReadiness(p).ready);
 
 const title = `لیست کامل دسته‌بندی قطعات جرثقیل سقفی | ${SITE.name}`;
 const description = `مرور کامل ${ALL_CATEGORIES.length} دسته قطعه‌ی جرثقیل سقفی در ${SILOS.length} گروه تخصصی: از بالابر و برق‌رسانی تا ترمز، محرکه و ریل. یافتن سریع قطعه بر اساس گروه فنی.`;
@@ -58,7 +63,7 @@ const jsonLd = {
 };
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexHub}>
   <section class="bg-crane-navy text-white pt-10 pb-16 px-4 border-b-[8px] border-crane-orange">
     <div class="max-w-7xl mx-auto">
       <Breadcrumb items={breadcrumbItems} />

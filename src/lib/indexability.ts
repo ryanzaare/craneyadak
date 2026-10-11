@@ -8,9 +8,9 @@
 //   محصول : نام + برند + دست‌کم یک دسته + دست‌کم یک تصویر + متن توضیحی (خلاصه+متن) ≥ ۱۰۰ کاراکتر؛ و نمایشی نباشد.
 //           ⚠️ کد فنی (SKU) شرط *نیست*: کارفرما (۱۹ مهر ۱۴۰۵) گفت حدود نیمی از محصولات اصلاً کد فنی ندارند؛
 //           شرط‌گذاشتن روی آن نیمی از کاتالوگ را برای همیشه noindex نگه می‌داشت. کدِ ساختگی هم ممنوع است (قاعده‌ی ۲).
-//   دسته  : دست‌کم یک محصول *آماده*  یا  محتوای تخصصی نهایی ≥ ۳۰۰ کلمه (بلوک‌های بدون علامت «نیاز به بازبینی»).
-//   برند  : دست‌کم یک محصول *آماده*  یا  پروفایل تخصصی نهایی ≥ ۱۵۰ کلمه.
-//   سیلو  : دست‌کم یک دسته‌ی فرزندِ *آماده* (تصمیم کارفرما ۱۹ مهر: سیلوی بدون محتوا noindex).
+//   دسته  : دست‌کم یک محصول *آماده*. (محتوای ≥ ۳۰۰ کلمه فقط وقتی POLICY.contentAloneCanIndex=true؛ فعلاً خاموش.)
+//   برند  : دست‌کم یک محصول *آماده*. (پروفایل ≥ ۱۵۰ کلمه فقط با همان کلید.)
+//   سیلو  : دست‌کم یک دسته‌ی فرزندِ *آماده* (یعنی دارای محصول کامل). تصمیم کارفرما ۱۹ مهر: همه‌ی برند/دسته/سیلو noindex تا محصول کامل بیاید.
 // ⚠️ «محصول آماده» می‌شمرد، نه «هر محصولی»: محصول آزمایشی/ناقص یک دسته را ایندکس‌پذیر نمی‌کند.
 // آستانه‌ها اینجا و فقط اینجا عوض می‌شوند.
 // ---------------------------------------------------------------------------
@@ -89,19 +89,29 @@ export function blocksWordCount(blocks: readonly BlockLike[] | null | undefined)
   return n;
 }
 
+/**
+ * ⚠️ سیاست موقت کارفرما (۱۹ مهر ۱۴۰۵، «تا اطلاع ثانوی»): برند، دسته و سیلو *فقط با محصولِ کامل* ایندکس‌پذیرند.
+ * محتوای تخصصی (حتی ≥ آستانه) یا فرزند دارای محتوا به‌تنهایی کافی نیست.
+ * برای برداشتن: `contentAloneCanIndex` را true کن؛ آستانه‌های کلمه و آزمون‌هایش همان‌جا مانده‌اند (فقط پشت این کلید خاموش‌اند).
+ */
+export const POLICY = { contentAloneCanIndex: false } as const;
+
 export interface PageInput {
   readyProducts: number;
   contentWords: number;
+  /** برای آزمون؛ پیش‌فرض POLICY.contentAloneCanIndex. */
+  contentAlone?: boolean;
   /** بازنویسی عمدی کارفرما (INDEX_EMPTY_CATEGORIES=1 برای دسته). */
   override?: boolean;
 }
 
 function pageReadiness(input: PageInput, minWords: number): Readiness {
   if (input.override) return { ready: true, missing: [] };
-  const ready = input.readyProducts > 0 || input.contentWords >= minWords;
+  const contentAlone = input.contentAlone ?? POLICY.contentAloneCanIndex;
+  const ready = input.readyProducts > 0 || (contentAlone && input.contentWords >= minWords);
   return {
     ready,
-    missing: ready ? [] : [`بدون محصول آماده و محتوای نهایی (${input.contentWords} از ${minWords} کلمه)`],
+    missing: ready ? [] : [contentAlone ? `بدون محصول کامل و محتوای نهایی (${input.contentWords} از ${minWords} کلمه)` : 'بدون محصول کامل (سیاست: محتوا به‌تنهایی ایندکس نمی‌کند)'],
   };
 }
 
@@ -114,5 +124,5 @@ export const brandReadiness = (i: PageInput) => pageReadiness(i, THRESHOLDS.bran
  */
 export function siloReadiness(children: readonly boolean[], override = false): Readiness {
   if (override || children.some(Boolean)) return { ready: true, missing: [] };
-  return { ready: false, missing: ['دسته‌ی فرزند آماده (محصول کامل یا محتوای نهایی)'] };
+  return { ready: false, missing: ['دسته‌ی فرزند دارای محصول کامل'] };
 }

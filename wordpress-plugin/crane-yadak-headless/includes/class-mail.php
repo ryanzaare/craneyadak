@@ -15,16 +15,13 @@
  *   define( 'CYH_SMTP_PASS',   '…' );
  *   define( 'CYH_MAIL_FROM_NAME', 'کرین یدک' );           // اختیاری
  *
- * تا HOST/USER/PASS هر سه تعریف نشده‌اند، هیچ‌چیز تغییر نمی‌کند (رفتار قبلی). وضعیت و ارسال آزمایشی:
- * تنظیمات ← ایمیل (SMTP).
+ * تا HOST/USER/PASS هر سه تعریف نشده‌اند، هیچ‌چیز تغییر نمی‌کند (رفتار قبلی).
+ * برای نرسیدن به اسپم: cPanel ← Email Deliverability ← SPF و DKIM باید Valid باشند.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-
-const CYH_MAIL_PAGE       = 'cyh-mail';
-const CYH_MAIL_LAST_ERROR = 'cyh_mail_last_error';
 
 /**
  * تنظیمات SMTP یا null اگر کامل نیست.
@@ -85,67 +82,9 @@ function cyh_smtp_from_name( $name = '' ) {
 }
 add_filter( 'wp_mail_from_name', 'cyh_smtp_from_name' );
 
-/** علت آخرین شکست ارسال، برای صفحه‌ی وضعیت (بدون رمز: فقط پیام PHPMailer). */
+/** شکست ارسال فقط در لاگ سرور (debug.log) ثبت می‌شود؛ رمز در پیام PHPMailer نیست. */
 function cyh_mail_failed( $error = null ) {
 	$msg = is_object( $error ) && method_exists( $error, 'get_error_message' ) ? (string) $error->get_error_message() : 'نامشخص';
-	set_transient( CYH_MAIL_LAST_ERROR, $msg, DAY_IN_SECONDS );
 	error_log( 'کرین یدک: ارسال ایمیل شکست خورد — ' . $msg );
 }
 add_action( 'wp_mail_failed', 'cyh_mail_failed' );
-
-function cyh_register_mail_page() {
-	add_options_page( 'ایمیل (SMTP)', 'ایمیل (SMTP)', 'manage_options', CYH_MAIL_PAGE, 'cyh_render_mail_page' );
-}
-add_action( 'admin_menu', 'cyh_register_mail_page' );
-
-function cyh_render_mail_page() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		return;
-	}
-	$cfg  = cyh_smtp_config();
-	$last = get_transient( CYH_MAIL_LAST_ERROR );
-	?>
-	<div class="wrap">
-		<h1>ایمیل (SMTP)</h1>
-		<?php if ( null === $cfg ) : ?>
-			<div class="notice notice-warning inline"><p>
-				<strong>SMTP تنظیم نشده است.</strong> ایمیل‌ها با <code>mail()</code> پیش‌فرض می‌روند و احتمالاً به اسپم می‌افتند.
-				ثابت‌های <code>CYH_SMTP_HOST</code>، <code>CYH_SMTP_USER</code> و <code>CYH_SMTP_PASS</code> را در <code>wp-config.php</code> بگذارید
-				(راهنما: بالای فایل <code>includes/class-mail.php</code>). رمز عمداً در پایگاه‌داده ذخیره نمی‌شود.
-			</p></div>
-		<?php else : ?>
-			<div class="notice notice-success inline"><p>
-				SMTP فعال است: <code dir="ltr"><?php echo esc_html( $cfg['user'] . ' @ ' . $cfg['host'] . ':' . $cfg['port'] . ' (' . $cfg['secure'] . ')' ); ?></code>
-			</p></div>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="cyh_mail_test" />
-				<?php wp_nonce_field( 'cyh_mail_test' ); ?>
-				<p>یک ایمیل آزمایشی به نشانی ایمیل حساب شما فرستاده می‌شود. پس از ارسال، پوشه‌ی «اسپم» را هم نگاه کنید.</p>
-				<?php submit_button( 'ارسال ایمیل آزمایشی', 'secondary', 'submit', false ); ?>
-			</form>
-		<?php endif; ?>
-		<?php if ( isset( $_GET['sent'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification ?>
-			<?php if ( '1' === $_GET['sent'] ) : // phpcs:ignore WordPress.Security.NonceVerification ?>
-				<div class="notice notice-success inline"><p>ارسال شد (به‌معنی تحویل در صندوق نیست؛ صندوق و اسپم را ببینید).</p></div>
-			<?php else : ?>
-				<div class="notice notice-error inline"><p>ارسال نشد<?php echo $last ? ': ' . esc_html( (string) $last ) : ''; ?></p></div>
-			<?php endif; ?>
-		<?php endif; ?>
-		<h2>پس از اتصال SMTP</h2>
-		<p>برای نرسیدن به اسپم، در cPanel ← «Email Deliverability» رکوردهای <strong>SPF</strong> و <strong>DKIM</strong> دامنه باید «Valid» باشند.</p>
-	</div>
-	<?php
-}
-
-function cyh_mail_test_handler() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( 'دسترسی ندارید.', 403 );
-	}
-	check_admin_referer( 'cyh_mail_test' );
-	delete_transient( CYH_MAIL_LAST_ERROR );
-	$user = wp_get_current_user();
-	$ok   = wp_mail( (string) $user->user_email, 'آزمایش ایمیل — کرین یدک', 'این یک ایمیل آزمایشی از وردپرس کرین یدک است. اگر این را در صندوق می‌بینید، SMTP درست کار می‌کند.' );
-	wp_safe_redirect( add_query_arg( [ 'page' => CYH_MAIL_PAGE, 'sent' => $ok ? '1' : '0' ], admin_url( 'options-general.php' ) ) );
-	exit;
-}
-add_action( 'admin_post_cyh_mail_test', 'cyh_mail_test_handler' );

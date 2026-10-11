@@ -9,7 +9,7 @@
 // ---------------------------------------------------------------------------
 import { readFileSync, writeFileSync, existsSync, mkdirSync, globSync } from 'node:fs';
 import path from 'node:path';
-import { parsePage, routeOf, isIndexable, routeMatrixProblems, metadataProblems, productSchemaProblems, shrinkageProblems } from './build-audit.mjs';
+import { parsePage, routeOf, isIndexable, routeMatrixProblems, metadataProblems, productSchemaProblems, shrinkageProblems, emptyListingProblems } from './build-audit.mjs';
 
 const dist = process.argv[2] || 'dist';
 if (!existsSync(dist)) {
@@ -26,7 +26,7 @@ const sitemapLocs = globSync(`${dist}/sitemap-*.xml`)
   .filter((f) => !f.endsWith('sitemap-index.xml'))
   .flatMap((f) => [...readFileSync(f, 'utf8').matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]));
 
-const problems = [...routeMatrixProblems(pages, sitemapLocs), ...metadataProblems(pages), ...productSchemaProblems(pages)];
+const problems = [...routeMatrixProblems(pages, sitemapLocs), ...metadataProblems(pages), ...productSchemaProblems(pages), ...emptyListingProblems(pages, { allowEmpty: process.env.INDEX_EMPTY_CATEGORIES === '1' })];
 
 const indexable = pages.filter((p) => isIndexable(p)).map((p) => p.route).sort();
 const MANIFEST = '.astro/build-manifest.json';

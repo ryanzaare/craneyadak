@@ -17,6 +17,11 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 import { SITE } from '../../data/site';
 import { BRAND_CLASSES, type BrandClass } from '../../data/taxonomy';
 import { getBrands } from '../../lib/brands';
+import { getAllProducts } from '../../lib/wp';
+import { productReadiness } from '../../lib/indexability';
+
+// ⚠️ فهرست بدون هیچ محصولِ کامل = صفحه‌ی خالی → noindex (تصمیم کارفرما ۱۹ مهر ۱۴۰۵)؛ با اولین محصول کامل خودکار ایندکس‌پذیر می‌شود.
+const noindexHub = !(await getAllProducts()).some((p) => productReadiness(p).ready);
 
 // برندها از وردپرس — رنگ، متن لوگو، انکرتکست و توضیح سئو از پنل می‌آیند.
 const BRANDS = await getBrands();
@@ -66,7 +71,7 @@ const jsonLd = {
 };
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexHub}>
   <section class="bg-crane-navy text-white pt-10 pb-16 px-4 border-b-[8px] border-crane-orange">
     <div class="max-w-7xl mx-auto">
       <Breadcrumb items={breadcrumbItems} />

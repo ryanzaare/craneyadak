@@ -21,7 +21,7 @@ export const WARRANTY_BY_CATEGORY: Readonly<Record<string, CategoryWarranty>> = 
     exclusions: [
       'آسیب ناشی از نفوذ آب',
       'ضربه‌ی فیزیکی',
-      'نوسان برق',
+      'نوسانات برق',
       'نصب نادرست',
       'دست‌کاری غیرمجاز در سیستم',
       'استفاده از باتری نامناسب (مثل باتری شارژی)',

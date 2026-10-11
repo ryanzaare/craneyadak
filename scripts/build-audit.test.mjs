@@ -1,6 +1,6 @@
 // scripts/build-audit.test.mjs — node scripts/build-audit.test.mjs
 // ورودی خراب شناخته‌شده عمداً هست (قاعده‌ی ۶): اگر ممیزی چیزی را نگیرد، این‌جا قرمز می‌شود.
-import { parsePage, routeOf, routeMatrixProblems, metadataProblems, productSchemaProblems, shrinkageProblems, SITE_ORIGIN } from './build-audit.mjs';
+import { parsePage, routeOf, routeMatrixProblems, metadataProblems, productSchemaProblems, shrinkageProblems, emptyListingProblems, SITE_ORIGIN } from './build-audit.mjs';
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -62,6 +62,19 @@ has('محصول ایندکس‌پذیر بدون تصویر گرفته می‌ش
 has('تصویر خالی هم تصویر نیست', productSchemaProblems([prod({ image: [] })]), 'هیچ تصویری ندارد');
 has('دو Product', productSchemaProblems([P('/products/p2/', { ld: [{ '@type': 'Product' }, { '@type': 'Product' }] })]), 'دقیقاً یک Product');
 has('بدون Product', productSchemaProblems([P('/products/p3/')]), 'دقیقاً یک Product');
+
+console.log('── فهرست خالی نباید ایندکس‌پذیر باشد');
+const link = (slug) => `<a href="/products/${slug}/">x</a>`;
+const readyProduct = P('/products/p1/');
+const noindexProduct = P('/products/p2/', { robots: 'noindex, follow' });
+eq('دسته‌ی ایندکس‌پذیر با محصول ایندکس‌پذیر سالم است', emptyListingProblems([readyProduct, P('/categories/a/b/', { body: link('p1') })]), []);
+has('دسته‌ی ایندکس‌پذیر بدون هیچ لینک محصول', emptyListingProblems([readyProduct, P('/categories/a/b/')]), 'صفحه‌ی خالی باید noindex باشد');
+has('فقط لینک به محصول noindex کافی نیست', emptyListingProblems([noindexProduct, P('/brands/saga/', { body: link('p2') })]), '/brands/saga/');
+has('سیلو', emptyListingProblems([P('/categories/silo/')]), '/categories/silo/');
+has('فهرست برندها و محصولات', emptyListingProblems([P('/brands/'), P('/products/')]), '/products/');
+eq('فهرست noindex معاف است', emptyListingProblems([P('/categories/a/b/', { robots: 'noindex' })]), []);
+eq('INDEX_EMPTY_CATEGORIES=1 بازنویسی عمدی', emptyListingProblems([P('/categories/a/b/')], { allowEmpty: true }), []);
+eq('صفحه‌ی غیرفهرست (درباره) معاف است', emptyListingProblems([P('/about/')]), []);
 
 console.log('── کوچک‌شدن بی‌صدا');
 const prev = Array.from({ length: 40 }, (_, i) => `/p${i}/`);

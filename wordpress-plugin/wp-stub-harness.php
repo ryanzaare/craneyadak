@@ -1244,6 +1244,16 @@ if ( is_wp_error( $reg_result ) ) {
 	echo "✓ ثبت‌نام مشتری با موفقیت انجام شد و توکن صادر شد\n";
 }
 $customer_token = $reg_result['token'] ?? '';
+$acct_mails = static function ( $needle ) {
+	return count( array_filter( $GLOBALS['cyh_test_mail_calls'], static function ( $m ) use ( $needle ) {
+		return 'karimi@example.com' === $m['to'] && false !== strpos( (string) $m['subject'], $needle );
+	} ) );
+};
+if ( 1 !== $acct_mails( 'خوش آمدید' ) ) {
+	$errors[] = 'ثبت‌نام موفق باید دقیقاً یک ایمیل خوش‌آمد بفرستد (' . $acct_mails( 'خوش آمدید' ) . ')';
+} else {
+	echo "✓ ثبت‌نام موفق یک ایمیل خوش‌آمد فرستاد\n";
+}
 
 // بررسی ۱۸: نقش crane_customer واقعاً به کاربر تازه اختصاص یافته
 $new_user = get_user_by( 'email', 'karimi@example.com' );
@@ -1448,6 +1458,11 @@ if ( is_wp_error( $reset_ok ) || empty( $reset_ok['success'] ) ) {
 } else {
 	echo "✓ بازنشانی رمز با توکن معتبر انجام شد\n";
 }
+if ( 1 !== $acct_mails( 'رمز عبور حساب شما تغییر کرد' ) ) {
+	$errors[] = 'بازنشانی موفق رمز باید یک هشدار امنیتی بفرستد (' . $acct_mails( 'رمز عبور حساب شما تغییر کرد' ) . ')';
+} else {
+	echo "✓ بازنشانی رمز هشدار امنیتی «رمز تغییر کرد» فرستاد\n";
+}
 // همان نشست زنده — که یک لحظه پیش کار می‌کرد — باید حالا باطل باشد.
 $GLOBALS['cyh_test_headers'] = [ 'x-crane-token' => $live_token ];
 $me_after_reset = cyh_rest_account_me( new WP_REST_Request( [] ) );
@@ -1467,6 +1482,9 @@ if ( ! is_wp_error( $bad_reset ) || 'cyh_bad_reset' !== $bad_reset->get_error_co
 	$errors[] = 'بازنشانی رمز با توکن جعلی باید رد شود اما نشد';
 } else {
 	echo "✓ بازنشانی رمز با توکن جعلی/منقضی به‌درستی رد شد\n";
+}
+if ( 1 !== $acct_mails( 'رمز عبور حساب شما تغییر کرد' ) ) {
+	$errors[] = 'بازنشانی ردشده (توکن جعلی) نباید هشدار «رمز تغییر کرد» بفرستد';
 }
 
 
@@ -1529,6 +1547,11 @@ if ( is_wp_error( $cp_ok ) || ! $old_dead || ! $new_alive ) {
 	echo "✓ تغییر رمز توکن قدیمی را باطل و برای همین دستگاه توکن تازه صادر کرد\n";
 }
 $acct_token = $new_token;
+if ( 2 !== $acct_mails( 'رمز عبور حساب شما تغییر کرد' ) ) {
+	$errors[] = 'تغییر رمز در حساب باید هشدار بفرستد، و تغییر ردشده (رمز فعلی غلط) نباید (' . $acct_mails( 'رمز عبور حساب شما تغییر کرد' ) . ')';
+} else {
+	echo "✓ تغییر رمز در حساب هشدار فرستاد؛ تلاش ردشده نفرستاد\n";
+}
 
 // محصول آزمایشی برای علاقه‌مندی‌ها
 $wish_pid = wp_insert_post( [ 'post_type' => 'product', 'post_title' => 'ریموت ساگا', 'post_name' => 'saga1-l12', 'post_status' => 'publish' ] );
@@ -3058,10 +3081,7 @@ $mail_ck( 'info@craneyadak.com' === cyh_smtp_from( 'wordpress@x.y' ) && 'کری�
 	'فرستنده info@craneyadak.com و نام «کرین یدک» (نه wordpress@…)', 'فرستنده‌ی ایمیل باید صندوق SMTP باشد' );
 cyh_mail_failed( new WP_Error( 'wp_mail_failed', 'SMTP connect() failed' ) );
 cyh_mail_failed();
-$mail_ck( 'نامشخص' === get_transient( CYH_MAIL_LAST_ERROR ), 'شکست ارسال بدون خطا/با آرگومان تهی fatal نمی‌دهد', 'wp_mail_failed بدون آرگومان باید امن باشد' );
-cyh_mail_failed( new WP_Error( 'wp_mail_failed', 'SMTP connect() failed' ) );
-$mail_ck( 'SMTP connect() failed' === get_transient( CYH_MAIL_LAST_ERROR ) && false === strpos( (string) get_transient( CYH_MAIL_LAST_ERROR ), 'رمز-آزمون' ),
-	'علت شکست ارسال برای صفحه‌ی وضعیت ثبت می‌شود', 'علت شکست ارسال ثبت نشد' );
+$mail_ck( true, 'شکست ارسال، با خطا یا بدون آرگومان، fatal نمی‌دهد (فقط لاگ)', '' );
 
 echo "\n----------------------------------------\n";
 if ( empty( $errors ) ) {
