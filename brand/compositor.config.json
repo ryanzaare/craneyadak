@@ -1,0 +1,40 @@
+{
+  "canvas": 1600,
+  "jpegQuality": 92,
+  "brandName": "کرین یدک",
+  "palette": {
+    "source": "src/styles/global.css",
+    "tokens": {
+      "bgCenter": "--color-steel-800",
+      "bgMid": "--color-steel-900",
+      "bgEdge": "--color-steel-950",
+      "grid": "--color-steel-300",
+      "text": "--color-steel-50",
+      "muted": "--color-steel-300",
+      "accent": "--color-accent"
+    }
+  },
+  "contact": {
+    "phone": "02146876980",
+    "site": "craneyadak.com",
+    "digits": "fa"
+  },
+  "logo": {
+    "file": "public/logo.png",
+    "placement": "footer-start"
+  },
+  "font": {
+    "family": "Vazirmatn",
+    "file": "public/fonts/Vazirmatn-Variable.woff2"
+  },
+  "layout": {
+    "marginPct": 11,
+    "footerHeightPct": 11,
+    "footerRulePx": 8,
+    "logoHeightPct": 66,
+    "cardHeaderHeightPct": 21,
+    "bracketSizePct": 6,
+    "bracketInsetPct": 3.2,
+    "bracketThicknessPx": 6
+  }
+}

@@ -136,5 +136,40 @@ Fixes:
 - **Make the AI do less.** Ask Gemini only for: cut-out, then backdrop and light. Give the real photo twice in the prompt
   ("do not redraw labels or text; keep every sticker pixel-faithful"). If stickers still change, composite the cut-out from
   pass 1 over a backdrop in the template instead of letting the model touch the part again.
-- **Compositor tool (offered, not built):** a small script that takes the cut-out + a JSON of name/chips/phone and exports the final
-  1600×1600 AVIF/JPG. It fixes fault 1 and 2 for every product at once and keeps Persian text correct. Ask for it when ready.
+- **Compositor tool: built** (section 8).
+
+## 8. The compositor (`scripts/compose-image.mjs`)
+
+Gemini does **one** job: remove the background and return a **transparent PNG** of the real part (prompt: "Remove only the background.
+Keep the part pixel-faithful. Do not redraw, sharpen, recolour or touch any label, sticker or text. Transparent PNG."). Everything else —
+backdrop, orange frame, shadow, logo, name, chips, site, phone — is drawn by the script, the same way every time. The AI never sees the
+brand look, so it cannot garble it, and the part's pixels are only moved and scaled, never repainted.
+
+```bash
+# hero (clean gallery image)
+npm run compose -- --photo cutout.png --out saga1-l12-saga-front-01.jpg
+# info card (name + up to 4 chips; text comes from you, from the product page)
+npm run compose -- --photo cutout.png --out saga1-l12-saga-card-02.jpg --variant card \
+  --name "ریموت کنترل ساگا SAGA1-L12" --chip "دو سرعته" --chip "۱۸ ماه ضمانت تعمیر"
+# batch: a JSON array of {photo,out,variant,name,chips,illustration}
+npm run compose -- --spec specs.json
+```
+
+It refuses (clear error, nothing written) on: an opaque photo, a cut-out with no real transparency, an unreadable name or chip, a bad
+phone in the config, an unknown colour token, or a blank render. `--illustration` adds the visible «تصویرسازی» label (rule 1).
+Output: 1600×1600 JPG (default), or `.png` / `.webp` / `.avif` by file extension.
+
+**Where the palette and the logo live (one place each):**
+
+| What | Where | Change it by |
+|---|---|---|
+| Colours | Token names in `brand/compositor.config.json` → `palette.tokens` (e.g. `accent: --color-accent`); the **hex values** are read from `src/styles/global.css` at run time | Edit the token in `global.css`. The site and every future image move together; a missing token is an error, never a silent default |
+| Logo file and side | `logo.file` (`public/logo.png`) and `logo.placement` (`footer-start` = right side in RTL, `footer-end`) in the config | Change the file or the word. The dark navy outline is recoloured light automatically so it shows on graphite; orange is kept |
+| Wordmark text, phone, site | `brandName`, `contact.phone`, `contact.site` in the config | One edit, then re-run the batch. This is why a phone in every image is safe |
+| Layout | `layout.*` in the config (margins, footer height, logo size, corner brackets), each validated to a sane range | Edit numbers, re-render the pilot 3 images, then freeze |
+| Font | `font.file` (Vazirmatn, the site font) | Same file as the site |
+
+If the site redesign changes the palette, edit `global.css` first; the images follow. Re-render old images from the saved cut-outs, so
+**keep every cut-out PNG** next to the raw photo.
+
+Tests: `npm run test:compose` (no Chrome, part of `npm run check`) and `npm run test:compose-render` (real Chrome render).
