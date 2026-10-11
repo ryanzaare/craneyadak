@@ -549,17 +549,31 @@ function cyh_zp_post( $path, array $body ) {
 		]
 	);
 	if ( is_wp_error( $res ) ) {
-		return [ 'network' => true, 'code' => null, 'data' => [] ];
+		return [ 'network' => true, 'code' => null, 'data' => [], 'http' => 0, 'message' => (string) $res->get_error_message() ];
 	}
+	$http = (int) wp_remote_retrieve_response_code( $res );
 	$json = json_decode( (string) wp_remote_retrieve_body( $res ), true );
 	$data = is_array( $json['data'] ?? null ) ? $json['data'] : [];
 	$code = null;
+	$msg  = '';
 	if ( isset( $data['code'] ) ) {
 		$code = (int) $data['code'];
+		$msg  = (string) ( $data['message'] ?? '' );
 	} elseif ( is_array( $json['errors'] ?? null ) && isset( $json['errors']['code'] ) ) {
 		$code = (int) $json['errors']['code'];
+		$msg  = (string) ( $json['errors']['message'] ?? '' );
 	}
-	return [ 'network' => ! is_array( $json ), 'code' => $code, 'data' => $data ];
+	return [ 'network' => ! is_array( $json ), 'code' => $code, 'data' => $data, 'http' => $http, 'message' => $msg ];
+}
+
+/**
+ * علت خطای درگاه برای *مدیر* (متای سفارش) — نه برای خریدار.
+ * ⚠️ پیام خریدار عمداً کلی است («اتصال برقرار نشد»)؛ ولی بدون ثبت علت، «مرچنت اشتباه»، «دامنه تأییدنشده»،
+ * «آی‌پی سرور مجاز نیست» و «بسته‌بودن ارتباط سرور» همگی یک‌شکل دیده می‌شدند و حدس زدن لازم می‌شد.
+ * فقط کد/پیام درگاه و وضعیت HTTP ثبت می‌شود؛ merchant هرگز.
+ */
+function cyh_zp_error_text( array $zp ) {
+	return trim( sprintf( 'HTTP %d | کد %s | %s', (int) ( $zp['http'] ?? 0 ), null === ( $zp['code'] ?? null ) ? '—' : (string) $zp['code'], (string) ( $zp['message'] ?? '' ) ) );
 }
 
 /** مبدأ سایت استاتیک برای بازگشت: فقط از فهرست CORS، وگرنه پیش‌فرض. */
@@ -698,6 +712,8 @@ function cyh_rest_checkout_pay( $request ) {
 	if ( 100 !== $zp['code'] || '' === $authority ) {
 		update_post_meta( $post_id, 'cyh_payment', 'failed' );
 		update_post_meta( $post_id, 'cyh_pay_error', $zp['network'] ? 'network' : (string) $zp['code'] );
+		update_post_meta( $post_id, 'cyh_pay_error_msg', cyh_zp_error_text( $zp ) );
+		error_log( 'کرین یدک: درگاه پرداخت درخواست را نپذیرفت — ' . cyh_zp_error_text( $zp ) );
 		return new WP_REST_Response(
 			[ 'ok' => false, 'message' => 'اتصال به درگاه پرداخت برقرار نشد. چند دقیقه بعد دوباره امتحان کنید.' ],
 			502
@@ -794,6 +810,7 @@ function cyh_checkout_complete( $code, $authority ) {
 		}
 		update_post_meta( $id, 'cyh_payment', 'failed' );
 		update_post_meta( $id, 'cyh_pay_error', (string) $zp['code'] );
+		update_post_meta( $id, 'cyh_pay_error_msg', cyh_zp_error_text( $zp ) );
 		return $done( 'fail' );
 	} finally {
 		delete_option( $lock );
@@ -1010,6 +1027,9 @@ function cyh_order_metabox( $post_type = '', $post = null ) {
 			};
 			$row( 'وضعیت پرداخت', ( $labels[ $pay ] ?? $pay ) . ( get_post_meta( $post->ID, 'cyh_sandbox', true ) ? ' (آزمایشی — پول واقعی نیست)' : '' ) );
 			$row( 'شماره پیگیری زرین‌پال', 'paid' === $pay ? get_post_meta( $post->ID, 'cyh_ref_id', true ) : '—' );
+			if ( 'failed' === $pay ) {
+				$row( 'علت خطای درگاه', get_post_meta( $post->ID, 'cyh_pay_error_msg', true ) ?: ( get_post_meta( $post->ID, 'cyh_pay_error', true ) ?: '—' ) );
+			}
 			$row( 'جمع اقلام (ریال)', number_format( (int) get_post_meta( $post->ID, 'cyh_subtotal', true ) ) );
 			$row( 'ارزش افزوده (ریال)', number_format( (int) get_post_meta( $post->ID, 'cyh_vat', true ) ) );
 			$row( 'مبلغ کل (ریال)', number_format( (int) get_post_meta( $post->ID, 'cyh_total', true ) ) );

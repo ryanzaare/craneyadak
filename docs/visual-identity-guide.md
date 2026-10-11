@@ -120,3 +120,21 @@ camera motion and mood, never to show how a part works. Do not use generated aud
 3. Freeze v1. Record the version in this file.
 4. Batch the catalogue per category as products get real SKUs (SKUs come from the client during the content phase).
 5. One 20–30 s video per top category after its images are done.
+
+## 7. Lessons from the first master image (client review, 19 Mehr 1405)
+
+Result judged "awful". Faults: (1) a fake phone number drawn by the AI (021-12345678); (2) no product name or key details;
+(3) very plain, boring design. **A fourth fault the client did not list:** the AI redrew the stickers on the remote, so their
+text is unreadable gibberish. That breaks hard rule 1 — the part was altered. Also check the product in the picture is the product on the page.
+
+Fixes:
+- **Two templates, two jobs.** (a) *Gallery hero*: clean part on the brand backdrop, thin footer strip. (b) *Info card*: the same
+  hero plus product name, 3 key facts as chips, brand logo of the *manufacturer only if it is on the real part*, and the contact strip.
+  Name, chips and phone are **template text** in Vazirmatn, never AI-drawn. Facts come from the product page, never invented.
+- **More design, from the site's own system:** steel-900→950 gradient with a very faint machined-steel grid, orange corner brackets
+  (accent only), a soft orange rim light behind the part, 10–12 % margin, one fixed typographic scale. Keep it to 3 colours.
+- **Make the AI do less.** Ask Gemini only for: cut-out, then backdrop and light. Give the real photo twice in the prompt
+  ("do not redraw labels or text; keep every sticker pixel-faithful"). If stickers still change, composite the cut-out from
+  pass 1 over a backdrop in the template instead of letting the model touch the part again.
+- **Compositor tool (offered, not built):** a small script that takes the cut-out + a JSON of name/chips/phone and exports the final
+  1600×1600 AVIF/JPG. It fixes fault 1 and 2 for every product at once and keeps Persian text correct. Ask for it when ready.

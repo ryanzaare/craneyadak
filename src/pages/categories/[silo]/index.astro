@@ -15,6 +15,8 @@ import ProductCard from '../../../components/ProductCard.astro';
 import { SITE } from '../../../data/site';
 import { SILOS, categoryPath, siloPath, type Silo } from '../../../data/taxonomy';
 import { getProductsBySilo, type CraneProduct } from '../../../lib/wp';
+import { getBlocks } from '../../../lib/content-blocks';
+import { categoryReadiness, productReadiness, siloReadiness, blocksWordCount } from '../../../lib/indexability';
 
 export async function getStaticPaths() {
   return Promise.all(
@@ -41,6 +43,21 @@ const canonical = `${SITE.url}${siloPath(silo)}`;
 
 // چند نمونه‌ی واقعی از محصولات این گروه — «حس فروشگاه» بدون داده‌ی ساختگی.
 const featured = products.slice(0, 8);
+
+// ⚠️ سیلو فقط وقتی ایندکس‌پذیر است که دست‌کم یک دسته‌ی فرزندش آماده باشد (تصمیم کارفرما ۱۹ مهر ۱۴۰۵:
+// «سیلوی بدون محتوا noindex»). متن مقدمه‌ی عمومی سیلو محتوا حساب نمی‌شود. همان تابعِ آمادگی دسته
+// استفاده می‌شود تا سیلو و فرزندش هرگز دو قاعده‌ی متفاوت نداشته باشند (src/lib/indexability.ts).
+const overrideEmpty = (process.env.INDEX_EMPTY_CATEGORIES ?? import.meta.env.INDEX_EMPTY_CATEGORIES) === '1';
+const childReady = await Promise.all(
+  silo.categories.map(async (c) =>
+    categoryReadiness({
+      readyProducts: products.filter((p) => p.categorySlugs.includes(c.slug) && productReadiness(p).ready).length,
+      contentWords: blocksWordCount(await getBlocks('category', c.slug)),
+      override: overrideEmpty,
+    }).ready,
+  ),
+);
+const noindexSilo = !siloReadiness(childReady).ready;
 
 const otherSilos = SILOS.filter((s) => s.slug !== silo.slug);
 
@@ -89,7 +106,7 @@ const jsonLd = {
 };
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexSilo}>
   <section class="bg-crane-navy text-white pt-10 pb-16 px-4 border-b-[8px] border-crane-orange">
     <div class="max-w-7xl mx-auto">
       <Breadcrumb items={breadcrumbItems} />

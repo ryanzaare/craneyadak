@@ -1,0 +1,26 @@
+---
+// src/components/WarrantyNotice.astro
+// ضمانتِ دسته‌ی محصول (src/data/warranty.ts). برای دسته‌ای که کارفرما متنش را نداده هیچ‌چیز رندر نمی‌شود —
+// ادعای مبهم «ضمانت دارد» بدون مدت و شرط، بدتر از نبودنش است.
+import { warrantyFor } from '../data/warranty';
+
+interface Props {
+  categorySlugs: readonly string[];
+}
+const warranty = warrantyFor(Astro.props.categorySlugs);
+---
+
+{
+  warranty && (
+    <div class="mt-5 pt-4 border-t border-steel-300" data-warranty>
+      <p class="text-sm font-black text-steel-900 mb-1">ضمانت</p>
+      <p class="text-sm text-steel-800 leading-7">{warranty.headline}</p>
+      <details class="mt-2 text-xs text-steel-600 leading-6">
+        <summary class="cursor-pointer font-bold">موارد خارج از ضمانت</summary>
+        <ul class="list-disc pr-5 mt-1">
+          {warranty.exclusions.map((e) => <li>{e}</li>)}
+        </ul>
+      </details>
+    </div>
+  )
+}

@@ -1,5 +1,5 @@
 // src/lib/indexability.test.mts — node --experimental-strip-types --no-warnings src/lib/indexability.test.mts
-import { productReadiness, categoryReadiness, brandReadiness, blocksWordCount, THRESHOLDS } from './indexability.ts';
+import { productReadiness, categoryReadiness, brandReadiness, siloReadiness, blocksWordCount, THRESHOLDS } from './indexability.ts';
 
 let failed = 0;
 const t = (name: string, ok: boolean, extra = '') => {
@@ -14,8 +14,6 @@ t('کامل = آماده', productReadiness(full).ready);
 t('متن در bodyHtml هم شمرده می‌شود', productReadiness({ ...full, summary: '', bodyHtml: `<p>${long}</p>` }).ready);
 t('HTML بی‌متن شمرده نمی‌شود', !productReadiness({ ...full, summary: '', bodyHtml: '<p><br></p><script>alert(1)</script>' }).ready);
 for (const [k, v, label] of [
-  ['sku', '', 'کد فنی'],
-  ['sku', '   ', 'کد فنی (فاصله)'],
   ['brandSlug', null, 'برند'],
   ['categorySlugs', [], 'دسته'],
   ['images', [], 'تصویر'],
@@ -27,6 +25,7 @@ for (const [k, v, label] of [
   t(`ناقص (${label}) → noindex`, !r.ready && r.missing.length === 1, JSON.stringify(r));
 }
 t('همه‌چیز خالی (محصول آزمایشی فعلی بدون تصویر)', productReadiness({ name: 'x', sku: 'SAGA1-L12', brandSlug: 'saga', categorySlugs: ['a'], images: [], summary: '', bodyHtml: '' }).missing.length === 2);
+t('بدون کد فنی (نیمی از کاتالوگ) محصول کامل است', productReadiness({ ...full, sku: null }).ready && productReadiness({ ...full, sku: '' }).ready);
 t('ورودی تهی', !productReadiness({}).ready);
 
 console.log('── دسته و برند');
@@ -51,4 +50,10 @@ t('جمع بلوک‌های نهایی بدون پیش‌نویس‌ها', mixed
 t('آستانه‌ی دسته با بلوک‌ها', categoryReadiness({ readyProducts: 0, contentWords: mixed }).ready);
 
 if (failed) { console.error(`\n❌ ${failed} مورد ناموفق`); process.exit(1); }
+console.log('── سیلو');
+t('هیچ فرزند آماده‌ای → noindex', !siloReadiness([false, false, false]).ready);
+t('بدون فرزند → noindex', !siloReadiness([]).ready);
+t('یک فرزند آماده → ایندکس', siloReadiness([false, true, false]).ready);
+t('بازنویسی عمدی', siloReadiness([false], true).ready);
+
 console.log('\nهمه‌ی آزمون‌های آمادگی ایندکس گذشت.');

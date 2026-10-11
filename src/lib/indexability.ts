@@ -5,9 +5,12 @@
 // خالص و بدون وابستگی تا با ورودی خراب آزمون شود (indexability.test.mts).
 //
 // تعریف «کامل»:
-//   محصول : کد فنی + برند + دست‌کم یک دسته + دست‌کم یک تصویر + متن توضیحی (خلاصه+متن) ≥ ۱۰۰ کاراکتر؛ و نمایشی نباشد.
+//   محصول : نام + برند + دست‌کم یک دسته + دست‌کم یک تصویر + متن توضیحی (خلاصه+متن) ≥ ۱۰۰ کاراکتر؛ و نمایشی نباشد.
+//           ⚠️ کد فنی (SKU) شرط *نیست*: کارفرما (۱۹ مهر ۱۴۰۵) گفت حدود نیمی از محصولات اصلاً کد فنی ندارند؛
+//           شرط‌گذاشتن روی آن نیمی از کاتالوگ را برای همیشه noindex نگه می‌داشت. کدِ ساختگی هم ممنوع است (قاعده‌ی ۲).
 //   دسته  : دست‌کم یک محصول *آماده*  یا  محتوای تخصصی نهایی ≥ ۳۰۰ کلمه (بلوک‌های بدون علامت «نیاز به بازبینی»).
 //   برند  : دست‌کم یک محصول *آماده*  یا  پروفایل تخصصی نهایی ≥ ۱۵۰ کلمه.
+//   سیلو  : دست‌کم یک دسته‌ی فرزندِ *آماده* (تصمیم کارفرما ۱۹ مهر: سیلوی بدون محتوا noindex).
 // ⚠️ «محصول آماده» می‌شمرد، نه «هر محصولی»: محصول آزمایشی/ناقص یک دسته را ایندکس‌پذیر نمی‌کند.
 // آستانه‌ها اینجا و فقط اینجا عوض می‌شوند.
 // ---------------------------------------------------------------------------
@@ -48,7 +51,6 @@ export function productReadiness(p: ProductLike): Readiness {
   const missing: string[] = [];
   if (p.isDemo) missing.push('نمونه‌ی نمایشی (DEMO-)');
   if (!p.name?.trim()) missing.push('نام');
-  if (!p.sku?.trim()) missing.push('کد فنی (SKU)');
   if (!p.brandSlug?.trim()) missing.push('برند');
   if (!p.categorySlugs?.length) missing.push('دسته');
   if (!p.images?.length) missing.push('تصویر');
@@ -105,3 +107,12 @@ function pageReadiness(input: PageInput, minWords: number): Readiness {
 
 export const categoryReadiness = (i: PageInput) => pageReadiness(i, THRESHOLDS.categoryWords);
 export const brandReadiness = (i: PageInput) => pageReadiness(i, THRESHOLDS.brandWords);
+
+/**
+ * سیلو (والد دسته‌ها). متن مقدمه‌ی عمومی سیلو «محتوا» حساب نمی‌شود — کارفرما: «محتوا ندارد، noindex».
+ * سیلو فقط وقتی ایندکس‌پذیر است که دست‌کم یک فرزندش آماده باشد. `children` = آمادگی هر دسته‌ی فرزند.
+ */
+export function siloReadiness(children: readonly boolean[], override = false): Readiness {
+  if (override || children.some(Boolean)) return { ready: true, missing: [] };
+  return { ready: false, missing: ['دسته‌ی فرزند آماده (محصول کامل یا محتوای نهایی)'] };
+}

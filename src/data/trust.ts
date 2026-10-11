@@ -104,6 +104,12 @@ export const ENAMAD = {
   code: 'nXGyxCMZMum5AEsSIFZLhYASxrQaEmyQ',
   href: 'https://trustseal.enamad.ir/?id=8029676&Code=nXGyxCMZMum5AEsSIFZLhYASxrQaEmyQ',
   img: 'https://trustseal.enamad.ir/logo.aspx?id=8029676&Code=nXGyxCMZMum5AEsSIFZLhYASxrQaEmyQ',
+  /**
+   * ⚠️ نسخه‌ی محلیِ نماد (AVIF ۱۲۰×۱۲۰، از فایلی که کارفرما ۱۹ مهر ۱۴۰۵ داد) — فقط برای *نمایش*. دلیل: `img` بالا از
+   * سرور ایران می‌آید و بیرون از ایران/با VPN بالا نمی‌آمد. لینک رسمی (`href` با id و Code) دست‌نخورده می‌ماند.
+   * 🔶 اگر در پنل اینماد «تأیید نصب نماد» پس از انتشار رد شد، یعنی خزنده‌ی آن‌ها خودِ `img` رسمی را می‌خواهد: به `img` برگردان.
+   */
+  localImg: '/enamad.avif',
 } as const;
 
 export const TRUST_BADGES: TrustBadge[] = [

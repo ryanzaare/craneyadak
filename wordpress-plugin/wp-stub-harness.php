@@ -191,6 +191,11 @@ function wp_remote_retrieve_body( $res ) { return is_array( $res ) ? (string) ( 
 /* ⚠️ `$wpdb` اصلاً وجود نداشت. `cyh_unique_slug()` مستقیم
    `$wpdb->update()` صدا می‌زند و بدون این، اولین بار که اسلاگ تکراری
    اصلاح می‌شد، fatal می‌گرفتیم. */
+class CYH_Test_PHPMailer {
+	public $smtp = false;
+	public $Host = '', $Port = 0, $SMTPAuth = false, $Username = '', $Password = '', $SMTPSecure = '', $CharSet = '', $Sender = '';
+	public function isSMTP() { $this->smtp = true; }
+}
 class CYH_Test_Wpdb {
 	public $posts = 'wp_posts';
 	public $terms = 'wp_terms';
@@ -851,6 +856,7 @@ function register_graphql_field( $type, $name, $config ) { $GLOBALS['cyh_test_gq
 
 // ── متفرقه ─────────────────────────────────────────────────────────────────
 function esc_url( $u, $p = null, $ctx = 'display' ) { return (string) $u; }
+function wp_get_current_user() { return (object) [ 'user_email' => 'admin@craneyadak.com' ]; }
 function is_email( $e ) { return (bool) filter_var( $e, FILTER_VALIDATE_EMAIL ); }
 function wp_json_encode( $d, $flags = 0, $depth = 512 ) { return json_encode( $d, $flags | JSON_UNESCAPED_UNICODE, $depth ); }
 function wp_kses( $str, $allowed = [], $protocols = [] ) { return strip_tags( (string) $str, array_map( fn( $t ) => "<$t>", array_keys( (array) $allowed ) ) ); }
@@ -1911,6 +1917,22 @@ $co_check(
 	'نشست پرداخت یک‌بارمصرف است؛ نشست ساختگی ۴۱۰',
 	'استفاده‌ی دوباره از نشست پرداخت باید ۴۱۰ بدهد'
 );
+
+/* ۶۷-ب: رد درخواست از سوی درگاه (مثلاً IP/دامنه مجاز نیست) — علت باید برای مدیر ثبت شود،
+   نه فقط پیام کلی خریدار؛ و merchant هرگز در متای خطا نیاید. */
+$co_sx = cyh_rest_checkout_session( new WP_REST_Request( [ 'items' => [ [ 'slug' => 'co-remote', 'qty' => 1 ] ] ] ) )->get_data();
+$GLOBALS['cyh_test_remote_queue'] = [ [ 'data' => [], 'errors' => [ 'code' => -10, 'message' => 'IP not allowed' ] ] ];
+$co_rx   = $co_pay( $co_sx['session'] );
+$co_oidx = max( array_keys( $GLOBALS['cyh_test_posts'] ) );
+$co_msgx = (string) get_post_meta( $co_oidx, 'cyh_pay_error_msg', true );
+$co_check(
+	502 === $co_rx->get_status() && 'failed' === get_post_meta( $co_oidx, 'cyh_payment', true ) && '-10' === get_post_meta( $co_oidx, 'cyh_pay_error', true )
+		&& false !== strpos( $co_msgx, 'کد -10' ) && false !== strpos( $co_msgx, 'IP not allowed' ) && false !== strpos( $co_msgx, 'HTTP 200' )
+		&& false === strpos( $co_msgx, '11111111-2222-3333-4444-555555555555' ),
+	'رد درخواست توسط درگاه: علت (HTTP، کد، پیام) برای مدیر ثبت می‌شود، بدون merchant',
+	'علت خطای درگاه ثبت نشد: ' . wp_json_encode( [ $co_rx->get_status(), $co_msgx ] )
+);
+$GLOBALS['cyh_test_remote_queue'] = [];
 
 /* ۶۸: authority سفارش دیگر (یا جعلی) سفارش را نمی‌بندد — حتی با Status=OK
    و حتی اگر زرین‌پال برای آن authority «موفق» بگوید. */
@@ -3004,6 +3026,42 @@ if ( $woo_mode ) {
  * گراف‌کیوال خودمان را تزریق می‌کنیم تا `craneProducts` از اسکیما نیفتد
  * و فرانت‌اند نشکند. آن محافظ ده‌خطی هنوز در `class-post-types.php` هست.
  */
+
+// ── SMTP (class-mail.php) ──────────────────────────────────────────────────────────────────────
+ini_set( 'error_log', '/dev/null' );
+$mail_ck = static function ( $cond, $ok, $err ) use ( &$errors ) {
+	if ( $cond ) {
+		echo "✓ $ok\n";
+	} else {
+		$errors[] = $err;
+		echo "✗ $err\n";
+	}
+};
+$mail_pm = new CYH_Test_PHPMailer();
+cyh_smtp_apply( $mail_pm );
+$mail_ck( null === cyh_smtp_config() && ! $mail_pm->smtp && 'x@y.z' === cyh_smtp_from( 'x@y.z' ) && 'نام' === cyh_smtp_from_name( 'نام' ),
+	'بدون ثابت‌های SMTP هیچ‌چیز تغییر نمی‌کند (رفتار قبلی)', 'بدون تنظیم SMTP باید دست‌نخورده بماند' );
+define( 'CYH_SMTP_HOST', 'mail.craneyadak.com' );
+define( 'CYH_SMTP_USER', 'info@craneyadak.com' );
+cyh_smtp_apply( $mail_pm );
+$mail_ck( null === cyh_smtp_config() && ! $mail_pm->smtp,
+	'تنظیم نیمه‌کاره (بدون رمز) مثل «تنظیم‌نشده» رفتار می‌کند، نه ارسال شکست‌خورده', 'بدون رمز نباید SMTP فعال شود' );
+cyh_smtp_apply( null );
+cyh_smtp_apply();
+define( 'CYH_SMTP_PASS', 'رمز-آزمون' );
+cyh_smtp_apply( $mail_pm );
+$mail_ck( $mail_pm->smtp && 'mail.craneyadak.com' === $mail_pm->Host && 465 === $mail_pm->Port && 'ssl' === $mail_pm->SMTPSecure
+		&& $mail_pm->SMTPAuth && 'info@craneyadak.com' === $mail_pm->Username && 'رمز-آزمون' === $mail_pm->Password
+		&& 'info@craneyadak.com' === $mail_pm->Sender && 'UTF-8' === $mail_pm->CharSet,
+	'SMTP کامل: میزبان، پورت ۴۶۵/ssl، احراز هویت و Sender هم‌صندوق', 'تنظیم کامل SMTP روی PHPMailer اعمال نشد' );
+$mail_ck( 'info@craneyadak.com' === cyh_smtp_from( 'wordpress@x.y' ) && 'کرین یدک' === cyh_smtp_from_name( 'WordPress' ),
+	'فرستنده info@craneyadak.com و نام «کرین یدک» (نه wordpress@…)', 'فرستنده‌ی ایمیل باید صندوق SMTP باشد' );
+cyh_mail_failed( new WP_Error( 'wp_mail_failed', 'SMTP connect() failed' ) );
+cyh_mail_failed();
+$mail_ck( 'نامشخص' === get_transient( CYH_MAIL_LAST_ERROR ), 'شکست ارسال بدون خطا/با آرگومان تهی fatal نمی‌دهد', 'wp_mail_failed بدون آرگومان باید امن باشد' );
+cyh_mail_failed( new WP_Error( 'wp_mail_failed', 'SMTP connect() failed' ) );
+$mail_ck( 'SMTP connect() failed' === get_transient( CYH_MAIL_LAST_ERROR ) && false === strpos( (string) get_transient( CYH_MAIL_LAST_ERROR ), 'رمز-آزمون' ),
+	'علت شکست ارسال برای صفحه‌ی وضعیت ثبت می‌شود', 'علت شکست ارسال ثبت نشد' );
 
 echo "\n----------------------------------------\n";
 if ( empty( $errors ) ) {
