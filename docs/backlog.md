@@ -823,3 +823,13 @@ Flow (ایده‌ها: شماره‌ی تماس در هر تصویر، پالت 
 - **Search Console:** کارفرما خودش انجام می‌دهد.
 - **Compositor تصویر ساخته شد:** `scripts/compose-image.mjs` + `brand/compositor.config.json`؛ رنگ از توکن‌های `global.css`، لوگو/تلفن/چیدمان از پیکربندی؛ ورودی PNG شفاف از Gemini (فقط حذف پس‌زمینه). آزمون‌ها: `test:compose` (در check) و `test:compose-render` (Chrome). راهنما: `docs/visual-identity-guide.md` §۸. 🔶 با عکس واقعی قطعه آزموده نشده (فقط قطعه‌ی ساختگی).
 - **بازطراحی فرانت‌اند:** نظر معماری/طراحی در گفتگو؛ پس از توافق، دستور تحویل نشست جدید نوشته می‌شود.
+
+## ۲۲ مهر ۱۴۰۵ — Lighthouse، کامنت‌های ربات (افزونه ۳.۲۷.۰)
+
+- **Lighthouse CI قرمز در GitHub:** `/categories/` و `/brands/` پس از noindex سخت نمره‌ی کلی seo ۰٫۶۹ گرفتند (`is-crawlable`). `assertMatrix` اکنون نمره‌ی seo را
+  برای `/products/*`، `/categories/` و `/brands/` برمی‌دارد (بقیه‌ی ممیزی‌ها می‌مانند). ⚠️ پس از ایندکس‌شدن اولین محصول کامل این استثنا قابل‌حذف است.
+- **زرین‌پال:** IP سرور مجاز شد و پرداخت آزمایشی کارفرما موفق بود. افزونه ۳.۲۶.۰ نصب شد.
+- **اسپم کامنت (formtests.info):** از فرم بومی `wp-comments-post.php` می‌آمد که سایت اصلاً استفاده نمی‌کند. به‌جای کپچا (reCAPTCHA/Turnstile در ایران
+  نامطمئن است) کل راه بسته شد: `comments_open`/`pings_open` false، `pre_comment_on_post` ← ۴۰۳، مسیر REST `/wp/v2/comments` حذف. دیدگاه/پرسش خود سایت
+  (REST کرین یدک با honeypot و rate limit) دست‌نخورده. 🔶 اگر ربات به فرم‌های خود سایت هم زد، آن‌وقت کپچای بدون‌وابستگی (مثلاً سؤال ساده/PoW) اضافه شود.
+

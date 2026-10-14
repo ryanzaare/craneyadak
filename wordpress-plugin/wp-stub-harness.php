@@ -857,6 +857,7 @@ function register_graphql_field( $type, $name, $config ) { $GLOBALS['cyh_test_gq
 // ── متفرقه ─────────────────────────────────────────────────────────────────
 function esc_url( $u, $p = null, $ctx = 'display' ) { return (string) $u; }
 function wp_get_current_user() { return (object) [ 'user_email' => 'admin@craneyadak.com' ]; }
+function __return_false() { return false; }
 function is_email( $e ) { return (bool) filter_var( $e, FILTER_VALIDATE_EMAIL ); }
 function wp_json_encode( $d, $flags = 0, $depth = 512 ) { return json_encode( $d, $flags | JSON_UNESCAPED_UNICODE, $depth ); }
 function wp_kses( $str, $allowed = [], $protocols = [] ) { return strip_tags( (string) $str, array_map( fn( $t ) => "<$t>", array_keys( (array) $allowed ) ) ); }
@@ -3082,6 +3083,18 @@ $mail_ck( 'info@craneyadak.com' === cyh_smtp_from( 'wordpress@x.y' ) && 'کری�
 cyh_mail_failed( new WP_Error( 'wp_mail_failed', 'SMTP connect() failed' ) );
 cyh_mail_failed();
 $mail_ck( true, 'شکست ارسال، با خطا یا بدون آرگومان، fatal نمی‌دهد (فقط لاگ)', '' );
+
+// ── کامنت بومی وردپرس بسته است (ضدربات) ──
+$nc_blocked = false;
+try {
+	do_action( 'pre_comment_on_post', 123 );
+} catch ( Exception $e ) {
+	$nc_blocked = 0 === strpos( $e->getMessage(), 'wp_die' );
+}
+$nc_routes = apply_filters( 'rest_endpoints', [ '/wp/v2/comments' => 1, '/wp/v2/comments/(?P<id>[\\d]+)' => 1, '/wp/v2/posts' => 1, '/crane-yadak/v1/contact' => 1 ] );
+$mail_ck( false === apply_filters( 'comments_open', true, 1 ) && false === apply_filters( 'pings_open', true, 1 ) && $nc_blocked
+		&& ! isset( $nc_routes['/wp/v2/comments'] ) && ! isset( $nc_routes['/wp/v2/comments/(?P<id>[\\d]+)'] ) && isset( $nc_routes['/wp/v2/posts'] ) && isset( $nc_routes['/crane-yadak/v1/contact'] ),
+	'کامنت بومی: comments_open/pings_open بسته، POST فرم بومی ۴۰۳، مسیر REST کامنت حذف؛ مسیرهای دیگر دست‌نخورده', 'کامنت بومی وردپرس باید کاملاً بسته باشد' );
 
 echo "\n----------------------------------------\n";
 if ( empty( $errors ) ) {

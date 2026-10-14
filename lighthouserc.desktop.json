@@ -26,7 +26,7 @@
     "assert": {
       "assertMatrix": [
         {
-          "matchingUrlPattern": "^(?!.*/products/[^/]+/index\\.html).*$",
+          "matchingUrlPattern": "^(?!.*/(products/[^/]+|categories|brands)/index\\.html).*$",
           "assertions": {
             "categories:performance": [
               "error",
@@ -121,7 +121,7 @@
           }
         },
         {
-          "matchingUrlPattern": "/products/[^/]+/index\\.html$",
+          "matchingUrlPattern": "/(products/[^/]+|categories|brands)/index\\.html$",
           "assertions": {
             "categories:performance": [
               "error",

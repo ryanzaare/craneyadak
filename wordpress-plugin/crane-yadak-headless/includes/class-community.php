@@ -390,3 +390,30 @@ function cyh_comment_type_column_content( $column, $comment_id ) {
 	}
 }
 add_action( 'manage_comments_custom_column', 'cyh_comment_type_column_content', 10, 2 );
+
+/* =========================================================================
+   بستن کامنت بومی وردپرس (ضدربات)
+   =========================================================================
+   ⚠️ سایت دیدگاه/پرسش را فقط از راه REST خودش می‌گیرد (honeypot + rate limit + نشست).
+   فرم بومی وردپرس (`wp-comments-post.php`) هیچ‌جا در سایت استفاده نمی‌شود، ولی از اینترنت مستقیم POST می‌خورد —
+   ربات‌ها همین‌جا اسپم می‌ریختند (دو کامیت «formtests.info» ۱۹ مهر ۱۴۰۵). به‌جای افزودن کپچا، کل راه را می‌بندیم:
+   کپچای گوگل/Turnstile در ایران بی‌اعتماد است و راهی که لازم نیست، نباید باز بماند.
+   پرسش/دیدگاه سایت با `wp_insert_comment` مستقیم ثبت می‌شود و به `comments_open` وابسته نیست. */
+add_filter( 'comments_open', '__return_false', 99 );
+add_filter( 'pings_open', '__return_false', 99 );
+
+function cyh_block_native_comment_post( $post_id = 0 ) {
+	wp_die( 'ارسال دیدگاه از این راه بسته است.', 'بسته', [ 'response' => 403 ] );
+}
+add_action( 'pre_comment_on_post', 'cyh_block_native_comment_post' );
+
+/** نقطه‌ی REST پیش‌فرض کامنت وردپرس برای عموم بسته می‌شود (REST خود سایت جداست: crane-yadak/v1). */
+function cyh_remove_native_comment_routes( $endpoints = [] ) {
+	foreach ( array_keys( (array) $endpoints ) as $route ) {
+		if ( 0 === strpos( (string) $route, '/wp/v2/comments' ) ) {
+			unset( $endpoints[ $route ] );
+		}
+	}
+	return $endpoints;
+}
+add_filter( 'rest_endpoints', 'cyh_remove_native_comment_routes' );
