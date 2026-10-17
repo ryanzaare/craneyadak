@@ -145,19 +145,35 @@ Keep the part pixel-faithful. Do not redraw, sharpen, recolour or touch any labe
 backdrop, orange frame, shadow, logo, name, chips, site, phone — is drawn by the script, the same way every time. The AI never sees the
 brand look, so it cannot garble it, and the part's pixels are only moved and scaled, never repainted.
 
+**Easiest way: one JSON file per product** (copy `brand/products/_example.json`, edit, run):
+
 ```bash
-# hero (clean gallery image)
-npm run compose -- --photo cutout.png --out saga1-l12-saga-front-01.jpg
-# info card (name + up to 4 chips; text comes from you, from the product page)
-npm run compose -- --photo cutout.png --out saga1-l12-saga-card-02.jpg --variant card \
-  --name "ریموت کنترل ساگا SAGA1-L12" --chip "دو سرعته" --chip "۱۸ ماه ضمانت تعمیر"
-# batch: a JSON array of {photo,out,variant,name,chips,illustration}
-npm run compose -- --spec specs.json
+npm run compose -- --spec brand/products/saga1-l12.json
 ```
+
+One file makes every size and layout at once. Shared fields apply to all outputs; each entry in `outputs` may override any of them.
+
+| Field | Meaning |
+|---|---|
+| `photo`, `outDir` | the transparent cut-out PNG; where to write (absolute, or relative to the JSON file) |
+| `variant` | `hero` (clean part, big, ring + glow) or `spec` (name, tag, subtitle, chips, spec table) |
+| `ratio` | `1:1` (1600²), `4:5` (1280×1600), `16:9` (1600×900, site/YouTube), `9:16` (900×1600, story/reel) |
+| `name`, `tag`, `subtitle`, `chips` (≤4), `specs` (≤5 rows `{k,v}`) | the text, typed by you from the product page. Never AI-written |
+| `callouts` (≤4) | `{text, x, y}` — a line from a point on the part (x,y in % of the part picture, 0 = left/top) to a label. Only point at things that really are on the part |
+| `ghost` | big faint outline of the model code behind the part (Latin, ≤14 chars) |
+| `badge` | `original` adds «محصول اصلی». Only for products carrying the «اصلی» label on the site |
+| `scale` 0.4–1.4, `dx`, `dy` (±30 %) | **make the part bigger/smaller or move it.** Try `scale: 1.25` when the part looks small |
+| `illustration` | adds the visible «تصویرسازی» label (rule 1) |
+
+Single images without a file also work: `npm run compose -- --photo cutout.png --out x.jpg --variant spec --ratio 16:9 --name "…" --chip "…"
+--spec-row "ولتاژ=۴۸ ولت AC" --callout "دکمه توقف=50,12" --scale 1.2`.
+
+Tip: the cut-out's *bounding box* decides the size. Long cables or a stand make the part look small; crop them in the cut-out (Gemini:
+"cut out only the main body, no cable") or raise `scale`.
 
 It refuses (clear error, nothing written) on: an opaque photo, a cut-out with no real transparency, an unreadable name or chip, a bad
 phone in the config, an unknown colour token, or a blank render. `--illustration` adds the visible «تصویرسازی» label (rule 1).
-Output: 1600×1600 JPG (default), or `.png` / `.webp` / `.avif` by file extension.
+Output: JPG by default, or `.png` / `.webp` / `.avif` by file extension.
 
 **Where the palette and the logo live (one place each):**
 

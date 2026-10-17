@@ -1,0 +1,27 @@
+{
+  "photo": "/مسیر/کامل/به/cutout.png",
+  "outDir": "/مسیر/خروجی/saga1-l12",
+  "name": "ریموت کنترل ساگا SAGA1-L12",
+  "tag": "ریموت کنترل جرثقیل",
+  "subtitle": "دو سرعته — ۱۲ کانال",
+  "ghost": "SAGA1-L12",
+  "badge": "original",
+  "chips": ["دو سرعته", "۱۸ ماه ضمانت تعمیر"],
+  "specs": [
+    { "k": "تعداد کانال", "v": "۱۲" },
+    { "k": "ولتاژ ورودی", "v": "۴۸ ولت AC" }
+  ],
+  "callouts": [
+    { "text": "دکمه توقف اضطراری", "x": 50, "y": 14 },
+    { "text": "برچسب مدل روی بدنه", "x": 40, "y": 60 }
+  ],
+  "scale": 1,
+  "dx": 0,
+  "dy": 0,
+  "outputs": [
+    { "file": "saga1-l12-hero-01.jpg", "variant": "hero", "name": "", "tag": "", "subtitle": "", "chips": [], "specs": [], "callouts": [] },
+    { "file": "saga1-l12-spec-02.jpg", "variant": "spec" },
+    { "file": "saga1-l12-spec-wide.jpg", "variant": "spec", "ratio": "16:9" },
+    { "file": "saga1-l12-story.jpg", "variant": "spec", "ratio": "9:16" }
+  ]
+}

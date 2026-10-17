@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { formatPhone, toFaDigits, readCssTokens, loadBrand, validateInput, buildHtml, recolorLogoPixels, escapeHtml } from './compose-image.mjs';
+import { canvasSize, layoutFor, nameSizeFor, expandSpecFile, formatPhone, toFaDigits, readCssTokens, loadBrand, validateInput, buildHtml, recolorLogoPixels, escapeHtml } from './compose-image.mjs';
 
 let failed = 0;
 const t = (name, ok, extra = '') => {
@@ -46,25 +46,54 @@ write({ ...cfg, contact: { ...cfg.contact, phone: '12345' } });
 t('تلفن خراب در پیکربندی رد می‌شود', throws(() => loadBrand(tmp), 'معتبر نیست'));
 
 console.log('── ورودی تصویر');
-t('hero ساده', validateInput({}).variant === 'hero');
-t('نام در hero ممنوع', throws(() => validateInput({ name: 'x' }), 'فقط در حالت card'));
-t('card بدون نام', throws(() => validateInput({ variant: 'card' }), '--name'));
-t('نام بلند', throws(() => validateInput({ variant: 'card', name: 'ا'.repeat(65) }), '۶۴'));
-t('پنج چیپ', throws(() => validateInput({ variant: 'card', name: 'x', chips: ['1', '2', '3', '4', '5'] }), '۴ چیپ'));
-t('چیپ بلند', throws(() => validateInput({ variant: 'card', name: 'x', chips: ['ا'.repeat(27)] }), '۲۶'));
-t('variant ناشناخته', throws(() => validateInput({ variant: 'poster' }), 'نامعتبر'));
+const throwsIn = (i, needle) => throws(() => validateInput(i), needle);
+t('hero ساده', validateInput({}).variant === 'hero' && validateInput({ variant: 'card', name: 'x' }).variant === 'spec');
+t('نام در hero ممنوع', throwsIn({ name: 'x' }, 'فقط در حالت spec'));
+t('spec بدون نام', throwsIn({ variant: 'spec' }, 'name'));
+t('نام بلند', throwsIn({ variant: 'spec', name: 'ا'.repeat(65) }, '۶۴') || throwsIn({ variant: 'spec', name: 'ا'.repeat(65) }, '64'));
+t('پنج چیپ / چیپ بلند', throwsIn({ variant: 'spec', name: 'x', chips: ['1', '2', '3', '4', '5'] }, '۴ چیپ') && throwsIn({ variant: 'spec', name: 'x', chips: ['ا'.repeat(27)] }, '۲۶'));
+t('variant و ratio ناشناخته', throwsIn({ variant: 'poster' }, 'نامعتبر') && throwsIn({ ratio: '3:2' }, 'نامعتبر'));
+t('مشخصات: ۶ ردیف، ردیف ناقص', throwsIn({ variant: 'spec', name: 'x', specs: Array(6).fill({ k: 'a', v: 'b' }) }, '۵ ردیف') && throwsIn({ variant: 'spec', name: 'x', specs: [{ k: 'a', v: '' }] }, 'k و هم v'));
+t('callout: ۵ تا، خارج از ۰..۱۰۰، بدون متن', throwsIn({ callouts: Array(5).fill({ text: 'a', x: 1, y: 1 }) }, '۴ callout') && throwsIn({ callouts: [{ text: 'a', x: 101, y: 5 }] }, 'callout.x') && throwsIn({ callouts: [{ text: '', x: 1, y: 1 }] }, 'بدون متن'));
+t('scale/dx/dy خارج از بازه', throwsIn({ scale: 3 }, 'scale') && throwsIn({ dx: 99 }, 'dx') && throwsIn({ dy: 'abc' }, 'dy'));
+t('badge فقط original', throwsIn({ badge: 'best' }, 'original') && validateInput({ badge: 'original' }).badge === 'original');
+
+console.log('── ابعاد و چیدمان');
+const cs = (r) => canvasSize(real.cfg, r);
+t('نسبت‌ها: ۱۶۰۰² ، ۱۲۸۰×۱۶۰۰ ، ۱۶۰۰×۹۰۰ ، ۹۰۰×۱۶۰۰', JSON.stringify([cs('1:1'), cs('4:5'), cs('16:9'), cs('9:16')]) === JSON.stringify([{ w: 1600, h: 1600 }, { w: 1280, h: 1600 }, { w: 1600, h: 900 }, { w: 900, h: 1600 }]), JSON.stringify([cs('1:1'), cs('4:5'), cs('16:9'), cs('9:16')]));
+const spec = (o) => validateInput({ variant: 'spec', name: 'ریموت کنترل ساگا SAGA1-L12', chips: ['الف'], specs: [{ k: 'a', v: 'b' }, { k: 'c', v: 'd' }, { k: 'e', v: 'f' }], ...o });
+for (const r of ['1:1', '4:5', '16:9', '9:16']) {
+  const L = layoutFor(real.cfg, spec({ ratio: r, callouts: [{ text: 'x', x: 20, y: 20 }, { text: 'y', x: 80, y: 20 }] }));
+  const inside = (b) => b.x >= 0 && b.y >= 0 && b.x + b.w <= L.w && b.y + b.h <= L.h - L.footerH + 1;
+  t(`${r}: قطعه، هدر و پنل درون بوم و روی هم نمی‌افتند`, inside(L.part) && inside(L.head) && inside(L.panel) && L.part.w > 100 && L.part.h > 100
+    && (L.landscape ? L.panel.y >= L.head.y + L.head.h : L.head.y + L.head.h <= L.part.y + 1 && L.part.y + L.part.h <= L.panel.y), JSON.stringify([L.part, L.head, L.panel]));
+}
+t('نام بلند → فونت کوچک‌تر و هدر بلندتر یا برابر', nameSizeFor(60) < nameSizeFor(31) && nameSizeFor(31) < nameSizeFor(10)
+  && layoutFor(real.cfg, spec({ name: 'ا'.repeat(60) })).head.h >= layoutFor(real.cfg, spec({ name: 'ا' })).head.h);
+t('callout سمت چپ و راست از عرض قطعه کم می‌کند', layoutFor(real.cfg, spec({ callouts: [{ text: 'x', x: 10, y: 5 }] })).part.w < layoutFor(real.cfg, spec({})).part.w);
+
+console.log('── فایل مشخصات');
+const jobs = expandSpecFile({ photo: 'c.png', outDir: 'out', name: 'N', variant: 'spec', outputs: [{ file: 'a.jpg' }, { file: 'b.jpg', ratio: '16:9', name: 'M' }] }, '/base');
+t('مسیرها نسبت به فایل؛ فیلد مشترک و بازنویسی', jobs.length === 2 && jobs[0].photo === '/base/c.png' && jobs[0].out === '/base/out/a.jpg' && jobs[1].ratio === '16:9' && jobs[1].name === 'M' && jobs[0].name === 'N');
+t('مسیر مطلق دست‌نخورده', expandSpecFile({ photo: '/x/c.png', outDir: '/y', outputs: [{ file: 'a.jpg' }] })[0].out === '/y/a.jpg');
+t('ورودی خراب: آرایه، بدون photo، بدون outputs، output بدون file', [[], { outputs: [{}] }, { photo: 'a' }, { photo: 'a', outputs: [{}] }].every((x) => throws(() => expandSpecFile(x), '')));
 
 console.log('── HTML');
-const assets = { part: 'data:image/png;base64,AAAA', logo: 'data:image/png;base64,BBBB', font: 'file:///f.woff2' };
-const card = buildHtml(real, { variant: 'card', name: 'ریموت <b>"ساگا"</b>', chips: ['۱۲ کلید'] }, assets);
-t('نام escape می‌شود (تزریق HTML ممکن نیست)', !card.includes('<b>"ساگا"') && card.includes('&lt;b&gt;'));
+const assets = { part: 'data:image/png;base64,AAAA', logo: 'data:image/png;base64,BBBB', font: 'file:///f.woff2', partW: 800, partH: 500 };
+const card = buildHtml(real, { variant: 'spec', name: 'ریموت <b>"ساگا"</b>', chips: ['۱۲ کلید'], specs: [{ k: '<i>k</i>', v: 'v' }], callouts: [{ text: '<u>x</u>', x: 30, y: 30 }] }, assets);
+t('همه‌ی متن‌ها escape می‌شوند (نام، مشخصات، callout)', !card.includes('<b>"ساگا"') && card.includes('&lt;') && !card.includes('<b>') && !card.includes('<i>k</i>') && !card.includes('<u>x</u>'));
 t('تلفن و سایت قالبی روی تصویر', card.includes('۰۲۱-۴۶۸۷۶۹۸۰') && card.includes('craneyadak.com'));
-t('رنگ‌ها فقط از توکن‌ها', card.includes('#EA580C') && card.includes('#0E1113') && !/#[0-9a-f]{6}/i.test(card.replace(/#(EA580C|0E1113|171B1F|232830|CBD2D9|F7F8FA)/gi, '')), 'رنگ هاردکد پیدا شد');
+t('رنگ‌ها فقط از توکن‌ها', !/#[0-9a-f]{6}/i.test(card.replace(/#(EA580C|0E1113|171B1F|232830|CBD2D9|F7F8FA)/gi, '').replace(/stroke-opacity/g, '')), 'رنگ هاردکد پیدا شد');
 const hero = buildHtml(real, {}, assets);
-t('hero عنوان ندارد، card دارد', !hero.includes('<h1>') && card.includes('<h1>'));
-t('برچسب «تصویرسازی» فقط با --illustration', !hero.includes('class="illus"') && buildHtml(real, { illustration: true }, assets).includes('class="illus"'));
+t('hero عنوان ندارد، spec دارد', !hero.includes('<h1') && card.includes('<h1'));
+t('کد مدل لاتین نشکن (nowrap)', buildHtml(real, { variant: 'spec', name: 'ریموت SAGA1-L12' }, assets).includes('<bdi style="white-space:nowrap">SAGA1-L12</bdi>'));
+t('برچسب‌ها فقط با گزینه‌شان', !hero.includes('class="illus"') && buildHtml(real, { illustration: true }, assets).includes('class="illus"') && !hero.includes('class="orig"') && buildHtml(real, { badge: 'original' }, assets).includes('class="orig"')
+  && !hero.includes('class="ghost"') && buildHtml(real, { ghost: 'F24-60' }, assets).includes('F24-60'));
 const endLogo = buildHtml({ ...real, cfg: { ...real.cfg, logo: { ...real.cfg.logo, placement: 'footer-end' } } }, {}, assets);
 t('جای لوگو قابل‌تغییر با پیکربندی', hero.indexOf('class="brand"') < hero.indexOf('class="contact"') && endLogo.indexOf('class="contact"') < endLogo.indexOf('class="brand"'));
+const big = buildHtml(real, { scale: 1.4 }, assets), small = buildHtml(real, { scale: 0.5 }, assets);
+const wOf = (h) => Number(/\.part\{[^}]*width:(\d+)px/.exec(h)[1]);
+t('scale اندازه‌ی قطعه را واقعاً عوض می‌کند', wOf(big) > wOf(hero) && wOf(hero) > wOf(small), [wOf(big), wOf(hero), wOf(small)].join('/'));
 t('escapeHtml', escapeHtml(`<a href="x">&'`) === '&lt;a href=&quot;x&quot;&gt;&amp;&#39;');
 
 console.log('── لوگوی روی پس‌زمینه‌ی تیره');

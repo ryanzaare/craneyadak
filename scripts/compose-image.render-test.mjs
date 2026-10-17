@@ -33,19 +33,23 @@ t('کار دوم خراب: کل دسته پیش از رندر رد می‌شود
 console.log('── رندر واقعی');
 const outHero = path.join(dir, 'hero.jpg');
 const outCard = path.join(dir, 'card.png');
+const outWide = path.join(dir, 'wide.jpg');
+const outStory = path.join(dir, 'story.jpg');
 await composeAll([
   { photo: cutout, out: outHero },
-  { photo: cutout, out: outCard, variant: 'card', name: 'ریموت کنترل ساگا SAGA1-L12', chips: ['۱۲ کلید', 'دو سرعته'] },
+  { photo: cutout, out: outCard, variant: 'spec', name: 'ریموت کنترل ساگا SAGA1-L12', chips: ['۱۲ کلید', 'دو سرعته'], specs: [{ k: 'کانال', v: '۱۲' }], callouts: [{ text: 'برچسب', x: 30, y: 60 }] },
+  { photo: cutout, out: outWide, variant: 'spec', ratio: '16:9', name: 'ریموت کنترل ساگا', scale: 0.8, dx: 3 },
+  { photo: cutout, out: outStory, variant: 'hero', ratio: '9:16', ghost: 'SAGA1-L12', badge: 'original' },
 ]);
-for (const f of [outHero, outCard]) {
+for (const [f, W, H] of [[outHero, 1600, 1600], [outCard, 1600, 1600], [outWide, 1600, 900], [outStory, 900, 1600]]) {
   const m = await sharp(f).metadata();
-  t(`${path.basename(f)} ۱۶۰۰×۱۶۰۰`, m.width === 1600 && m.height === 1600, `${m.width}×${m.height}`);
+  t(`${path.basename(f)} ${W}×${H}`, m.width === W && m.height === H, `${m.width}×${m.height}`);
   const { channels } = await sharp(f).stats();
   t(`${path.basename(f)} تک‌رنگ نیست`, Math.max(...channels.map((c) => c.stdev)) > 20);
 }
 // نوار نارنجی بالای فوتر: ردیف y = 1600 - footer(176) + 2
 const px = async (f, x, y) => (await sharp(f).extract({ left: x, top: y, width: 1, height: 1 }).raw().toBuffer());
-const rule = await px(outCard, 800, 1600 - 176 + 3);
+const rule = await px(outCard, 800, 1600 - 176 + 3); // footerHeightPct 11% از ۱۶۰۰
 t('نوار نارنجی فوتر (#EA580C ± JPEG/PNG)', Math.abs(rule[0] - 234) < 8 && Math.abs(rule[1] - 88) < 8 && Math.abs(rule[2] - 12) < 8, [...rule].join(','));
 // هدر card: متن روشن (steel-50) باید در نیمه‌ی بالا باشد، در hero نباشد.
 const brightIn = async (f, top, h) => {
