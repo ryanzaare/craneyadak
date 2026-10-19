@@ -138,54 +138,45 @@ Fixes:
   pass 1 over a backdrop in the template instead of letting the model touch the part again.
 - **Compositor tool: built** (section 8).
 
-## 8. The compositor (`scripts/compose-image.mjs`)
+## 8. The compositor (`scripts/compose-image.mjs`) — v3
 
-Gemini does **one** job: remove the background and return a **transparent PNG** of the real part (prompt: "Remove only the background.
-Keep the part pixel-faithful. Do not redraw, sharpen, recolour or touch any label, sticker or text. Transparent PNG."). Everything else —
-backdrop, orange frame, shadow, logo, name, chips, site, phone — is drawn by the script, the same way every time. The AI never sees the
-brand look, so it cannot garble it, and the part's pixels are only moved and scaled, never repainted.
+**Step 1 — background removal is automatic (no Gemini).** Give the compositor your *raw phone photo* (JPG/HEIC). On the Mac it runs
+`scripts/cutout.swift` (Apple Vision): Vision only makes a *mask*; every pixel of the part stays the original pixel. Gemini, by contrast,
+re-paints the whole picture — that is why the stickers on the first master came out as gibberish. (Tested: inside the part, colours are
+identical to the source; the background becomes transparent.) Standalone: `npm run cutout -- raw.jpg cut.png`.
 
-**Easiest way: one JSON file per product** (copy `brand/products/_example.json`, edit, run):
+**Step 2 — one JSON file per product, one command:**
 
 ```bash
-npm run compose -- --spec brand/products/saga1-l12.json
+npm run compose -- --spec brand/products/f24-60.json
 ```
 
-One file makes every size and layout at once. Shared fields apply to all outputs; each entry in `outputs` may override any of them.
+Copy `brand/products/_example.json`. Shared fields apply to every output; each `outputs` entry may override any field.
 
 | Field | Meaning |
 |---|---|
-| `photo`, `outDir` | the transparent cut-out PNG; where to write (absolute, or relative to the JSON file) |
-| `variant` | `hero` (clean part, big, ring + glow) or `spec` (name, tag, subtitle, chips, spec table) |
-| `ratio` | `1:1` (1600²), `4:5` (1280×1600), `16:9` (1600×900, site/YouTube), `9:16` (900×1600, story/reel) |
-| `name`, `tag`, `subtitle`, `chips` (≤4), `specs` (≤5 rows `{k,v}`) | the text, typed by you from the product page. Never AI-written |
-| `callouts` (≤4) | `{text, x, y}` — a line from a point on the part (x,y in % of the part picture, 0 = left/top) to a label. Only point at things that really are on the part |
-| `ghost` | big faint outline of the model code behind the part (Latin, ≤14 chars) |
-| `badge` | `original` adds «محصول اصلی». Only for products carrying the «اصلی» label on the site |
-| `scale` 0.4–1.4, `dx`, `dy` (±30 %) | **make the part bigger/smaller or move it.** Try `scale: 1.25` when the part looks small |
-| `illustration` | adds the visible «تصویرسازی» label (rule 1) |
+| `photo`, `outDir` | raw photo (or transparent PNG) and output folder (absolute, or relative to the JSON file) |
+| `variant` | `hero` (part only, biggest) · `spec` (name, tag, subtitle, ≤3 chips, ≤4 spec cards) · `anatomy` (part centred, 2–8 labelled callouts — the most useful image for a technical buyer) |
+| `theme` | `light` (default — matches the Frontend v2 light surface) or `dark`. The footer is graphite in both |
+| `ratio` | `1:1` (1600²) · `4:5` (1280×1600) · `16:9` (1600×900) · `9:16` (900×1600, story/reel) |
+| `trust` | `true` adds an icon row from **verified** items of `src/data/trust.ts` (`trustRow` in the config). «گارانتی اصالت» appears only with `badge: "original"` |
+| `callouts` | `{text, x, y}`: x,y in % of the part picture (0 = left/top). Point only at things that really exist on the part |
+| `ghost`, `badge`, `illustration` | faint model code behind the part · «محصول اصلی» (only for parts labelled «اصلی») · visible «تصویرسازی» label |
+| `scale` 0.4–1.4, `dx`, `dy` (±30 %) | resize / move the part |
+| `enhance` | mild non-generative sharpen + contrast (no shape or colour change) |
 
-Single images without a file also work: `npm run compose -- --photo cutout.png --out x.jpg --variant spec --ratio 16:9 --name "…" --chip "…"
---spec-row "ولتاژ=۴۸ ولت AC" --callout "دکمه توقف=50,12" --scale 1.2`.
+**What the tool cannot fix: the source photo.** If the part itself is under ~1000 px, the tool warns — it will look soft. Shoot: plain
+background in a contrasting colour, daylight or two soft lights, phone at full resolution, part filling most of the frame, straight-on and
+3/4 views, plus one close-up of the label. Never use a competitor's photo, even as a base.
 
-Tip: the cut-out's *bounding box* decides the size. Long cables or a stand make the part look small; crop them in the cut-out (Gemini:
-"cut out only the main body, no cable") or raise `scale`.
+**Where palette, logo and contact live (one place each):**
 
-It refuses (clear error, nothing written) on: an opaque photo, a cut-out with no real transparency, an unreadable name or chip, a bad
-phone in the config, an unknown colour token, or a blank render. `--illustration` adds the visible «تصویرسازی» label (rule 1).
-Output: JPG by default, or `.png` / `.webp` / `.avif` by file extension.
+| What | Where |
+|---|---|
+| Colours | token names in `brand/compositor.config.json` → `palette.tokens`; hex values read from `src/styles/global.css` at run time. Change the token there and site + images move together. Missing token = error |
+| Logo | `logo.file` + `logo.placement` (`footer-start` = right in RTL, `footer-end`); the navy outline is recoloured light on the graphite footer automatically |
+| Wordmark, phone, site | `brandName`, `contact.*` in the config — one edit, re-run the batch |
+| Trust row | `trustRow` ids → verified items in `src/data/trust.ts` |
+| Layout | `layout.*` in the config, each validated to a sane range |
 
-**Where the palette and the logo live (one place each):**
-
-| What | Where | Change it by |
-|---|---|---|
-| Colours | Token names in `brand/compositor.config.json` → `palette.tokens` (e.g. `accent: --color-accent`); the **hex values** are read from `src/styles/global.css` at run time | Edit the token in `global.css`. The site and every future image move together; a missing token is an error, never a silent default |
-| Logo file and side | `logo.file` (`public/logo.png`) and `logo.placement` (`footer-start` = right side in RTL, `footer-end`) in the config | Change the file or the word. The dark navy outline is recoloured light automatically so it shows on graphite; orange is kept |
-| Wordmark text, phone, site | `brandName`, `contact.phone`, `contact.site` in the config | One edit, then re-run the batch. This is why a phone in every image is safe |
-| Layout | `layout.*` in the config (margins, footer height, logo size, corner brackets), each validated to a sane range | Edit numbers, re-render the pilot 3 images, then freeze |
-| Font | `font.file` (Vazirmatn, the site font) | Same file as the site |
-
-If the site redesign changes the palette, edit `global.css` first; the images follow. Re-render old images from the saved cut-outs, so
-**keep every cut-out PNG** next to the raw photo.
-
-Tests: `npm run test:compose` (no Chrome, part of `npm run check`) and `npm run test:compose-render` (real Chrome render).
+Tests: `npm run test:compose` (no Chrome; part of `npm run check`) and `npm run test:compose-render` (real Chrome + Vision cut-out).

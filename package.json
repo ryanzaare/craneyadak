@@ -31,9 +31,10 @@
     "test:phone": "node --experimental-strip-types --no-warnings src/lib/phone.test.mts",
     "test:indexability": "node --experimental-strip-types --no-warnings src/lib/indexability.test.mts",
     "test:warranty": "node --experimental-strip-types --no-warnings src/data/warranty.test.mts",
-    "test:compose": "node scripts/compose-image.test.mjs",
-    "test:compose-render": "node scripts/compose-image.render-test.mjs",
-    "compose": "node scripts/compose-image.mjs",
+    "test:compose": "node --experimental-strip-types --no-warnings scripts/compose-image.test.mjs",
+    "test:compose-render": "node --experimental-strip-types --no-warnings scripts/compose-image.render-test.mjs",
+    "compose": "node --experimental-strip-types --no-warnings scripts/compose-image.mjs",
+    "cutout": "swift scripts/cutout.swift",
     "test:urls": "node --experimental-strip-types --no-warnings src/lib/urls.test.mts"
   },
   "dependencies": {

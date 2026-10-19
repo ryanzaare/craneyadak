@@ -11,7 +11,13 @@
       "grid": "--color-steel-300",
       "text": "--color-steel-50",
       "muted": "--color-steel-300",
-      "accent": "--color-accent"
+      "accent": "--color-accent",
+      "accentInk": "--color-accent-ink",
+      "paper": "--color-steel-50",
+      "paperEdge": "--color-steel-100",
+      "ink": "--color-steel-900",
+      "inkMuted": "--color-steel-600",
+      "line": "--color-steel-300"
     }
   },
   "contact": {
@@ -36,5 +42,10 @@
     "bracketSizePct": 6,
     "bracketInsetPct": 3.2,
     "bracketThicknessPx": 6
-  }
+  },
+  "trustRow": [
+    "oem-guarantee",
+    "invoice",
+    "delivery"
+  ]
 }

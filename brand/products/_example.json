@@ -1,27 +1,33 @@
 {
-  "photo": "/مسیر/کامل/به/cutout.png",
-  "outDir": "/مسیر/خروجی/saga1-l12",
-  "name": "ریموت کنترل ساگا SAGA1-L12",
+  "photo": "/Users/you/Pictures/raw/f24-60.jpg",
+  "outDir": "/Users/you/Pictures/craneyadak/f24-60",
+  "theme": "light",
+  "name": "ریموت کنترل تله کرین F24-60",
   "tag": "ریموت کنترل جرثقیل",
-  "subtitle": "دو سرعته — ۱۲ کانال",
-  "ghost": "SAGA1-L12",
+  "subtitle": "جوی‌استیک دوگانه، دو سرعته",
+  "ghost": "F24-60",
   "badge": "original",
+  "trust": true,
   "chips": ["دو سرعته", "۱۸ ماه ضمانت تعمیر"],
   "specs": [
     { "k": "تعداد کانال", "v": "۱۲" },
-    { "k": "ولتاژ ورودی", "v": "۴۸ ولت AC" }
+    { "k": "ولتاژ گیرنده", "v": "48V AC" },
+    { "k": "باتری", "v": "۴ قلمی" }
   ],
-  "callouts": [
-    { "text": "دکمه توقف اضطراری", "x": 50, "y": 14 },
-    { "text": "برچسب مدل روی بدنه", "x": 40, "y": 60 }
-  ],
-  "scale": 1,
-  "dx": 0,
-  "dy": 0,
   "outputs": [
-    { "file": "saga1-l12-hero-01.jpg", "variant": "hero", "name": "", "tag": "", "subtitle": "", "chips": [], "specs": [], "callouts": [] },
-    { "file": "saga1-l12-spec-02.jpg", "variant": "spec" },
-    { "file": "saga1-l12-spec-wide.jpg", "variant": "spec", "ratio": "16:9" },
-    { "file": "saga1-l12-story.jpg", "variant": "spec", "ratio": "9:16" }
+    { "file": "f24-60-hero-01.jpg", "variant": "hero", "name": "", "tag": "", "subtitle": "", "chips": [], "specs": [] },
+    { "file": "f24-60-spec-02.jpg", "variant": "spec" },
+    { "file": "f24-60-spec-wide.jpg", "variant": "spec", "ratio": "16:9" },
+    { "file": "f24-60-story.jpg", "variant": "spec", "ratio": "9:16", "theme": "dark" },
+    {
+      "file": "f24-60-anatomy.jpg", "variant": "anatomy", "ratio": "16:9",
+      "name": "اجزای ریموت تله کرین F24-60", "tag": "", "subtitle": "", "chips": [], "specs": [],
+      "callouts": [
+        { "text": "توقف اضطراری", "x": 50, "y": 62 },
+        { "text": "جوی‌استیک ۵ حالته", "x": 30, "y": 40 },
+        { "text": "کلید اصلی on/off", "x": 55, "y": 28 },
+        { "text": "دکمه START", "x": 75, "y": 32 }
+      ]
+    }
   ]
 }
