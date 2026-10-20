@@ -52,7 +52,7 @@ const description = 'ساخت حساب کاربری برای پیگیری سفا
         </div>
 
         {/* هانی‌پات — ربات‌ساده پر می‌کند، کاربر واقعی نمی‌بیند. */}
-        <input type="text" name="website" tabindex="-1" autocomplete="off" class="absolute -left-[9999px] w-px h-px" aria-hidden="true" />
+        <input type="text" name="website" tabindex="-1" autocomplete="off" class="cyh-honeypot" aria-hidden="true" />
 
         <button type="submit" id="register-submit" class="w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
           ساخت حساب
@@ -89,7 +89,7 @@ const description = 'ساخت حساب کاربری برای پیگیری سفا
     const nextRaw = new URLSearchParams(location.search).get('next') || '';
     const next = /^\/(?![/\\])/.test(nextRaw) ? nextRaw : '/account';
     const loginLink = document.getElementById('register-login-link');
-    if (loginLink && next !== '/account') loginLink.setAttribute('href', '/account/login?next=' + encodeURIComponent(next));
+    if (loginLink && next !== '/account') loginLink.setAttribute('href', '/account/login/?next=' + encodeURIComponent(next));
 
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();

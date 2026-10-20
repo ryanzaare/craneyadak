@@ -215,9 +215,14 @@ $GLOBALS['wpdb'] = new CYH_Test_Wpdb();
 class WP_Query {
 	public $vars;
 	public $main;
+	public $found_posts = 0;
 	public function __construct( $vars = [], $main = true ) {
 		$this->vars = $vars;
 		$this->main = $main;
+		// اجرای واقعی فقط وقتی با post_type ساخته شود (cyh_count_posts)؛ آزمون‌های pre_get_posts فقط vars می‌خواهند.
+		if ( isset( $vars['post_type'] ) && function_exists( 'get_posts' ) ) {
+			$this->found_posts = count( get_posts( array_merge( $vars, [ 'posts_per_page' => -1, 'fields' => 'ids' ] ) ) );
+		}
 	}
 	public function is_main_query() { return $this->main; }
 	public function get( $key, $default = '' ) { return $this->vars[ $key ] ?? $default; }
@@ -516,6 +521,25 @@ function get_post( $p = null, $out = OBJECT ) {
  * خام می‌دهد (class-media-keys.php این را می‌خواهد)، وگرنه شیء با
  * `->ID` (بقیه‌ی فراخوان‌ها این را می‌خواهند).
  */
+function cyh_test_meta_match( $id, $mq ) {
+	$or      = 'OR' === strtoupper( (string) ( $mq['relation'] ?? 'AND' ) );
+	$results = [];
+	foreach ( $mq as $k => $clause ) {
+		if ( 'relation' === $k || ! is_array( $clause ) ) { continue; }
+		if ( ! isset( $clause['key'] ) ) {
+			$results[] = cyh_test_meta_match( $id, $clause );
+			continue;
+		}
+		$has     = isset( $GLOBALS['cyh_test_meta'][ $id ] ) && array_key_exists( $clause['key'], $GLOBALS['cyh_test_meta'][ $id ] );
+		$mval    = $has ? $GLOBALS['cyh_test_meta'][ $id ][ $clause['key'] ] : null;
+		$compare = strtoupper( (string) ( $clause['compare'] ?? '=' ) );
+		if ( 'NOT EXISTS' === $compare ) { $results[] = ! $has; }
+		elseif ( 'EXISTS' === $compare ) { $results[] = $has; }
+		else { $results[] = $has && (string) $mval === (string) ( $clause['value'] ?? '' ); }
+	}
+	if ( ! $results ) { return true; }
+	return $or ? in_array( true, $results, true ) : ! in_array( false, $results, true );
+}
 function get_posts( $args = [] ) {
 	$all      = $GLOBALS['cyh_test_posts'] ?? [];
 	$types    = (array) ( $args['post_type'] ?? 'post' );
@@ -537,15 +561,10 @@ function get_posts( $args = [] ) {
 			if ( null === $mval ) { continue; }
 			if ( isset( $args['meta_value'] ) && (string) $mval !== (string) $args['meta_value'] ) { continue; }
 		}
-		if ( isset( $args['meta_query'] ) && is_array( $args['meta_query'] ) ) {
-			$ok = true;
-			foreach ( $args['meta_query'] as $clause ) {
-				if ( ! is_array( $clause ) || ! isset( $clause['key'] ) ) { continue; }
-				$mval = $GLOBALS['cyh_test_meta'][ $id ][ $clause['key'] ] ?? null;
-				if ( (string) $mval !== (string) ( $clause['value'] ?? '' ) ) { $ok = false; break; }
-			}
-			if ( ! $ok ) { continue; }
-		}
+		// ⚠️ meta_query تودرتو (relation AND/OR، compare = / EXISTS / NOT EXISTS) واقعاً ارزیابی می‌شود.
+		// نسخه‌ی قبلی هر بند بدون key (یعنی هر گروه OR) را *نادیده* می‌گرفت — کوئری‌ای که در وردپرس واقعی
+		// فیلتر می‌کرد، در هارنس همه‌چیز را برمی‌گرداند (آزمون کور، قاعده‌ی ۶).
+		if ( isset( $args['meta_query'] ) && is_array( $args['meta_query'] ) && ! cyh_test_meta_match( $id, $args['meta_query'] ) ) { continue; }
 		$matches[] = $id;
 	}
 
@@ -905,8 +924,6 @@ function acf_add_options_page( $args ) {
 // کد جدید اصلاً بارگذاری نشده بود. glob این کلاس از خطا را می‌بندد.
 $plugin_files = glob( $plugin_dir . 'includes/*.php' );
 sort( $plugin_files );
-// class-taxonomy-hierarchy به cyh_taxonomy_blueprint() در class-taxonomy-sync
-// وابسته است؛ چون فقط در زمان *فراخوانی* لازم است، ترتیب الفبایی کافی است.
 foreach ( $plugin_files as $__f ) {
 	require_once $__f;
 }
@@ -2638,6 +2655,8 @@ $GLOBALS['cyh_test_is_admin'] = false;
 // ۹۹: ویجت داشبورد — فقط پرداخت‌شده‌ی «در حال آماده‌سازی»؛ ارسال‌شده و ناموفق نه.
 update_post_meta( $co_evil_id, 'cyh_fulfilment', 'processing' );
 ob_start(); cyh_orders_dashboard_widget(); $w1 = ob_get_clean();
+$co_paid_cnt = cyh_user_paid_order_count( (int) ( $GLOBALS['cyh_test_posts'][ $co_evil_id ]['post_author'] ?? 0 ) );
+$co_check( false !== strpos( $w1, '<strong>1</strong>' ) && cyh_quote_view_count( 'orders' ) >= 1 && $co_paid_cnt >= 0, 'شمارش‌ها در پایگاه‌داده (cyh_count_posts): ویجت ۱ سفارش در انتظار؛ شمارش زبانه و کاربر کار می‌کند', 'شمارش ویجت: ' . $w1 );
 update_post_meta( $co_evil_id, 'cyh_fulfilment', 'delivered' );
 ob_start(); cyh_orders_dashboard_widget(); $w2 = ob_get_clean();
 $GLOBALS['cyh_test_dashboard_widgets'] = [];

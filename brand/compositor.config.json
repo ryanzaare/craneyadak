@@ -23,7 +23,17 @@
   "contact": {
     "phone": "02146876980",
     "site": "craneyadak.com",
-    "digits": "fa"
+    "digits": "fa",
+    "mobile": "09122892253",
+    "email": "info@craneyadak.com",
+    "address": "تهران، کیلومتر ۱۹ جاده مخصوص، مجتمع اداری تجاری ایرانیان، واحد ۳۲۵",
+    "showOnImage": [
+      "phone",
+      "mobile",
+      "site",
+      "email",
+      "address"
+    ]
   },
   "logo": {
     "file": "public/logo.png",
@@ -35,7 +45,7 @@
   },
   "layout": {
     "marginPct": 11,
-    "footerHeightPct": 11,
+    "footerHeightPct": 12,
     "footerRulePx": 8,
     "logoHeightPct": 66,
     "cardHeaderHeightPct": 21,

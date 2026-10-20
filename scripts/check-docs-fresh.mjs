@@ -83,10 +83,17 @@ const RETIRED = [
   { term: 'HIGH_WEAR_PARTS', why: 'ثابت هاردکد src/data/discovery.ts — به highWearParts در siteOptionsFields منتقل شد' },
 
   // ── ایست ۲، فاز ۳: دو سبد جدا ─────────────────────────────────────────
+  // ── ۲۸ مهر ۱۴۰۵: بذر یک‌باره‌ی تاکسونومی و بقایای README افزونه ─────────
+  { term: 'cyh_taxonomy_blueprint', why: 'بذر مهاجرت یک‌باره‌ی ۷ سیلو/۳۱ دسته — بی‌فراخواننده، حذف شد' },
+  { term: 'cyh_silo_blueprint', why: 'بذر مهاجرت یک‌باره — حذف شد' },
+  { term: 'cyh_category_meta_seed', why: 'بذر مهاجرت یک‌باره — حذف شد' },
+  { term: 'priceDisplay', why: 'فیلد GraphQL بازنشسته — قیمت از src/lib/pricing.ts' },
+  { term: 'صنایع تحت پوشش', why: 'CPT صنعت — حذف شد' },
   { term: 'QuoteBasket.astro', why: 'سبد تکی با برچسب «سفارش/استعلام» — با Baskets.astro (دو سبد جدا) جایگزین شد' },
 ];
 
-const DOCS = [...globSync('docs/**/*.md'), 'CLAUDE.md', 'README.md'].filter((f) => {
+// ⚠️ README افزونه هم سند است (۲۸ مهر ۱۴۰۵): ماه‌ها از /industries/، «اسناد فنی» و فیلدهای بازنشسته‌ی GraphQL می‌گفت و این نگهبان نمی‌دیدش.
+const DOCS = [...globSync('docs/**/*.md'), ...globSync('wordpress-plugin/**/*.md'), 'CLAUDE.md', 'README.md'].filter((f) => {
   try { return statSync(f).isFile(); } catch { return false; }
 });
 
@@ -203,7 +210,8 @@ for (const file of DOCS) {
 // سندی که به فایل ناموجود ارجاع می‌دهد، خواننده را به بن‌بست می‌فرستد و
 // دقیقاً همان‌جایی است که اعتماد به مستندات از بین می‌رود.
 {
-  const PATH = /`((?:src|scripts|docs|wordpress-plugin|content|public)\/[\w./[\]-]+)`/g;
+  // ⚠️ زیرمسیر اختیاری: `content/` تنها (بدون زیرمسیر) قبلاً از این الگو رد می‌شد — ردیف README برای پوشه‌ی حذف‌شده دیده نشد.
+  const PATH = /`((?:src|scripts|docs|wordpress-plugin|content|public)\/[\w./[\]-]*)`/g;
   const broken = [];
 
   for (const file of DOCS) {

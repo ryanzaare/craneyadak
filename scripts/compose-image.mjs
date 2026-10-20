@@ -61,7 +61,16 @@ export function loadBrand(root = ROOT, configPath = path.join(root, 'brand/compo
   if (!Number.isInteger(cfg.canvas) || cfg.canvas < 800 || cfg.canvas > 4000) throw new Error('canvas باید عدد صحیح بین ۸۰۰ و ۴۰۰۰ باشد');
   const phone = formatPhone(cfg.contact.phone, cfg.contact.digits);
   if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(cfg.contact.site)) throw new Error('contact.site نامعتبر');
-  return { cfg, colors, phone, root };
+  // هویت کامل شرکت روی تصویر (بازخورد کارفرما ۲۸ مهر: رقبا تلفن، موبایل، سایت، ایمیل و نشانی را روی تصویر دارند).
+  const SHOW = ['phone', 'mobile', 'site', 'email', 'address'];
+  const show = cfg.contact.showOnImage ?? ['phone', 'site'];
+  for (const k of show) if (!SHOW.includes(k)) throw new Error(`contact.showOnImage: «${k}» ناشناخته (${SHOW.join(' | ')})`);
+  if (!show.includes('phone')) throw new Error('contact.showOnImage باید phone را داشته باشد');
+  const mobile = show.includes('mobile') ? formatPhone(cfg.contact.mobile, cfg.contact.digits) : '';
+  if (show.includes('email') && !/^[^@\s]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(cfg.contact.email ?? '')) throw new Error('contact.email نامعتبر');
+  if (show.includes('address') && !(String(cfg.contact.address ?? '').trim().length >= 10 && String(cfg.contact.address).length <= 80)) throw new Error('contact.address باید ۱۰ تا ۸۰ کاراکتر باشد');
+  const contact = { show, phone, mobile, site: cfg.contact.site, email: show.includes('email') ? cfg.contact.email : '', address: show.includes('address') ? String(cfg.contact.address).trim() : '' };
+  return { cfg, colors, phone, contact, root };
 }
 
 export const RATIOS = { '1:1': [1, 1], '4:5': [4, 5], '16:9': [16, 9], '9:16': [9, 16] };
@@ -100,7 +109,8 @@ export function validateInput(i) {
   if (!VARIANTS.includes(variant)) throw new Error(`variant «${variant}» نامعتبر است (${VARIANTS.join(' | ')})`);
   const ratio = i.ratio ?? '1:1';
   if (!RATIOS[ratio]) throw new Error(`ratio «${ratio}» نامعتبر است (${Object.keys(RATIOS).join(' | ')})`);
-  const theme = i.theme ?? 'light';
+  // پیش‌فرض تیره (۲۸ مهر): تصویر «پلاک گرافیتی» برند است — هم‌خوان با شاسی گرافیتی سایت؛ روی سطح روشن سایت کنتراست می‌سازد. روشن اختیاری.
+  const theme = i.theme ?? 'dark';
   if (!THEMES.includes(theme)) throw new Error(`theme «${theme}» نامعتبر است (light | dark)`);
   const out = {
     variant, ratio, theme,
@@ -158,7 +168,7 @@ const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 
 
 /** اندازه‌ی فونت نام (کسری از u) بر اساس طول — بلندتر، کوچک‌تر. */
-export const nameSizeFor = (len) => (len > 44 ? 0.038 : len > 30 ? 0.045 : 0.054);
+export const nameSizeFor = (len) => (len > 44 ? 0.046 : len > 30 ? 0.054 : 0.064);
 
 /**
  * مناطق چیدمان (px) — تابعی خالص، قابل آزمون.
@@ -171,23 +181,66 @@ export function layoutFor(cfg, v) {
   const L = cfg.layout;
   const p = (k) => Math.round(u * k);
   const pad = Math.round((u * L.marginPct) / 100) - p(0.03);
-  const footerH = Math.round((u * L.footerHeightPct) / 100);
-  const trustH = v.trust ? p(0.07) : 0;
+  // فوتر = شناسنامه‌ی شرکت؛ هر ردیف اضافه (سایت/ایمیل، نشانی) ارتفاع می‌گیرد — هرگز فشرده‌تر از خوانایی بندانگشتی.
+  // ردیف ۱: لوگو + تلفن‌ها؛ ردیف‌های بعد: سایت · ایمیل · نشانی در یک خط شکستنی — تعداد خط از طول متن تخمین زده می‌شود
+  // تا هیچ متنی از فوتر بیرون نزند (نسخه‌ی قبل در بوم مربع نشانی را از پایین بیرون می‌برد).
+  const show = cfg.contact?.showOnImage ?? ['phone', 'site'];
+  const infoText = [show.includes('site') ? cfg.contact.site : '', show.includes('email') ? cfg.contact.email ?? '' : '', show.includes('address') ? cfg.contact.address ?? '' : '']
+    .filter(Boolean);
+  const infoFont = p(0.027);
+  const infoW = infoText.reduce((a, t) => a + t.length * 0.52 * infoFont + p(0.07), 0);
+  const infoLines = infoText.length ? Math.ceil(infoW / (w - p(0.09))) : 0;
+  const footerH = p(0.03) + p(0.07) + infoLines * Math.round(infoFont * 1.7) + p(0.025);
+  const trustH = v.trust ? p(0.08) : 0;
   const bottom = h - footerH - trustH;
   const landscape = w > h * 1.3;
-  const cardH = p(0.115);
-  const fontPx = p(nameSizeFor(v.name.length));
+  // ⚠️ spec در بوم مربع هم دوستونه (متن راست، قطعه چپ): چیدمان عمودی متن را روی قطعه انباشت و قطعه را ریز کرد.
+  const sideBySide = v.variant === 'spec' && w >= h;
+  const cardH = p(sideBySide ? 0.115 : 0.13);
+  // در ستون باریکِ بوم مربع، نام کمی کوچک‌تر (هنوز بالای حد خوانایی بندانگشتی).
+  const fontPx = Math.round(p(nameSizeFor(v.name.length)) * (sideBySide && !landscape ? 0.75 : 1));
   let head = null, cards = null, part, cardCols = 0;
 
   if (v.variant === 'spec') {
-    const headW = landscape ? Math.round(w * 0.42) - pad : w - 2 * pad;
-    const lines = Math.max(1, Math.ceil((v.name.length * 0.56 * fontPx) / headW));
-    const headH = (v.tag ? p(0.05) : 0) + lines * Math.round(fontPx * 1.28) + (v.subtitle ? p(0.048) : 0) + (v.chips.length ? p(0.066) : 0) + p(0.01);
-    if (landscape) {
+    const headW = sideBySide ? Math.round(w * (landscape ? 0.47 : 0.52)) - pad : w - 2 * pad;
+    // تخمین محافظه‌کارانه‌ی خط‌ها (عرض متوسط حرف فارسی درشت ≈ ۰٫۶۲ اندازه‌ی فونت): کم‌تخمینی یعنی هم‌پوشانی متن.
+    const lines = Math.max(1, Math.ceil((v.name.length * 0.62 * fontPx) / headW));
+    const subLines = v.subtitle ? Math.ceil((v.subtitle.length * 0.55 * p(0.032)) / headW) : 0;
+    let chipLines = 0;
+    if (v.chips.length) {
+      chipLines = 1;
+      let x = 0;
+      for (const c of v.chips) {
+        const cw = c.length * 0.58 * p(0.028) + p(0.05);
+        if (x && x + cw > headW) { chipLines++; x = 0; }
+        x += cw + p(0.01);
+      }
+    }
+    const headH = (v.tag ? p(0.055) : 0) + lines * Math.round(fontPx * 1.3) + subLines * p(0.052) + chipLines * p(0.072) + p(0.015);
+    if (sideBySide && !landscape) {
+      // مربع: کارت‌ها یک ردیف تمام‌عرض پایین (مثل آگهی رقبا)، بالای آن دو ستون — متن راست، قطعه چپ.
       const colX = w - pad - headW;
-      cardCols = Math.min(2, v.specs.length) || 1;
+      cardCols = Math.max(1, v.specs.length);
+      const ch = v.specs.length ? cardH : 0;
+      cards = ch ? { x: pad, y: bottom - p(0.03) - ch, w: w - 2 * pad, h: ch, rows: 1 } : null;
+      // نشان «محصول اصلی» گوشه‌ی بالا-چپ است؛ قطعه زیرش شروع می‌شود تا روی آن نیفتد.
+      const top = pad + (v.badge ? p(0.05) : 0);
+      const bot = (cards ? cards.y : bottom - p(0.02)) - p(0.02);
+      if (headH > bot - pad) {
+        throw new Error(`متن برای بوم ${v.ratio} جا نمی‌شود (${Math.round(headH)}px از ${Math.round(bot - top)}px): یک چیپ کم کنید، نام یا زیرعنوان را کوتاه کنید، trust را بردارید یا ratio 4:5 / 16:9 بگیرید.`);
+      }
+      head = { x: colX, y: pad + Math.max(0, Math.round((bot - pad - headH) / 2)), w: headW, h: headH };
+      part = { x: pad, y: top, w: colX - pad * 1.6, h: bot - top };
+    } else if (sideBySide) {
+      const colX = w - pad - headW;
+      // ستون متن پهن‌تر از سه کارت؟ همه در یک ردیف (ارتفاع کمتر = جا برای نام بلندتر).
+      cardCols = v.specs.length && headW >= v.specs.length * p(0.22) ? v.specs.length : Math.min(2, v.specs.length) || 1;
       const cardRows = v.specs.length ? Math.ceil(v.specs.length / cardCols) : 0;
       const textH = headH + (cardRows ? p(0.03) + cardRows * cardH + (cardRows - 1) * p(0.02) : 0);
+      // ⚠️ اگر متن جا نشود، خطا — نه تصویری با متنِ روی هم افتاده (یک بار دقیقاً همین تولید شد).
+      if (textH > bottom - pad) {
+        throw new Error(`متن برای بوم ${v.ratio} جا نمی‌شود (${Math.round(textH)}px از ${Math.round(bottom - pad)}px): یک چیپ یا کارت کم کنید، زیرعنوان را کوتاه کنید، trust را بردارید یا ratio 4:5 / 16:9 بگیرید.`);
+      }
       const ty = Math.max(pad, Math.round((bottom - textH) / 2));
       head = { x: colX, y: ty, w: headW, h: headH };
       cards = cardRows ? { x: colX, y: ty + headH + p(0.03), w: headW, h: cardRows * cardH + (cardRows - 1) * p(0.02), rows: cardRows } : null;
@@ -201,6 +254,9 @@ export function layoutFor(cfg, v) {
       const top = pad + headH + p(0.01);
       const bot = (cards ? cards.y : bottom - p(0.02)) - p(0.015);
       part = { x: pad, y: top, w: w - 2 * pad, h: bot - top };
+      if (part.h < h * 0.22) {
+        throw new Error(`در بوم ${v.ratio} برای قطعه فقط ${Math.round(part.h)}px می‌ماند (حداقل ${Math.round(h * 0.22)}px): متن را کم کنید یا ratio دیگری بگیرید.`);
+      }
     }
   } else if (v.variant === 'anatomy') {
     const titleH = v.name ? p(0.1) : 0;
@@ -214,20 +270,21 @@ export function layoutFor(cfg, v) {
   if (v.variant !== 'anatomy' && v.callouts.length) {
     const lw = p(0.15);
     const left = v.callouts.some((c) => c.x < 50), right = v.callouts.some((c) => c.x >= 50);
-    if (landscape && v.variant === 'spec') { outer.x = part.x; outer.w = part.w; }
+    if (sideBySide) { outer.x = part.x; outer.w = part.w; }
     else { outer.x = part.x; outer.w = part.w; }
     if (left) { part.x += lw; part.w -= lw; }
     if (right) { part.w -= lw; }
   }
   if (v.variant === 'anatomy') { outer.x = pad; outer.w = w - 2 * pad; }
-  return { w, h, u, pad, footerH, trustH, bottom, head, cards, cardCols, cardH, part, outer, landscape, fontPx };
+  return { w, h, u, pad, footerH, trustH, bottom, head, cards, cardCols, cardH, part, outer, landscape, sideBySide, fontPx };
 }
 
 /** توکن‌های لاتین/عددی (کد مدل) هرگز وسط خط نشکنند: «SAGA1-L12» یک واحد است. ⚠️ روی متن *خام* کار می‌کند و خودش escape می‌کند — اجرا روی HTML escape‌شده موجودیت‌ها (&lt;) را خراب می‌کرد. */
 const nowrapLatin = (raw) =>
   String(raw)
-    .split(/([A-Za-z0-9][A-Za-z0-9\-_.\/]*)/)
-    .map((part, i) => (i % 2 ? `<bdi style="white-space:nowrap">${escapeHtml(part)}</bdi>` : escapeHtml(part)))
+    // دنباله‌ی لاتینِ چندکلمه‌ای («48V AC») یک واحد است؛ تکه‌تکه، RTL ترتیبش را برعکس می‌کرد («AC 48V»).
+    .split(/([A-Za-z0-9][A-Za-z0-9\-_.\/]*(?:\s+[A-Za-z0-9][A-Za-z0-9\-_.\/]*)*)/)
+    .map((part, i) => (i % 2 ? `<bdi dir="ltr" style="white-space:nowrap">${escapeHtml(part)}</bdi>` : escapeHtml(part)))
     .join('');
 const hexAlpha = (hex, a) => `${hex}${Math.round(a * 255).toString(16).padStart(2, '0')}`;
 
@@ -247,6 +304,20 @@ function themeColors(c, theme) {
   };
 }
 
+/**
+ * ⚠️ خوانایی بندانگشتی — دلیل اصلی «ضعیف» دیده‌شدن نسخه‌های قبلی: تصویر برای نمایش ۱۶۰۰px طراحی شده بود ولی در
+ * اینستاگرام، دیوار و نتایج گوگل در ~۳۰۰–۴۰۰px دیده می‌شود؛ متن ۲۲px آنجا ۵px می‌شد. رقبا متن را نسبت به بوم بسیار
+ * درشت‌تر می‌گذارند. قاعده: هر متن در عرض ۴۰۰px دست‌کم ۱۰px (آزمون‌شده).
+ */
+// عرض نمایش واقعی هر نسبت: مربع/۴:۵ در فید اینستاگرام و دیوار (~۴۰۰px)، استوری تمام‌صفحه‌ی گوشی (~۳۹۰px)،
+// ۱۶:۹ برای گالری سایت و یوتیوب (~۷۰۰px).
+export const THUMB_WIDTHS = { '1:1': 400, '4:5': 400, '9:16': 390, '16:9': 700 };
+export const THUMB_MIN_PX = 10;
+export function minThumbFontPx(html, canvasW, ratio = '1:1') {
+  const sizes = [...html.matchAll(/font-size:(\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]));
+  return sizes.length ? (Math.min(...sizes) * THUMB_WIDTHS[ratio]) / canvasW : Infinity;
+}
+
 /** HTML کامل (خالص — بدون Chrome قابل آزمون). `assets`: font، logo، part (data URI)، partW/partH، trust (آرایه‌ی {text, icon}). */
 export function buildHtml(brand, input, assets) {
   const { cfg, colors: c, phone } = brand;
@@ -256,9 +327,9 @@ export function buildHtml(brand, input, assets) {
   const T = themeColors(c, v.theme);
   const L = cfg.layout;
   const rule = L.footerRulePx;
-  const logoH = Math.round((footerH - rule) * (L.logoHeightPct / 100));
   const bs = Math.round((u * L.bracketSizePct) / 100), bi = Math.round((u * L.bracketInsetPct) / 100), bt = L.bracketThicknessPx;
   const p = (k) => Math.round(u * k);
+  const logoH = Math.round(p(0.07) * (L.logoHeightPct / 100) * 1.25);
 
   const fit = Math.min(part.w / assets.partW, part.h / assets.partH) * v.scale;
   const iw = Math.round(assets.partW * fit), ih = Math.round(assets.partH * fit);
@@ -288,9 +359,18 @@ export function buildHtml(brand, input, assets) {
     }
   }
 
+  const K = brand.contact ?? { show: ['phone', 'site'], phone, mobile: '', site: cfg.contact.site, email: '', address: '' };
+  const ico = (d) => `<svg viewBox="0 0 24 24" width="${p(0.03)}" height="${p(0.03)}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+  const I_PHONE = 'M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z';
+  const I_MOBILE = 'M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3';
+  const I_WEB = 'M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3 7.5 7.03 7.5 12s2.015 9 4.5 9zM3.6 9h16.8M3.6 15h16.8';
+  const I_MAIL = 'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0l-9.75 6.5-9.75-6.5';
+  const I_PIN = 'M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z';
   const brandBlock = `<div class="brand"><img src="${assets.logo}" height="${logoH}" alt=""><span class="wordmark">${escapeHtml(cfg.brandName)}</span></div>`;
-  const contactBlock = `<div class="contact"><span class="site" dir="ltr">${escapeHtml(cfg.contact.site)}</span><span class="phone" dir="ltr">${escapeHtml(phone)}</span></div>`;
-  const footer = cfg.logo.placement === 'footer-start' ? brandBlock + contactBlock : contactBlock + brandBlock;
+  const row2 = [K.show.includes('site') && `<span dir="ltr">${ico(I_WEB)}${escapeHtml(K.site)}</span>`, K.email && `<span dir="ltr">${ico(I_MAIL)}${escapeHtml(K.email)}</span>`].filter(Boolean);
+  const contactBlock = `<div class="pills"><span class="pill main" dir="ltr">${ico(I_PHONE)}${escapeHtml(K.phone)}</span>${K.mobile ? `<span class="pill" dir="ltr">${ico(I_MOBILE)}${escapeHtml(K.mobile)}</span>` : ''}</div>`;
+  const info = [...row2, K.address && `<span>${ico(I_PIN)}${escapeHtml(K.address)}</span>`].filter(Boolean);
+  const footer = `<div class="top">${cfg.logo.placement === 'footer-start' ? brandBlock + contactBlock : contactBlock + brandBlock}</div>${info.length ? `<div class="info">${info.join('')}</div>` : ''}`;
 
   let header = '';
   if (head && v.variant === 'spec') {
@@ -299,7 +379,7 @@ ${v.tag ? `<span class="tag">${escapeHtml(v.tag)}</span>` : ''}<h1 style="font-s
 ${v.subtitle ? `<p class="sub">${nowrapLatin(v.subtitle)}</p>` : ''}
 ${v.chips.length ? `<ul>${v.chips.map((x) => `<li>${nowrapLatin(x)}</li>`).join('')}</ul>` : ''}</div>`;
   } else if (head) {
-    header = `<div class="head center" style="left:${head.x}px;top:${head.y}px;width:${head.w}px;height:${head.h}px"><h1 style="font-size:${p(0.046)}px">${nowrapLatin(v.name)}</h1></div>`;
+    header = `<div class="head center" style="left:${head.x}px;top:${head.y}px;width:${head.w}px;height:${head.h}px"><h1 style="font-size:${p(0.054)}px">${nowrapLatin(v.name)}</h1></div>`;
   }
   const cardsHtml = cards
     ? `<div class="cards" style="left:${cards.x}px;top:${cards.y}px;width:${cards.w}px;grid-template-columns:repeat(${cardCols},1fr)">${v.specs
@@ -308,7 +388,7 @@ ${v.chips.length ? `<ul>${v.chips.map((x) => `<li>${nowrapLatin(x)}</li>`).join(
     : '';
   const trust = v.trust && (assets.trust ?? []).length
     ? `<div class="trust" style="top:${bottom}px;height:${trustH}px">${assets.trust
-        .map((t) => `<span><svg viewBox="0 0 24 24" width="${p(0.03)}" height="${p(0.03)}" fill="none" stroke="${c.accent}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="${escapeHtml(t.icon)}"/></svg>${escapeHtml(t.text)}</span>`)
+        .map((t) => `<span><svg viewBox="0 0 24 24" width="${p(0.034)}" height="${p(0.034)}" fill="none" stroke="${c.accent}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="${escapeHtml(t.icon)}"/></svg>${escapeHtml(t.text)}</span>`)
         .join('')}</div>`
     : '';
   const badge = v.badge === 'original' ? `<div class="orig">محصول اصلی</div>` : '';
@@ -338,28 +418,32 @@ html,body{width:${W}px;height:${H}px;background:${T.plateEdge};font-family:"${cf
 .br.brr{bottom:${footerH + trustH + bi}px;right:${bi}px;border-bottom-width:${bt}px;border-right-width:${bt}px}
 .head{position:absolute;display:flex;flex-direction:column;align-items:flex-start;gap:${p(0.012)}px}
 .head.center{align-items:center;justify-content:center;text-align:center}
-.tag{font-size:${p(0.022)}px;font-weight:800;color:${T.accentText};letter-spacing:.01em;border-bottom:${p(0.004)}px solid ${c.accent};padding-bottom:${p(0.004)}px}
+.tag{font-size:${p(0.028)}px;font-weight:800;color:${T.accentText};letter-spacing:.01em;border-bottom:${p(0.004)}px solid ${c.accent};padding-bottom:${p(0.004)}px}
 .head h1{font-weight:900;line-height:1.28;color:${T.ink}}
-.sub{font-size:${p(0.028)}px;font-weight:500;color:${T.muted};line-height:1.6}
+.sub{font-size:${p(0.032)}px;font-weight:500;color:${T.muted};line-height:1.6}
 .head ul{display:flex;gap:${p(0.01)}px;list-style:none;flex-wrap:wrap;margin-top:${p(0.004)}px}
-.head li{font-size:${p(0.022)}px;font-weight:700;color:${T.ink};border:1.5px solid ${hexAlpha(T.line, v.theme === 'dark' ? 0.4 : 1)};background:${T.card};border-radius:${p(0.006)}px;padding:${p(0.005)}px ${p(0.013)}px}
+.head li{font-size:${p(0.028)}px;font-weight:700;color:${T.ink};border:1.5px solid ${hexAlpha(T.line, v.theme === 'dark' ? 0.4 : 1)};background:${T.card};border-radius:${p(0.006)}px;padding:${p(0.005)}px ${p(0.013)}px}
 .head li:first-child{border-color:${c.accent}}
 .cards{position:absolute;display:grid;gap:${p(0.02)}px}
 .card{background:${T.card};border:1px solid ${T.cardBorder};border-top:${p(0.006)}px solid ${c.accent};border-radius:${p(0.008)}px;display:flex;flex-direction:column;justify-content:center;padding:0 ${p(0.022)}px;gap:${p(0.004)}px;box-shadow:0 ${p(0.006)}px ${p(0.02)}px ${v.theme === 'dark' ? 'rgba(0,0,0,.35)' : 'rgba(14,17,19,.06)'}}
-.card .val{font-size:${p(0.036)}px;font-weight:900;color:${T.ink};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card .k{font-size:${p(0.02)}px;font-weight:600;color:${T.muted}}
-.co{position:absolute;font-size:${p(0.022)}px;font-weight:700;line-height:1.45;color:${T.ink}}
+.card .val{font-size:${p(0.044)}px;font-weight:900;color:${T.ink};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .k{font-size:${p(0.027)}px;font-weight:600;color:${T.muted}}
+.co{position:absolute;font-size:${p(0.027)}px;font-weight:700;line-height:1.45;color:${T.ink}}
 .co.l{text-align:left}
 .co.r{text-align:right}
-.orig{position:absolute;top:${p(0.04)}px;left:${p(0.06)}px;font-size:${p(0.022)}px;font-weight:900;color:${c.paper};background:${c.accent};padding:${p(0.006)}px ${p(0.018)}px;border-radius:${p(0.05)}px}
-.illus{position:absolute;top:${p(0.04)}px;right:${p(0.06)}px;font-size:${p(0.02)}px;font-weight:700;color:${T.muted};border:2px dashed ${T.muted};padding:${p(0.005)}px ${p(0.014)}px;border-radius:${p(0.007)}px}
+.orig{position:absolute;top:${p(0.04)}px;left:${p(0.06)}px;font-size:${p(0.028)}px;font-weight:900;color:${c.paper};background:${c.accent};padding:${p(0.006)}px ${p(0.018)}px;border-radius:${p(0.05)}px}
+.illus{position:absolute;top:${p(0.04)}px;right:${p(0.06)}px;font-size:${p(0.027)}px;font-weight:700;color:${T.muted};border:2px dashed ${T.muted};padding:${p(0.005)}px ${p(0.014)}px;border-radius:${p(0.007)}px}
 .trust{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:${p(0.05)}px;background:${v.theme === 'dark' ? c.bgMid : c.paperEdge};border-top:1px solid ${hexAlpha(T.line, v.theme === 'dark' ? 0.2 : 1)}}
-.trust span{display:flex;align-items:center;gap:${p(0.01)}px;font-size:${p(0.022)}px;font-weight:700;color:${T.ink}}
-.foot{position:absolute;left:0;right:0;bottom:0;height:${footerH}px;background:${c.bgEdge};border-top:${rule}px solid ${c.accent};display:flex;align-items:center;justify-content:space-between;padding:0 ${p(0.05)}px}
+.trust span{display:flex;align-items:center;gap:${p(0.01)}px;font-size:${p(0.028)}px;font-weight:700;color:${T.ink}}
+.foot{position:absolute;left:0;right:0;bottom:0;height:${footerH}px;background:${c.bgEdge};border-top:${rule}px solid ${c.accent};display:flex;flex-direction:column;justify-content:center;gap:${p(0.012)}px;padding:${p(0.012)}px ${p(0.045)}px}
+.foot .top{display:flex;align-items:center;justify-content:space-between;gap:${p(0.03)}px;height:${p(0.07)}px}
+.foot .info{display:flex;flex-wrap:wrap;align-items:center;column-gap:${p(0.035)}px;row-gap:${p(0.006)}px;font-size:${p(0.027)}px;line-height:1.5;font-weight:600;color:${c.muted}}
+.foot .info span{display:flex;align-items:center;gap:${p(0.008)}px}
 .brand{display:flex;align-items:center;gap:${p(0.014)}px}
-.wordmark{font-size:${p(0.036)}px;font-weight:900;color:${c.text}}
-.contact{display:flex;align-items:center;gap:${p(0.03)}px;font-size:${p(0.029)}px;font-weight:700;color:${c.text}}
-.contact .site{color:${c.muted};font-weight:500}
+.wordmark{font-size:${p(0.046)}px;font-weight:900;color:${c.text};white-space:nowrap}
+.pills{display:flex;gap:${p(0.014)}px}
+.pill{display:flex;align-items:center;gap:${p(0.01)}px;font-size:${p(0.032)}px;white-space:nowrap;font-weight:900;padding:${p(0.004)}px ${p(0.016)}px;border:2px solid ${c.accent};border-radius:${p(0.008)}px;color:${c.text}}
+.pill.main{background:${c.accent};color:${c.paper}}
 </style></head><body><div class="canvas">
 <div class="ring"></div>${ghost}
 <i class="br tl"></i><i class="br tr"></i><i class="br bl"></i><i class="br brr"></i>

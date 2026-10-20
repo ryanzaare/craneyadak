@@ -202,6 +202,12 @@ function cyh_order_notify_shipped( $post_id ) {
 
 /* ------------------------------ فهرست پنل و ویجت ------------------------------ */
 
+/** شمارش در پایگاه‌داده (found_posts، یک شناسه) — هرگز بارکردن همه‌ی ردیف‌ها برای count(). */
+function cyh_count_posts( array $args = [] ) {
+	$q = new WP_Query( array_merge( $args, [ 'posts_per_page' => 1, 'fields' => 'ids', 'no_found_rows' => false ] ) );
+	return (int) $q->found_posts;
+}
+
 /**
  * ?cyh_fulfil=processing|shipped|delivered — «processing» شامل سفارش بدون متا هم
  * هست (پیش‌فرض). فقط مقدار شناخته‌شده اعمال می‌شود.
@@ -221,34 +227,26 @@ function cyh_fulfilment_filter_meta_query( $value ) {
 }
 
 function cyh_orders_dashboard_widget() {
-	// فیلتر «در انتظار» در PHP (نه meta_query): متای cyh_fulfilment برای سفارش بدون
-	// رسیدگی اصلاً وجود ندارد و همان پیش‌فرض «در حال آماده‌سازی» است.
-	$paid     = get_posts(
-		[
-			'post_type'      => CYH_QUOTE_CPT,
-			'post_status'    => 'publish',
-			'posts_per_page' => -1,
-			'meta_query'     => [ [ 'key' => 'cyh_payment', 'value' => 'paid' ] ], // phpcs:ignore WordPress.DB.SlowDBQuery
-		]
-	);
-	$awaiting = array_values(
-		array_filter(
-			$paid,
-			static function ( $post ) {
-				return 'processing' === cyh_order_fulfilment_status( $post->ID );
-			}
-		)
-	);
+	// ⚠️ فیلتر در SQL (نه PHP): نسخه‌ی قبلی *همه‌ی* سفارش‌های پرداخت‌شده را با posts_per_page=-1 در حافظه می‌آورد و
+	// در PHP می‌شمرد — با رشد سفارش‌ها هر بار بازکردن پیشخوان کندتر می‌شد. «در حال آماده‌سازی» = بدون متا یا processing.
+	$mq       = [
+		'relation' => 'AND',
+		[ 'key' => 'cyh_payment', 'value' => 'paid' ],
+		cyh_fulfilment_filter_meta_query( 'processing' ),
+	];
+	$base     = [ 'post_type' => CYH_QUOTE_CPT, 'post_status' => 'publish', 'meta_query' => $mq ]; // phpcs:ignore WordPress.DB.SlowDBQuery
+	$total    = cyh_count_posts( $base );
+	$awaiting = get_posts( array_merge( $base, [ 'posts_per_page' => 10, 'fields' => 'ids', 'no_found_rows' => true ] ) );
 	if ( ! $awaiting ) {
 		echo '<p>سفارش پرداخت‌شده‌ی در انتظار رسیدگی نیست.</p>';
 	} else {
-		printf( '<p><strong>%d</strong> سفارش پرداخت‌شده منتظر ارسال است:</p><ul style="margin:0 0 8px 0">', count( $awaiting ) );
-		foreach ( array_slice( $awaiting, 0, 10 ) as $post ) {
+		printf( '<p><strong>%d</strong> سفارش پرداخت‌شده منتظر ارسال است:</p><ul style="margin:0 0 8px 0">', (int) $total );
+		foreach ( $awaiting as $post_id ) {
 			printf(
 				'<li><a href="%s" dir="ltr">%s</a> — %s ریال</li>',
-				esc_url( get_edit_post_link( $post->ID ) ),
-				esc_html( (string) get_post_meta( $post->ID, 'cyh_code', true ) ),
-				esc_html( number_format( (int) get_post_meta( $post->ID, 'cyh_total', true ) ) )
+				esc_url( get_edit_post_link( $post_id ) ),
+				esc_html( (string) get_post_meta( $post_id, 'cyh_code', true ) ),
+				esc_html( number_format( (int) get_post_meta( $post_id, 'cyh_total', true ) ) )
 			);
 		}
 		echo '</ul>';

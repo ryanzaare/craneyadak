@@ -65,8 +65,8 @@ export default defineConfig({
     sitemap({
       // صفحه‌ی جستجو و صفحه‌ی تشکر (thank-you) عمداً noindex هستند؛ حذف
       // آن‌ها از sitemap جلوی هشدار Search Console («Submitted URL marked
-      // noindex») را می‌گیرد. صفحه‌ی /datasheets هم تا انتشار اولین PDF
-      // واقعی noindex است و به همین دلیل موقتاً از sitemap حذف می‌شود.
+      // noindex») را می‌گیرد. (صفحه‌های noindex دیگر — دسته/برند/محصولِ ناقص — را
+      // scripts/prune-noindex-sitemap.mjs پس از build از روی HTML واقعی برمی‌دارد.)
       // صفحات محصولِ نمایشی هرگز نباید در نقشه‌ی سایت بیایند. نام فایل
       // آن‌ها از اسلاگ ساخته می‌شود و اسلاگ فیکسچرها با `demo-` شروع
       // می‌شود (کد فنی DEMO- → اسلاگ demo-...).

@@ -1,7 +1,7 @@
 # Craneyadak visual identity — image and video production guide
 
-Status: v0 draft (18 Mehr 1405). Owner: client. Tools: Gemini (Nano Banana image models) and Google Flow (Veo video).
-Freeze the style sheet as **v1** after the 3-product pilot (step 6). Changing it later means redoing every asset.
+Status: v1 (28 Mehr 1405). Owner: client. **Images: the compositor (§8) — no Gemini in the image path.** Video: Google Flow (Veo), §3.
+Freeze the look after the 3-product pilot (§6). Changing it later means re-running the batch from the saved raw photos (minutes, not a redo).
 
 > Capabilities below come from public Google pages and third-party guides read on 2026-10-10. Reference-image limits and
 > Gem behaviour differ between sources and between plans. **Test each claim in your own account before relying on it.**
@@ -20,57 +20,29 @@ Freeze the style sheet as **v1** after the 3-product pilot (step 6). Changing it
 5. No official-dealer claims in any image or video (rule 3). «قطعه اصلی با ضمانت اصالت» is allowed only on products that
    carry the «اصلی» label on the site.
 
-## 1. The style sheet (decide once, write it down)
+## 1. The style sheet (lives in code, not in this document)
 
-Use the site's own tokens so photos and pages look like one system (`src/styles/global.css`):
+The look is defined once and enforced by `scripts/compose-image.mjs` + `brand/compositor.config.json`, using the site's own
+tokens in `src/styles/global.css`. This section only explains the decisions; the numbers are in the config.
 
 | Element | Decision |
 |---|---|
-| Backdrop | Dark graphite gradient, `#171B1F` (steel-900) centre to `#0E1113` (steel-950) edge. One backdrop for all products. |
-| Accent | Orange `#EA580C`, used only for: thin rule under the part, phone strip, small corner mark. Nothing else orange. |
-| Light | One soft key light from upper-left, soft contact shadow under the part, faint rim light. No coloured gels. |
-| Camera | Straight-on or 3/4 view, part centred, 10–12 % safe margin on every side, same scale feel across products. |
-| Canvas | Square 1:1, 1600×1600 px for gallery. Social variants cropped from the same master (4:5, 9:16). |
-| Footer strip | Bottom 8 % of canvas: brand mark on the right (RTL start), `craneyadak.com` and phone in Vazirmatn. Outside the part area. |
-| Never | Hands, people, fake workshops, invented environments, lens flare, stock cranes behind the part, text inside the part area. |
+| Plate | **Graphite by default** (`steel-800 → 950`, faint hexagon grid echoing the logo) — the brand's chrome colour, so images read as one family and stand out on the site's light reading surface. A light plate exists (`theme: "light"`) for places that need it |
+| Accent | Orange `#EA580C` only for: corner brackets, the ring behind the part, the primary phone pill, card top rules, badges |
+| Part | The hero: largest element, real pixels only (Apple Vision mask), soft floor shadow |
+| Company identity | Graphite footer on every image: logo + wordmark, phone (orange pill), mobile, website, email, address — all from the config (`contact.showOnImage`) |
+| Product details | Name, category tag, subtitle, up to 3 chips and up to 4 spec cards (`spec`), or up to 8 labelled callouts (`anatomy`). Typed by you from the product page — never AI-written |
+| Legibility | Every text ≥ 10px at real viewing size (feed ~400px, story ~390px, site 16:9 ~700px) — tested. Too much text for a ratio = a clear error, never an overlapping image |
+| Never | Hands, people, invented scenes, competitor photos, AI-redrawn parts, text on the part |
 
-Phone number in every image — your idea works if done as a **template layer**:
+## 2. Image pipeline (raw photo in → branded images out)
 
-- Put **`craneyadak.com`** as the permanent mark and the phone beside it. The number is then one text layer you can change once and re-export.
-- Cost to know: if the number changes you re-export every image. Template + batch export keeps that to minutes.
-- Google Merchant-style image policies forbid promotional overlays on the main product image. That programme is not
-  available in Iran, so it does not bind you, but keep the strip small and outside the part so a clean crop is always possible.
-
-## 2. Image pipeline (raw photo in → branded image out)
-
-1. **Prepare the raw photo.** Sharp, whole part visible, plain background if possible, 2000 px or larger. Do not pre-filter.
-2. **Pass 1 in Gemini — cut-out only.** Upload the photo, ask to remove only the background and keep the part pixel-faithful.
-   Change one thing per pass. Combining background, light and angle in one pass causes the part to drift.
-3. **Pass 2 in Gemini — place on the brand backdrop.** Attach: the cut-out, plus your **approved master image** as style anchor.
-4. **Check at 100 % zoom against the raw photo** (checklist in section 5). Reject and redo on any change to the part.
-5. **Template in Canva / Figma / Photoshop:** drop the result in, footer strip with brand + site + phone. Export 1600×1600.
-6. **Save:** raw → `raw/`, branded master → `branded/`. Upload the branded image to WordPress; keep the raw close-up as the last gallery image.
-
-Prompt skeleton for pass 2 (English works best; the text on the part stays whatever the photo shows):
-
-```
-Image 1 is a real product photo of a crane spare part (already cut out). Image 2 is the approved brand style reference.
-Task: place the part from image 1 on a backdrop that matches image 2: dark graphite gradient, one soft key light from
-upper-left, soft contact shadow, faint rim light, part centred with 10% margin.
-Keep the part exactly as in image 1: same shape, proportions, holes, connectors, label text, part number and colours.
-Do not add, remove or redraw any detail on the part. Do not add text, logos, hands or other objects.
-Output: square 1:1.
-```
-
-Gemini setup that makes this repeatable:
-
-- Create a **Gem** (Gemini → Gems → New Gem) holding the style sheet and the skeleton above. Sources disagree on whether a Gem can
-  default to «Create image»; if not, pick the tool manually inside the Gem chat.
-- Use the best image model your plan offers (the «Thinking»/Pro tier when you attach several references). The cheapest «Fast» tier is
-  described by Google as not optimised for multiple references or multi-step editing.
-- **Master image first.** Make one perfect branded image of one product, approve it, then attach it as a reference in every later job.
-  Consistency comes from the anchor image, not from the words.
-- Do not describe the part in the prompt beyond what is needed. Describing it invites the model to "improve" it.
+1. **Shoot the raw photo** (iPhone full resolution): plain contrasting background, soft daylight, part filling most of the frame,
+   straight-on and 3/4, plus one close-up of the label. Keep every raw photo forever (§0 rule 2).
+2. **Write one JSON per product** (copy `brand/products/_example.json`; it is never committed — `brand/products/.gitignore`).
+3. **Run** `npm run compose -- --spec brand/products/<part>.json`. Background removal (Vision), layout and every text are automatic.
+4. **Check at 100 %** against the raw photo (§5). If a callout dot is off, adjust its `x`/`y` (percent of the part picture).
+5. **Upload** the hero/spec images to WordPress; keep the unretouched label close-up as the last gallery image.
 
 ## 3. Video pipeline (motion graphics + human voice)
 
@@ -121,7 +93,7 @@ camera motion and mood, never to show how a part works. Do not use generated aud
 4. Batch the catalogue per category as products get real SKUs (SKUs come from the client during the content phase).
 5. One 20–30 s video per top category after its images are done.
 
-## 7. Lessons from the first master image (client review, 19 Mehr 1405)
+## 7. Lessons from the first master image (client review, 19 Mehr 1405) — history; §1, §2 and §8 are current
 
 Result judged "awful". Faults: (1) a fake phone number drawn by the AI (021-12345678); (2) no product name or key details;
 (3) very plain, boring design. **A fourth fault the client did not list:** the AI redrew the stickers on the remote, so their
@@ -138,7 +110,7 @@ Fixes:
   pass 1 over a backdrop in the template instead of letting the model touch the part again.
 - **Compositor tool: built** (section 8).
 
-## 8. The compositor (`scripts/compose-image.mjs`) — v3
+## 8. The compositor (`scripts/compose-image.mjs`) — v4
 
 **Step 1 — background removal is automatic (no Gemini).** Give the compositor your *raw phone photo* (JPG/HEIC). On the Mac it runs
 `scripts/cutout.swift` (Apple Vision): Vision only makes a *mask*; every pixel of the part stays the original pixel. Gemini, by contrast,
@@ -157,7 +129,7 @@ Copy `brand/products/_example.json`. Shared fields apply to every output; each `
 |---|---|
 | `photo`, `outDir` | raw photo (or transparent PNG) and output folder (absolute, or relative to the JSON file) |
 | `variant` | `hero` (part only, biggest) · `spec` (name, tag, subtitle, ≤3 chips, ≤4 spec cards) · `anatomy` (part centred, 2–8 labelled callouts — the most useful image for a technical buyer) |
-| `theme` | `light` (default — matches the Frontend v2 light surface) or `dark`. The footer is graphite in both |
+| `theme` | `dark` (default — graphite plate, the brand chrome) or `light`. The footer is graphite in both |
 | `ratio` | `1:1` (1600²) · `4:5` (1280×1600) · `16:9` (1600×900) · `9:16` (900×1600, story/reel) |
 | `trust` | `true` adds an icon row from **verified** items of `src/data/trust.ts` (`trustRow` in the config). «گارانتی اصالت» appears only with `badge: "original"` |
 | `callouts` | `{text, x, y}`: x,y in % of the part picture (0 = left/top). Point only at things that really exist on the part |

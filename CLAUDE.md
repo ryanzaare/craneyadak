@@ -163,7 +163,7 @@ LCP و TBT آن هیچ نسبتی با تولید ندارند — بهینه‌
 
 ```bash
 npm run build && npm run preview     # خروجی واقعی، مینیفای‌شده
-npm run lighthouse                   # Lighthouse CI روی dist (دسکتاپ+موبایل، آستانه‌ها در lighthouserc.*.json)
+npm run lighthouse                   # Lighthouse CI روی dist (دسکتاپ+موبایل، آستانه‌ها در lighthouserc.json؛ تفاوت دسکتاپ/موبایل در scripts/run-lhci.mjs)
 ```
 
 پورت را از خروجی `preview` بخوان و فرض نکن. برای CLS و مسائل واکنش‌گرا

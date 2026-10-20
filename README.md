@@ -30,7 +30,6 @@ npm run build           # تاکسونومی → بررسی‌ها → build →
 | `src/data/` | داده‌ی ساکن + `taxonomy.generated.ts` (تولیدشده، دستی ویرایش نشود) |
 | `src/components/` | کامپوننت‌های Astro |
 | `wordpress-plugin/crane-yadak-headless/` | افزونه: CPTها، فیلدهای ACF، REST، ابزار ورود محتوا |
-| `content/` | محتوای آماده به شکل JSON برای ورود گروهی از پنل |
 | `scripts/` | نگهبان‌های build |
 | `docs/` | تصمیم‌های معماری و کارهای باقی‌مانده |
 

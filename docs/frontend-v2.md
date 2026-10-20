@@ -86,20 +86,43 @@ WhatsApp.
 **Category page:** title + one-paragraph guide (from WordPress content blocks) · filters (existing facets) · **list/table view by default**
 for spec-heavy categories (code · name · brand · key spec · stock · price state) with a grid toggle · content blocks below the list.
 
-**Product page (mobile order, top to bottom):**
+**Product page (mobile order, top to bottom) — revised 28 Mehr after the review below:**
 1. One-line scrollable breadcrumb.
-2. Gallery: compositor hero (light plate) first, anatomy image, unretouched label close-up last.
-3. Name; part code in monospace with copy; brand + origin; authenticity label.
+2. **Compact identity header** (~140px): name (max 2 lines), part code in monospace with copy, brand, authenticity + stock pills.
+3. Gallery with **capped height** (≈ 4:3, ~290px on a 390px phone; swipe dots, no thumbnail strip on mobile): compositor hero,
+   anatomy image, unretouched label close-up last.
 4. Stock state + price block (payable / inquiry / expired, with validity date) + **one** primary action; secondary actions as text links
    (WhatsApp photo, proforma, wishlist).
 5. Four key spec chips → "full specs" anchor.
 6. Fitment and equivalents.
 7. Warranty (per category, exists) — once.
 8. Full spec table — once. 9. Description and content blocks. 10. Questions. 11. Related parts.
-Sticky bottom bar: price state + primary action + WhatsApp.
+Sticky bottom bar: price state + primary action + WhatsApp/call — **visible on load whenever the primary button is off-screen**
+(today `#sticky-bar` stays hidden until the user scrolls *past* `#buy-box`, so on a phone neither is seen on the first screen), and
+merged with the site-wide contact bar on product pages (two stacked bottom bars = one too many).
+
+*Why identity before the gallery (the trade-off, analysed):* a buyer arriving from Google searched a part number. The first question
+is "is this the page for my code?" — only text answers it; many remotes or brake discs look alike, so a picture cannot confirm a
+code. With a 460–500px gallery first, the code and the authenticity label fall below the first screen on a 390×812 phone, the
+"information scent" breaks and the back button wins. The counter-argument — technicians recognise parts by look — is kept by
+capping the gallery height instead of removing it: identity (~140px) + gallery (~290px) + price/primary action still fit in the
+first screen. Side benefit: the text header can become the LCP element, which is cheaper than an image. Desktop keeps the
+two-column layout (gallery left, identity + buy box right), where both are visible at once anyway.
 
 **Quote / checkout / account:** keep logic, restyle: a clear 3-step indicator, saved company/invoice profile (exists), printable proforma
 view.
+
+### 4b. Review findings to fix (verified in code, 28 Mehr 1405)
+
+| Finding | Evidence | Fix (phase) |
+|---|---|---|
+| Trust claims repeated: home has 4 blocks (`MetricsStrip`, `CoverageStrip`, `AssuranceStrip`, «چرا کرین یدک»); the buy box shows the same 3 claims three times (pills above price, `TrustBadges compact`, 3-item list) | `src/pages/index.astro`, `src/pages/products/[slug].astro` buy box | One compact trust strip per page (1, 3) |
+| Buy box has no hierarchy: orange cart, green WhatsApp, bordered proforma, plus wishlist / share / print | buy box | One primary, one secondary, the rest as text links (1) |
+| Radius chaos: `rounded-3xl` ×13, `rounded-2xl` ×36, `rounded-xl` ×41, plus `rounded-md` | `grep` over `src/` | Only 4px (chips, tables) and 6–8px (cards, buttons, inputs); hairline `steel-300` borders instead of `shadow-xl` (0) |
+| Token split: legacy `gray-*` ×278 and `crane-*` ×259 classes beside `steel-*` ×469 | `grep` over `src/` | Migrate everything to `steel-*` / `accent*`; a guard fails the build on legacy classes and on `rounded-2xl/3xl` (0) |
+| No search in the header — a visitor landing on an inner page cannot search again | `src/components/Header.astro` | Header search on every page, mobile included (3, moved earlier: 1) |
+| Category cards have no add action — adding 4 parts means opening 4 pages | `src/components/ProductCard.astro` | `+ استعلام` / `+ سبد` on each row of the list/table view (2) |
+| Honeypot `left:-9999px` widened the RTL page to 10,264px (mobile «white screen» on register) | measured `scrollWidth` | **Fixed 28 Mehr** (`.cyh-honeypot`) |
 
 ## 5. Visual language
 
@@ -116,7 +139,7 @@ view.
   desktop), fitment table, list/grid product row, three-ways-in search block, bottom action bar, step indicator, honest empty state,
   printable spec sheet.
 - **Icons:** one outline set at 1.5px stroke (current Heroicons-style), no emoji, no decorative icons.
-- **Images:** the compositor plates (light theme, `docs/visual-identity-guide.md` §8) — the same corner brackets and graphite footer link
+- **Images:** the compositor plates (graphite by default, `docs/visual-identity-guide.md` §8) — the same corner brackets and graphite footer link
   images and pages into one system. Fixed aspect ratios (CLS 0).
 - **Motion:** state transitions ≤ 150ms; nothing else; `prefers-reduced-motion` respected.
 
@@ -124,7 +147,7 @@ view.
 
 | Item | Budget |
 |---|---|
-| Lighthouse (mobile and desktop) | performance ≥ 0.9, accessibility ≥ 0.9, SEO ≥ 0.95 on indexable pages, CLS ≤ 0.05, TBT ≤ 200ms, LCP ≤ 2.5s (existing `lighthouserc.*.json`) |
+| Lighthouse (mobile and desktop) | performance ≥ 0.9, accessibility ≥ 0.9, SEO ≥ 0.95 on indexable pages, CLS ≤ 0.05, TBT ≤ 200ms, LCP ≤ 2.5s (existing `lighthouserc.json`) |
 | JavaScript per page | ≤ 30 KB gzip, islands only (search, filters, baskets, account). Today all JS in `dist/_astro` is ~42 KB raw |
 | Fonts | Vazirmatn variable (111 KB today — subset to Persian + Latin, target ≤ 70 KB) + mono subset ≤ 20 KB |
 | HTML | product page today ~200 KB raw / home ~280 KB raw (inline CSS + repeated content). Target: product ≤ 120 KB raw by removing repetition |
@@ -148,8 +171,8 @@ Work in a **git worktree on a separate branch**; nothing reaches `main` without 
 
 | Phase | Scope | Done when |
 |---|---|---|
-| 0 | Tokens, type scale, mono font, components on a `noindex` style-guide page | Client approves the style guide |
-| 1 | Product page (+ bottom action bar) | Before/after screenshots at 390 / 768 / 1280px; no repeated blocks; price + primary action in the first mobile screen |
+| 0 | Tokens, type scale, mono font, radius/border rules, legacy-class migration + guard, components on a `noindex` style-guide page | Client approves the style guide; guard green with zero `gray-*`/`crane-*`/`rounded-2xl/3xl` |
+| 1 | Product page (identity header, capped gallery, buy-box hierarchy, single trust strip, bottom action bar) + header search | Before/after screenshots at 390 / 768 / 1280px; no repeated blocks; code, image, price and primary action in the first 390×812 screen |
 | 2 | Category page (list/table view) and search (part-number tolerant, zero-result fallback) | Search finds `saga1l12`, `SAGA1 L12`, `ساگا` |
 | 3 | Header, navigation (non-empty only), home | No empty category in nav/home; home has one leading block |
 | 4 | Quote, checkout, account restyle | Purchase and quote flows tested end-to-end on sandbox |

@@ -910,16 +910,12 @@ function cyh_quote_admin_filter_query( $query ) {
 add_action( 'pre_get_posts', 'cyh_quote_admin_filter_query' );
 
 function cyh_quote_view_count( $view ) {
-	return count(
-		get_posts(
-			[
-				'post_type'      => CYH_QUOTE_CPT,
-				'post_status'    => 'publish',
-				'posts_per_page' => -1,
-				'fields'         => 'ids',
-				'meta_query'     => [ cyh_quote_view_meta_query( $view ) ], // phpcs:ignore WordPress.DB.SlowDBQuery
-			]
-		)
+	return cyh_count_posts(
+		[
+			'post_type'   => CYH_QUOTE_CPT,
+			'post_status' => 'publish',
+			'meta_query'  => [ cyh_quote_view_meta_query( $view ) ], // phpcs:ignore WordPress.DB.SlowDBQuery
+		]
 	);
 }
 

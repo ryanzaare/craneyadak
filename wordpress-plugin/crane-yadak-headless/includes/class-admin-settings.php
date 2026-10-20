@@ -115,7 +115,7 @@ function cyh_render_settings_page() {
 						<label>
 							<input type="checkbox" id="cyh_deploy_hook_enabled" name="cyh_deploy_hook_enabled" value="1"
 								<?php checked( get_option( 'cyh_deploy_hook_enabled', false ) ); ?> />
-							فعال باشد: بعد از هر انتشار/ویرایش محصول، برند، صنعت، سند فنی یا مقاله، سایت زنده به‌صورت خودکار به‌روزرسانی شود
+							فعال باشد: بعد از هر انتشار/ویرایش محصول، برند، دسته یا مقاله، سایت زنده به‌صورت خودکار به‌روزرسانی شود
 						</label>
 						<p class="description">
 							این گزینه دقیقاً همان چیزی است که به شما اجازه می‌دهد بدون دانش کدنویسی، محتوا اضافه/ویرایش کنید و

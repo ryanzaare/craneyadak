@@ -223,10 +223,7 @@ export function unverifiedTrustItems(): UnverifiedItem[] {
   for (const b of TRUST_BADGES) {
     if (!b.verified) out.push({ group: 'نشان‌های اعتماد', id: b.id, detail: b.title });
   }
-  /* نویسنده‌ها دیگر اینجا نیستند؛ از وردپرس می‌آیند و تأییدشان آنجاست. */
-  for (const a of [] as Author[]) {
-    if (!a.verified) out.push({ group: 'نویسندگان', id: a.slug, detail: `${a.name} — ${a.jobTitle}` });
-  }
+  /* نویسنده‌ها اینجا نیستند؛ از وردپرس می‌آیند و تأییدشان آنجاست (حلقه‌ی مرده روی آرایه‌ی خالی حذف شد). */
 
   return out;
 }

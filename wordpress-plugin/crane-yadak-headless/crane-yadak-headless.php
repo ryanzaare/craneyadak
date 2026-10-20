@@ -2,10 +2,10 @@
 /**
  * Plugin Name:       Crane Yadak — Headless Backend
  * Plugin URI:        https://craneyadak.com
- * Description:       بک‌اند Headless برای فرانت‌اند Astro سایت کرین یدک. CPTهای محصول/برند/صنعت/سند فنی
+ * Description:       بک‌اند Headless برای فرانت‌اند Astro سایت کرین یدک. CPTهای محصول و برند
  *                     را با پشتیبانی WPGraphQL ثبت می‌کند، فیلدهای ACF Pro را از طریق Local JSON همگام
  *                     نگه می‌دارد، و یک اندپوینت REST امن برای فرم استعلام قیمت فراهم می‌کند.
- * Version:           3.27.0
+ * Version:           3.28.0
  * Requires PHP:      8.0
  * Requires Plugins:  advanced-custom-fields-pro, wp-graphql
  * Author:            Crane Yadak Engineering
@@ -60,7 +60,7 @@ if ( defined( 'CYH_VERSION' ) ) {
 	return;
 }
 
-define( 'CYH_VERSION', '3.27.0' );
+define( 'CYH_VERSION', '3.28.0' );
 define( 'CYH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CYH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -86,7 +86,7 @@ function cyh_check_dependencies() {
 			'admin_notices',
 			function () use ( $missing ) {
 				printf(
-					'<div class="notice notice-error"><p><strong>Crane Yadak Headless:</strong> افزونه(های) پیش‌نیاز فعال نیستند: %s. تا نصب و فعال‌سازی این افزونه‌ها، محصولات/برندها/صنایع در WPGraphQL قابل کوئری نخواهند بود.</p></div>',
+					'<div class="notice notice-error"><p><strong>Crane Yadak Headless:</strong> افزونه(های) پیش‌نیاز فعال نیستند: %s. تا نصب و فعال‌سازی این افزونه‌ها، محصولات و برندها در WPGraphQL قابل کوئری نخواهند بود.</p></div>',
 					esc_html( implode( '، ', $missing ) )
 				);
 			}

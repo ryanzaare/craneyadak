@@ -6,10 +6,10 @@
 //
 // چرا روی dist و نه سایت زنده: این گیت «رگرسیون کد» را می‌گیرد (CLS، JS بلاک‌کننده، آلت و متای سئو)
 // بدون نویز شبکه/سرور. موارد وابسته به سرور (فشرده‌سازی، کش، TTFB، HTTPS) عمداً در assertions نیست؛
-// آن‌ها را verify-deploy روی دامنه‌ی زنده می‌سنجد. آستانه‌ها در lighthouserc.{desktop,mobile}.json.
+// آن‌ها را verify-deploy روی دامنه‌ی زنده می‌سنجد. آستانه‌ها در lighthouserc.json (یک منبع).
 // ---------------------------------------------------------------------------
 import { spawnSync } from 'node:child_process';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, rmSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 if (!existsSync('dist/index.html')) {
   console.error('❌ dist/ نیست — اول `npm run build`.');
@@ -17,9 +17,19 @@ if (!existsSync('dist/index.html')) {
 }
 let failed = 0;
 try {
+  // ⚠️ یک منبع برای آستانه‌ها: lighthouserc.json. دو فایل desktop/mobile قبلی ۹۸٪ یکسان بودند و هر تغییر باید
+  // دو بار تکرار می‌شد (یک بار هم نشد = گیت ناهمخوان). تفاوت فقط preset و پوشه‌ی گزارش است و اینجا اعمال می‌شود.
+  // ⚠️ preset 'mobile' در lhci نامعتبر است؛ موبایل = پیش‌فرض Lighthouse (بدون preset).
+  const base = JSON.parse(readFileSync('lighthouserc.json', 'utf8'));
+  mkdirSync('.astro', { recursive: true });
   for (const preset of ['desktop', 'mobile']) {
     console.log(`\n── Lighthouse CI (${preset}) ──`);
-    const r = spawnSync('npx', ['lhci', 'autorun', `--config=./lighthouserc.${preset}.json`], { stdio: 'inherit' });
+    const cfg = structuredClone(base);
+    if (preset === 'desktop') cfg.ci.collect.settings = { ...cfg.ci.collect.settings, preset: 'desktop' };
+    cfg.ci.upload.outputDir = `./.astro/lhci-${preset}`;
+    const file = `.astro/lighthouserc.${preset}.json`;
+    writeFileSync(file, JSON.stringify(cfg, null, 2));
+    const r = spawnSync('npx', ['lhci', 'autorun', `--config=./${file}`], { stdio: 'inherit' });
     if (r.status !== 0) failed++;
   }
 } finally {

@@ -139,7 +139,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
   document.getElementById('cart-checkout')?.addEventListener('click', (e) => {
     if (getToken()) return;
     e.preventDefault();
-    location.href = `/account/login?next=${encodeURIComponent('/checkout')}`;
+    location.href = `/account/login/?next=${encodeURIComponent('/checkout')}`;
   });
 
   const store = browserStore();

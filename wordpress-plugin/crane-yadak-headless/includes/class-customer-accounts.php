@@ -810,15 +810,14 @@ function cyh_rest_account_saved_clear( $request ) {
 /* =========================================================================
    پنل وردپرس: «کاربران» فقط نام و ایمیل نشان می‌داد
    ========================================================================= */
-function cyh_user_paid_orders( $user_id ) {
-	return get_posts(
+/** تعداد سفارش پرداخت‌شده‌ی کاربر — شمارش در پایگاه‌داده، نه بارکردن همه (ستون «کاربران» برای هر ردیف صدا می‌زند). */
+function cyh_user_paid_order_count( $user_id = 0 ) {
+	return cyh_count_posts(
 		[
-			'post_type'      => CYH_QUOTE_CPT,
-			'post_status'    => 'publish',
-			'author'         => (int) $user_id,
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-			'meta_query'     => [ [ 'key' => 'cyh_payment', 'value' => 'paid' ] ], // phpcs:ignore WordPress.DB.SlowDBQuery
+			'post_type'   => CYH_QUOTE_CPT,
+			'post_status' => 'publish',
+			'author'      => (int) $user_id,
+			'meta_query'  => [ [ 'key' => 'cyh_payment', 'value' => 'paid' ] ], // phpcs:ignore WordPress.DB.SlowDBQuery
 		]
 	);
 }
@@ -840,7 +839,7 @@ function cyh_users_column_content( $value, $column, $user_id ) {
 		return esc_html( (string) get_user_meta( $user_id, 'cyh_company', true ) ?: '—' );
 	}
 	if ( 'cyh_orders' === $column ) {
-		$count = count( cyh_user_paid_orders( $user_id ) );
+		$count = cyh_user_paid_order_count( $user_id );
 		return $count > 0
 			? sprintf( '<a href="%s">%d</a>', esc_url( admin_url( 'edit.php?post_type=' . CYH_QUOTE_CPT . '&cyh_view=orders&author=' . (int) $user_id ) ), $count )
 			: '0';
@@ -858,7 +857,7 @@ function cyh_user_profile_section( $user ) {
 	echo '<h2>مشخصات مشتری (کرین یدک)</h2><table class="form-table" role="presentation">';
 	printf( '<tr><th>موبایل</th><td dir="ltr" style="text-align:right">%s</td></tr>', esc_html( '' === $phone ? '—' : $phone ) );
 	printf( '<tr><th>شرکت</th><td>%s</td></tr>', esc_html( '' === $company ? '—' : $company ) );
-	printf( '<tr><th>سفارش پرداخت‌شده</th><td>%d</td></tr>', count( cyh_user_paid_orders( $user->ID ) ) );
+	printf( '<tr><th>سفارش پرداخت‌شده</th><td>%d</td></tr>', cyh_user_paid_order_count( $user->ID ) );
 	printf( '<tr><th>نشانی ذخیره‌شده</th><td>%s</td></tr>', esc_html( '' === $addr ? '—' : $addr ) );
 	echo '</table>';
 }

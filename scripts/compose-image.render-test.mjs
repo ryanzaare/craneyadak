@@ -52,8 +52,8 @@ const outCard = path.join(dir, 'card.png');
 const outWide = path.join(dir, 'wide.jpg');
 const outStory = path.join(dir, 'story.jpg');
 await composeAll([
-  { photo: cutout, out: outHero },
-  { photo: cutout, out: outCard, variant: 'spec', name: 'ریموت کنترل ساگا SAGA1-L12', chips: ['۱۲ کلید', 'دو سرعته'], specs: [{ k: 'کانال', v: '۱۲' }], callouts: [{ text: 'برچسب', x: 30, y: 60 }] },
+  { photo: cutout, out: outHero, theme: 'light' },
+  { photo: cutout, out: outCard, variant: 'spec', theme: 'light', name: 'ریموت کنترل ساگا SAGA1-L12', chips: ['۱۲ کلید', 'دو سرعته'], specs: [{ k: 'کانال', v: '۱۲' }], callouts: [{ text: 'برچسب', x: 30, y: 60 }] },
   { photo: cutout, out: outWide, variant: 'spec', ratio: '16:9', name: 'ریموت کنترل ساگا', scale: 0.8, dx: 3 },
   { photo: cutout, out: outStory, variant: 'hero', ratio: '9:16', ghost: 'SAGA1-L12', badge: 'original', theme: 'dark', trust: true },
   { photo: cutout, out: path.join(dir, 'anatomy.jpg'), variant: 'anatomy', ratio: '16:9', name: 'اجزا', callouts: [{ text: 'الف', x: 20, y: 20 }, { text: 'ب', x: 80, y: 60 }] },
@@ -66,7 +66,11 @@ for (const [f, W, H] of [[outHero, 1600, 1600], [outCard, 1600, 1600], [outWide,
 }
 // نوار نارنجی بالای فوتر: ردیف y = 1600 - footer(176) + 2
 const px = async (f, x, y) => (await sharp(f).extract({ left: x, top: y, width: 1, height: 1 }).raw().toBuffer());
-const rule = await px(outCard, 800, 1600 - 176 + 3); // footerHeightPct 11% از ۱۶۰۰
+// نوار نارنجی = لبه‌ی بالای فوتر؛ ارتفاع فوتر از متن شناسنامه حساب می‌شود، پس ردیفی که رنگش نارنجی است را از پایین پیدا می‌کنیم.
+const colOf = async (f, y) => [...(await sharp(f).extract({ left: 800, top: y, width: 1, height: 1 }).raw().toBuffer())];
+let ruleY = -1;
+for (let y = 1599; y > 1000; y--) { const c = await colOf(outCard, y); if (Math.abs(c[0] - 234) < 10 && Math.abs(c[1] - 88) < 10 && Math.abs(c[2] - 12) < 10) { ruleY = y; break; } }
+const rule = ruleY > 0 ? await colOf(outCard, ruleY) : [0, 0, 0];
 t('نوار نارنجی فوتر (#EA580C ± JPEG/PNG)', Math.abs(rule[0] - 234) < 8 && Math.abs(rule[1] - 88) < 8 && Math.abs(rule[2] - 12) < 8, [...rule].join(','));
 // هدر card: متن روشن (steel-50) باید در نیمه‌ی بالا باشد، در hero نباشد.
 const brightIn = async (f, top, h) => {
@@ -74,11 +78,12 @@ const brightIn = async (f, top, h) => {
   return [...data].filter((v) => v > 200).length;
 };
 // تم روشن پیش‌فرض: متن نام تیره روی سطح روشن → پیکسل‌های تیره در نوار هدر.
-const darkIn = async (f, top, h) => {
-  const { data } = await sharp(f).extract({ left: 150, top, width: 1300, height: h }).greyscale().raw().toBuffer({ resolveWithObject: true });
+const darkIn = async (f, top, h, left = 150, width = 1300) => {
+  const { data } = await sharp(f).extract({ left, top, width, height: h }).greyscale().raw().toBuffer({ resolveWithObject: true });
   return [...data].filter((v) => v < 80).length;
 };
-t('spec (روشن): متن نام در هدر دیده می‌شود', (await darkIn(outCard, 90, 160)) > 2000);
+// مربع: ستون متن سمت راست (RTL) است.
+t('spec (روشن): متن نام در ستون متن دیده می‌شود', (await darkIn(outCard, 150, 500, 850, 600)) > 2000);
 t('hero (روشن): هدر خالی است', (await darkIn(outHero, 90, 60)) < 50);
 
 if (failed) {

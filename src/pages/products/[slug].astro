@@ -737,7 +737,7 @@ const contact = await getContact();
   };
 
   const toLogin = () => {
-    location.href = `/account/login?next=${encodeURIComponent(location.pathname)}`;
+    location.href = `/account/login/?next=${encodeURIComponent(location.pathname)}`;
   };
 
   if (btn && slug) {

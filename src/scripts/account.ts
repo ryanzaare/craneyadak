@@ -130,7 +130,7 @@ export async function api<T = Record<string, any>>(
 export function requireLogin(): boolean {
   if (getToken()) return true;
   // ⚠️ search هم برگردانده می‌شود: /account/invoice?code=… بدون کد بعد از ورود بی‌معنی است.
-  location.replace(`/account/login?next=${encodeURIComponent(location.pathname + location.search)}`);
+  location.replace(`/account/login/?next=${encodeURIComponent(location.pathname + location.search)}`);
   return false;
 }
 

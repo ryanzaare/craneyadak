@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { canvasSize, layoutFor, nameSizeFor, expandSpecFile, trustItems, formatPhone, toFaDigits, readCssTokens, loadBrand, validateInput, buildHtml, recolorLogoPixels, escapeHtml } from './compose-image.mjs';
+import { canvasSize, layoutFor, nameSizeFor, expandSpecFile, trustItems, minThumbFontPx, THUMB_MIN_PX, formatPhone, toFaDigits, readCssTokens, loadBrand, validateInput, buildHtml, recolorLogoPixels, escapeHtml } from './compose-image.mjs';
 
 let failed = 0;
 const t = (name, ok, extra = '') => {
@@ -47,7 +47,7 @@ t('تلفن خراب در پیکربندی رد می‌شود', throws(() => loa
 
 console.log('── ورودی تصویر');
 const throwsIn = (i, needle) => throws(() => validateInput(i), needle);
-t('پیش‌فرض‌ها: hero، تم روشن؛ card = spec', validateInput({}).variant === 'hero' && validateInput({}).theme === 'light' && validateInput({ variant: 'card', name: 'x' }).variant === 'spec');
+t('پیش‌فرض‌ها: hero، تم تیره (پلاک گرافیتی برند)؛ card = spec', validateInput({}).variant === 'hero' && validateInput({}).theme === 'dark' && validateInput({ variant: 'card', name: 'x' }).variant === 'spec');
 t('متن در hero ممنوع', throwsIn({ name: 'x' }, 'در hero نمی‌آیند'));
 t('spec بدون نام', throwsIn({ variant: 'spec' }, 'name'));
 t('anatomy: کمتر از ۲ callout یا با مشخصات', throwsIn({ variant: 'anatomy', callouts: [{ text: 'a', x: 1, y: 1 }] }, 'دست‌کم ۲') && throwsIn({ variant: 'anatomy', specs: [{ k: 'a', v: 'b' }], callouts: [{ text: 'a', x: 1, y: 1 }, { text: 'b', x: 2, y: 2 }] }, 'فقط name'));
@@ -76,11 +76,12 @@ for (const r of ['1:1', '4:5', '16:9', '9:16']) {
   const L = layoutFor(real.cfg, spec({ ratio: r }));
   const inside = (b) => !b || (b.x >= 0 && b.y >= 0 && b.x + b.w <= L.w && b.y + b.h <= L.bottom + 1);
   t(`${r}: همه درون بوم، هدر/قطعه/کارت روی هم نمی‌افتند`, inside(L.part) && inside(L.head) && inside(L.cards)
-    && (L.landscape ? L.part.x + L.part.w <= L.head.x : L.head.y + L.head.h <= L.part.y + 1 && L.part.y + L.part.h <= L.cards.y), JSON.stringify([L.part, L.head, L.cards]));
+    && (L.sideBySide ? L.part.x + L.part.w <= L.head.x && (L.landscape || L.head.y + L.head.h <= L.cards.y) : L.head.y + L.head.h <= L.part.y + 1 && L.part.y + L.part.h <= L.cards.y), JSON.stringify([L.part, L.head, L.cards]));
   // ⚠️ درس رقبا: قطعه قهرمان قاب است.
-  t(`${r}: منطقه‌ی قطعه در spec (پر: برچسب+زیرعنوان+چیپ+۳ کارت+نوار اعتماد) ≥ ۲۵٪ بوم`, area(L) >= 0.25, area(L).toFixed(2));
+  // ⚠️ شناسنامه‌ی کامل شرکت + نوار اعتماد جا می‌گیرد؛ کف‌ها پس از افزودن آن‌ها (۲۸ مهر) واقع‌بینانه شد.
+  t(`${r}: منطقه‌ی قطعه در spec (پر: برچسب+زیرعنوان+چیپ+۳ کارت+نوار اعتماد+شناسنامه) ≥ ۱۵٪ بوم`, area(L) >= 0.15, area(L).toFixed(2));
   const Lh = layoutFor(real.cfg, validateInput({ ratio: r, trust: true }));
-  t(`${r}: منطقه‌ی قطعه در hero ≥ ۵۰٪ بوم`, area(Lh) >= 0.5, area(Lh).toFixed(2));
+  t(`${r}: منطقه‌ی قطعه در hero ≥ ۴۰٪ بوم`, area(Lh) >= 0.4, area(Lh).toFixed(2));
 }
 t('نام بلند → فونت کوچک‌تر و هدر بلندتر یا برابر', nameSizeFor(60) < nameSizeFor(31) && nameSizeFor(31) < nameSizeFor(10)
   && layoutFor(real.cfg, spec({ name: 'ا'.repeat(60) })).head.h >= layoutFor(real.cfg, spec({ name: 'ا' })).head.h);
@@ -105,17 +106,44 @@ for (const theme of ['light', 'dark']) {
 const hero = buildHtml(real, {}, assets);
 t('hero عنوان ندارد، spec دارد', !hero.includes('<h1') && card.includes('<h1'));
 t('نوار اعتماد فقط با trust:true', card.includes('class="trust"') && !hero.includes('class="trust"'));
-t('کد مدل لاتین نشکن (nowrap)', buildHtml(real, { variant: 'spec', name: 'ریموت SAGA1-L12' }, assets).includes('<bdi style="white-space:nowrap">SAGA1-L12</bdi>'));
+t('کد مدل لاتین نشکن (nowrap)', buildHtml(real, { variant: 'spec', name: 'ریموت SAGA1-L12' }, assets).includes('<bdi dir="ltr" style="white-space:nowrap">SAGA1-L12</bdi>'));
+t('دنباله‌ی لاتین چندکلمه‌ای یک واحد LTR («48V AC» برعکس نشود)', buildHtml(real, { variant: 'spec', name: 'x', specs: [{ k: 'ولتاژ', v: '48V AC' }] }, assets).includes('<bdi dir="ltr" style="white-space:nowrap">48V AC</bdi>'));
 t('برچسب‌ها فقط با گزینه‌شان', !hero.includes('class="illus"') && buildHtml(real, { illustration: true }, assets).includes('class="illus"') && !hero.includes('class="orig"') && buildHtml(real, { badge: 'original' }, assets).includes('class="orig"')
   && !hero.includes('class="ghost"') && buildHtml(real, { ghost: 'F24-60' }, assets).includes('F24-60'));
 const endLogo = buildHtml({ ...real, cfg: { ...real.cfg, logo: { ...real.cfg.logo, placement: 'footer-end' } } }, {}, assets);
-t('جای لوگو قابل‌تغییر با پیکربندی', hero.indexOf('class="brand"') < hero.indexOf('class="contact"') && endLogo.indexOf('class="contact"') < endLogo.indexOf('class="brand"'));
+t('جای لوگو قابل‌تغییر با پیکربندی', hero.indexOf('class="brand"') < hero.indexOf('class="pills"') && endLogo.indexOf('class="pills"') < endLogo.indexOf('class="brand"'));
 const big = buildHtml(real, { scale: 1.4 }, assets), small = buildHtml(real, { scale: 0.5 }, assets);
 const wOf = (h) => Number(/\.part\{[^}]*width:(\d+)px/.exec(h)[1]);
 t('scale اندازه‌ی قطعه را واقعاً عوض می‌کند', wOf(big) > wOf(hero) && wOf(hero) > wOf(small), [wOf(big), wOf(hero), wOf(small)].join('/'));
 const anat = buildHtml(real, { variant: 'anatomy', callouts: [{ text: 'الف', x: 10, y: 10 }, { text: 'ب', x: 20, y: 12 }, { text: 'پ', x: 80, y: 50 }] }, assets);
 const ys = [...anat.matchAll(/class="co l" style="left:\d+px;top:(\d+)px/g)].map((m) => Number(m[1]));
 t('anatomy: برچسب‌های یک سمت روی هم نمی‌افتند', ys.length === 2 && ys[1] - ys[0] >= Math.round(1600 * 0.085) - 1, ys.join(','));
+console.log('── خوانایی بندانگشتی و جا شدن متن');
+for (const r of ['1:1', '4:5', '16:9', '9:16']) {
+  for (const variant of ['hero', 'spec', 'anatomy']) {
+    const input = variant === 'spec' ? { variant, ratio: r, name: 'ریموت کنترل تله کرین F24-60', tag: 'ریموت', chips: ['دو سرعته'], specs: [{ k: 'کانال', v: '۱۲' }, { k: 'ولتاژ', v: '48V AC' }], trust: true, badge: 'original' }
+      : variant === 'anatomy' ? { variant, ratio: r, name: 'اجزا', callouts: [{ text: 'الف', x: 10, y: 10 }, { text: 'ب', x: 90, y: 50 }], trust: true } : { ratio: r, trust: true };
+    const h = buildHtml(real, input, assets);
+    const W = canvasSize(real.cfg, r).w;
+    t(`${variant} ${r}: کوچک‌ترین متن در اندازه‌ی نمایش واقعی ≥ ${THUMB_MIN_PX}px`, minThumbFontPx(h, W, r) >= THUMB_MIN_PX, minThumbFontPx(h, W, r).toFixed(1));
+  }
+}
+t('ورودی خراب: متن زیاد در ۱:۱ = خطای روشن، نه تصویر روی‌هم‌افتاده', throws(() => layoutFor(real.cfg, validateInput({ variant: 'spec', name: 'ا'.repeat(64), tag: 'ا'.repeat(30), subtitle: 'ا'.repeat(70), chips: ['ا'.repeat(26), 'ب'.repeat(26), 'پ'.repeat(26)], specs: [{ k: 'a', v: 'b' }], trust: true })), 'جا نمی‌شود'));
+t('محتوای کامل نمونه‌ی واقعی (F24-60) در هر چهار نسبت جا می‌شود', ['1:1', '4:5', '16:9', '9:16'].every((r) => !throws(() => layoutFor(real.cfg, validateInput({ variant: 'spec', ratio: r, name: 'ریموت کنترل تله کرین F24-60', tag: 'ریموت کنترل جرثقیل', subtitle: 'جوی‌استیک دوگانه، دو سرعته', chips: ['دو سرعته', '۱۸ ماه ضمانت تعمیر'], specs: [{ k: 'تعداد کانال', v: '۱۲' }, { k: 'ولتاژ گیرنده', v: '48V AC' }, { k: 'باتری', v: '۴ قلمی' }], trust: true, badge: 'original' })), '')));
+
+console.log('── شناسنامه‌ی شرکت روی تصویر');
+const full = buildHtml(real, {}, assets);
+t('تلفن، موبایل، سایت، ایمیل و نشانی همه روی تصویر', ['۰۲۱-۴۶۸۷۶۹۸۰', '۰۹۱۲-۲۸۹۲۲۵۳', 'craneyadak.com', 'info@craneyadak.com', 'جاده مخصوص'].every((x) => full.includes(x)));
+write({ ...cfg, contact: { ...cfg.contact, showOnImage: ['site'] } });
+t('showOnImage بدون phone رد می‌شود', throws(() => loadBrand(tmp), 'phone'));
+write({ ...cfg, contact: { ...cfg.contact, showOnImage: ['phone', 'fax'] } });
+t('فیلد ناشناخته رد می‌شود', throws(() => loadBrand(tmp), 'ناشناخته'));
+write({ ...cfg, contact: { ...cfg.contact, email: 'not-an-email' } });
+t('ایمیل خراب رد می‌شود', throws(() => loadBrand(tmp), 'email'));
+write({ ...cfg, contact: { ...cfg.contact, mobile: '0912' } });
+t('موبایل خراب رد می‌شود', throws(() => loadBrand(tmp), 'معتبر نیست'));
+write(cfg);
+
 t('escapeHtml', escapeHtml(`<a href="x">&'`) === '&lt;a href=&quot;x&quot;&gt;&amp;&#39;');
 
 console.log('── لوگوی روی پس‌زمینه‌ی تیره');
