@@ -29,6 +29,7 @@
 // ---------------------------------------------------------------------------
 
 import { readFileSync, globSync, statSync } from 'node:fs';
+import { liveSymbolProblems, acfLiveSets, stripPhpComments } from './docs-fresh-lib.mjs';
 
 /**
  * چیزهایی که از پروژه حذف شده‌اند.
@@ -89,6 +90,11 @@ const RETIRED = [
   { term: 'cyh_category_meta_seed', why: 'بذر مهاجرت یک‌باره — حذف شد' },
   { term: 'priceDisplay', why: 'فیلد GraphQL بازنشسته — قیمت از src/lib/pricing.ts' },
   { term: 'صنایع تحت پوشش', why: 'CPT صنعت — حذف شد' },
+  // ── ۲۹ مهر ۱۴۰۵ ────────────────────────────────────────────────────────
+  { term: 'categoryContent', why: 'گروه ACF — با پالت بلوک (contentBlocks) جایگزین شد' },
+  { term: 'group_cyh_category_content', why: 'کلید گروه ACF categoryContent — حذف شد' },
+  { term: 'compose-image', why: 'compositor برنامه‌ای تصویر — به تصمیم کارفرما حذف شد' },
+  { term: 'compositor.config', why: 'پیکربندی compositor — حذف شد' },
   { term: 'QuoteBasket.astro', why: 'سبد تکی با برچسب «سفارش/استعلام» — با Baskets.astro (دو سبد جدا) جایگزین شد' },
 ];
 
@@ -177,7 +183,7 @@ const problems = [];
 const selfCheck = [];
 
 // ── ۱) خودآزمایی: آیا واقعاً بازنشسته‌اند؟ ───────────────────────────────
-const liveCode = CODE.filter((f) => !f.includes('check-docs-fresh'))
+const liveCode = CODE.filter((f) => !f.includes('docs-fresh')) // نگهبان و کتابخانه/آزمونش نام‌ها را عمداً دارند
   .map((f) => stripComments(read(f)))
   .join('\n');
 
@@ -266,17 +272,15 @@ try {
   problems.push('package.json خوانده نشد — بررسی ارجاع دستورها بی‌اعتبار است.');
 }
 
-if (npmScripts) {
-  for (const doc of DOCS) {
-    const body = readFileSync(doc, 'utf8');
-    // کامنت/کدبلاک خنثی نمی‌شود: در یک سند، *همه‌ی* ذکرها ادعا هستند.
-    for (const m of body.matchAll(/npm run ([a-z0-9:_-]+)/g)) {
-      const name = m[1];
-      if (!(name in npmScripts)) {
-        problems.push(`${doc}: «npm run ${name}» در package.json نیست.`);
-      }
-    }
-  }
+/* ═══ ۴) مستندات در برابر کد زنده (فهرست سفید از خود کد) ═══════════════
+   ⚠️ فهرست سیاه RETIRED فقط چیزی را می‌گیرد که کسی دستی به آن افزوده باشد؛ categoryContent،
+   cyh_repair_slugs و cyh_build_hierarchy از همین شکاف رد شدند. اینجا هر `cyh_*`، نام/کلید گروه ACF
+   و `npm run …` با PHP افزونه، تعریف زنده‌ی ACF و package.json سنجیده می‌شود (منطق و آزمون:
+   scripts/docs-fresh-lib.mjs، scripts/docs-fresh.test.mjs). */
+{
+  const php = stripPhpComments(globSync('wordpress-plugin/crane-yadak-headless/**/*.php').map(read).join('\n'));
+  const { acfNames, acfKeys } = acfLiveSets(globSync('wordpress-plugin/crane-yadak-headless/acf-json/*.json').map(read), php);
+  for (const doc of DOCS) problems.push(...liveSymbolProblems(doc, read(doc), { php, acfNames, acfKeys, npmScripts }));
 }
 
 // ── گزارش ──────────────────────────────────────────────────────────────────

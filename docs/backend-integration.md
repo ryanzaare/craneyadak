@@ -6,14 +6,14 @@
 > «داده‌ی Mock» که دیگر وجود ندارد. اگر چیزی در این سند با کد نمی‌خواند،
 > **کد درست است و این سند باید اصلاح شود.**
 
-آخرین بازبینی: ۷ مهر ۱۴۰۵ (شماره‌ی نسخه‌ی افزونه عمداً اینجا نیست؛ فقط یک zip در `wordpress-plugin/` هست).
+آخرین بازبینی: ۲۹ مهر ۱۴۰۵ (سطر‌به‌سطر با کد؛ نام‌های `cyh_*`، گروه‌های ACF و دستورهای npm این سند را `npm run check` با کد زنده می‌سنجد) (شماره‌ی نسخه‌ی افزونه عمداً اینجا نیست؛ فقط یک zip در `wordpress-plugin/` هست).
 
 ---
 
 ## معماری در یک نگاه
 
 ```
-WordPress (localhost)                    Astro (static)
+WordPress (admin.craneyadak.com)         Astro (static) → craneyadak.com
 ├── CPT / Taxonomy / ACF        ──┐
 ├── WPGraphQL  /graphql           ├──►  npm run build  ──►  dist/  (HTML خالص)
 └── REST  /wp-json/…            ──┘      (فقط زمان build)
@@ -74,18 +74,23 @@ WordPress (localhost)                    Astro (static)
 قیمت (`productFields.price`، با `price_updated_at`) و پرداخت آنلاین زرین‌پال
 (`class-checkout.php`) از ایست ۲ وجود دارند؛ قیمتِ تأییدنشده یا منقضی هرگز
 Offer/پرداخت نمی‌شود و قلم به سبد استعلام می‌رود. جزئیات و وضعیت: `docs/backlog.md`
-(ایست ۲). موجودی هنوز فیلد مستقل ندارد و حدس زده نمی‌شود.
+(ایست ۲). موجودی فیلد مستقل `productFields.stockStatus` دارد (`unknown` پیش‌فرض امن، `in_stock`، `on_order`) که فقط از پنل پر
+می‌شود و هرگز حدس زده نمی‌شود. Offer در JSON-LD فقط برای قلم پرداخت‌پذیر ساخته می‌شود — و پرداخت‌پذیر یعنی موجود — پس
+`availability` آن همیشه `InStock` است (`src/lib/wp.ts`، `productJsonLd`).
 
 
 ## ۲. گروه‌های ACF
 
-| گروه | `graphql_field_name` | روی چه چیزی |
-|---|---|---|
-| Product Fields | `productFields` | CPT `product` |
-| Brand Fields | `brandFields` | CPT `brand` |
-| محتوای سئوی دسته‌بندی | `categoryContent` | ترم `crane_category` |
-| هویت دسته (سئو و نمایش) | `categoryMeta` | ترم `crane_category` |
-| تنظیمات سراسری سایت | `siteOptionsFields` | صفحه‌ی تنظیمات |
+| گروه | `graphql_field_name` | روی چه چیزی | تعریف |
+|---|---|---|---|
+| Product Fields | `productFields` | CPT `product` | `acf-json/group_cyh_product_fields.json` |
+| Brand Fields | `brandFields` | CPT `brand` | `acf-json/group_cyh_brand_fields.json` |
+| بلوک‌های محتوا | `contentBlocks` | برند، دسته، محصول | `acf-json/group_cyh_content_blocks.json` |
+| پروفایل کارشناس | `authorProfile` | کاربر وردپرس (E-E-A-T) | `acf-json/group_cyh_author_profile.json` |
+| تنظیمات سراسری سایت | `siteOptionsFields` | صفحه‌ی تنظیمات (`craneSiteSettings`) | `acf-json/group_cyh_site_options.json` |
+| هویت دسته (سئو و نمایش) | `categoryMeta` | ترم `crane_category` | PHP: `includes/class-category-meta.php` |
+
+~~`categoryContent`~~ (محتوای سئوی دسته) حذف شد — با پالت بلوک (`contentBlocks`) جایگزین شد؛ `docs/architecture.md` §۴.
 
 > ⚠️ **هیچ دو گروهی نباید یک `graphql_field_name` داشته باشد.**
 > WPGraphQL نمی‌تواند دو گروه را در یک تایپ ادغام کند؛ یکی بی‌صدا حذف
@@ -192,23 +197,19 @@ query AllProducts($first: Int!, $after: String) {
 
 ## ۷. زنجیره‌ی build
 
-```bash
-npm run build
-#  ۱) generate-taxonomy.mjs  → ساختار دسته را از وردپرس می‌گیرد
-#  ۲) check-imports.mjs      → هر import به export واقعی می‌رسد؟
-#  ۳) check-wp-hooks.mjs     → امضای هوک‌های پلاگین با وردپرس می‌خواند؟
-#  ۴) astro build            → تولید HTML استاتیک
-#  ۵) pagefind               → ایندکس جستجو
-```
+⚠️ مراحل این‌جا عمداً فهرست نمی‌شوند: نسخه‌ی قبلی این بخش یک زنجیره‌ی پنج‌مرحله‌ای می‌گفت که ماه‌ها با
+`package.json` نمی‌خواند. **مرجع یگانه `package.json` است:**
 
-مرحله‌ی ۱ اگر وردپرس در دسترس نباشد **عمداً build را متوقف می‌کند**.
+| اسکریپت | چه می‌کند |
+|---|---|
+| `scripts.build` | ساختار دسته از وردپرس (`npm run taxonomy`) ← همه‌ی نگهبان‌های آفلاین (`npm run check`) ← هارنس افزونه (`npm run check:plugin`) ← `astro build` |
+| `scripts.postbuild` | پس از هر build خودکار: پیوندها، `.htaccess`، حذف صفحه‌های noindex از sitemap، pagefind و نگهبان‌های خروجی |
+| `scripts.check` | فهرست کامل نگهبان‌ها و آزمون‌ها |
+
+مرحله‌ی ساختار دسته اگر وردپرس در دسترس نباشد **عمداً build را متوقف می‌کند**.
 `npm run dev` برعکس، با آخرین ساختار ذخیره‌شده ادامه می‌دهد.
 
-تست جداگانه‌ی پلاگین (نیازمند `php` روی سیستم):
-
-```bash
-php wordpress-plugin/wp-stub-harness.php
-```
+تست جداگانه‌ی افزونه (نیازمند `php`): `npm run check:plugin`.
 
 ---
 

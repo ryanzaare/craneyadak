@@ -21,10 +21,11 @@ export default defineConfig({
   redirects: LEGACY_REDIRECTS,
 
   build: {
-    // ⚠️ 'always' (آزمایشی، ۱۵ مهر ۱۴۰۵): با 'auto' فایل CSS ۱۲٫۸KB (فشرده) جدا می‌ماند و رندر را
-    // مسدود می‌کرد؛ روی سرور زنده (تأخیر شبکه‌ی بالا) هر درخواست اضافه ≈ ۰٫۳ تا ۰٫۸ ثانیه به FCP/Speed Index
-    // اضافه می‌کند و Lighthouse دسکتاپ ۹۲ بود (نه ۹۹ محلی). هزینه: همین CSS در هر صفحه‌ی HTML تکرار می‌شود
-    // (کش بین‌صفحه‌ای ندارد). اگر Lighthouse زنده بهتر نشد، به 'auto' برگردانید.
+    // ⚠️ 'always' — تنظیم دائمی تولید (از ۱۵ مهر ۱۴۰۵، بازسنجی‌شده روی سایت زنده): با 'auto' فایل CSS
+    // ۱۲٫۸KB (فشرده) جدا می‌ماند و رندر را مسدود می‌کرد؛ روی سرور زنده (تأخیر شبکه‌ی بالا) هر درخواست اضافه
+    // ≈ ۰٫۳ تا ۰٫۸ ثانیه به FCP/Speed Index می‌افزود. نتیجه پس از تغییر: دسکتاپ ۹۲ ← ۹۷، موبایل ۹۶ ← ۹۸
+    // (docs/backlog.md، «عملکرد روی سایت زنده»). هزینه‌ی آگاهانه: همین CSS در هر صفحه‌ی HTML تکرار می‌شود
+    // (کش بین‌صفحه‌ای ندارد). بازگشت به 'auto' فقط با بازسنجی Lighthouse زنده.
     inlineStylesheets: 'always',
   },
 
@@ -74,7 +75,7 @@ export default defineConfig({
         !page.includes('/products/demo-') &&
         !page.includes('/search') &&
         !page.includes('/thank-you') &&
-        // The tracking page is noindex and has no public content.
+        // صفحه‌ی پیگیری سفارش noindex است و محتوای عمومی ندارد.
         !page.includes('/track') &&
         // ⚠️ حساب کاربری و پرداخت noindex هستند. نبودشان در این فهرست ۷
         // صفحه‌ی /account را هفته‌ها در sitemap نگه داشت (ایست ۶). حالا

@@ -1,7 +1,7 @@
 # Frontend v2 — rebuilding the buying experience
 
-Status: **proposal, waiting for the client's agreement** (27 Mehr 1405). The handover prompt for the implementation session is written
-only after this document is agreed. The implementation session must read this file, `CLAUDE.md` and `docs/backlog.md` first.
+Status: **approved** by the client (29 Mehr 1405), decisions in §10. Implementation starts from `docs/frontend-v2-handover.md`.
+The implementation session must read `CLAUDE.md`, `docs/backlog.md`, this file and the handover first.
 
 ## 0. Why this is not a "redesign"
 
@@ -58,8 +58,8 @@ Product page on a phone (390px):
   warranty, assurance list).
 - Four actions of equal weight (cart, WhatsApp photo, proforma, wishlist); price is far below the fold.
 - Title digits mix systems ("SAGA1-L12 L۱۲").
-- Unverified marketing claims ("same-day shipping", "best market price, direct importer") — **removed 27 Mehr** (rule 2); the about page
-  still mentions central warehouses 🔶 (needs confirmation).
+- Unverified marketing claims ("same-day shipping", "best market price, direct importer") — **removed 27 Mehr** (rule 2); the about
+  page's "central warehouses / immediate dispatch" wording — **removed 29 Mehr** (rule 2).
 
 Home page:
 - Promises "31 categories from 19 brands" while 27 categories are empty; another section says 18 brands.
@@ -89,8 +89,8 @@ for spec-heavy categories (code · name · brand · key spec · stock · price s
 **Product page (mobile order, top to bottom) — revised 28 Mehr after the review below:**
 1. One-line scrollable breadcrumb.
 2. **Compact identity header** (~140px): name (max 2 lines), part code in monospace with copy, brand, authenticity + stock pills.
-3. Gallery with **capped height** (≈ 4:3, ~290px on a 390px phone; swipe dots, no thumbnail strip on mobile): compositor hero,
-   anatomy image, unretouched label close-up last.
+3. Gallery with **capped height** (≈ 4:3, ~290px on a 390px phone; swipe dots, no thumbnail strip on mobile) in a neutral frame
+   (`steel-50`/white, fixed aspect ratio, CLS 0). Product images are supplied by the client; unretouched label close-up last.
 4. Stock state + price block (payable / inquiry / expired, with validity date) + **one** primary action; secondary actions as text links
    (WhatsApp photo, proforma, wishlist).
 5. Four key spec chips → "full specs" anchor.
@@ -126,7 +126,7 @@ view.
 
 ## 5. Visual language
 
-- **Surfaces:** light reading surface (`steel-50`/white) for content; graphite (`steel-900/950`) only for header, footer and image plates.
+- **Surfaces:** light reading surface (`steel-50`/white) for content; graphite (`steel-900/950`) only for header and footer.
   (Decision A.)
 - **Colour:** orange (`accent`) is reserved for primary actions, focus and active states; `accent-ink` for links and orange text on
   light. No orange decoration. (Decision B.)
@@ -139,8 +139,8 @@ view.
   desktop), fitment table, list/grid product row, three-ways-in search block, bottom action bar, step indicator, honest empty state,
   printable spec sheet.
 - **Icons:** one outline set at 1.5px stroke (current Heroicons-style), no emoji, no decorative icons.
-- **Images:** the compositor plates (graphite by default, `docs/visual-identity-guide.md` §8) — the same corner brackets and graphite footer link
-  images and pages into one system. Fixed aspect ratios (CLS 0).
+- **Images:** supplied by the client (pipeline outside this repo; rules in `docs/visual-identity-guide.md`). The site provides a clean,
+  neutral gallery frame (`steel-50`/white) with a fixed aspect ratio (CLS 0) and never draws on the image.
 - **Motion:** state transitions ≤ 150ms; nothing else; `prefers-reduced-motion` respected.
 
 ## 6. Performance budget (the Lighthouse gate stays)
@@ -161,7 +161,7 @@ view.
   silo URLs, the automatic `noindex` rules, sitemap pruning.
 - The `data-*` attributes and IDs read by scripts and guards (`data-authenticity`, `data-warranty`, `data-guard-until`, basket/checkout
   hooks, storage keys).
-- Tokens live in `src/styles/global.css` (the compositor reads them); accent / accent-ink contrast rule.
+- Tokens live in `src/styles/global.css` (single source); accent / accent-ink contrast rule.
 - Rules from `CLAUDE.md`: no invented data or claims, no official-dealer claim, AI images labelled «تصویرسازی», no WooCommerce.
 - Guards: `npm run check`, `npm run build`, `npm run lighthouse` must stay green; `check-build-audit` must pass.
 
@@ -173,7 +173,7 @@ Work in a **git worktree on a separate branch**; nothing reaches `main` without 
 |---|---|---|
 | 0 | Tokens, type scale, mono font, radius/border rules, legacy-class migration + guard, components on a `noindex` style-guide page | Client approves the style guide; guard green with zero `gray-*`/`crane-*`/`rounded-2xl/3xl` |
 | 1 | Product page (identity header, capped gallery, buy-box hierarchy, single trust strip, bottom action bar) + header search | Before/after screenshots at 390 / 768 / 1280px; no repeated blocks; code, image, price and primary action in the first 390×812 screen |
-| 2 | Category page (list/table view) and search (part-number tolerant, zero-result fallback) | Search finds `saga1l12`, `SAGA1 L12`, `ساگا` |
+| 2 | Category page (list/table view with stock chips «همه / موجود / استعلامی» + brand filter, quick add per row) and search (part-number tolerant, zero-result fallback) | Search finds `saga1l12`, `SAGA1 L12`, `ساگا`; filters combine; quick add works without opening the product |
 | 3 | Header, navigation (non-empty only), home | No empty category in nav/home; home has one leading block |
 | 4 | Quote, checkout, account restyle | Purchase and quote flows tested end-to-end on sandbox |
 | 5 | Content blocks, blog, legal pages | Reading width ≤ 70ch, tables readable on mobile |
@@ -183,8 +183,22 @@ Every phase: `npm run check` + `npm run build` + `npm run lighthouse` green, scr
 ## 9. Open questions for the client
 
 1. Analytics: there is no visitor analytics today, so "is v2 better?" cannot be measured. Accept a privacy-friendly, self-hostable or
-   Iranian-accessible tool? (Without it, success = Search Console + quote/WhatsApp counts from WordPress.)
-2. Manufacturer logos (Demag, Telecrane…) on brand pages: trademark use is allowed only as identification, never to imply dealership.
-   OK to show them that way?
-3. "Central warehouses" on the about page — true?
-4. Order of phases: product page first (recommended — it is where buying happens), or home first?
+   Iranian-accessible tool? (Without it, success = Search Console + quote/WhatsApp counts from WordPress.) — **still open**; not a blocker
+   for Phases 0–2.
+
+## 10. Client decisions (29 Mehr 1405) — binding for implementation
+
+1. **Images:** the in-repo compositor was removed; the client and Gemini supply product images. The gallery is a clean neutral frame
+   (`steel-50`/white), fixed aspect ratio, zero CLS. The site never overlays text on product images.
+2. **Category page filters (Phase 2):** above the table/list view, three stock chips «همه / موجود / استعلامی» **and a brand filter**
+   (only brands that have products in that category). Filters combine and are reflected in the URL (existing behaviour on `/products/`).
+3. **Product page tabs (Phase 1):** exactly **two** tabs — «مشخصات فنی» and «محصولات مرتبط/سازگار». No empty third tab; «راهنمای نصب و
+   سیم‌کشی» is added only when its WordPress field exists and has content (backlog item).
+4. **Inquiry-priced items («استعلامی») on product cards, table rows and the product buy box:** the primary action opens WhatsApp with a
+   **pre-filled message containing the exact product name and SKU** (e.g. «استعلام قیمت: <نام> — کد فنی <SKU>»; if the product has no SKU,
+   the name and the page URL). The «+ استعلام» quote-basket action stays available as the secondary action. The WhatsApp number comes
+   from WordPress site options (`src/lib/site-options.ts`, `whatsappHref`) — never hard-coded.
+5. **Phase order:** 0 → 1 → 2 → 3 → 4 → 5 as in §8 (Phase 1 includes the header search).
+6. **About page:** unverified "central warehouses / immediate dispatch" wording removed (done 29 Mehr).
+7. **Manufacturer logos on brand pages:** allowed strictly as factual brand identification; never wording or layout that implies official
+   dealership (rule 3).

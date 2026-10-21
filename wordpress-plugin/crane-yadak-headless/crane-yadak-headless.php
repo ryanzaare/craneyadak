@@ -5,7 +5,7 @@
  * Description:       بک‌اند Headless برای فرانت‌اند Astro سایت کرین یدک. CPTهای محصول و برند
  *                     را با پشتیبانی WPGraphQL ثبت می‌کند، فیلدهای ACF Pro را از طریق Local JSON همگام
  *                     نگه می‌دارد، و یک اندپوینت REST امن برای فرم استعلام قیمت فراهم می‌کند.
- * Version:           3.28.0
+ * Version:           3.28.1
  * Requires PHP:      8.0
  * Requires Plugins:  advanced-custom-fields-pro, wp-graphql
  * Author:            Crane Yadak Engineering
@@ -60,7 +60,7 @@ if ( defined( 'CYH_VERSION' ) ) {
 	return;
 }
 
-define( 'CYH_VERSION', '3.28.0' );
+define( 'CYH_VERSION', '3.28.1' );
 define( 'CYH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CYH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
