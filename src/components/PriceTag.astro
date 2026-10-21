@@ -42,7 +42,7 @@ const priceDateLabel = faDate(price.priceDate);
         {/* قیمت قبلی فقط زمانی رندر می‌شود که واقعاً یک قیمت عادیِ ثبت‌شده
             وجود داشته باشد و از قیمت فعلی بیشتر باشد — نگاه کنید به
             computePrice در src/lib/pricing.ts. */}
-        <s class:list={['text-gray-500 tabular-nums', isPage ? 'text-lg' : 'text-sm']}>
+        <s class:list={['text-steel-500 tabular-nums', isPage ? 'text-xl' : 'text-sm']}>
           {formatPrice(price.previous)}
         </s>
         <span
@@ -58,7 +58,7 @@ const priceDateLabel = faDate(price.priceDate);
     )}
     <span
       class:list={[
-        'font-black text-crane-navy tabular-nums',
+        'font-black text-steel-900 tabular-nums',
         isPage ? 'text-3xl md:text-4xl' : 'text-base',
       ]}
     >
@@ -69,20 +69,20 @@ const priceDateLabel = faDate(price.priceDate);
   <div class:list={['flex flex-col gap-1', className]}>
     <span
       class:list={[
-        'inline-flex items-center gap-2 font-bold text-crane-orange',
+        'inline-flex items-center gap-2 font-bold text-accent-ink',
         isPage ? 'text-xl' : 'text-sm',
       ]}
     >
       استعلام قیمت روز
     </span>
-    <span class:list={['text-gray-500 tabular-nums', isPage ? 'text-sm' : 'text-xs']}>
+    <span class:list={['text-steel-500 tabular-nums', isPage ? 'text-sm' : 'text-xs']}>
       آخرین قیمت{priceDateLabel ? ` (${priceDateLabel})` : ''}: {formatPrice(price.effective)}
     </span>
   </div>
 ) : (
   <span
     class:list={[
-      'inline-flex items-center gap-2 font-bold text-crane-orange',
+      'inline-flex items-center gap-2 font-bold text-accent-ink',
       isPage ? 'text-xl' : 'text-sm',
       className,
     ]}
@@ -97,7 +97,7 @@ const priceDateLabel = faDate(price.priceDate);
 {price.payable && validUntilLabel && isPage && (
   /* data-price-valid-until: محافظ مرورگر (فاز سبدها) پس از این لحظه دکمه‌ی
      خرید را به استعلام تبدیل می‌کند — بی‌نیاز از rebuild. */
-  <p class="text-xs text-gray-600 mt-2" data-price-valid-until={price.validUntil}>
+  <p class="text-xs text-steel-600 mt-2" data-price-valid-until={price.validUntil}>
     اعتبار این قیمت تا <time datetime={validUntilDay}>{validUntilLabel}</time>
   </p>
 )}

@@ -76,7 +76,7 @@ const reviewedLabel = reviewedAt
         {author.name}
         {
           !author.verified && (
-            <span class="text-[10px] font-bold text-steel-900 bg-amber-400 px-1.5 py-0.5 rounded">
+            <span class="text-xs font-bold text-steel-900 bg-amber-400 px-1.5 py-0.5 rounded">
               نام جای‌گذار
             </span>
           )
@@ -90,7 +90,7 @@ const reviewedLabel = reviewedAt
         author.expertise.length > 0 && (
           <ul role="list" class="flex flex-wrap gap-1.5 mt-3">
             {author.expertise.map((item) => (
-              <li class="text-[11px] font-bold text-steel-700 bg-white border border-steel-300 rounded px-2 py-0.5">
+              <li class="text-xs font-bold text-steel-700 bg-white border border-steel-300 rounded px-2 py-0.5">
                 {item}
               </li>
             ))}

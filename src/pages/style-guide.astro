@@ -1,0 +1,172 @@
+---
+// src/pages/style-guide.astro — /style-guide/
+// ---------------------------------------------------------------------------
+// راهنمای سبک Frontend v2 (فاز ۰ — docs/frontend-v2.md §5 و §8). «تمام» = کارفرما این صفحه را تأیید کند.
+//
+// ⚠️ noindex و بیرون از sitemap (prune-noindex-sitemap خودکار) و بیرون از جستجوی داخلی
+// (data-pagefind-ignore): همه‌ی داده‌ها *نمونه*‌اند — کد DEMO-، نام «قطعه‌ی نمونه»، قیمت ساختگی. اگر
+// این‌ها به گوگل یا جستجوی سایت برسند، همان «داده‌ی ساختگی» است که قاعده‌ی ۲ منع می‌کند.
+// قیمت‌ها از همان computePrice واقعی ساخته می‌شوند (نه رشته‌ی دستی) تا هر سه حالت PriceTag همان منطق
+// تولید را نشان دهند. دکمه‌ها `inert`اند: هیچ data-* سبد ندارند و نمونه وارد سبد واقعی کسی نمی‌شود.
+// ---------------------------------------------------------------------------
+import Layout from '../layouts/Layout.astro';
+import PartNumber from '../components/PartNumber.astro';
+import StockPill from '../components/StockPill.astro';
+import SpecTable from '../components/SpecTable.astro';
+import TwoTabs from '../components/TwoTabs.astro';
+import ProductRow from '../components/ProductRow.astro';
+import BuyBox from '../components/BuyBox.astro';
+import ActionBar from '../components/ActionBar.astro';
+import EmptyState from '../components/EmptyState.astro';
+import PriceTag from '../components/PriceTag.astro';
+import { computePrice, formatPrice } from '../lib/wp';
+import { getContact } from '../lib/site-options';
+
+const contact = await getContact();
+// شماره‌ی واقعی از وردپرس؛ اگر ثبت نشده (build آفلاین)، حالت «بدون واتساپ» هم نشان داده می‌شود و
+// حالت «با واتساپ» با پیوند نمونه — دکمه‌ها inert‌اند و به هیچ شماره‌ای نمی‌روند.
+const wa = contact.whatsappHref ?? 'https://wa.me/0';
+
+const day = 86_400_000;
+const now = Date.now();
+const base = { saleStart: null, saleEnd: null, salePrice: null, priceUpdatedAt: new Date(now - day).toISOString() };
+const payable = computePrice({ ...base, buyMode: 'cart', stockStatus: 'in_stock', price: 24_500_000, priceValidUntil: new Date(now + 7 * day).toISOString() });
+const reference = computePrice({ ...base, buyMode: 'cart', stockStatus: 'on_order', price: 24_500_000, priceValidUntil: new Date(now + 7 * day).toISOString() });
+const inquiry = computePrice({ ...base, buyMode: 'rfq', stockStatus: 'unknown', price: null, priceValidUntil: null, priceUpdatedAt: null });
+
+const sample = { slug: 'demo-0001', name: 'قطعه‌ی نمونه — ریموت کنترل', sku: 'DEMO-0001-L12', url: 'https://craneyadak.com/style-guide/' };
+
+const colors = [
+  ['steel-950', 'گرافیت تیره — فوتر'], ['steel-900', 'گرافیت — هدر، متن اصلی'], ['steel-800', ''], ['steel-700', 'متن بدنه'],
+  ['steel-600', 'متن ثانویه'], ['steel-500', 'متن کم‌رنگ (AA روی ۵۰/۱۰۰)'], ['steel-400', 'فقط آیکن/جداکننده'], ['steel-300', 'خط مو'],
+  ['steel-200', 'خط درون جدول'], ['steel-100', 'سطح ثانویه'], ['steel-50', 'سطح خواندن'],
+  ['accent', 'فقط پرکردن بی‌متن: فوکوس، حالت فعال'], ['accent-ink', 'دکمه‌ی اصلی، متن و پیوند نارنجی'], ['accent-strong', 'hover دکمه‌ی اصلی'], ['accent-soft', 'تینت'],
+];
+// ⚠️ کلاس کامل و لفظی: Tailwind فقط رشته‌ی کامل را در سورس می‌بیند؛ `bg-${c}` هیچ CSS نمی‌سازد.
+const SWATCH: Record<string, string> = {
+  'steel-950': 'bg-steel-950', 'steel-900': 'bg-steel-900', 'steel-800': 'bg-steel-800', 'steel-700': 'bg-steel-700',
+  'steel-600': 'bg-steel-600', 'steel-500': 'bg-steel-500', 'steel-400': 'bg-steel-400', 'steel-300': 'bg-steel-300',
+  'steel-200': 'bg-steel-200', 'steel-100': 'bg-steel-100', 'steel-50': 'bg-steel-50',
+  accent: 'bg-accent', 'accent-ink': 'bg-accent-ink', 'accent-strong': 'bg-accent-strong', 'accent-soft': 'bg-accent-soft',
+};
+const sizes = [['text-4xl', '۴۰'], ['text-3xl', '۳۲'], ['text-2xl', '۲۴'], ['text-xl', '۲۰'], ['text-base', '۱۶'], ['text-sm', '۱۴'], ['text-xs', '۱۲']];
+const h2 = 'text-2xl font-black text-steel-900 mb-4';
+const section = 'py-10 border-t border-steel-300';
+---
+
+<Layout title="راهنمای سبک (داخلی)" description="راهنمای سبک داخلی Frontend v2 کرین یدک — صفحه‌ی غیرعمومی برای بازبینی اجزا." noindex={true}>
+  <div class="bg-steel-50" data-pagefind-ignore="all">
+    <div class="max-w-6xl mx-auto px-4 md:px-6 py-10" id="style-guide">
+      <p class="text-sm font-bold text-amber-900 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-6">
+        صفحه‌ی داخلی برای تأیید کارفرما — noindex. همه‌ی نام‌ها، کدها و قیمت‌ها <strong>نمونه</strong>‌اند و به هیچ قطعه‌ی واقعی اشاره نمی‌کنند. دکمه‌ها غیرفعال‌اند.
+      </p>
+      <h1 class="text-4xl font-black text-steel-900">راهنمای سبک — Frontend v2، فاز ۰</h1>
+      <p class="mt-3 text-base text-steel-700 leading-8 max-w-prose">مرجع: docs/frontend-v2.md §5. هر چیزی که این‌جا نیست، در سایت هم نباید باشد.</p>
+
+      <section class={section} aria-labelledby="sg-color">
+        <h2 id="sg-color" class={h2}>رنگ</h2>
+        <ul class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" role="list">
+          {colors.map(([c, note]) => (
+            <li class="bg-white border border-steel-300 rounded-md overflow-hidden">
+              <span class:list={['block h-12', SWATCH[c]]} />
+              <span class="block px-2 py-1.5 text-xs"><code class="font-mono font-bold text-steel-900" dir="ltr">{c}</code><span class="block text-steel-600">{note}</span></span>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-3 text-sm text-steel-700 leading-7 max-w-prose">نارنجی فقط برای عمل، فوکوس و حالت فعال — هیچ تزئینی. 🔶 دکمه‌ی اصلی با <code class="font-mono" dir="ltr">accent-ink</code> پر می‌شود، نه <code class="font-mono" dir="ltr">accent</code>: متن سفید روی نارنجی روشن ۳٫۶:۱ است و زیر حد AA.</p>
+      </section>
+
+      <section class={section} aria-labelledby="sg-type">
+        <h2 id="sg-type" class={h2}>تایپوگرافی</h2>
+        <ul class="space-y-2" role="list">
+          {sizes.map(([cls, px]) => (
+            <li class="flex items-baseline gap-4 border-b border-steel-200 pb-2"><span class="w-16 shrink-0 text-xs text-steel-600 tabular-nums">{px}px</span><span class:list={[cls, 'font-black text-steel-900']}>ترمز جرثقیل سقفی</span></li>
+          ))}
+        </ul>
+        <p class="mt-4 text-base text-steel-700"><span class="font-normal">۴۰۰ معمولی</span> · <span class="font-bold">۷۰۰ پررنگ</span> · <span class="font-black">۹۰۰ سیاه</span> — فقط همین سه وزن.</p>
+        <p class="mt-2 text-base text-steel-700">کد فنی با قلم مونو: <code class="font-mono font-bold text-steel-900" dir="ltr">0O 1lI 5S 8B — SAGA1-L12 / MT318-K2</code> · قیمت با ارقام هم‌عرض: <span class="tabular-nums font-black">۱۲٬۳۴۵٬۶۷۸</span></p>
+      </section>
+
+      <section class={section} aria-labelledby="sg-shape">
+        <h2 id="sg-shape" class={h2}>گوشه و خط</h2>
+        <div class="flex flex-wrap gap-4 items-end">
+          <span class="w-24 h-16 bg-white border border-steel-300 rounded grid place-items-center text-xs text-steel-600">۴px چیپ/جدول</span>
+          <span class="w-24 h-16 bg-white border border-steel-300 rounded-md grid place-items-center text-xs text-steel-600">۶px دکمه/ورودی</span>
+          <span class="w-24 h-16 bg-white border border-steel-300 rounded-lg grid place-items-center text-xs text-steel-600">۸px کارت</span>
+        </div>
+        <p class="mt-3 text-sm text-steel-700">خط مو ۱px <code class="font-mono" dir="ltr">steel-300</code> به‌جای سایه. سایه فقط برای لایه‌ی شناور (منو، کشو).</p>
+      </section>
+
+      <section class={section} aria-labelledby="sg-code">
+        <h2 id="sg-code" class={h2}>چیپ کد فنی + کپی، قرص موجودی</h2>
+        <div class="flex flex-wrap items-center gap-6">
+          <PartNumber sku={sample.sku} id="sg-a" compact />
+          <PartNumber sku="DEMO-MT318-K2/L" id="sg-b" />
+          <StockPill status="in_stock" />
+          <StockPill status="on_order" />
+          <span class="text-xs text-steel-600">(موجودی «نامعلوم» هیچ قرصی نمی‌گیرد)</span>
+        </div>
+      </section>
+
+      <section class={section} aria-labelledby="sg-price">
+        <h2 id="sg-price" class={h2}>بلوک قیمت با تاریخ اعتبار</h2>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-2">پرداخت‌پذیر</p><PriceTag price={payable} size="page" /></div>
+          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-2">مرجع (ناموجود/منقضی)</p><PriceTag price={reference} size="page" /></div>
+          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-2">بدون قیمت</p><PriceTag price={inquiry} size="page" /></div>
+        </div>
+      </section>
+
+      <section class={section} aria-labelledby="sg-buy">
+        <h2 id="sg-buy" class={h2}>جعبه‌ی خرید — یک عمل اصلی</h2>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-3">پرداخت‌پذیر</p><BuyBox {...sample} price={payable} whatsappHref={wa} inert /></div>
+          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-3">استعلامی (واتساپ با نام + کد فنی)</p><BuyBox {...sample} price={inquiry} whatsappHref={wa} inert /></div>
+          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-3">استعلامی، بدون شماره‌ی واتساپ در وردپرس</p><BuyBox {...sample} price={inquiry} whatsappHref={null} inert /></div>
+        </div>
+      </section>
+
+      <section class={section} aria-labelledby="sg-spec">
+        <h2 id="sg-spec" class={h2}>جدول مشخصات + دو زبانه</h2>
+        <TwoTabs id="sg-tabs" first="مشخصات فنی" second="محصولات مرتبط/سازگار">
+          <SpecTable slot="first" caption="مشخصات فنی قطعه‌ی نمونه" sticky rows={[
+            { label: 'کد فنی', value: sample.sku, code: true },
+            { label: 'ولتاژ تغذیه', value: '24-48 V AC/DC' },
+            { label: 'تعداد دکمه', value: '6 + Start/Stop' },
+            { label: 'درجه حفاظت', value: 'IP65' },
+            { label: 'ردیف بدون مقدار (نمایش داده نمی‌شود)', value: '' },
+          ]} />
+          <ul slot="second" class="bg-white border border-steel-300 rounded-md" role="list">
+            <ProductRow {...sample} slug="demo-0002" sku="DEMO-0002" name="قطعه‌ی نمونه — گیرنده" brand="برند نمونه" keySpec="24 V" stock="in_stock" price={payable} whatsappHref={wa} inert />
+            <ProductRow {...sample} slug="demo-0003" sku="DEMO-0003" name="قطعه‌ی نمونه — فرستنده" brand="برند نمونه" keySpec="433 MHz" stock="unknown" price={inquiry} whatsappHref={wa} inert />
+          </ul>
+        </TwoTabs>
+      </section>
+
+      <section class={section} aria-labelledby="sg-rows">
+        <h2 id="sg-rows" class={h2}>ردیف فهرست/جدول با افزودن سریع</h2>
+        <div class="hidden lg:grid lg:grid-cols-[9rem_1fr_7rem_10rem_8rem_9rem_auto] gap-x-4 px-3 py-2 text-xs font-bold text-steel-600 bg-steel-100 border border-steel-300 border-b-0 rounded-t-md">
+          <span>کد فنی</span><span>نام</span><span>برند</span><span>مشخصه‌ی کلیدی</span><span>موجودی</span><span>قیمت</span><span></span>
+        </div>
+        <ul class="bg-white border border-steel-300 rounded-md lg:rounded-t-none" role="list">
+          <ProductRow {...sample} brand="برند نمونه" keySpec="6 دکمه، IP65" stock="in_stock" price={payable} whatsappHref={wa} inert />
+          <ProductRow {...sample} slug="demo-0004" sku="DEMO-0004" name="قطعه‌ی نمونه — مگنت ترمز با نام طولانی که باید در دو خط بشکند و ستون‌ها را نشکند" brand="برند نمونه" keySpec="190 V DC" stock="on_order" price={reference} whatsappHref={wa} inert />
+          <ProductRow {...sample} slug="demo-0005" sku={null} name="قطعه‌ی نمونه — بدون کد فنی" brand={null} keySpec={null} stock="unknown" price={inquiry} whatsappHref={null} inert />
+        </ul>
+      </section>
+
+      <section class={section} aria-labelledby="sg-bar">
+        <h2 id="sg-bar" class={h2}>نوار عمل پایین (موبایل)</h2>
+        <div class="max-w-sm space-y-3">
+          <ActionBar inline priceLabel={formatPrice(payable.effective ?? 0)} primaryLabel="افزودن به سبد" primaryHref="#style-guide" whatsappHref="#style-guide" telHref="#style-guide" />
+          <ActionBar inline priceLabel="استعلامی" primaryLabel="استعلام در واتساپ" primaryHref="#style-guide" telHref="#style-guide" />
+        </div>
+      </section>
+
+      <section class={section} aria-labelledby="sg-empty">
+        <h2 id="sg-empty" class={h2}>حالت خالیِ صادقانه</h2>
+        <EmptyState title="هنوز محصولی در این دسته ثبت نشده است" text="کد فنی یا عکس پلاک قطعه را بفرستید تا بررسی کنیم." whatsappHref="#style-guide" telHref="#style-guide" />
+      </section>
+    </div>
+  </div>
+</Layout>

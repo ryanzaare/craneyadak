@@ -184,8 +184,8 @@ const noindexBrand = !brandReadiness({
     <div class="max-w-7xl mx-auto relative z-10">
       <Breadcrumb items={breadcrumbItems} />
       <div class="flex flex-col md:flex-row items-start gap-8">
-        <div class="w-28 h-28 bg-white rounded-3xl flex items-center justify-center shrink-0 border-4 border-white/20 shadow-2xl p-3">
-          <svg class="w-full h-full text-crane-navy" viewBox="0 0 200 60" fill="currentColor" role="img" aria-label={`لوگوی ${brand.nameFa}`}>
+        <div class="w-28 h-28 bg-white rounded-lg flex items-center justify-center shrink-0 border border-white/20 p-3">
+          <svg class="w-full h-full text-steel-900" viewBox="0 0 200 60" fill="currentColor" role="img" aria-label={`لوگوی ${brand.nameFa}`}>
             <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="34" font-weight="900">{brand.logoText}</text>
           </svg>
         </div>
@@ -194,26 +194,26 @@ const noindexBrand = !brandReadiness({
             <span class="inline-block px-3 py-1 rounded bg-white/10 text-steel-100 text-xs font-bold border border-white/20">{classMeta.name}</span>
             <span class="inline-block px-3 py-1 rounded bg-white/10 text-steel-100 text-xs font-bold border border-white/20">ساخت {brand.country}</span>
           </div>
-          <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md leading-relaxed">
+          <h1 class="text-3xl md:text-4xl font-black mb-4 tracking-tight drop-shadow-md leading-relaxed">
             قطعات {brand.nameFa}
-            <span class="text-gray-400 font-bold text-2xl md:text-3xl" dir="ltr">({brand.nameEn})</span>
+            <span class="text-steel-400 font-bold text-2xl md:text-3xl" dir="ltr">({brand.nameEn})</span>
           </h1>
           {/* فقط و فقط متن وردپرس. جمله‌ی ثابت «تامین با بررسی سازگاری…»
               که اینجا بود حذف شد: متن سئوی نوشته‌شده باید تنها چیزی باشد
               که خوانده می‌شود، نه یک شعار تکراری کنارش. */}
-          <p class="text-lg text-steel-300 max-w-3xl leading-9 whitespace-pre-line">{brand.seoDesc}</p>
+          <p class="text-xl text-steel-300 max-w-3xl leading-9 whitespace-pre-line">{brand.seoDesc}</p>
         </div>
       </div>
     </div>
   </section>
 
   {/* ------------------------------ محصولات ------------------------------ */}
-  <section class="bg-gray-50 px-4 py-14" aria-labelledby="brand-products-heading">
+  <section class="bg-steel-50 px-4 py-14" aria-labelledby="brand-products-heading">
     <div class="max-w-7xl mx-auto">
-      <div class="flex flex-wrap gap-4 justify-between items-end mb-8 border-b border-gray-200 pb-4">
-        <h2 id="brand-products-heading" class="text-2xl font-black text-crane-navy">قطعات {brand.nameFa}</h2>
+      <div class="flex flex-wrap gap-4 justify-between items-end mb-8 border-b border-steel-200 pb-4">
+        <h2 id="brand-products-heading" class="text-2xl font-black text-steel-900">قطعات {brand.nameFa}</h2>
         {products.length > 0 && (
-          <span class="text-sm text-gray-600 font-bold bg-white border border-gray-200 px-3 py-1 rounded-full tabular-nums">{products.length} قطعه</span>
+          <span class="text-sm text-steel-600 font-bold bg-white border border-steel-200 px-3 py-1 rounded-full tabular-nums">{products.length} قطعه</span>
         )}
       </div>
 
@@ -224,16 +224,16 @@ const noindexBrand = !brandReadiness({
           ))}
         </ul>
       ) : (
-        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 md:p-12 max-w-3xl">
-          <h3 class="text-xl md:text-2xl font-black text-crane-navy mb-4 leading-9">
+        <div class="bg-white rounded-lg border border-steel-100 shadow-sm p-8 md:p-12 max-w-3xl">
+          <h3 class="text-xl md:text-2xl font-black text-steel-900 mb-4 leading-9">
             استعلام قطعات {brand.nameFa} با کد فنی سازنده
           </h3>
-          <p class="text-gray-700 leading-8 mb-8">
+          <p class="text-steel-700 leading-8 mb-8">
             فهرست آنلاین قطعات {brand.nameFa} در حال تکمیل است و تنها اقلامی منتشر می‌شود که تامین آن‌ها قطعی باشد. اگر Part Number اصلی سازنده یا عکس پلاک دستگاه را دارید، همان را بفرستید؛ کارشناسان ما قطعه‌ی اورجینال یا معادل استاندارد را شناسایی می‌کنند.
           </p>
           <div class="flex flex-col sm:flex-row gap-3">
-            <a href={`/contact?brand=${encodeURIComponent(brand.nameEn)}`} class="bg-crane-orange text-white px-8 py-4 rounded-xl font-black text-center hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
-            <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-xl font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
+            <a href={`/contact?brand=${encodeURIComponent(brand.nameEn)}`} class="bg-accent-ink text-white px-8 py-4 rounded-lg font-black text-center hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
+            <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-lg font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
           </div>
         </div>
       )}
@@ -242,19 +242,19 @@ const noindexBrand = !brandReadiness({
 
   {/* -------- تقاطع واقعی برند × دسته (فقط جایی که محصول وجود دارد) -------- */}
   {categoriesWithProducts.length > 0 && (
-    <section class="bg-white px-4 py-14 border-t border-gray-100" aria-labelledby="brand-categories-heading">
+    <section class="bg-white px-4 py-14 border-t border-steel-100" aria-labelledby="brand-categories-heading">
       <div class="max-w-7xl mx-auto">
-        <h2 id="brand-categories-heading" class="text-xl md:text-2xl font-black text-crane-navy mb-8">
+        <h2 id="brand-categories-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-8">
           دسته‌بندی قطعات موجود {brand.nameFa}
         </h2>
         <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" role="list">
           {categoriesWithProducts.map((category) => (
             <li>
-              <a href={categoryPath(category)} class="group h-full bg-gray-50 hover:bg-white p-5 rounded-2xl border border-gray-100 hover:border-orange-100 hover:shadow-md transition-all flex items-center gap-3 focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
-                <span class="w-10 h-10 shrink-0 bg-white text-crane-navy group-hover:text-crane-orange group-hover:bg-orange-50 rounded-xl flex items-center justify-center transition-colors" aria-hidden="true">
+              <a href={categoryPath(category)} class="group h-full bg-steel-50 hover:bg-white p-5 rounded-lg border border-steel-300 hover:border-steel-400 transition-colors flex items-center gap-3 focus:outline-none focus:ring-4 focus:ring-accent-ink/30">
+                <span class="w-10 h-10 shrink-0 bg-white text-steel-900 group-hover:text-accent-ink group-hover:bg-accent-soft rounded-lg flex items-center justify-center transition-colors" aria-hidden="true">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={category.icon} /></svg>
                 </span>
-                <span class="text-sm font-bold text-crane-navy group-hover:text-crane-orange transition-colors leading-6">{category.name}</span>
+                <span class="text-sm font-bold text-steel-900 group-hover:text-accent-ink transition-colors leading-6">{category.name}</span>
               </a>
             </li>
           ))}
@@ -268,16 +268,16 @@ const noindexBrand = !brandReadiness({
 
   {/* ---------------------- برندهای هم‌گروه ---------------------- */}
   {siblings.length > 0 && (
-    <section class="bg-gray-50 px-4 py-14 border-t border-gray-100" aria-labelledby="sibling-brands-heading">
+    <section class="bg-steel-50 px-4 py-14 border-t border-steel-100" aria-labelledby="sibling-brands-heading">
       <div class="max-w-7xl mx-auto">
-        <h2 id="sibling-brands-heading" class="text-xl md:text-2xl font-black text-crane-navy mb-3">سایر {classMeta.name}</h2>
-        <p class="text-gray-600 leading-8 mb-8 max-w-3xl">{classMeta.intro}</p>
+        <h2 id="sibling-brands-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-3">سایر {classMeta.name}</h2>
+        <p class="text-steel-600 leading-8 mb-8 max-w-3xl">{classMeta.intro}</p>
         <ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" role="list">
           {siblings.map((sibling) => (
             <li>
-              <a href={`/brands/${sibling.slug}`} class="group h-full bg-white hover:shadow-md p-5 rounded-2xl border border-gray-100 hover:border-orange-100 transition-all flex flex-col items-center text-center focus:outline-none focus:ring-4 focus:ring-crane-orange/30">
-                <span class="text-sm font-black tracking-wider text-crane-navy group-hover:text-crane-orange transition-colors uppercase" dir="ltr">{sibling.nameEn}</span>
-                <span class="text-sm font-bold text-gray-700 mt-0.5">{sibling.nameFa}</span>
+              <a href={`/brands/${sibling.slug}`} class="group h-full bg-white p-5 rounded-lg border border-steel-300 hover:border-steel-400 transition-colors flex flex-col items-center text-center focus:outline-none focus:ring-4 focus:ring-accent-ink/30">
+                <span class="text-sm font-black tracking-wider text-steel-900 group-hover:text-accent-ink transition-colors uppercase" dir="ltr">{sibling.nameEn}</span>
+                <span class="text-sm font-bold text-steel-700 mt-0.5">{sibling.nameFa}</span>
               </a>
             </li>
           ))}

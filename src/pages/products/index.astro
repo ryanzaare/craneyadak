@@ -121,13 +121,13 @@ function facetAttrs(p: (typeof products)[number]) {
         /* حالت خالی صادقانه: کاتالوگ هنوز پر نشده. کارت ساختگی ساخته
            نمی‌شود تا صفحه «پر» به نظر برسد. */
         <div class="bg-steel-50 border border-steel-300 rounded-lg p-8 text-center">
-          <p class="text-steel-900 font-black text-lg mb-2">هنوز محصولی منتشر نشده است.</p>
+          <p class="text-steel-900 font-black text-xl mb-2">هنوز محصولی منتشر نشده است.</p>
           <p class="text-steel-600 leading-7 mb-5">
             کاتالوگ در حال تکمیل است. تا آن زمان می‌توانید کد فنی قطعه را مستقیم استعلام کنید.
           </p>
           <a
             href="/contact"
-            class="inline-block bg-accent text-white px-6 py-3 rounded-md font-black hover:bg-accent-ink transition-colors"
+            class="inline-block bg-accent-ink text-white px-6 py-3 rounded-md font-black hover:bg-accent-strong transition-colors"
           >
             استعلام با کد فنی
           </a>
@@ -246,7 +246,7 @@ function facetAttrs(p: (typeof products)[number]) {
 
             {/* حالت «فیلتر نتیجه‌ای نداشت» — بن‌بست نیست، راه بازگشت دارد. */}
             <div data-empty-state hidden class="bg-steel-50 border border-steel-300 rounded-lg p-8 text-center mt-4">
-              <p class="text-steel-900 font-black text-lg mb-2">هیچ قطعه‌ای با این فیلترها پیدا نشد.</p>
+              <p class="text-steel-900 font-black text-xl mb-2">هیچ قطعه‌ای با این فیلترها پیدا نشد.</p>
               <p class="text-steel-600 leading-7 mb-5">
                 فیلترها را کمتر کنید، یا کد فنی قطعه را مستقیم برای ما بفرستید.
               </p>
@@ -260,7 +260,7 @@ function facetAttrs(p: (typeof products)[number]) {
                 </button>
                 <a
                   href="/contact"
-                  class="bg-accent text-white px-5 py-2.5 rounded-md font-bold hover:bg-accent-ink transition-colors"
+                  class="bg-accent-ink text-white px-5 py-2.5 rounded-md font-bold hover:bg-accent-strong transition-colors"
                 >
                   استعلام با کد فنی
                 </a>

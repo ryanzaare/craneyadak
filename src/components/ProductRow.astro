@@ -1,0 +1,69 @@
+---
+// src/components/ProductRow.astro
+// ---------------------------------------------------------------------------
+// ردیف محصول در نمای فهرست/جدول با «افزودن سریع» (Frontend v2، فاز ۰؛ مصرف در فاز ۲ — صفحه‌ی دسته).
+//
+// چرا: یافته‌ی §4b — کارت دسته هیچ عمل افزودنی ندارد؛ افزودن ۴ قطعه یعنی باز کردن ۴ صفحه. پیمانکار
+// تعمیرات فهرست می‌خرد، نه تک‌قطعه. ترتیب ستون‌ها همان ترتیب پرسش خریدار است:
+// کد → نام → برند → مشخصه‌ی کلیدی → موجودی → قیمت → عمل.
+//
+// موبایل و تبلت (<lg): همان ردیف، دو خطی (کد و نام بالا؛ موجودی، قیمت و عمل پایین) — بدون اسکرول افقی جدول.
+// عمل‌ها همان قاعده‌ی BuyBox (تصمیم ۴): پرداخت‌پذیر «+ سبد»؛ استعلامی «واتساپ» اصلی + «+ استعلام» فرعی.
+// ⚠️ data-*های سبد = قرارداد §7 (Baskets.astro). `inert` فقط برای راهنمای سبک.
+// ---------------------------------------------------------------------------
+import PriceTag from './PriceTag.astro';
+import StockPill from './StockPill.astro';
+import { whatsappInquiryHref } from './inquiry-message';
+import type { PriceState } from '../lib/wp';
+import type { StockStatus } from '../lib/pricing';
+
+export interface Props {
+  slug: string;
+  name: string;
+  sku: string | null;
+  url: string;
+  brand?: string | null;
+  keySpec?: string | null;
+  stock: StockStatus;
+  price: PriceState;
+  whatsappHref: string | null;
+  inert?: boolean;
+}
+
+const { slug, name, sku, url, brand, keySpec, stock, price, whatsappHref, inert = false } = Astro.props;
+const hook = (attrs: Record<string, string | null | undefined | boolean>) => (inert ? {} : attrs);
+const basket = { 'data-basket-name': name, 'data-basket-sku': sku ?? '' };
+const inquiryHref = price.payable ? null : whatsappInquiryHref(whatsappHref, { name, sku, url });
+const btn = 'inline-flex items-center justify-center min-h-11 px-3 rounded-md text-sm font-bold whitespace-nowrap transition-colors';
+---
+
+<li class="grid grid-cols-[1fr_auto] lg:grid-cols-[9rem_1fr_7rem_10rem_8rem_9rem_auto] items-center gap-x-4 gap-y-2 px-3 py-3 border-t border-steel-200 first:border-t-0 hover:bg-steel-50">
+  <code class="font-mono font-bold text-sm text-steel-900 lg:order-none order-1 truncate text-right" dir="ltr">{sku ?? '—'}</code>
+  <a href={inert ? '#style-guide' : url} class="col-span-2 lg:col-span-1 order-3 lg:order-none font-bold text-steel-900 hover:text-accent-ink leading-7 line-clamp-2">{name}</a>
+  <span class="hidden lg:block text-sm text-steel-600 truncate">{brand ?? ''}</span>
+  <span class="hidden lg:block text-sm text-steel-700 tabular-nums truncate" dir="auto">{keySpec ?? ''}</span>
+  <span class="order-2 lg:order-none justify-self-end lg:justify-self-start"><StockPill status={stock} /></span>
+  <span class="order-4 lg:order-none"><PriceTag price={price} /></span>
+  <span class="order-5 lg:order-none justify-self-end flex items-center gap-2">
+    {price.payable ? (
+      <button type="button" class={`${btn} bg-accent-ink text-white hover:bg-accent-strong`}
+        {...hook({ 'data-cart-add': slug, ...basket, 'data-guard-until': price.validUntil, 'data-payable-only': true })}
+        aria-label={`افزودن ${name} به سبد خرید`}>
+        <span data-basket-label>+ سبد</span>
+      </button>
+    ) : (
+      <>
+        {inquiryHref && (
+          <a href={inert ? '#style-guide' : inquiryHref} target={inert ? undefined : '_blank'} rel="noopener noreferrer"
+            class={`${btn} bg-accent-ink text-white hover:bg-accent-strong`} aria-label={`استعلام قیمت ${name} در واتساپ`}>واتساپ</a>
+        )}
+        <button type="button"
+          class={`${btn} ${inquiryHref ? 'text-accent-ink hover:text-accent-strong hover:underline' : 'bg-accent-ink text-white hover:bg-accent-strong'}`}
+          {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'rfq', ...basket })}
+          aria-label={`افزودن ${name} به سبد استعلام`}>
+          <span data-basket-label>+ استعلام</span>
+        </button>
+      </>
+    )}
+  </span>
+</li>

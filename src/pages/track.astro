@@ -46,7 +46,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
     <div class="max-w-3xl mx-auto">
       {/* درخواست‌های ثبت‌شده روی همین دستگاه */}
       <div id="track-mine" hidden class="mb-8">
-        <h2 class="text-lg font-black text-steel-900 mb-3">درخواست‌های شما روی این دستگاه</h2>
+        <h2 class="text-xl font-black text-steel-900 mb-3">درخواست‌های شما روی این دستگاه</h2>
         <ul id="track-mine-list" role="list" class="space-y-2"></ul>
       </div>
 
@@ -84,7 +84,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
         <button
           type="submit"
           id="track-submit"
-          class="w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]"
+          class="w-full bg-accent-ink text-white py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]"
         >
           مشاهده‌ی وضعیت
         </button>
@@ -240,7 +240,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         a.className =
-          'inline-flex items-center gap-2 bg-accent text-white px-5 py-3 rounded-md font-black text-sm hover:bg-accent-ink transition-colors';
+          'inline-flex items-center gap-2 bg-accent-ink text-white px-5 py-3 rounded-md font-black text-sm hover:bg-accent-strong transition-colors';
         a.textContent = 'دریافت فایل پیش‌فاکتور';
         body.appendChild(a);
       }
@@ -273,7 +273,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
           a.href = f.officialInvoiceUrl;
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
-          a.className = 'inline-flex items-center gap-2 bg-accent text-white px-5 py-3 rounded-md font-black text-sm hover:bg-accent-ink transition-colors';
+          a.className = 'inline-flex items-center gap-2 bg-accent-ink text-white px-5 py-3 rounded-md font-black text-sm hover:bg-accent-strong transition-colors';
           a.textContent = 'دریافت فاکتور رسمی';
           body.appendChild(a);
         }

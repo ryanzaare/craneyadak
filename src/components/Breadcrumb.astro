@@ -30,7 +30,7 @@ const { items, center = false, light = false } = Astro.props;
 <nav
   class:list={[
     'text-sm mb-8 flex flex-wrap items-center gap-2',
-    light ? 'text-gray-300' : 'text-gray-400',
+    light ? 'text-steel-300' : 'text-steel-400',
     center ? 'justify-center' : '',
   ]}
   aria-label="Breadcrumb"
@@ -44,7 +44,7 @@ const { items, center = false, light = false } = Astro.props;
           <a
             href={item.href}
             class:list={[
-              'hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded py-1 px-2',
+              'hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-accent-ink rounded py-1 px-2',
               isFirst && !center ? '-ml-2' : '',
               !isFirst ? '-mx-2' : '',
             ]}

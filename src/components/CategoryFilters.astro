@@ -169,7 +169,7 @@ export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
             {/* توضیح مهندسی: چرا این مشخصه در انتخاب اهمیت دارد.
                 این همان چیزی است که یک فروشگاه عمومی ندارد و مرجع تخصصی
                 باید داشته باشد. */}
-            {facet.hint && <p class="text-[11px] text-steel-600 leading-5 mb-2">{facet.hint}</p>}
+            {facet.hint && <p class="text-xs text-steel-600 leading-5 mb-2">{facet.hint}</p>}
 
             {facet.kind === 'checkbox' ? (
               facet.values.map((value) => (
@@ -198,7 +198,7 @@ export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
                   step="any"
                   class="w-full accent-accent"
                 />
-                <p class="flex justify-between text-[11px] text-steel-600 tabular-nums mt-1">
+                <p class="flex justify-between text-xs text-steel-600 tabular-nums mt-1">
                   <span>{facet.min}</span>
                   <span>
                     تا <strong data-range-out={facet.id} class="text-steel-900">{facet.max}</strong>
@@ -212,7 +212,7 @@ export function specAttrs(product: CraneProduct, facets: typeof specFacets) {
         {/* مشخصه‌های تعریف‌شده‌ای که هنوز داده‌ی کافی برای فیلتر شدن ندارند. */}
         {pendingSpecs.length > 0 && (
           <div class="p-4 bg-steel-50">
-            <p class="text-[11px] text-steel-600 leading-5">
+            <p class="text-xs text-steel-600 leading-5">
               فیلتر تخصصی این دسته روی{' '}
               <strong class="text-steel-800">{pendingSpecs.join('، ')}</strong>{' '}
               تعریف شده و به‌محض ثبت این مشخصات برای چند قطعه، همین‌جا فعال می‌شود.

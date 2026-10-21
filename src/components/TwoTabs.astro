@@ -1,0 +1,81 @@
+---
+// src/components/TwoTabs.astro
+// ---------------------------------------------------------------------------
+// دقیقاً دو زبانه (تصمیم ۳ کارفرما، docs/frontend-v2.md §10): «مشخصات فنی» و «محصولات مرتبط/سازگار».
+//
+// ⚠️ زبانه‌ی خالی رندر نمی‌شود: اگر اسلات دوم محتوا نداشته باشد، فقط پنل اول بدون نوار زبانه می‌ماند.
+// زبانه‌ای که روی آن بزنی و خالی باشد، اعتماد را بیشتر از نبودنش خراب می‌کند. زبانه‌ی سوم («راهنمای
+// نصب و سیم‌کشی») فقط وقتی فیلد وردپرسش وجود دارد و پر است — backlog.
+//
+// بدون جاوااسکریپت: هر دو پنل زیر هم دیده می‌شوند و نوار زبانه پنهان است (محتوا برای گوگل و
+// شبکه‌ی ضعیف همیشه در HTML است — هیچ‌چیز فقط بعد از کلیک بار نمی‌شود). الگوی ARIA tabs با کلید جهت‌ها.
+// ---------------------------------------------------------------------------
+export interface Props {
+  id: string;
+  first: string;
+  second: string;
+}
+
+const { id, first, second } = Astro.props;
+const hasSecond = Astro.slots.has('second');
+const secondHtml = hasSecond ? (await Astro.slots.render('second')).trim() : '';
+const two = secondHtml !== '';
+---
+
+<div class="cy-tabs" data-tabs={two ? id : undefined}>
+  {two && (
+    <div role="tablist" aria-label="بخش‌های اطلاعات محصول" class="cy-tablist hidden border-b border-steel-300 gap-6">
+      <button type="button" role="tab" id={`${id}-tab-1`} aria-controls={`${id}-panel-1`} aria-selected="true"
+        class="min-h-11 -mb-px border-b-2 border-accent text-steel-900 font-bold text-base px-1">{first}</button>
+      <button type="button" role="tab" id={`${id}-tab-2`} aria-controls={`${id}-panel-2`} aria-selected="false" tabindex="-1"
+        class="min-h-11 -mb-px border-b-2 border-transparent text-steel-600 font-bold text-base px-1 hover:text-steel-900">{second}</button>
+    </div>
+  )}
+  <section id={`${id}-panel-1`} role={two ? 'tabpanel' : undefined} aria-labelledby={two ? `${id}-tab-1` : undefined} class="pt-4">
+    {/* عنوان پنل فقط بدون JS دیده می‌شود (با JS، زبانه همان نقش را دارد). */}
+    <h2 class="cy-tab-heading text-xl font-black text-steel-900 mb-3">{first}</h2>
+    <slot name="first" />
+  </section>
+  {two && (
+    <section id={`${id}-panel-2`} role="tabpanel" aria-labelledby={`${id}-tab-2`} class="pt-4">
+      <h2 class="cy-tab-heading text-xl font-black text-steel-900 mb-3">{second}</h2>
+      <Fragment set:html={secondHtml} />
+    </section>
+  )}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-tabs]').forEach((root) => {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    const panels = tabs.map((t) => document.getElementById(t.getAttribute('aria-controls') ?? ''));
+    root.querySelector('.cy-tablist')?.classList.replace('hidden', 'flex');
+    root.querySelectorAll('.cy-tab-heading').forEach((h) => h.classList.add('sr-only'));
+    const select = (i: number, focus = false) => {
+      tabs.forEach((t, j) => {
+        const on = i === j;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        t.classList.toggle('border-accent', on);
+        t.classList.toggle('border-transparent', !on);
+        t.classList.toggle('text-steel-900', on);
+        t.classList.toggle('text-steel-600', !on);
+        panels[j]?.toggleAttribute('hidden', !on);
+      });
+      if (focus) tabs[i]?.focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(i));
+      // ⚠️ RTL: «راست» یعنی زبانه‌ی قبلی. ArrowLeft = بعدی، ArrowRight = قبلی.
+      t.addEventListener('keydown', (e) => {
+        const n = tabs.length;
+        if (e.key === 'ArrowLeft') select((i + 1) % n, true);
+        else if (e.key === 'ArrowRight') select((i - 1 + n) % n, true);
+        else if (e.key === 'Home') select(0, true);
+        else if (e.key === 'End') select(n - 1, true);
+        else return;
+        e.preventDefault();
+      });
+    });
+    select(0);
+  });
+</script>

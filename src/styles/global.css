@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* ⚠️ Tailwind v4 هر فایل غیر gitignore در مخزن را برای نام کلاس می‌خواند. یعنی ورودی خرابِ عمدی آزمون‌ها
+   (scripts/check-design-tokens.test.mjs: کلاس‌های gray و orange پیش‌فرض)، متن مستندات و PHP افزونه
+   به CSS تولید راه پیدا می‌کرد — کلاس‌های مرده در هر صفحه (کشف فاز ۰ Frontend v2). فقط src/ منبع سایت است. */
+@source not "../../scripts";
+@source not "../../docs";
+@source not "../../wordpress-plugin";
+@source not "../../.claude";
+@source not "../../README.md";
+@source not "../../AGENTS.md";
+@source not "../../CLAUDE.md";
+
 /* ---------------------------------------------------------
    فونت وزیرمتن (Vazirmatn) — سلف‌هاست، متن‌باز (SIL OFL 1.1)
    نسخه‌ی Variable = یک فایل برای تمام وزن‌ها جهت جلوگیری از افت LCP
@@ -52,7 +63,13 @@
   --color-steel-800: #232830;
   --color-steel-700: #343B45;
   --color-steel-600: #4B5563;
+  /* ۲۰۰/۴۰۰/۵۰۰ برای جایگزینی gray-* افزوده شدند (فاز ۰). steel-500 عمداً کمی تیره‌تر از gray-500 است
+     (#636C77): متن ثانویه روی steel-100 با gray-500 فقط ۴٫۲:۱ بود (زیر AA)؛ حالا ۴٫۶ روی steel-100،
+     ۵٫۰ روی steel-50، ۵٫۳ روی سفید. ⚠️ steel-400 (۲٫۵:۱ روی سفید) فقط برای آیکن/جداکننده یا متن روی گرافیت. */
+  --color-steel-500: #636C77;
+  --color-steel-400: #9AA3AE;
   --color-steel-300: #CBD2D9;
+  --color-steel-200: #DDE1E6;
   --color-steel-100: #EDEFF2;
   --color-steel-50:  #F7F8FA;
 
@@ -60,18 +77,75 @@
   --color-accent:      #EA580C;  /* پرکردن: دکمه، نشان، نوار — ۳.۴:۱ روی سفید */
   --color-accent-ink:  #9A3412;  /* متن و لینک روی سفید — ۶.۴:۱ ✓ */
   --color-accent-soft: #FFF1E9;  /* پس‌زمینه‌ی تینت‌شده */
+  /* hover/فشرده‌ی دکمه‌ی اصلی (bg-accent-ink). ⚠️ پیش از فاز ۰، hover این دکمه‌ها orange-800 بود که *دقیقاً*
+     همان #9A3412 = accent-ink است — یعنی ۱۱ دکمه هیچ بازخورد hover نداشتند و کسی ندید. */
+  --color-accent-strong: #7C2D12; /* ۹٫۳:۱ با متن سفید */
 
-  /* ---- نام‌های قدیمی به‌عنوان alias حفظ می‌شوند ----
-     تغییر نام توکن در ۲۰+ فایل یعنی ریسک از دست دادن یک مورد و شکستن
-     ظاهر. چون این‌ها متغیر CSS‌اند، تغییر مقدار در همین یک نقطه کل سایت
-     را به‌روز می‌کند بدون آن‌که یک کلاس در قالب‌ها عوض شود. */
-  --color-crane-navy: var(--color-steel-900);
-  --color-crane-orange: var(--color-accent-ink);
-  --color-crane-light: var(--color-steel-50);
-  --color-crane-white: #FFFFFF;
+  /* ⚠️ دکمه‌ی اصلی = bg-accent-ink + متن سفید (۷٫۳:۱)، نه bg-accent: متن سفید روی #EA580C فقط ۳٫۶:۱ است و
+     برای متن ۱۶px پررنگ زیر AA (۴٫۵:۱) می‌ماند. accent (روشن) برای پرکردن بی‌متن است: حلقه‌ی فوکوس، نوار
+     حالت فعال، نقطه‌ی وضعیت. 🔶 docs/frontend-v2.md §5 «accent برای عمل اصلی» را این‌گونه پیاده کردیم. */
+
+  /* ⚠️ aliasهای قدیمی (crane-navy/orange/light/white) و پالت پیش‌فرض gray-* حذف شدند (Frontend v2، فاز ۰).
+     دلیل نگه‌داشتنشان («تغییر نام در ۲۰+ فایل ریسک دارد») درست بود، ولی نتیجه سه نام برای یک رنگ شد و هر قالب
+     تازه یکی را تصادفی برمی‌داشت. مهاجرت یک‌جا انجام شد و نگهبان `scripts/check-design-tokens.mjs` جلوی
+     برگشتشان را می‌گیرد. ⚠️ crane-orange = accent-ink بود (نه accent)؛ مهاجرت همان رنگ را نگه داشت. */
 
   /* تنظیم فونت پیش‌فرض سایت */
   --font-sans: "Vazirmatn", "Segoe UI", Tahoma, sans-serif;
+  /* کد فنی و مدل: زیرمجموعه‌ی JetBrains Mono (فقط لاتین، رقم، - / . _ و چند نشانه؛ ~۳٫۷KB هر وزن). در کد
+     فنی «O/0» و «l/1» باید از هم جدا باشند — اشتباهش یعنی قطعه‌ی اشتباه (قاعده‌ی ۲). نویسه‌ی فارسی در این
+     زیرمجموعه نیست و خودکار به Vazirmatn می‌افتد. */
+  --font-mono: "CY Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* مقیاس تایپ سخت‌گیرانه (docs/frontend-v2.md §5): ۱۲/۱۴/۱۶/۲۰/۲۴/۳۲/۴۰.
+     xs/sm/base/xl/2xl پیش‌فرض Tailwind همین‌اند؛ 3xl (۳۰→۳۲) و 4xl (۳۶→۴۰) بازتعریف شدند.
+     ⚠️ text-xl (۱۸) و 5xl…9xl حذف شدند: دو اندازه‌ی نزدیک به هم (۱۶/۱۸، ۱۸/۲۰) همان «سلسله‌مراتب ضعیف» بود
+     که بازبینی پیدا کرد. کلاس حذف‌شده CSS نمی‌سازد و بی‌صدا بی‌اثر می‌شود — نگهبان توکن‌ها آن را می‌گیرد. */
+  --text-lg: initial;
+  --text-lg--line-height: initial;
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 1.25;
+  --text-4xl: 2.5rem;
+  --text-4xl--line-height: 1.2;
+  --text-5xl: initial;
+  --text-6xl: initial;
+  --text-7xl: initial;
+  --text-8xl: initial;
+  --text-9xl: initial;
+
+  /* وزن‌ها: فقط ۴۰۰/۷۰۰/۹۰۰. وزن‌های میانی در Vazirmatn از هم به سختی تشخیص داده می‌شوند و فقط
+     سلسله‌مراتب را گل‌آلود می‌کنند. */
+  --font-weight-thin: initial;
+  --font-weight-extralight: initial;
+  --font-weight-light: initial;
+  --font-weight-medium: initial;
+  --font-weight-semibold: initial;
+  --font-weight-extrabold: initial;
+
+  /* گوشه‌ها: فقط ۴px (چیپ، جدول) و ۶–۸px (کارت، دکمه، ورودی) + full برای قرص. xl/2xl/3xl حذف شدند. */
+  --radius-xl: initial;
+  --radius-2xl: initial;
+  --radius-3xl: initial;
+}
+
+/* زیرمجموعه‌ی مونو برای کد فنی. font-display: optional (مثل Vazirmatn): اگر در ~۱۰۰ms نرسید، همان بازدید با
+   مونوی سیستم می‌ماند و هرگز جابه‌جا نمی‌شود (CLS صفر). عمداً preload نمی‌شود: ۳٫۷KB است و فقط صفحه‌ای که کد
+   فنی دارد آن را می‌خواهد؛ preload روی همه‌ی صفحات پهنای باند را برای هیچ هدر می‌داد. */
+@font-face {
+  font-family: "CY Mono";
+  src: url("/fonts/JetBrainsMono-400-codes.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: optional;
+  unicode-range: U+0020, U+0023, U+0028-0029, U+002B-002F, U+0030-003A, U+0041-005A, U+005F, U+0061-007A;
+}
+@font-face {
+  font-family: "CY Mono";
+  src: url("/fonts/JetBrainsMono-700-codes.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: optional;
+  unicode-range: U+0020, U+0023, U+0028-0029, U+002B-002F, U+0030-003A, U+0041-005A, U+005F, U+0061-007A;
 }
 
 /* ---------------------------------------------------------
@@ -90,7 +164,9 @@
   }
 
   :focus-visible {
-    outline: 3px solid var(--color-crane-orange);
+    /* فوکوس = accent (§5: نارنجی فقط برای عمل، فوکوس و حالت فعال). کنتراست غیرمتنی ۳٫۶:۱ روی سفید و ۴٫۹ روی
+       گرافیت — هر دو بالای ۳:۱ لازم (WCAG 1.4.11). */
+    outline: 3px solid var(--color-accent);
     outline-offset: 2px;
   }
 
@@ -120,12 +196,12 @@
   top: -100%;
   right: 1rem;
   z-index: 100;
-  background: var(--color-crane-navy);
+  background: var(--color-steel-900);
   color: #fff;
   font-weight: 700;
   padding: 0.75rem 1.5rem;
-  border-radius: 0 0 0.75rem 0.75rem;
-  transition: top 0.2s ease-out;
+  border-radius: 0 0 0.5rem 0.5rem;
+  transition: top 0.15s ease-out; /* حرکت ≤۱۵۰ms (§5) */
 }
 
 .skip-to-content:focus {
@@ -160,22 +236,22 @@
 .prose-crane h2,
 .prose-crane h3,
 .prose-crane h4 {
-  color: var(--color-crane-navy);
+  color: var(--color-steel-900);
   font-weight: 900;
   line-height: 1.9;
   margin-top: 2.25em;
   margin-bottom: 0.75em;
   padding-inline-start: 0.75rem;
-  border-inline-start: 4px solid var(--color-crane-orange);
+  border-inline-start: 4px solid var(--color-accent-ink);
   /* letter-spacing منفیِ ملایم روی فارسیِ سنگین‌وزن، عنوان را جمع‌تر و
      خواناتر می‌کند بدون آن‌که حروف به هم بچسبند. */
   letter-spacing: -0.01em;
 }
 
-.prose-crane h2 { font-size: 1.625rem; }
-.prose-crane h3 { font-size: 1.3125rem; }
+.prose-crane h2 { font-size: 1.5rem; }
+.prose-crane h3 { font-size: 1.25rem; }
 .prose-crane h4 {
-  font-size: 1.0625rem;
+  font-size: 1rem;
   /* h4 عمق چهارم است و نباید با h2/h3 رقابت کند — لنگر باریک‌تر و کم‌رنگ‌تر. */
   border-inline-start-width: 3px;
   border-inline-start-color: var(--color-steel-300, #cbd5e1);
@@ -191,7 +267,7 @@
 }
 
 .prose-crane a {
-  color: var(--color-crane-orange);
+  color: var(--color-accent-ink);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -218,7 +294,7 @@
 .prose-aside > * + * { margin-top: 0.75em; }
 
 .prose-aside a {
-  color: var(--color-crane-orange);
+  color: var(--color-accent-ink);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -229,12 +305,12 @@
 .prose-aside ul { list-style: disc; }
 .prose-aside ol { list-style: decimal; }
 .prose-aside li + li { margin-top: 0.35em; }
-.prose-aside strong { color: var(--color-crane-navy); font-weight: 800; }
+.prose-aside strong { color: var(--color-steel-900); font-weight: 900; }
 
-.prose-crane strong { color: var(--color-crane-navy); font-weight: 800; }
+.prose-crane strong { color: var(--color-steel-900); font-weight: 900; }
 
 .prose-crane img {
-  border-radius: 1rem;
+  border-radius: 0.5rem;
   max-width: 100%;
   height: auto;
 }
@@ -251,7 +327,7 @@
   -webkit-overflow-scrolling: touch;
   margin-block: 1.5em;
   border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
 }
 
 .prose-crane .table-scroll table {
@@ -266,7 +342,7 @@
   width: 100%;
   font-size: 0.875rem;
   border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   overflow: hidden;
   border-collapse: collapse;
 }
@@ -281,7 +357,7 @@
 .prose-crane th { background: #f8fafc; font-weight: 700; }
 
 .prose-crane blockquote {
-  border-inline-start: 4px solid var(--color-crane-orange);
+  border-inline-start: 4px solid var(--color-accent-ink);
   padding-inline-start: 1rem;
   color: #4b5563;
 }
@@ -415,7 +491,7 @@
   display: block;
   font-weight: 900;
   margin-bottom: 0.5rem;
-  font-size: 0.9375rem;
+  font-size: 1rem;
 }
 .cy-pros > strong { color: #166534; }
 .cy-cons > strong { color: #991B1B; }
@@ -427,7 +503,7 @@
   position: relative;
   padding-inline-start: 1.5rem;
   margin-bottom: 0.375rem;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   line-height: 1.9;
 }
 .cy-pros li::before,
@@ -447,7 +523,7 @@
   border-radius: 0.375rem;
   padding: 0.875rem 1rem;
   margin: 1.25rem 0;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   line-height: 1.9;
 }
 .cy-callout > strong { display: block; font-weight: 900; margin-bottom: 0.25rem; }
@@ -479,7 +555,7 @@
   background: var(--color-steel-900);
   color: #fff;
   font-weight: 900;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
 }
 .cy-compare tbody th {
   background: var(--color-steel-50);
@@ -510,7 +586,7 @@
   .cy-compare td::before {
     content: attr(data-label);
     display: block;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 900;
     color: var(--color-steel-600);
     margin-bottom: 0.125rem;

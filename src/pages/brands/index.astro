@@ -72,31 +72,31 @@ const jsonLd = {
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexHub}>
-  <section class="bg-crane-navy text-white pt-10 pb-16 px-4 border-b-[8px] border-crane-orange">
+  <section class="bg-steel-900 text-white pt-10 pb-16 px-4 border-b-[8px] border-accent-ink">
     <div class="max-w-7xl mx-auto">
       <Breadcrumb items={breadcrumbItems} />
-      <h1 class="text-3xl md:text-5xl font-black mb-4 tracking-tight drop-shadow-md">برندهای تحت پوشش</h1>
-      <p class="text-lg text-gray-300 max-w-3xl leading-8">
+      <h1 class="text-3xl md:text-4xl font-black mb-4 tracking-tight drop-shadow-md">برندهای تحت پوشش</h1>
+      <p class="text-xl text-steel-300 max-w-3xl leading-8">
         قطعات {BRANDS.length} برند تجهیزات بالابر تامین می‌شود. برندها بر اساس نقششان دسته‌بندی شده‌اند: سازنده‌ی جرثقیل، سازنده‌ی سیستم کنترل، و سازنده‌ی تجهیزات برقی — چون معمولاً روی یک دستگاه، هر سه از شرکت‌های متفاوتی هستند.
       </p>
     </div>
   </section>
 
-  <section class="bg-gray-50 px-4 py-14">
+  <section class="bg-steel-50 px-4 py-14">
     <div class="max-w-7xl mx-auto space-y-12">
       {classOrder.map((brandClass) => {
         const meta = BRAND_CLASSES[brandClass];
         const items = brandsByClass(brandClass);
         return (
           <section aria-labelledby={`class-${meta.slug}`}>
-            <div class="mb-6 border-b border-gray-200 pb-4">
-              <h2 id={`class-${meta.slug}`} class="text-xl md:text-2xl font-black text-crane-navy mb-2">
+            <div class="mb-6 border-b border-steel-200 pb-4">
+              <h2 id={`class-${meta.slug}`} class="text-xl md:text-2xl font-black text-steel-900 mb-2">
                 {meta.name}
-                <span class="text-sm font-bold text-gray-600 bg-white border border-gray-200 px-3 py-1 rounded-full mr-3 tabular-nums align-middle">
+                <span class="text-sm font-bold text-steel-600 bg-white border border-steel-200 px-3 py-1 rounded-full mr-3 tabular-nums align-middle">
                   {items.length} برند
                 </span>
               </h2>
-              <p class="text-gray-700 leading-8 max-w-3xl">{meta.intro}</p>
+              <p class="text-steel-700 leading-8 max-w-3xl">{meta.intro}</p>
             </div>
 
             <ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" role="list">
@@ -108,7 +108,7 @@ const jsonLd = {
                       برمی‌گردد — نه یک رنگ اشتباه. */}
                   <a
                     href={`/brands/${brand.slug}`}
-                    class="cy-brand-card group h-full bg-white p-6 rounded-lg border-2 border-steel-100 hover:shadow-lg transition-all flex flex-col items-center text-center gap-1 focus:outline-none focus:ring-4 focus:ring-accent/30"
+                    class="cy-brand-card group h-full bg-white p-6 rounded-lg border border-steel-300 hover:border-steel-400 transition-colors flex flex-col items-center text-center gap-1 focus:outline-none focus:ring-4 focus:ring-accent/30"
                     style={brand.color ? `--brand:${brand.color}` : undefined}
                     title={brand.seoAnchor ?? undefined}
                   >
@@ -130,15 +130,15 @@ const jsonLd = {
     </div>
   </section>
 
-  <section class="bg-white px-4 py-14 border-t border-gray-100">
-    <div class="max-w-4xl mx-auto text-gray-700 leading-8 text-right">
-      <h2 class="text-2xl font-black text-crane-navy mb-6">برند مورد نظر شما در فهرست نیست؟</h2>
+  <section class="bg-white px-4 py-14 border-t border-steel-100">
+    <div class="max-w-4xl mx-auto text-steel-700 leading-8 text-right">
+      <h2 class="text-2xl font-black text-steel-900 mb-6">برند مورد نظر شما در فهرست نیست؟</h2>
       <p class="mb-4">
         فهرست بالا برندهایی است که به‌طور منظم تامین می‌شوند. اگر قطعه‌ی شما از سازنده‌ی دیگری است، کد فنی (Part Number) یا عکس پلاک دستگاه را بفرستید؛ در بسیاری از موارد قطعه‌ی معادل با همان مشخصات فنی از سازنده‌ی دیگری قابل تامین است.
       </p>
       <p>
         در نظر داشته باشید که روی یک جرثقیل، معمولاً بدنه از یک برند، ریموت کنترل از برند دوم و تجهیزات تابلو برق از برند سوم است — بنابراین برای هر قطعه، برند همان قطعه اهمیت دارد، نه برند کل دستگاه.
-        <a href="/contact" class="text-crane-orange font-bold hover:underline mr-1">ثبت استعلام</a>
+        <a href="/contact" class="text-accent-ink font-bold hover:underline mr-1">ثبت استعلام</a>
       </p>
     </div>
   </section>

@@ -56,12 +56,12 @@ const faDate = (iso: string) => {
 
 <section
   id="category-qa"
-  class="bg-white px-4 py-14 border-t border-gray-100 print:hidden"
+  class="bg-white px-4 py-14 border-t border-steel-100 print:hidden"
   aria-labelledby="qa-heading"
 >
   <div class="max-w-7xl mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12 lg:items-start">
     <div class="min-w-0">
-      <h2 id="qa-heading" class="text-2xl md:text-3xl font-black text-crane-navy mb-2">
+      <h2 id="qa-heading" class="text-2xl md:text-3xl font-black text-steel-900 mb-2">
         پرسش‌های فنی درباره‌ی {entityName}
       </h2>
       <p class="text-steel-600 leading-8 mb-8">
@@ -70,20 +70,20 @@ const faDate = (iso: string) => {
       </p>
 
       {questions.length === 0 ? (
-        <p class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-steel-600 leading-8">
+        <p class="rounded-lg border border-dashed border-steel-300 bg-steel-50 px-6 py-8 text-steel-600 leading-8">
           هنوز پرسشی درباره‌ی این {entity === 'category' ? 'دسته' : 'محصول'} ثبت نشده است. اگر دستگاه یا کد فنی مشخصی
           دارید، همین‌جا بپرسید — پاسخ کارشناس روی همین صفحه می‌آید.
         </p>
       ) : (
         <ul class="space-y-4" role="list">
           {questions.map((q) => (
-            <li class="rounded-2xl border border-gray-200 border-r-4 border-r-crane-orange/50 overflow-hidden">
+            <li class="rounded-lg border border-steel-200 border-r-4 border-r-accent-ink/50 overflow-hidden">
               <div class="px-6 pt-5">
-                <h3 class="font-black text-crane-navy leading-8">{q.question}</h3>
+                <h3 class="font-black text-steel-900 leading-8">{q.question}</h3>
                 <p class="text-xs text-steel-500 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                   {q.askerName && <span>پرسش از {q.askerName}</span>}
                   {q.craneModel && (
-                    <span class="rounded-full bg-gray-100 px-2 py-0.5 font-bold text-steel-600">
+                    <span class="rounded-full bg-steel-100 px-2 py-0.5 font-bold text-steel-600">
                       {q.craneModel}
                     </span>
                   )}
@@ -92,8 +92,8 @@ const faDate = (iso: string) => {
               </div>
               {/* پاسخ همیشه هست: هم نگهبان افزونه و هم لایه‌ی واکشی،
                   پرسش بی‌پاسخ را کنار می‌گذارند. */}
-              <div class="px-6 py-4 mt-3 bg-gray-50 border-t border-gray-100">
-                <p class="text-xs font-black text-crane-orange mb-2">پاسخ کارشناس فنی</p>
+              <div class="px-6 py-4 mt-3 bg-steel-50 border-t border-steel-100">
+                <p class="text-xs font-black text-accent-ink mb-2">پاسخ کارشناس فنی</p>
                 <div class="prose-aside text-steel-700 leading-8" set:html={q.answerHtml} />
               </div>
             </li>
@@ -107,14 +107,14 @@ const faDate = (iso: string) => {
       {canSubmit ? (
         <form
           id="qa-form"
-          class="rounded-2xl border border-gray-200 bg-gray-50/70 p-6"
+          class="rounded-lg border border-steel-200 bg-steel-50/70 p-6"
           data-wp-base={wpBase}
           data-entity={entity}
           data-category={entity === 'category' ? entitySlug : ''}
           data-product={productId ?? ''}
           novalidate
         >
-          <h3 class="font-black text-crane-navy mb-1">پرسش خود را بپرسید</h3>
+          <h3 class="font-black text-steel-900 mb-1">پرسش خود را بپرسید</h3>
           <p class="text-sm text-steel-600 leading-7 mb-5">
             هرچه مدل دستگاه دقیق‌تر باشد، پاسخ دقیق‌تر است.
           </p>
@@ -122,7 +122,7 @@ const faDate = (iso: string) => {
           <label class="block text-sm font-bold text-steel-700 mb-1" for="qa-name">نام</label>
           <input
             id="qa-name" name="name" type="text" required minlength="2" autocomplete="name"
-            class="w-full rounded-xl border border-gray-300 px-4 py-2.5 mb-4 focus:outline-none focus:ring-2 focus:ring-crane-orange"
+            class="w-full rounded-lg border border-steel-300 px-4 py-2.5 mb-4 focus:outline-none focus:ring-2 focus:ring-accent-ink"
           />
 
           <label class="block text-sm font-bold text-steel-700 mb-1" for="qa-model">
@@ -130,7 +130,7 @@ const faDate = (iso: string) => {
           </label>
           <input
             id="qa-model" name="crane_model" type="text"
-            class="w-full rounded-xl border border-gray-300 px-4 py-2.5 mb-4 focus:outline-none focus:ring-2 focus:ring-crane-orange"
+            class="w-full rounded-lg border border-steel-300 px-4 py-2.5 mb-4 focus:outline-none focus:ring-2 focus:ring-accent-ink"
           />
 
           <label class="block text-sm font-bold text-steel-700 mb-1" for="qa-email">
@@ -138,13 +138,13 @@ const faDate = (iso: string) => {
           </label>
           <input
             id="qa-email" name="email" type="email" autocomplete="email"
-            class="w-full rounded-xl border border-gray-300 px-4 py-2.5 mb-4 focus:outline-none focus:ring-2 focus:ring-crane-orange"
+            class="w-full rounded-lg border border-steel-300 px-4 py-2.5 mb-4 focus:outline-none focus:ring-2 focus:ring-accent-ink"
           />
 
           <label class="block text-sm font-bold text-steel-700 mb-1" for="qa-body">پرسش</label>
           <textarea
             id="qa-body" name="body" rows="4" required minlength="10"
-            class="w-full rounded-xl border border-gray-300 px-4 py-2.5 mb-4 leading-7 focus:outline-none focus:ring-2 focus:ring-crane-orange"
+            class="w-full rounded-lg border border-steel-300 px-4 py-2.5 mb-4 leading-7 focus:outline-none focus:ring-2 focus:ring-accent-ink"
           ></textarea>
 
           {/* هانی‌پات — کاربر واقعی هرگز نمی‌بیندش. `hidden` نیست تا ربات
@@ -156,7 +156,7 @@ const faDate = (iso: string) => {
 
           <button
             type="submit"
-            class="w-full bg-crane-orange text-white font-black rounded-xl py-3 min-h-[48px] hover:brightness-95 transition focus:outline-none focus:ring-4 focus:ring-crane-orange/40 disabled:opacity-60"
+            class="w-full bg-accent-ink text-white font-black rounded-lg py-3 min-h-[48px] hover:brightness-95 transition focus:outline-none focus:ring-4 focus:ring-accent-ink/40 disabled:opacity-60"
           >
             ثبت پرسش
           </button>
@@ -164,7 +164,7 @@ const faDate = (iso: string) => {
           <p id="qa-status" class="text-sm leading-7 mt-3" role="status" aria-live="polite"></p>
         </form>
       ) : (
-        <div class="rounded-2xl border border-dashed border-gray-300 p-6 text-sm text-steel-600 leading-7">
+        <div class="rounded-lg border border-dashed border-steel-300 p-6 text-sm text-steel-600 leading-7">
           فرم ثبت پرسش در این نسخه‌ی build غیرفعال است
           <span class="block mt-1 text-steel-500">(آدرس وردپرس تنظیم نشده)</span>
         </div>

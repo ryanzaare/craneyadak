@@ -93,7 +93,7 @@ const TONE = {
 } as const;
 
 const flag = (needs: boolean) => (reviewMode && needs ? 'bg-amber-50 ring-1 ring-amber-300' : '');
-const band = (i: number) => (i % 2 === 1 ? 'bg-gray-50' : '');
+const band = (i: number) => (i % 2 === 1 ? 'bg-steel-50' : '');
 
 /* ═══════════════════════════════════════════════════════════════════════
    ستون کناری
@@ -145,17 +145,17 @@ const rail = (b: ContentBlock): string =>
       {blocks.map((b, i) => (
         <section
           id={b.anchor}
-          class={`px-4 py-16 border-t border-gray-100 scroll-mt-32 ${band(i)} ${flag(b.needsReview)}`}
+          class={`px-4 py-16 border-t border-steel-100 scroll-mt-32 ${band(i)} ${flag(b.needsReview)}`}
           aria-labelledby={b.heading ? `${b.anchor}-h` : undefined}
         >
           <div class="max-w-7xl mx-auto">
             {b.heading && (
               <div class="flex items-start gap-4 mb-8">
-                <span class="shrink-0 w-11 h-11 rounded-2xl bg-crane-navy text-white flex items-center justify-center font-black text-lg tabular-nums" aria-hidden="true">
+                <span class="shrink-0 w-11 h-11 rounded-lg bg-steel-900 text-white flex items-center justify-center font-black text-xl tabular-nums" aria-hidden="true">
                   {numberOf(b)}
                 </span>
                 <div>
-                  <h2 id={`${b.anchor}-h`} class="text-2xl md:text-3xl font-black text-crane-navy leading-relaxed">{b.heading}</h2>
+                  <h2 id={`${b.anchor}-h`} class="text-2xl md:text-3xl font-black text-steel-900 leading-relaxed">{b.heading}</h2>
                   {b.type === 'table' && b.intro && <p class="text-steel-600 mt-1">{b.intro}</p>}
                 </div>
               </div>
@@ -166,26 +166,26 @@ const rail = (b: ContentBlock): string =>
 
             {/* ── متن ────────────────────────────────────────────────── */}
             {b.type === 'text' && (
-              <div class="prose-crane max-w-[70ch] text-lg text-steel-700 leading-9" set:html={bodies[i]} />
+              <div class="prose-crane max-w-[70ch] text-xl text-steel-700 leading-9" set:html={bodies[i]} />
             )}
 
             {/* ── جدول ───────────────────────────────────────────────── */}
             {b.type === 'table' && (
-              <div class="table-scroll bg-white rounded-2xl border border-gray-200">
+              <div class="table-scroll bg-white rounded-lg border border-steel-200">
                 <table class="w-full text-sm">
                   <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200">
+                    <tr class="bg-steel-50 border-b border-steel-200">
                       {b.columns.map((c) => (
-                        <th scope="col" class="text-right font-black text-crane-navy px-5 py-3 whitespace-nowrap">{c}</th>
+                        <th scope="col" class="text-right font-black text-steel-900 px-5 py-3 whitespace-nowrap">{c}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {b.rows.map((row, r) => (
-                      <tr class={`border-b border-gray-100 last:border-0 transition-colors hover:bg-orange-50/40 ${r % 2 ? 'bg-gray-50/50' : ''}`}>
+                      <tr class={`border-b border-steel-100 last:border-0 transition-colors hover:bg-accent-soft/40 ${r % 2 ? 'bg-steel-50/50' : ''}`}>
                         {row.cells.map((cell, c) => (
                           c === 0
-                            ? <th scope="row" class="text-right px-5 py-4 font-black text-crane-navy whitespace-nowrap align-top border-r-2 border-crane-orange/30">{cell || '—'}</th>
+                            ? <th scope="row" class="text-right px-5 py-4 font-black text-steel-900 whitespace-nowrap align-top border-r-2 border-accent-ink/30">{cell || '—'}</th>
                             : <td class="px-5 py-4 text-steel-700 leading-7 align-top">{cell || '—'}</td>
                         ))}
                       </tr>
@@ -199,10 +199,10 @@ const rail = (b: ContentBlock): string =>
             {b.type === 'faq' && (
               <div class="max-w-3xl space-y-3">
                 {b.faqs.map((f) => (
-                  <details class="group rounded-2xl bg-white border border-gray-200 border-r-4 border-r-transparent open:border-r-crane-orange/60 overflow-hidden transition-colors">
-                    <summary class="cursor-pointer list-none px-6 py-4 font-black text-crane-navy flex items-center justify-between gap-4 hover:bg-orange-50/50 transition-colors">
+                  <details class="group rounded-lg bg-white border border-steel-200 border-r-4 border-r-transparent open:border-r-accent-ink/60 overflow-hidden transition-colors">
+                    <summary class="cursor-pointer list-none px-6 py-4 font-black text-steel-900 flex items-center justify-between gap-4 hover:bg-accent-soft/50 transition-colors">
                       <span>{f.question}</span>
-                      <span class="shrink-0 w-6 h-6 grid place-items-center rounded-full bg-orange-50 text-crane-orange text-lg leading-none transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+                      <span class="shrink-0 w-6 h-6 grid place-items-center rounded-full bg-accent-soft text-accent-ink text-xl leading-none transition-transform group-open:rotate-45" aria-hidden="true">+</span>
                     </summary>
                     <div class="px-6 pb-5 text-steel-700 leading-8 whitespace-pre-line">{f.answer}</div>
                   </details>
@@ -217,9 +217,9 @@ const rail = (b: ContentBlock): string =>
                  بلوک `additionalProperty` بسازد. */
               <dl class="grid gap-x-8 gap-y-0 sm:grid-cols-2 max-w-4xl">
                 {b.specs.map((sp) => (
-                  <div class="flex items-baseline justify-between gap-4 border-b border-gray-100 py-3">
+                  <div class="flex items-baseline justify-between gap-4 border-b border-steel-100 py-3">
                     <dt class="text-steel-600 shrink-0">{sp.label}</dt>
-                    <dd class="font-black text-crane-navy text-left tabular-nums">
+                    <dd class="font-black text-steel-900 text-left tabular-nums">
                       {sp.value}{sp.unit && <span class="font-bold text-steel-500 text-sm"> {sp.unit}</span>}
                     </dd>
                   </div>
@@ -231,7 +231,7 @@ const rail = (b: ContentBlock): string =>
             {b.type === 'callout' && (
               <div
                 role="note"
-                class={`max-w-3xl rounded-2xl border-2 px-6 py-5 ${TONE[b.tone].box}`}
+                class={`max-w-3xl rounded-lg border-2 px-6 py-5 ${TONE[b.tone].box}`}
               >
                 <p class="flex items-center gap-2 font-black text-sm mb-2">
                   <span class={`w-2 h-2 rounded-full ${TONE[b.tone].dot}`} aria-hidden="true"></span>
@@ -249,11 +249,11 @@ const rail = (b: ContentBlock): string =>
                   // به سیلو منتقل می‌شود. صفحه‌ی جستجو معمولاً noindex است.
                   const cat = p.categorySlug ? findCategory(p.categorySlug) : undefined;
                   return (
-                    <li class="rounded-2xl border border-gray-200 p-5 hover:border-crane-orange transition-colors">
-                      <h3 class="font-black text-crane-navy mb-2">{p.partName}</h3>
+                    <li class="rounded-lg border border-steel-200 p-5 hover:border-accent-ink transition-colors">
+                      <h3 class="font-black text-steel-900 mb-2">{p.partName}</h3>
                       {p.failureReason && <p class="text-sm text-steel-600 leading-7 mb-3">{p.failureReason}</p>}
                       {cat && (
-                        <a href={categoryPath(cat)} class="text-sm font-black text-crane-orange hover:underline">
+                        <a href={categoryPath(cat)} class="text-sm font-black text-accent-ink hover:underline">
                           دیدن {p.categoryName ?? cat.name} ←
                         </a>
                       )}
@@ -267,13 +267,13 @@ const rail = (b: ContentBlock): string =>
             {b.type === 'media' && (
               <div class={`grid gap-6 ${b.media.length > 1 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'max-w-3xl'}`}>
                 {b.media.map((m) => (
-                  <figure class="rounded-2xl overflow-hidden border border-gray-200 bg-white">
+                  <figure class="rounded-lg overflow-hidden border border-steel-200 bg-white">
                     {m.kind === 'video' && m.videoUrl ? (
                       /* الگوی facade: هیچ iframeای تا کلیک کاربر ساخته نمی‌شود.
                          جاسازی مستقیم بیش از ۵۰۰ کیلوبایت به هر بازدید اضافه
                          می‌کند — یعنی LCP بدتر، نه سئوی بهتر. */
                       <a href={m.videoUrl} target="_blank" rel="noopener"
-                         class="group block relative aspect-video bg-crane-navy"
+                         class="group block relative aspect-video bg-steel-900"
                          aria-label={`پخش ویدیو: ${m.alt || m.caption || 'ویدیو'}`}>
                         {m.url && (
                           <img src={m.url} alt={m.alt} width={m.width ?? undefined} height={m.height ?? undefined}
@@ -295,7 +295,7 @@ const rail = (b: ContentBlock): string =>
                       )
                     )}
                     {m.caption && (
-                      <figcaption class="px-4 py-3 text-sm text-steel-600 border-t border-gray-100">{m.caption}</figcaption>
+                      <figcaption class="px-4 py-3 text-sm text-steel-600 border-t border-steel-100">{m.caption}</figcaption>
                     )}
                   </figure>
                 ))}
@@ -306,9 +306,9 @@ const rail = (b: ContentBlock): string =>
 
             {/* ── ستون کناری ─────────────────────────────────────────── */}
             {b.asideHtml !== '' && (
-              <aside class="mt-8 lg:mt-0 lg:sticky lg:top-32 rounded-2xl bg-white lg:bg-gray-50/70 border border-gray-200 p-5">
-                <p class="flex items-center gap-2 text-xs font-black text-crane-orange mb-2">
-                  <span class="w-1.5 h-1.5 rounded-full bg-crane-orange" aria-hidden="true"></span>
+              <aside class="mt-8 lg:mt-0 lg:sticky lg:top-32 rounded-lg bg-white lg:bg-steel-50/70 border border-steel-200 p-5">
+                <p class="flex items-center gap-2 text-xs font-black text-accent-ink mb-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-accent-ink" aria-hidden="true"></span>
                   نکته
                 </p>
                 <div class="prose-aside text-sm text-steel-600 leading-7" set:html={asides[i]} />

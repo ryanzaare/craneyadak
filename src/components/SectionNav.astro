@@ -43,13 +43,13 @@ const { sections, eyebrow, ariaLabel } = Astro.props;
 
 {sections.length > 2 && (
   <nav
-    class="section-nav sticky top-[68px] z-30 bg-white/95 backdrop-blur-sm border-y border-gray-200 print:hidden"
+    class="section-nav sticky top-[68px] z-30 bg-white/95 backdrop-blur-sm border-y border-steel-200 print:hidden"
     style="transform: translateZ(0);"
     aria-label={ariaLabel}
   >
     <div class="max-w-7xl mx-auto px-4">
       <ul class="flex items-center gap-1 overflow-x-auto hide-scrollbar py-2.5" role="list">
-        <li class="shrink-0 text-xs font-black text-gray-500 pl-3 border-l border-gray-200 ml-1">
+        <li class="shrink-0 text-xs font-black text-steel-500 pl-3 border-l border-steel-200 ml-1">
           {eyebrow}
         </li>
         {sections.map((section) => (
@@ -57,7 +57,7 @@ const { sections, eyebrow, ariaLabel } = Astro.props;
             <a
               href={`#${section.id}`}
               data-section-link={section.id}
-              class="block px-3.5 py-1.5 rounded-full text-sm font-bold text-gray-600 hover:text-crane-orange hover:bg-orange-50 transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-crane-orange"
+              class="block px-3.5 py-1.5 rounded-full text-sm font-bold text-steel-600 hover:text-accent-ink hover:bg-accent-soft transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-accent-ink"
             >
               {section.label}
             </a>
@@ -82,7 +82,7 @@ const { sections, eyebrow, ariaLabel } = Astro.props;
       .filter((el): el is HTMLElement => el !== null);
     if (targets.length === 0) return;
 
-    const ACTIVE = ['text-crane-orange', 'bg-orange-50'];
+    const ACTIVE = ['text-accent-ink', 'bg-accent-soft'];
     let current: HTMLAnchorElement | null = null;
 
     const setActive = (id: string) => {

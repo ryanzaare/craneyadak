@@ -43,13 +43,13 @@ const navLinks = [
 ---
 
 <header
-  class="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 py-3 shadow-sm"
+  class="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-steel-300 py-3"
   style="transform: translateZ(0);"
   role="banner"
   data-wp-base={wpBase}
 >
   <div class="w-full max-w-7xl mx-auto flex justify-between items-center px-4 md:px-8">
-    <a href="/" class="flex min-w-0 items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label={`صفحه اصلی ${SITE.name}`}>
+    <a href="/" class="flex min-w-0 items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-accent-ink" aria-label={`صفحه اصلی ${SITE.name}`}>
       {/* چینش راست‌به‌چپ: `items-start` به‌جای `items-end`.
           در ظرف flex عمودی، محور متقاطع همان محور افقی است و با dir="rtl"
           مقدار `start` یعنی سمت راست. نسخه‌ی قبل `items-end` بود که در
@@ -63,17 +63,17 @@ const navLinks = [
           و اگر هر دو سبد پر باشند، نشان پنهان می‌شود (global.css،
           .brand-mark) — وگرنه نام ۱۴px روی نشان می‌افتاد (preview دیده شد). */}
       <span class="flex min-w-0 flex-col items-start text-right leading-tight">
-        <span class="whitespace-nowrap text-xl min-[360px]:text-2xl md:text-3xl font-black text-crane-navy tracking-tight">{SITE.name}</span>
-        <span class="max-w-full truncate text-[10px] md:text-xs font-bold text-gray-600">{SITE.tagline}</span>
+        <span class="whitespace-nowrap text-xl min-[360px]:text-2xl md:text-3xl font-black text-steel-900 tracking-tight">{SITE.name}</span>
+        <span class="max-w-full truncate text-xs md:text-xs font-bold text-steel-600">{SITE.tagline}</span>
       </span>
-      <Logo class="brand-mark w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 md:w-14 md:h-14 text-crane-navy shrink-0" />
+      <Logo class="brand-mark w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 md:w-14 md:h-14 text-steel-900 shrink-0" />
     </a>
 
     {/* ------------------------- ناوبری دسکتاپ ------------------------- */}
     <nav class="hidden md:block" aria-label="منوی اصلی">
-      <ul class="flex items-center gap-7 text-sm font-medium">
+      <ul class="flex items-center gap-7 text-sm font-normal">
         <li>
-          <a href="/" class:list={['transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-crane-orange rounded', isActive('/') ? 'text-crane-orange font-bold' : 'text-gray-700 hover:text-crane-navy']} aria-current={isActive('/') ? 'page' : undefined}>صفحه اصلی</a>
+          <a href="/" class:list={['transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-accent-ink rounded', isActive('/') ? 'text-accent-ink font-bold' : 'text-steel-700 hover:text-steel-900']} aria-current={isActive('/') ? 'page' : undefined}>صفحه اصلی</a>
         </li>
 
         <li id="mega-wrap" class="static">
@@ -84,18 +84,18 @@ const navLinks = [
             aria-expanded="false"
             aria-controls="mega-menu"
             class:list={[
-              'flex items-center gap-1 transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-crane-orange rounded',
-              inSection('/categories') ? 'text-crane-orange font-bold' : 'text-gray-700 hover:text-crane-navy',
+              'flex items-center gap-1 transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-accent-ink rounded',
+              inSection('/categories') ? 'text-accent-ink font-bold' : 'text-steel-700 hover:text-steel-900',
             ]}
           >
             دسته‌بندی قطعات
-            <svg id="mega-chevron" class="w-4 h-4 text-gray-500 transition-transform" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+            <svg id="mega-chevron" class="w-4 h-4 text-steel-500 transition-transform" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
           </button>
         </li>
 
         {navLinks.map((link) => (
           <li>
-            <a href={link.href} class:list={['transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-crane-orange rounded', inSection(link.href) ? 'text-crane-orange font-bold' : 'text-gray-700 hover:text-crane-navy']} aria-current={isActive(link.href) ? 'page' : undefined}>{link.label}</a>
+            <a href={link.href} class:list={['transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-accent-ink rounded', inSection(link.href) ? 'text-accent-ink font-bold' : 'text-steel-700 hover:text-steel-900']} aria-current={isActive(link.href) ? 'page' : undefined}>{link.label}</a>
           </li>
         ))}
       </ul>
@@ -120,34 +120,34 @@ const navLinks = [
         type="button"
         id="quote-open"
         hidden
-        class="relative rounded-md p-1.5 md:p-2 text-crane-navy hover:text-crane-orange transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange"
+        class="relative rounded-md p-1.5 md:p-2 text-steel-900 hover:text-accent-ink transition-colors focus:outline-none focus:ring-2 focus:ring-accent-ink"
         aria-label="سبد استعلام"
         aria-controls="quote-drawer"
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-6 0h.01M12 16h3m-6 0h.01" />
         </svg>
-        <span id="quote-count" class="absolute -top-0.5 -left-0.5 bg-steel-900 text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center tabular-nums text-[11px] font-black">0</span>
+        <span id="quote-count" class="absolute -top-0.5 -left-0.5 bg-steel-900 text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center tabular-nums text-xs font-black">0</span>
       </button>
       <button
         type="button"
         id="cart-open"
         hidden
-        class="relative rounded-md p-1.5 md:p-2 text-crane-navy hover:text-crane-orange transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange"
+        class="relative rounded-md p-1.5 md:p-2 text-steel-900 hover:text-accent-ink transition-colors focus:outline-none focus:ring-2 focus:ring-accent-ink"
         aria-label="سبد خرید"
         aria-controls="cart-drawer"
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
         </svg>
-        <span id="cart-count" class="absolute -top-0.5 -left-0.5 bg-crane-orange text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center tabular-nums text-[11px] font-black">0</span>
+        <span id="cart-count" class="absolute -top-0.5 -left-0.5 bg-accent-ink text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center tabular-nums text-xs font-black">0</span>
       </button>
       <a
         id="account-link"
         href="/account/login"
         class:list={[
-          'flex items-center gap-1.5 rounded-md p-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange',
-          inSection('/account') ? 'text-crane-orange' : 'text-crane-navy hover:text-crane-orange',
+          'flex items-center gap-1.5 rounded-md p-2 text-sm font-normal transition-colors focus:outline-none focus:ring-2 focus:ring-accent-ink',
+          inSection('/account') ? 'text-accent-ink' : 'text-steel-900 hover:text-accent-ink',
         ]}
         aria-label="ورود یا ثبت‌نام"
       >
@@ -166,22 +166,22 @@ const navLinks = [
           aria-controls="account-menu"
           aria-label="منوی حساب من"
           class:list={[
-            'flex items-center gap-1.5 rounded-md p-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange',
-            inSection('/account') ? 'text-crane-orange' : 'text-crane-navy hover:text-crane-orange',
+            'flex items-center gap-1.5 rounded-md p-2 text-sm font-normal transition-colors focus:outline-none focus:ring-2 focus:ring-accent-ink',
+            inSection('/account') ? 'text-accent-ink' : 'text-steel-900 hover:text-accent-ink',
           ]}
         >
           <svg class="w-7 h-7 md:w-6 md:h-6" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.1a7.5 7.5 0 0115 0A17.9 17.9 0 0112 21.75c-2.68 0-5.22-.58-7.5-1.65z" />
           </svg>
           <span id="account-name" class="hidden md:inline max-w-[9rem] truncate">حساب من</span>
-          <svg id="account-chevron" class="hidden md:block w-4 h-4 text-gray-500 transition-transform" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+          <svg id="account-chevron" class="hidden md:block w-4 h-4 text-steel-500 transition-transform" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
         </button>
 
         {/* left-0: در RTL، دکمه در لبه‌ی چپ هدر است؛ منو باید به سمت داخل
             صفحه باز شود، نه بیرون از آن. */}
         <div
           id="account-menu"
-          class="hidden absolute left-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl py-2 z-50"
+          class="hidden absolute left-0 top-full mt-2 w-56 bg-white border border-steel-200 rounded-lg shadow-xl py-2 z-50"
           role="menu"
           aria-label="حساب من"
         >
@@ -190,15 +190,15 @@ const navLinks = [
               href={item.href}
               role="menuitem"
               class:list={[
-                'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors focus:outline-none focus:bg-gray-50',
-                isActive(item.href) ? 'text-crane-orange font-bold' : 'text-gray-700 hover:bg-gray-50 hover:text-crane-navy',
+                'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors focus:outline-none focus:bg-steel-50',
+                isActive(item.href) ? 'text-accent-ink font-bold' : 'text-steel-700 hover:bg-steel-50 hover:text-steel-900',
               ]}
             >
-              <svg class="w-5 h-5 shrink-0 text-gray-400" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={item.icon} /></svg>
+              <svg class="w-5 h-5 shrink-0 text-steel-400" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={item.icon} /></svg>
               {item.label}
             </a>
           ))}
-          <div class="border-t border-gray-100 my-1" role="separator"></div>
+          <div class="border-t border-steel-100 my-1" role="separator"></div>
           <button
             id="account-logout"
             type="button"
@@ -211,7 +211,7 @@ const navLinks = [
         </div>
       </div>
 
-      <button id="mobile-menu-btn" type="button" class="md:hidden text-crane-navy rounded-md p-2 z-50 focus:outline-none focus:ring-2 focus:ring-crane-orange" aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobile-menu">
+      <button id="mobile-menu-btn" type="button" class="md:hidden text-steel-900 rounded-md p-2 z-50 focus:outline-none focus:ring-2 focus:ring-accent-ink" aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobile-menu">
         <svg class="w-8 h-8" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path id="hamburger-icon-path" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
@@ -222,7 +222,7 @@ const navLinks = [
   {/* ---------------------------- مگا-منو ---------------------------- */}
   <div
     id="mega-menu"
-    class="hidden absolute inset-x-0 top-full bg-white border-b border-gray-200 shadow-xl max-h-[75vh] overflow-y-auto"
+    class="hidden absolute inset-x-0 top-full bg-white border-b border-steel-200 shadow-xl max-h-[75vh] overflow-y-auto"
     role="region"
     aria-label="همه دسته‌بندی‌های قطعات"
   >
@@ -232,9 +232,9 @@ const navLinks = [
           <div class="min-w-0">
             <a
               href={siloPath(silo)}
-              class="flex items-center gap-2 font-black text-crane-navy hover:text-crane-orange transition-colors mb-3 pb-2 border-b border-gray-100 focus:outline-none focus:ring-2 focus:ring-crane-orange rounded"
+              class="flex items-center gap-2 font-black text-steel-900 hover:text-accent-ink transition-colors mb-3 pb-2 border-b border-steel-100 focus:outline-none focus:ring-2 focus:ring-accent-ink rounded"
             >
-              <span class="w-7 h-7 shrink-0 text-crane-orange" aria-hidden="true">
+              <span class="w-7 h-7 shrink-0 text-accent-ink" aria-hidden="true">
                 <svg class="w-full h-full" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={silo.icon} /></svg>
               </span>
               <span class="text-sm leading-6">{silo.name}</span>
@@ -245,10 +245,10 @@ const navLinks = [
                   <a
                     href={categoryPath({ ...category, silo })}
                     class:list={[
-                      'block text-sm leading-6 transition-colors rounded px-1 -mx-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-crane-orange',
+                      'block text-sm leading-6 transition-colors rounded px-1 -mx-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-accent-ink',
                       path === categoryPath({ ...category, silo })
-                        ? 'text-crane-orange font-bold'
-                        : 'text-gray-700 hover:text-crane-orange',
+                        ? 'text-accent-ink font-bold'
+                        : 'text-steel-700 hover:text-accent-ink',
                     ]}
                   >
                     {category.name}
@@ -260,40 +260,40 @@ const navLinks = [
         ))}
       </div>
 
-      <div class="mt-8 pt-5 border-t border-gray-100 flex flex-wrap items-center gap-4">
-        <a href="/categories" class="text-sm font-bold text-crane-orange hover:underline focus:outline-none focus:ring-2 focus:ring-crane-orange rounded">مشاهده نقشه کامل کاتالوگ ←</a>
-        <a href="/contact" class="text-sm font-bold text-crane-navy hover:text-crane-orange transition-colors focus:outline-none focus:ring-2 focus:ring-crane-navy rounded">قطعه را پیدا نکردید؟ کد فنی را استعلام بگیرید</a>
+      <div class="mt-8 pt-5 border-t border-steel-100 flex flex-wrap items-center gap-4">
+        <a href="/categories" class="text-sm font-bold text-accent-ink hover:underline focus:outline-none focus:ring-2 focus:ring-accent-ink rounded">مشاهده نقشه کامل کاتالوگ ←</a>
+        <a href="/contact" class="text-sm font-bold text-steel-900 hover:text-accent-ink transition-colors focus:outline-none focus:ring-2 focus:ring-steel-900 rounded">قطعه را پیدا نکردید؟ کد فنی را استعلام بگیرید</a>
       </div>
     </div>
   </div>
 
   {/* ------------------------- منوی موبایل ------------------------- */}
-  <div id="mobile-menu" class="hidden md:hidden absolute top-full inset-x-0 bg-white border-b border-gray-100 shadow-lg z-40 max-h-[80vh] overflow-y-auto">
+  <div id="mobile-menu" class="hidden md:hidden absolute top-full inset-x-0 bg-white border-b border-steel-100 shadow-lg z-40 max-h-[80vh] overflow-y-auto">
     <nav aria-label="منوی موبایل">
-      <ul class="flex flex-col py-4 px-5 gap-1 text-base font-medium">
-        <li><a href="/" class:list={['block py-2.5', isActive('/') ? 'text-crane-orange font-bold' : 'text-gray-700']}>صفحه اصلی</a></li>
+      <ul class="flex flex-col py-4 px-5 gap-1 text-base font-normal">
+        <li><a href="/" class:list={['block py-2.5', isActive('/') ? 'text-accent-ink font-bold' : 'text-steel-700']}>صفحه اصلی</a></li>
 
         {/* آکاردئون: هر گروه باز می‌شود و زیردسته‌ها را نشان می‌دهد —
             همان اطلاعاتی که در دسکتاپ با هاور دیده می‌شود. */}
-        <li class="border-t border-gray-100 pt-2 mt-1">
-          <span class="block text-xs font-black text-gray-500 uppercase tracking-wider py-2">دسته‌بندی قطعات</span>
+        <li class="border-t border-steel-100 pt-2 mt-1">
+          <span class="block text-xs font-black text-steel-500 uppercase tracking-wider py-2">دسته‌بندی قطعات</span>
           <ul class="flex flex-col gap-1">
             {SILOS.map((silo) => (
               <li>
                 <details class="group">
-                  <summary class="flex items-center justify-between gap-2 cursor-pointer list-none py-2.5 text-crane-navy font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-crane-orange rounded">
+                  <summary class="flex items-center justify-between gap-2 cursor-pointer list-none py-2.5 text-steel-900 font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink rounded">
                     <span class="flex items-center gap-2">
-                      <span class="w-5 h-5 shrink-0 text-crane-orange" aria-hidden="true">
+                      <span class="w-5 h-5 shrink-0 text-accent-ink" aria-hidden="true">
                         <svg class="w-full h-full" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={silo.icon} /></svg>
                       </span>
                       <span class="text-sm">{silo.name}</span>
                     </span>
-                    <svg class="w-4 h-4 shrink-0 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                    <svg class="w-4 h-4 shrink-0 text-steel-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                   </summary>
-                  <ul class="flex flex-col pr-7 gap-0.5 pb-2 border-r-2 border-orange-100 mr-2.5" role="list">
-                    <li><a href={siloPath(silo)} class="block text-xs font-bold text-crane-orange py-1.5">مشاهده کل گروه ←</a></li>
+                  <ul class="flex flex-col pr-7 gap-0.5 pb-2 border-r-2 border-accent-soft mr-2.5" role="list">
+                    <li><a href={siloPath(silo)} class="block text-xs font-bold text-accent-ink py-1.5">مشاهده کل گروه ←</a></li>
                     {silo.categories.map((category) => (
-                      <li><a href={categoryPath({ ...category, silo })} class="block text-sm text-gray-700 py-1.5">{category.name}</a></li>
+                      <li><a href={categoryPath({ ...category, silo })} class="block text-sm text-steel-700 py-1.5">{category.name}</a></li>
                     ))}
                   </ul>
                 </details>
@@ -302,10 +302,10 @@ const navLinks = [
           </ul>
         </li>
 
-        <li class="border-t border-gray-100 pt-2 mt-1">
+        <li class="border-t border-steel-100 pt-2 mt-1">
           <ul class="flex flex-col">
             {navLinks.map((link) => (
-              <li><a href={link.href} class:list={['block py-2.5', inSection(link.href) ? 'text-crane-orange font-bold' : 'text-gray-700']}>{link.label}</a></li>
+              <li><a href={link.href} class:list={['block py-2.5', inSection(link.href) ? 'text-accent-ink font-bold' : 'text-steel-700']}>{link.label}</a></li>
             ))}
           </ul>
         </li>

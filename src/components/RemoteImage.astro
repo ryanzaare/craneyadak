@@ -72,7 +72,7 @@ const isRemote = typeof src === 'string' && /^https?:\/\//i.test(src);
   /* جایگزین خنثی — عمداً یک آیکون است نه تصویر یک محصول دیگر.
      ابعاد ثابت نگه داشته می‌شود تا نبود تصویر باعث پرش چیدمان (CLS) نشود. */
   <div
-    class:list={['flex items-center justify-center bg-gray-100 text-gray-300', className, fallbackClass]}
+    class:list={['flex items-center justify-center bg-steel-100 text-steel-300', className, fallbackClass]}
     style={`aspect-ratio: ${width} / ${height};`}
     role="img"
     aria-label={alt}

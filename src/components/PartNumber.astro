@@ -18,25 +18,31 @@ export interface Props {
   label?: string;
   /** شناسه‌ی یکتا — چون این کامپوننت ممکن است چند بار در صفحه بیاید. */
   id: string;
+  /** بدون برچسب «کد فنی:» — برای سرصفحه‌ی فشرده‌ی محصول و ردیف جدول (Frontend v2، فاز ۱). */
+  compact?: boolean;
 }
 
-const { sku, label = 'کد فنی (Part Number)', id } = Astro.props;
+const { sku, label = 'کد فنی (Part Number)', id, compact = false } = Astro.props;
 ---
 
-<div class="flex flex-wrap items-center gap-3">
-  <span class="text-sm text-gray-700">{label}:</span>
+{/* Frontend v2 (فاز ۰): چیپ ۴px با خط مو به‌جای جعبه‌ی خاکستری گرد، و قلم مونو («CY Mono»). در کد فنی
+    O/0 و l/1 باید از هم جدا باشند؛ Vazirmatn برای لاتین این تمایز را ندارد. */}
+<div class="flex flex-wrap items-center gap-2">
+  {!compact && <span class="text-sm text-steel-600">{label}:</span>}
   <code
     id={`sku-${id}`}
-    class="font-mono font-bold text-crane-navy bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5 select-all"
+    class="font-mono font-bold text-base text-steel-900 bg-white border border-steel-300 rounded px-2 py-1 select-all tabular-nums"
     dir="ltr"
+    aria-label={compact ? `${label}: ${sku}` : undefined}
   >{sku}</code>
+  {/* ⚠️ هدف لمسی ≥۴۴px (min-h-11): انگشت روی کف کارگاه، نه موس. */}
   <button
     type="button"
-    class="copy-sku hidden items-center gap-1.5 text-sm font-bold text-crane-orange hover:text-orange-800 transition-colors focus:outline-none focus:ring-2 focus:ring-crane-orange rounded px-2 py-1 print:hidden"
+    class="copy-sku hidden items-center gap-1 min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong underline-offset-4 hover:underline transition-colors rounded px-2 print:hidden"
     data-target={`sku-${id}`}
     data-sku={sku}
   >
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
     </svg>
     <span class="copy-label">کپی کد</span>

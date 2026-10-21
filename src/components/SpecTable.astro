@@ -1,0 +1,51 @@
+---
+// src/components/SpecTable.astro
+// ---------------------------------------------------------------------------
+// جدول مشخصات فنی (Frontend v2، فاز ۰ — docs/frontend-v2.md §5): ردیف‌های راه‌راه، خط مو، سرستون
+// چسبان روی دسکتاپ. *یک‌بار* در صفحه (اصل ۵: «هر چیز را یک‌بار بگو») — مشخصات امروز سه بار تکرار می‌شود.
+//
+// مقدار با اعداد لاتین و dir="auto": «24 V DC» یا «M12×1.5» نباید در متن RTL برعکس شود.
+// ردیفی که مقدار ندارد رندر نمی‌شود — سلول خالی یا «—» شکل داده‌ی ناقص است، نه اطلاعات.
+// ---------------------------------------------------------------------------
+export interface Row {
+  label: string;
+  value: string | null | undefined;
+  /** مقدار کد/مدل است → قلم مونو. */
+  code?: boolean;
+}
+
+export interface Props {
+  rows: Row[];
+  caption?: string;
+  /** سرستون چسبان (فقط md+). برای جدول بلند صفحه‌ی محصول. */
+  sticky?: boolean;
+}
+
+const { rows, caption, sticky = false } = Astro.props;
+// ⚠️ ظرف جدول عمداً overflow-x-auto ندارد: sticky درون ظرفِ overflow نسبت به *همان ظرف* می‌چسبد و با
+// top-16 سرستون روی ردیف اول می‌افتاد (دیده‌شده در اسکرین‌شات فاز ۰). جدول دوستونی اسکرول افقی لازم
+// ندارد؛ مقدار بلند با break-words می‌شکند.
+const visible = rows.filter((r) => (r.value ?? '').trim() !== '');
+---
+
+{visible.length > 0 && (
+  <div class="border border-steel-300 rounded">
+    <table class="w-full text-sm text-right border-collapse">
+      {caption && <caption class="sr-only">{caption}</caption>}
+      <thead class:list={['bg-steel-100 text-steel-700', sticky && 'md:sticky md:top-16 md:z-10']}>
+        <tr>
+          <th scope="col" class="px-3 py-2 font-bold w-2/5">مشخصه</th>
+          <th scope="col" class="px-3 py-2 font-bold">مقدار</th>
+        </tr>
+      </thead>
+      <tbody>
+        {visible.map((r) => (
+          <tr class="border-t border-steel-200 even:bg-steel-50">
+            <th scope="row" class="px-3 py-2 font-normal text-steel-600 align-top">{r.label}</th>
+            <td class:list={['px-3 py-2 text-steel-900 font-bold tabular-nums break-words', r.code && 'font-mono']} dir="auto">{r.value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}

@@ -45,7 +45,8 @@ const jsonLdOut = jsonLd ? normalizeJsonLdUrls(jsonLd, SITE.url) : undefined;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <meta name="theme-color" content="#0A192F" />
+    {/* = steel-900 (هدر). مقدار قبلی #0A192F سرمه‌ای پالت حذف‌شده بود. */}
+    <meta name="theme-color" content="#171B1F" />
     
     <!-- LCP Preload Strategy -->
     <link rel="preload" href="/fonts/Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
@@ -88,7 +89,7 @@ const jsonLdOut = jsonLd ? normalizeJsonLdUrls(jsonLd, SITE.url) : undefined;
       اسکرول به بالا ناپدید یا نصفه می‌شد).
       `overflow-x: clip` همان بریدن افقی را انجام می‌دهد اما زمینه‌ی اسکرول
       نمی‌سازد، بنابراین sticky سالم می‌ماند. */}
-  <body class="bg-gray-50 text-gray-900 font-sans antialiased [overflow-x:clip] selection:bg-crane-orange selection:text-white flex flex-col min-h-screen pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
+  <body class="bg-steel-50 text-steel-900 font-sans antialiased [overflow-x:clip] selection:bg-accent-ink selection:text-white flex flex-col min-h-screen pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
     <a href="#main-content" class="skip-to-content">پرش به محتوای اصلی</a>
     <Header />
     <main id="main-content" class="flex-grow" role="main">

@@ -65,7 +65,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
         </p>
         {/* ⚠️ پرداخت مهمان ندارد (تصمیم کارفرما): بدون توکن، مستقیم به ورود/ثبت‌نام
             و بعد برگشت به /checkout. سرور هم ۴۰۱ می‌دهد؛ این فقط راه را کوتاه می‌کند. */}
-        <a id="cart-checkout" href="/checkout" class="block text-center w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+        <a id="cart-checkout" href="/checkout" class="block text-center w-full bg-accent-ink text-white py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
           ادامه جهت تسویه‌حساب
         </a>
       </div>
@@ -107,7 +107,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
         <input type="tel" name="phone" required autocomplete="tel" inputmode="tel" dir="ltr" placeholder="شماره تماس" class={`${inputClass} text-right`} />
         <input type="text" name="organization" autocomplete="organization" placeholder="نام شرکت یا کارخانه (اختیاری)" class={inputClass} />
         <textarea name="note" rows="2" placeholder="توضیح یا مدل دستگاه (اختیاری)" class={`${inputClass} resize-y`}></textarea>
-        <button type="submit" id="quote-submit" class="w-full bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+        <button type="submit" id="quote-submit" class="w-full bg-accent-ink text-white py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
           ثبت درخواست پیش‌فاکتور
         </button>
       </form>
@@ -211,8 +211,8 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
         const priced = item.mode === 'cart';
         const tag = document.createElement('span');
         tag.className = priced
-          ? 'inline-block mt-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5'
-          : 'inline-block mt-1 text-[11px] font-bold text-steel-700 bg-steel-50 border border-steel-300 rounded px-1.5 py-0.5';
+          ? 'inline-block mt-1 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5'
+          : 'inline-block mt-1 text-xs font-bold text-steel-700 bg-steel-50 border border-steel-300 rounded px-1.5 py-0.5';
         tag.textContent = priced ? 'قیمت‌دار' : 'نیازمند استعلام';
         info.appendChild(tag);
       }

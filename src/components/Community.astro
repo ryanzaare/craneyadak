@@ -85,10 +85,10 @@ const faDate = (iso: string | null) => {
             امتیاز ستاره‌ای متقاعدکننده‌تر است و دقیقاً همان سوال
             سازگاری را جواب می‌دهد. */}
         <div>
-          <h3 class="text-lg font-black text-steel-900 mb-3 flex items-center gap-2">
+          <h3 class="text-xl font-black text-steel-900 mb-3 flex items-center gap-2">
             گزارش نصب واقعی
             {fitments.length > 0 && (
-              <span class="text-xs font-bold text-white bg-accent rounded px-2 py-0.5 tabular-nums">
+              <span class="text-xs font-bold text-white bg-accent-ink rounded px-2 py-0.5 tabular-nums">
                 {fitments.length}
               </span>
             )}
@@ -120,7 +120,7 @@ const faDate = (iso: string | null) => {
         {/* ───────────────── نظر خریداران ───────────────── */}
         {reviews.length > 0 && (
           <div>
-            <h3 class="text-lg font-black text-steel-900 mb-3">نظر خریداران</h3>
+            <h3 class="text-xl font-black text-steel-900 mb-3">نظر خریداران</h3>
             <ul role="list" class="space-y-3">
               {reviews.map((r) => (
                 <li class="border border-steel-300 rounded-lg p-4">
@@ -222,7 +222,7 @@ const faDate = (iso: string | null) => {
               <textarea name="body" required rows="3" class="cy-body w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40 resize-y"></textarea>
             </div>
 
-            <button type="submit" class="cy-submit w-full mt-3 bg-accent text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+            <button type="submit" class="cy-submit w-full mt-3 bg-accent-ink text-white py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
               ارسال
             </button>
             <p class="cy-form-msg text-xs leading-6 mt-2" role="status" aria-live="polite"></p>
@@ -235,7 +235,7 @@ const faDate = (iso: string | null) => {
             <p class="text-sm text-steel-700 leading-7">
               برای پرسش فنی درباره‌ی این قطعه با ما تماس بگیرید.
             </p>
-            <a href="/contact" class="inline-block mt-3 bg-accent text-white px-5 py-2.5 rounded-md font-bold text-sm hover:bg-accent-ink transition-colors">
+            <a href="/contact" class="inline-block mt-3 bg-accent-ink text-white px-5 py-2.5 rounded-md font-bold text-sm hover:bg-accent-strong transition-colors">
               تماس و استعلام
             </a>
           </div>

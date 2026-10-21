@@ -1,0 +1,70 @@
+---
+// src/components/ActionBar.astro
+// ---------------------------------------------------------------------------
+// نوار عمل پایین صفحه‌ی محصول — موبایل (Frontend v2، فاز ۰؛ مصرف در فاز ۱).
+//
+// ⚠️ باگی که این جایگزینش می‌شود (§4): `#sticky-bar` امروز فقط وقتی دیده می‌شود که کاربر از `#buy-box`
+// *عبور* کند؛ روی گوشی نه آن دیده می‌شود نه جعبه‌ی خرید — اولین صفحه هیچ عملی ندارد. قاعده‌ی تازه:
+// نوار **از لحظه‌ی بارگذاری** دیده می‌شود، هر وقت دکمه‌ی اصلی ([data-primary-action]) بیرون از دید است،
+// و وقتی دکمه‌ی اصلی در دید است پنهان می‌شود (دو دکمه‌ی یکسان هم‌زمان = تکرار).
+// بدون جاوااسکریپت نوار همیشه دیده می‌شود: نوارِ اضافه بهتر از نبودِ عمل است.
+//
+// در صفحه‌ی محصول جایگزین نوار تماس سراسری (MobileCTA) می‌شود — دو نوار روی هم یکی زیادی است (§4).
+// `inline` فقط برای راهنمای سبک: همان ظاهر، در جریان صفحه، بدون رفتار.
+// ---------------------------------------------------------------------------
+export interface Props {
+  /** متن کوتاه وضعیت قیمت: «۲٬۴۰۰٬۰۰۰ تومان» یا «استعلامی». */
+  priceLabel: string;
+  primaryLabel: string;
+  /** مقصد عمل اصلی: نشانی (واتساپ) یا لنگر دکمه‌ی اصلی در صفحه. */
+  primaryHref: string;
+  primaryExternal?: boolean;
+  whatsappHref?: string | null;
+  telHref?: string | null;
+  inline?: boolean;
+}
+
+const { priceLabel, primaryLabel, primaryHref, primaryExternal = false, whatsappHref, telHref, inline = false } = Astro.props;
+const icon = 'inline-flex items-center justify-center w-11 h-11 rounded-md border border-steel-300 text-steel-700 hover:text-steel-900 hover:border-steel-400';
+---
+
+<div
+  data-action-bar={inline ? undefined : ''}
+  class:list={[
+    'bg-white border-t border-steel-300 px-3 py-2 flex items-center gap-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] print:hidden',
+    inline ? 'relative border border-steel-300 rounded-md' : 'fixed bottom-0 inset-x-0 z-40 md:hidden transition-transform duration-150',
+  ]}
+>
+  <span class="min-w-0 flex-1 text-sm font-black text-steel-900 tabular-nums truncate">{priceLabel}</span>
+  {telHref && (
+    <a href={telHref} class={icon} aria-label="تماس تلفنی">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>
+    </a>
+  )}
+  {whatsappHref && (
+    <a href={whatsappHref} target="_blank" rel="noopener noreferrer" class={icon} aria-label="واتساپ">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2z" /></svg>
+    </a>
+  )}
+  <a
+    href={primaryHref}
+    target={primaryExternal ? '_blank' : undefined}
+    rel={primaryExternal ? 'noopener noreferrer' : undefined}
+    class="inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-accent-ink text-white text-sm font-black whitespace-nowrap hover:bg-accent-strong"
+  >{primaryLabel}</a>
+</div>
+
+{!inline && (
+  <script>
+    const bar = document.querySelector<HTMLElement>('[data-action-bar]');
+    const primary = document.querySelector('[data-primary-action]');
+    if (bar && primary && 'IntersectionObserver' in window) {
+      // دکمه‌ی اصلی در دید = نوار پنهان. «off-screen» هم بالا را می‌شمارد (کاربر از آن گذشته).
+      new IntersectionObserver(([e]) => {
+        const hide = !!e?.isIntersecting;
+        bar.classList.toggle('translate-y-full', hide);
+        bar.toggleAttribute('inert', hide);
+      }).observe(primary);
+    }
+  </script>
+)}

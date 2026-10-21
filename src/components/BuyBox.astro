@@ -1,0 +1,100 @@
+---
+// src/components/BuyBox.astro
+// ---------------------------------------------------------------------------
+// جعبه‌ی خرید با **یک** عمل اصلی (Frontend v2، فاز ۰ — docs/frontend-v2.md §2 اصل ۴، §4b).
+//
+// چرا: امروز چهار عمل هم‌وزن کنار هم‌اند (سبد نارنجی، واتساپ سبز، پیش‌فاکتور قاب‌دار، علاقه‌مندی) و
+// خریدار باید انتخاب کند که «اول چه کنم». یک دکمه‌ی پر، بقیه پیوند متنی.
+//
+//   • پرداخت‌پذیر:  اصلی = «افزودن به سبد خرید»؛ فرعی = «دریافت پیش‌فاکتور» + «ارسال عکس در واتساپ».
+//   • استعلامی/مرجع/بی‌قیمت (تصمیم ۴ کارفرما): اصلی = واتساپ با پیام پرشده‌ی نام + کد فنی؛
+//     فرعی = «+ افزودن به سبد استعلام». بدون شماره‌ی واتساپ در وردپرس → سبد استعلام اصلی می‌شود.
+//
+// ⚠️ قرارداد §7: همه‌ی data-*های سبد (data-cart-add، data-quote-add، data-quote-mode، data-basket-name،
+// data-basket-sku، data-basket-label، data-guard-until، data-payable-only، data-expired-only) همان
+// نام‌هایی‌اند که src/components/Baskets.astro می‌خواند. تغییر نام = سبدی که بی‌صدا کار نمی‌کند.
+// `inert` فقط برای صفحه‌ی راهنمای سبک است: همان ظاهر، بدون هیچ data-* (نمونه وارد سبد واقعی کاربر نشود).
+// ---------------------------------------------------------------------------
+import PriceTag from './PriceTag.astro';
+import { whatsappInquiryHref } from './inquiry-message';
+import type { PriceState } from '../lib/wp';
+
+export interface Props {
+  slug: string;
+  name: string;
+  sku: string | null;
+  /** نشانی canonical صفحه — در پیام واتساپ وقتی کد فنی نیست. */
+  url: string;
+  price: PriceState;
+  /** از getContact().whatsappHref — هرگز ثابت. */
+  whatsappHref: string | null;
+  inert?: boolean;
+}
+
+const { slug, name, sku, url, price, whatsappHref, inert = false } = Astro.props;
+
+const hook = (attrs: Record<string, string | null | undefined | boolean>) => (inert ? {} : attrs);
+const basket = { 'data-basket-name': name, 'data-basket-sku': sku ?? '' };
+const inquiryHref = whatsappInquiryHref(whatsappHref, { name, sku, url });
+
+// کلاس‌ها یک‌جا: هر سه دکمه‌ی اصلی ممکن دقیقاً یک شکل دارند.
+const primary =
+  'w-full inline-flex items-center justify-center gap-2 bg-accent-ink text-white rounded-md px-6 min-h-12 font-black text-base hover:bg-accent-strong transition-colors focus-visible:outline-accent';
+const link = 'inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4';
+const waIcon = 'M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2z';
+---
+
+<div class="cy-buybox flex flex-col gap-3" data-buybox>
+  <PriceTag price={price} size="page" />
+
+  {price.payable && (
+    <p {...hook({ 'data-guard-until': price.validUntil, 'data-expired-only': true })} hidden class="text-sm leading-7 text-amber-900 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+      اعتبار این قیمت به پایان رسیده است. برای قیمت روز، استعلام بگیرید.
+    </p>
+  )}
+
+  {price.payable ? (
+    <>
+      <button type="button" class={primary} data-primary-action
+        {...hook({ 'data-cart-add': slug, ...basket, 'data-guard-until': price.validUntil, 'data-payable-only': true })}>
+        <span data-basket-label>افزودن به سبد خرید</span>
+      </button>
+      <button type="button" class={primary} hidden
+        {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'rfq', ...basket, 'data-guard-until': price.validUntil, 'data-expired-only': true })}>
+        <span data-basket-label>افزودن به سبد استعلام</span>
+      </button>
+      <div class="flex flex-wrap gap-x-5">
+        <button type="button" class={link}
+          {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'cart', ...basket, 'data-guard-until': price.validUntil, 'data-payable-only': true })}>
+          <span data-basket-label>دریافت پیش‌فاکتور</span>
+        </button>
+        {whatsappHref && (
+          <a href={inert ? '#style-guide' : whatsappHref} target={inert ? undefined : '_blank'} rel="noopener noreferrer" class={link}>
+            ارسال عکس قطعه در واتساپ
+          </a>
+        )}
+        <slot name="links" />
+      </div>
+    </>
+  ) : inquiryHref ? (
+    <>
+      <a href={inert ? '#style-guide' : inquiryHref} target={inert ? undefined : '_blank'} rel="noopener noreferrer" class={primary} data-primary-action>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d={waIcon} /></svg>
+        استعلام قیمت در واتساپ
+      </a>
+      <div class="flex flex-wrap gap-x-5">
+        <button type="button" class={link} {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'rfq', ...basket })}>
+          <span data-basket-label>+ افزودن به سبد استعلام</span>
+        </button>
+        <slot name="links" />
+      </div>
+    </>
+  ) : (
+    <>
+      <button type="button" class={primary} data-primary-action {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'rfq', ...basket })}>
+        <span data-basket-label>افزودن به سبد استعلام</span>
+      </button>
+      <div class="flex flex-wrap gap-x-5"><slot name="links" /></div>
+    </>
+  )}
+</div>

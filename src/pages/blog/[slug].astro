@@ -83,19 +83,19 @@ const jsonLd = {
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd} isArticle={true}>
-  <section class="bg-crane-navy text-white pt-12 pb-16 px-4 border-b-[8px] border-crane-orange relative">
+  <section class="bg-steel-900 text-white pt-12 pb-16 px-4 border-b-[8px] border-accent-ink relative">
     <div class="max-w-4xl mx-auto relative z-10">
       <Breadcrumb items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'مجله تخصصی', href: '/blog' }, { label: post.title }]} />
-      <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-gray-300 text-xs font-black tracking-widest mb-4 uppercase border border-white/20">{post.category}</span>
+      <span class="inline-block px-3 py-1 rounded-full bg-white/10 text-steel-300 text-xs font-black tracking-widest mb-4 uppercase border border-white/20">{post.category}</span>
       <h1 class="text-3xl md:text-4xl font-black mb-4 tracking-tight leading-tight drop-shadow-md">{post.title}</h1>
-      <time datetime={post.isoDate} class="text-sm text-gray-400 font-bold">
+      <time datetime={post.isoDate} class="text-sm text-steel-400 font-bold">
         {post.date}{author ? ` — ${author.name}` : ''}
       </time>
     </div>
   </section>
 
   <section class="py-16 px-4 bg-white">
-    <article class="max-w-3xl mx-auto text-gray-700 leading-9 text-right text-lg space-y-6">
+    <article class="max-w-3xl mx-auto text-steel-700 leading-9 text-right text-xl space-y-6">
       {/* ⚠️ بدنه حالا یک HTML واحد از ویرایشگر وردپرس است، نه آرایه‌ی
           پاراگراف. `prose-crane` همان استایلی است که بلوک‌های متن دارند،
           پس مقاله و صفحه‌ی برند یک‌شکل دیده می‌شوند. */}
@@ -105,14 +105,14 @@ const jsonLd = {
       {author && <AuthorBox author={author} reviewedAt={post.isoModified} class="mt-12" />}
     </article>
 
-    <div class="max-w-3xl mx-auto mt-16 bg-crane-light rounded-3xl p-8 md:p-10 border border-gray-200 text-center">
-      <h2 class="text-xl md:text-2xl font-black text-crane-navy mb-3">قطعه مورد نظر خود را پیدا نکردید؟</h2>
-      <p class="text-gray-600 leading-7 mb-6">کد فنی یا عکس قطعه را برای کارشناسان فنی کرین یدک ارسال کنید تا امکان تامین و زمان تحویل بررسی شود.</p>
-      <a href="/contact" class="inline-block bg-crane-orange text-white px-8 py-3.5 rounded-full font-bold hover:bg-orange-800 transition-colors focus:outline-none focus:ring-4 focus:ring-crane-orange/40">ثبت درخواست استعلام</a>
+    <div class="max-w-3xl mx-auto mt-16 bg-steel-50 rounded-lg p-8 md:p-10 border border-steel-200 text-center">
+      <h2 class="text-xl md:text-2xl font-black text-steel-900 mb-3">قطعه مورد نظر خود را پیدا نکردید؟</h2>
+      <p class="text-steel-600 leading-7 mb-6">کد فنی یا عکس قطعه را برای کارشناسان فنی کرین یدک ارسال کنید تا امکان تامین و زمان تحویل بررسی شود.</p>
+      <a href="/contact" class="inline-block bg-accent-ink text-white px-8 py-3.5 rounded-full font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40">ثبت درخواست استعلام</a>
     </div>
 
     <nav class="max-w-3xl mx-auto mt-10 flex justify-between items-center text-sm font-bold" aria-label="بازگشت به مجله">
-      <a href="/blog" class="text-crane-orange hover:underline flex items-center gap-2">
+      <a href="/blog" class="text-accent-ink hover:underline flex items-center gap-2">
         <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
         بازگشت به مجله تخصصی
       </a>

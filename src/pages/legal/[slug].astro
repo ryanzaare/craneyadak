@@ -58,18 +58,18 @@ const jsonLd = {
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd}>
-  <section class="bg-crane-navy text-white pt-12 pb-14 px-4 border-b-[8px] border-crane-orange relative">
+  <section class="bg-steel-900 text-white pt-12 pb-14 px-4 border-b-[8px] border-accent-ink relative">
     <div class="max-w-4xl mx-auto relative z-10">
       <Breadcrumb items={[{ label: 'صفحه اصلی', href: '/' }, { label: page.label }]} />
       <h1 class="text-3xl md:text-4xl font-black mb-3 tracking-tight leading-tight drop-shadow-md">{page.label}</h1>
       {page.isoModified && (
-        <p class="text-sm text-gray-400 font-bold">آخرین به‌روزرسانی: {page.isoModified}</p>
+        <p class="text-sm text-steel-400 font-bold">آخرین به‌روزرسانی: {page.isoModified}</p>
       )}
     </div>
   </section>
 
   <section class="py-16 px-4 bg-white">
-    <article class="max-w-3xl mx-auto text-gray-700 leading-9 text-right text-lg">
+    <article class="max-w-3xl mx-auto text-steel-700 leading-9 text-right text-xl">
       {/* همان کلاس prose-crane که مقاله و بلوک متنی دارند — یک‌شکلیِ سراسر سایت. */}
       <div class="prose-crane" set:html={page.bodyHtml} />
     </article>
