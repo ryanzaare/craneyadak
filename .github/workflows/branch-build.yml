@@ -21,8 +21,9 @@ concurrency:
   group: branch-build-${{ github.ref }}
   cancel-in-progress: true
 
+# write فقط برای شاخه‌ی ci-dist/* پایین (dist خروجی)، نه شاخه‌ی کد.
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -58,3 +59,17 @@ jobs:
             src/data/taxonomy.generated.ts
           include-hidden-files: true
           retention-days: 7
+
+      # ⚠️ دستیار artifact را نمی‌تواند دانلود کند (فایل از blob.core.windows.net سرو می‌شود و gh درونی‌اش فقط
+      # api.github.com را صدا می‌زند)، ولی git به github.com می‌رسد. پس همان dist/ با force روی یک شاخه‌ی یتیم
+      # جدا هم می‌رود. نام ci-dist/… با الگوی 'claude/**' جور نیست → حلقه‌ی push/build ساخته نمی‌شود.
+      - name: Publish dist to ci-dist branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp src/data/taxonomy.generated.ts dist/_taxonomy.generated.ts
+          cd dist
+          git init -q -b ci
+          git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "dist ${GITHUB_SHA}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "ci:refs/heads/ci-dist/${GITHUB_REF_NAME//\//-}"
