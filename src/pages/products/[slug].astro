@@ -210,21 +210,25 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
     <div class="max-w-7xl mx-auto px-4 md:px-6">
       <div class="print:hidden"><Breadcrumb items={breadcrumbItems} surface /></div>
 
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 lg:gap-x-10 gap-y-4 pb-6 lg:pb-10">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 lg:gap-x-10 gap-y-3 md:gap-y-4 pb-6 lg:pb-10">
         {/* ── ۲) هویت فشرده ── */}
-        <header class="md:col-start-1 md:col-span-7 md:row-start-1 pt-1">
-          <h1 class="text-xl md:text-2xl lg:text-3xl font-black text-steel-900 leading-[1.6] line-clamp-2 lg:line-clamp-none">{product.name}</h1>
-          <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-            {product.sku && <PartNumber sku={product.sku} id="main" compact />}
-            {brand && (
-              <a href={`/brands/${brand.slug}`} class="inline-flex items-center min-h-11 text-sm font-bold text-steel-700 hover:text-accent-ink hover:underline underline-offset-4">
-                {brand.nameFa}{' '}<span class="font-normal text-steel-500" dir="ltr">({brand.nameEn})</span>
-              </a>
-            )}
-          </div>
-          <div class="mt-1 flex flex-wrap items-center gap-2">
-            {product.authenticity && <AuthenticityBadge authenticity={product.authenticity} full />}
-            <StockPill status={product.stockStatus} />
+        <header class="md:col-start-1 md:col-span-7 md:row-start-1">
+          <h1 class="text-xl md:text-2xl lg:text-3xl font-black text-steel-900 leading-[1.5] md:leading-[1.6] line-clamp-2 lg:line-clamp-none">{product.name}</h1>
+          {/* نوار هویت یکپارچه (بازبینی ۱ آبان ۱۴۰۵): کد + برند در یک سو، اصالت + موجودی در سوی دیگر، با خط زیرین —
+              به‌جای دو ردیف ناهم‌عرض که لبه‌ی «پلکانی» می‌ساختند. */}
+          <div class="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pb-2 md:pb-3.5 border-b border-steel-200">
+            <div class="flex flex-wrap items-center gap-x-3">
+              {product.sku && <PartNumber sku={product.sku} id="main" compact />}
+              {brand && (
+                <a href={`/brands/${brand.slug}`} class="inline-flex items-center min-h-11 text-sm font-bold text-steel-700 hover:text-accent-ink hover:underline underline-offset-4">
+                  {brand.nameFa}{' '}<span class="font-normal text-steel-500" dir="ltr">({brand.nameEn})</span>
+                </a>
+              )}
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              {product.authenticity && <AuthenticityBadge authenticity={product.authenticity} full />}
+              <StockPill status={product.stockStatus} />
+            </div>
           </div>
         </header>
 
@@ -236,7 +240,10 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         {/* ── ۴) قیمت + یک عمل اصلی ──
             ⚠️ id="buy-box" قرارداد §7 است (لنگر و اسکریپت‌ها). سه نسخه‌ی تکراری اعتماد که این‌جا بود (قرص‌های بالای
             قیمت، TrustBadges، فهرست سه‌تایی) حذف شد — اعتماد یک‌بار، پایین‌تر (§4b). */}
-        <section id="buy-box" class="md:col-start-1 md:col-span-7 md:row-start-2 print:hidden" aria-label="قیمت و خرید">
+        {/* قاب «پنل مهندسی» (بازبینی ۱ آبان ۱۴۰۵): قیمت، عمل اصلی، پیوندهای فرعی و تماس یک سطح مشخص دارند — منطقه‌ی خرید
+            دیگر روی پس‌زمینه‌ی سفید شناور نیست. ⚠️ فاصله‌های موبایل فشرده‌اند تا عمل اصلی و «+ سبد استعلام» هر دو تا ۷۷۵px
+            اولین صفحه‌ی ۳۹۰×۸۱۲ دیده شوند (سنجش در backlog). */}
+        <section id="buy-box" class="md:col-start-1 md:col-span-7 md:row-start-2 bg-steel-50 border border-steel-300 rounded-md p-3 md:p-5 print:hidden" aria-label="قیمت و خرید">
           <BuyBox slug={product.slug} name={product.name} sku={product.sku} url={canonical} price={price} whatsappHref={contact.whatsappHref}>
             <Fragment slot="links">
               {/* علاقه‌مندی — وارد نشده: به ورود می‌رود و بعد به همین صفحه برمی‌گردد. ⚠️ idهای wish-* را اسکریپت پایین می‌خواند. */}
@@ -245,10 +252,10 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
                 <svg id="wish-icon" class="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.6a4.3 4.3 0 017.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" /></svg>
                 <span id="wish-label">افزودن به علاقه‌مندی‌ها</span>
               </button>
-              {/* ابزار کار واقعی: خرید صنعتی چندنفره است — ارسال به همکار و چاپ مشخصات برای تأیید داخلی. */}
+              {/* ابزار کار واقعی: خرید صنعتی چندنفره است — اشتراک‌گذاری با همکار و چاپ مشخصات برای تأیید داخلی. */}
               <button type="button" id="share-product" data-title={product.name} data-url={canonical}
                 class="inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
-                <span id="share-label">ارسال به همکار</span>
+                <span id="share-label">اشتراک‌گذاری</span>
               </button>
               <button type="button" id="print-product" class="hidden lg:inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
                 چاپ مشخصات
@@ -256,7 +263,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
             </Fragment>
           </BuyBox>
           {contact.telHref && (
-            <p class="mt-1 text-sm text-steel-600">
+            <p class="mt-1 pt-2 border-t border-steel-200 text-sm text-steel-600">
               تماس: <a href={contact.telHref} class="font-bold text-steel-900 hover:text-accent-ink tabular-nums" dir="ltr">{contact.phoneDisplay}</a>
               <span class="text-steel-500"> — در ساعات کاری</span>
             </p>
@@ -267,16 +274,18 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
             جدول فشرده‌ی شش‌ردیفی کنار خرید حذف شد: همان مشخصات سه بار تکرار می‌شد (§3). */}
         {keySpecs.length > 0 && (
           <div class="md:col-start-1 md:col-span-7 md:row-start-3">
-            <ul class="flex flex-wrap gap-2" role="list" aria-label="مشخصات کلیدی">
+            {/* شبکه‌ی ۲×۲ تمام‌عرض (بازبینی ۱ آبان ۱۴۰۵) به‌جای قرص‌های ناهم‌عرض: لبه‌ها با قاب خرید بالا هم‌ترازند. */}
+            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2" role="list" aria-label="مشخصات کلیدی">
               {keySpecs.map((spec) => (
-                <li class="rounded border border-steel-300 bg-steel-50 px-2 py-1 text-xs">
-                  <span class="text-steel-600">{spec.label}:</span> <span class="font-bold text-steel-900" dir="auto">{spec.value}</span>
+                <li class="bg-white border border-steel-200 rounded px-3 py-2 flex items-baseline justify-between gap-2">
+                  <span class="text-steel-600 text-xs shrink-0">{spec.label}</span>
+                  <span class="font-bold text-steel-900 text-sm" dir="auto">{spec.value}</span>
                 </li>
               ))}
             </ul>
             {product.technicalSpecs.length > keySpecs.length && (
               <a href="#product-tabs-panel-1" class="mt-1 inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4">
-                همه‌ی {product.technicalSpecs.length} مشخصه ↓
+                همه‌ی {product.technicalSpecs.length.toLocaleString('fa-IR')} مشخصه ↓
               </a>
             )}
           </div>
@@ -484,7 +493,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
     try {
       await navigator.clipboard.writeText(url);
       if (shareLabel) shareLabel.textContent = 'لینک کپی شد ✓';
-      setTimeout(() => { if (shareLabel) shareLabel.textContent = 'اشتراک گذاری'; }, 2000);
+      setTimeout(() => { if (shareLabel) shareLabel.textContent = 'اشتراک‌گذاری'; }, 2000);
     } catch {
       if (shareLabel) shareLabel.textContent = 'کپی نشد';
     }

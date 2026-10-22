@@ -44,7 +44,7 @@ const link = 'inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-a
 const waIcon = 'M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2z';
 ---
 
-<div class="cy-buybox flex flex-col gap-3" data-buybox>
+<div class="cy-buybox flex flex-col gap-2 md:gap-3" data-buybox>
   {/* قلم غیرپرداخت‌پذیر: برچسب وضعیت به‌جای «استعلام قیمت» — دکمه‌ی زیرش همان عمل را نام می‌برد (اصل ۵). */}
   <PriceTag price={price} size="page" statusLabel={price.payable ? undefined : 'فروش استعلامی — قیمت روز'} />
 

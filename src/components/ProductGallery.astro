@@ -46,11 +46,12 @@ const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
 ---
 
 <div class="product-gallery">
-  {/* ⚠️ Frontend v2 (فاز ۱، §4 گام ۳): قاب ۴:۳ با ارتفاع سقف‌دار (~۲۷۰px روی گوشی ۳۹۰px) به‌جای مربع ۳۶۰px+.
+  {/* ⚠️ Frontend v2 (فاز ۱، §4 گام ۳): قاب ۳:۲ روی موبایل (~۲۴۰px در ۳۹۰px؛ بازبینی ۱ آبان: ۴:۳ = ۲۷۰px دکمه‌ی فرعی
+      را به ۸۰۸px می‌برد) و ۴:۳ از md، به‌جای مربع ۳۶۰px+.
       گالری مربعی کد فنی و برچسب اصالت را از اولین صفحه‌ی موبایل بیرون می‌راند. object-contain، نه cover: عکس
       قطعه برای تشخیص است و بریدن لبه‌ی آن (کانکتور، شیار) همان اطلاعاتی را حذف می‌کند که خریدار دنبالش است.
       نسبت ثابت = CLS صفر. قاب خنثی؛ هیچ‌چیز روی خود عکس کشیده نمی‌شود (تصمیم ۱ کارفرما). */}
-  <figure id="gallery-figure" class="aspect-[4/3] bg-white rounded-lg border border-steel-300 overflow-hidden relative m-0 touch-pan-y">
+  <figure id="gallery-figure" class="aspect-[3/2] md:aspect-[4/3] bg-white rounded-lg border border-steel-300 overflow-hidden relative m-0 touch-pan-y">
     {hasImages ? (
       gallery.map((image, index) => (
         <div class="gallery-slide absolute inset-0" data-index={index} hidden={index !== 0}>

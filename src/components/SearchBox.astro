@@ -28,7 +28,9 @@ interface Props {
 
 const {
   id = 'search-box',
-  placeholder = 'کد فنی، نام قطعه یا برند — مثال: MT318',
+  // «جستجو»، تک‌کلمه (بازبینی کارفرما، ۱ آبان ۱۴۰۵): placeholder بلند زیر آیکن بریده می‌شد. راهنمای «کد فنی» در
+  // label (sr-only) و aria هست؛ placeholder جای راهنما نیست.
+  placeholder = 'جستجو',
   tone = 'dark',
   autofocus = false,
   class: className = '',

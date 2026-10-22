@@ -36,7 +36,7 @@ const { items, center = false, light = false, surface = false } = Astro.props;
 <nav
   class:list={[
     surface
-      ? 'text-sm text-steel-600 flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap py-2 [scrollbar-width:none]'
+      ? 'text-sm text-steel-600 flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap py-1 md:py-2 [scrollbar-width:none]'
       : ['text-sm mb-8 flex flex-wrap items-center gap-2', light ? 'text-steel-300' : 'text-steel-400'],
     center ? 'justify-center' : '',
   ]}
