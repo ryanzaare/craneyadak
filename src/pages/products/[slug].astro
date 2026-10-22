@@ -203,15 +203,16 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
       چرا هویت *پیش از* گالری (تحلیل کامل در §4): خریدارِ آمده از گوگل کد فنی جستجو کرده؛ اولین پرسشش «این صفحه‌ی
       همان کد است؟» است و فقط متن به آن پاسخ می‌دهد — ده ریموت شبیه هم‌اند. معیار پذیرش: کد، تصویر، قیمت و عمل
       اصلی همه در اولین صفحه‌ی ۳۹۰×۸۱۲.
-      دسکتاپ (lg+): دو ستون — هویت و خرید در ستون راست (شروع RTL)، گالری چسبان در ستون چپ. همان DOM، فقط
+      تبلت و دسکتاپ (md+): دو ستون — هویت و خرید در ستون راست (شروع RTL)، گالری چسبان در ستون چپ. ⚠️ از md، نه lg:
+      در ۷۶۸px تک‌ستونی، قاب ۴:۳ تمام‌عرض ~۵۴۰px بلند بود و قیمت را زیر خط تا می‌برد (اسکرین‌شات فاز ۱). همان DOM، فقط
       جای ستون‌ها با grid عوض می‌شود؛ ترتیب خواندن صفحه‌خوان همان ترتیب موبایل می‌ماند. */}
   <div class="bg-white border-b border-steel-300 print:border-0">
     <div class="max-w-7xl mx-auto px-4 md:px-6">
       <div class="print:hidden"><Breadcrumb items={breadcrumbItems} surface /></div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-x-10 gap-y-4 pb-6 lg:pb-10">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 lg:gap-x-10 gap-y-4 pb-6 lg:pb-10">
         {/* ── ۲) هویت فشرده ── */}
-        <header class="lg:col-start-1 lg:col-span-7 lg:row-start-1 pt-1">
+        <header class="md:col-start-1 md:col-span-7 md:row-start-1 pt-1">
           <h1 class="text-xl md:text-2xl lg:text-3xl font-black text-steel-900 leading-[1.6] line-clamp-2 lg:line-clamp-none">{product.name}</h1>
           <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             {product.sku && <PartNumber sku={product.sku} id="main" compact />}
@@ -228,14 +229,14 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         </header>
 
         {/* ── ۳) گالری ── */}
-        <div class="lg:col-start-8 lg:col-span-5 lg:row-start-1 lg:row-span-4 lg:sticky lg:top-40 xl:top-28 lg:self-start">
+        <div class="md:col-start-8 md:col-span-5 md:row-start-1 md:row-span-4 md:sticky md:top-40 xl:top-28 md:self-start">
           <ProductGallery images={product.images} productName={product.name} />
         </div>
 
         {/* ── ۴) قیمت + یک عمل اصلی ──
             ⚠️ id="buy-box" قرارداد §7 است (لنگر و اسکریپت‌ها). سه نسخه‌ی تکراری اعتماد که این‌جا بود (قرص‌های بالای
             قیمت، TrustBadges، فهرست سه‌تایی) حذف شد — اعتماد یک‌بار، پایین‌تر (§4b). */}
-        <section id="buy-box" class="lg:col-start-1 lg:col-span-7 lg:row-start-2 print:hidden" aria-label="قیمت و خرید">
+        <section id="buy-box" class="md:col-start-1 md:col-span-7 md:row-start-2 print:hidden" aria-label="قیمت و خرید">
           <BuyBox slug={product.slug} name={product.name} sku={product.sku} url={canonical} price={price} whatsappHref={contact.whatsappHref}>
             <Fragment slot="links">
               {/* علاقه‌مندی — وارد نشده: به ورود می‌رود و بعد به همین صفحه برمی‌گردد. ⚠️ idهای wish-* را اسکریپت پایین می‌خواند. */}
@@ -265,7 +266,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         {/* ── ۵) چیپ‌های مشخصه‌ی کلیدی (حداکثر ۴) → جدول کامل ──
             جدول فشرده‌ی شش‌ردیفی کنار خرید حذف شد: همان مشخصات سه بار تکرار می‌شد (§3). */}
         {keySpecs.length > 0 && (
-          <div class="lg:col-start-1 lg:col-span-7 lg:row-start-3">
+          <div class="md:col-start-1 md:col-span-7 md:row-start-3">
             <ul class="flex flex-wrap gap-2" role="list" aria-label="مشخصات کلیدی">
               {keySpecs.map((spec) => (
                 <li class="rounded border border-steel-300 bg-steel-50 px-2 py-1 text-xs">
@@ -282,7 +283,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         )}
 
         {modifiedDate && (
-          <p class="lg:col-start-1 lg:col-span-7 lg:row-start-4 text-xs text-steel-600">
+          <p class="md:col-start-1 md:col-span-7 md:row-start-4 text-xs text-steel-600">
             آخرین به‌روزرسانی اطلاعات این قطعه: <time datetime={product.modified!}>{modifiedDate}</time>
           </p>
         )}
