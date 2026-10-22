@@ -13,8 +13,10 @@
 import Layout from '../../../layouts/Layout.astro';
 import Breadcrumb from '../../../components/Breadcrumb.astro';
 import ProductCard from '../../../components/ProductCard.astro';
-import CategoryFilters from '../../../components/CategoryFilters.astro';
-import { resolveFacets, specValue, hasUsefulFilters } from '../../../data/filters';
+import CategoryFilterBar from '../../../components/CategoryFilterBar.astro';
+import ProductRow from '../../../components/ProductRow.astro';
+import EmptyState from '../../../components/EmptyState.astro';
+import { resolveFacets, specValue } from '../../../data/filters';
 import { getCategoryFacets } from '../../../lib/category-facets';
 import { buildTitle, buildDescription } from '../../../lib/seo-meta';
 import { SITE } from '../../../data/site';
@@ -28,7 +30,7 @@ import {
 import ContentBlocks from '../../../components/ContentBlocks.astro';
 import Questions from '../../../components/Questions.astro';
 import { getQuestions, questionsJsonLd } from '../../../lib/questions';
-import { getProductsByCategory, computePrice, productJsonLd, type CraneProduct } from '../../../lib/wp';
+import { getProductsByCategory, computePrice, productJsonLd, productPath, type CraneProduct } from '../../../lib/wp';
 import { getBlocks, specsToJsonLd } from '../../../lib/content-blocks';
 import { categoryReadiness, productReadiness, blocksWordCount } from '../../../lib/indexability';
 import { resolveCategoryTerm, type CategoryTerm } from '../../../lib/categories';
@@ -204,14 +206,12 @@ const jsonLd = {
 const categoryFacets = await getCategoryFacets(category.slug);
 const catFacets = resolveFacets(products, categoryFacets);
 
-/* ⚠️ چیدمان باید بداند نوار فیلتر می‌آید یا نه.
-   بدون این، وقتی هیچ فیلتری رندر نشود، شبکه‌ی محصولات در ستون ۱۵rem
-   له می‌شود. (توضیح کامل در hasUsefulFilters) */
-const showFilters = hasUsefulFilters(products, categoryFacets);
-
 /** صفت‌های داده روی هر کارت تا فیلتر سمت کلاینت بتواند بخواندشان. */
 function catAttrs(product: typeof products[number]) {
   const attrs: Record<string, string> = {
+    'data-cat-item': '',
+    // ⚠️ هر محصول دو بار در DOM است (نمای جدول و کارت)؛ شمار نتیجه با slug یکتا می‌شود.
+    'data-slug': product.slug,
     'data-brand': product.brandSlug ?? '',
     'data-stock': product.stockStatus,
     'data-buymode': product.buyMode,
@@ -238,93 +238,73 @@ const contact = await getContact();
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexEmpty}>
-  {/* ------------------------------- Hero ------------------------------- */}
-  <section class="bg-steel-900 text-white pt-10 pb-16 px-4 border-b-[8px] border-accent-ink">
-    <div class="max-w-7xl mx-auto">
-      <Breadcrumb items={breadcrumbItems} />
-      <div class="flex flex-col md:flex-row items-start gap-6">
-        <span class="w-16 h-16 bg-white/10 rounded-lg flex items-center justify-center shrink-0 border border-white/20" aria-hidden="true">
-          <svg class="w-8 h-8 text-accent-ink" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={category.icon} /></svg>
-        </span>
-        <div>
-          <h1 class="text-3xl md:text-4xl font-black mb-4 tracking-tight drop-shadow-md leading-relaxed">{category.keyword}</h1>
-          <p class="text-xl text-steel-300 max-w-2xl leading-8">{displayBlurb}</p>
-          {category.aka && category.aka.length > 0 && (
-            /* مترادف‌ها اینجا نمایش داده می‌شوند تا کاربرِ آشنا با نام دیگرِ
-               همین قطعه، صفحه را درست تشخیص دهد — بدون ساختن صفحه‌ی دوم. */
-            <p class="text-sm text-steel-400 mt-4">
-              نام‌های دیگر: {category.aka.join('، ')}
-            </p>
-          )}
-        </div>
-      </div>
+  {/* ── Frontend v2 (فاز ۲): سرصفحه‌ی روشن به‌جای نوار گرافیتی (§5: گرافیت فقط هدر و فوتر) — عنوان، یک
+      پاراگراف راهنما، مترادف‌ها؛ بعد بلافاصله فهرست. «یک کار در هر صفحه»: خریدار برای پیدا کردن قطعه آمده. ── */}
+  <section class="bg-white border-b border-steel-300 px-4 md:px-6">
+    <div class="max-w-7xl mx-auto pb-5">
+      <Breadcrumb items={breadcrumbItems} surface />
+      <h1 class="mt-1 text-2xl md:text-3xl font-black text-steel-900 leading-[1.5]">{category.keyword}</h1>
+      {displayBlurb && <p class="mt-2 text-base text-steel-700 leading-8 max-w-3xl">{displayBlurb}</p>}
+      {category.aka && category.aka.length > 0 && (
+        /* مترادف‌ها مرئی‌اند تا کاربرِ آشنا با نام دیگر همین قطعه صفحه را بشناسد — بدون صفحه‌ی دوم
+           (و هم‌خوان با alternateName در JSON-LD). */
+        <p class="mt-2 text-sm text-steel-600">نام‌های دیگر: {category.aka.join('، ')}</p>
+      )}
     </div>
   </section>
 
   {/* ------------------------------ محصولات ------------------------------ */}
-  <section class="bg-steel-50 px-4 py-14" aria-labelledby="products-heading">
+  <section class="bg-steel-50 px-4 md:px-6 py-6 md:py-8" aria-labelledby="products-heading">
     <div class="max-w-7xl mx-auto">
-      <div class="flex flex-wrap gap-4 justify-between items-end mb-8 border-b border-steel-200 pb-4">
-        <h2 id="products-heading" class="text-2xl font-black text-steel-900">{displayName}</h2>
+      <div class="flex flex-wrap gap-2 justify-between items-baseline mb-3">
+        <h2 id="products-heading" class="text-xl font-black text-steel-900">{displayName}</h2>
         {products.length > 0 && (
-          <span class="text-sm text-steel-600 font-bold bg-steel-100 px-3 py-1 rounded-full tabular-nums">
-            {products.length} قطعه
-          </span>
+          <p class="text-sm text-steel-600"><strong data-cat-count class="text-steel-900 font-black tabular-nums">{products.length.toLocaleString('fa-IR')}</strong> قطعه</p>
         )}
       </div>
 
       {products.length > 0 ? (
-        /* دو ستون: فیلتر تخصصی + شبکه‌ی محصولات.
-           این همان «لایه‌ی دوم» معماری فیلتر است — فیلترهای عمومی به‌علاوه
-           مشخصه‌هایی که واقعاً انتخاب این قطعه‌ی خاص را تعیین می‌کنند. */
-        <div class:list={[
-          'gap-6 items-start',
-          showFilters ? 'grid lg:grid-cols-[15rem_minmax(0,1fr)]' : 'block',
-        ]}>
-          {showFilters && (
-            <CategoryFilters products={products} categorySlug={category.slug} class="lg:sticky lg:top-24" />
-          )}
+        <>
+          <CategoryFilterBar products={products} categorySlug={category.slug} />
 
-          <div class="min-w-0">
-            <p class="text-sm text-steel-700 mb-3">
-              <strong data-cat-count class="text-steel-900 font-black tabular-nums">{products.length}</strong>
-              {' '}قطعه نمایش داده می‌شود
-            </p>
-
-            <ul data-cat-grid class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" role="list">
-              {products.map((product, index) => (
-                <li data-cat-item {...catAttrs(product)}>
-                  <ProductCard product={product} eager={index < 4} />
-                </li>
+          {/* نمای جدول — پیش‌فرض (§4، تصمیم ۲): کد · نام · برند · مشخصه‌ی کلیدی · موجودی · قیمت · افزودن سریع. */}
+          <div data-cat-view="list">
+            <div class="hidden lg:grid lg:grid-cols-[9rem_1fr_7rem_10rem_8rem_9rem_auto] gap-x-4 px-3 py-2 text-xs font-bold text-steel-600 bg-steel-100 border border-steel-300 border-b-0 rounded-t">
+              <span>کد فنی</span><span>نام قطعه</span><span>برند</span><span>مشخصه‌ی کلیدی</span><span>موجودی</span><span>قیمت</span><span class="sr-only">عمل</span>
+            </div>
+            <ul class="bg-white border border-steel-300 rounded lg:rounded-t-none" role="list">
+              {products.map((product) => (
+                <ProductRow slug={product.slug} name={product.name} sku={product.sku} url={`${SITE.url}${productPath(product)}`}
+                  brand={product.brandNameFa} keySpec={product.technicalSpecs[0]?.value ?? null} stock={product.stockStatus}
+                  price={computePrice(product)} whatsappHref={contact.whatsappHref} attrs={catAttrs(product)} />
               ))}
             </ul>
+          </div>
 
-            <div data-cat-empty hidden class="bg-white border border-steel-300 rounded-lg p-6 text-center mt-4">
-              <p class="text-steel-900 font-black mb-1">هیچ قطعه‌ای با این مشخصات پیدا نشد.</p>
-              <p class="text-sm text-steel-600 leading-7">
-                فیلترها را کمتر کنید یا مشخصات دستگاه خود را برای ما بفرستید تا معادل مناسب را پیدا کنیم.
-              </p>
-            </div>
+          {/* نمای کارت — با جابه‌جایی نما. ⚠️ hidden تا اسکریپت؛ تصویرهای lazy داخل display:none بار نمی‌شوند. */}
+          <ul data-cat-view="grid" hidden class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" role="list">
+            {products.map((product) => (
+              <li {...catAttrs(product)}>
+                <ProductCard product={product} />
+              </li>
+            ))}
+          </ul>
+
+          <div data-cat-empty hidden class="mt-4">
+            <EmptyState title="هیچ قطعه‌ای با این فیلترها پیدا نشد." text="فیلترها را کمتر کنید یا کد فنی و عکس پلاک را بفرستید تا معادل مناسب را پیدا کنیم."
+              whatsappHref={contact.whatsappHref} telHref={contact.telHref} />
           </div>
-        </div>
+        </>
       ) : (
-        /* حالت خالیِ صادقانه — هیچ محصول ساختگی ساخته نمی‌شود. */
-        <div class="bg-white rounded-lg border border-steel-100 shadow-sm p-8 md:p-12 max-w-3xl">
-          <span class="w-14 h-14 rounded-lg bg-accent-soft text-accent-ink flex items-center justify-center mb-6" aria-hidden="true">
-            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" /></svg>
-          </span>
-          <h3 class="text-xl md:text-2xl font-black text-steel-900 mb-4 leading-9">
-            استعلام {category.keyword} با کد فنی
-          </h3>
-          <p class="text-steel-700 leading-8 mb-8">
-            فهرست آنلاین این دسته در حال تکمیل است و تنها اقلامی منتشر می‌شود که تامین آن‌ها قطعی باشد. سریع‌ترین مسیر این است که کد فنی (Part Number)، پلاک دستگاه یا عکس قطعه‌ی فرسوده را برای کارشناسان ما بفرستید تا سازگاری بررسی و پیش‌فاکتور رسمی صادر شود.
-          </p>
-          <div class="flex flex-col sm:flex-row gap-3">
-            <a href={`/contact?category=${encodeURIComponent(displayName)}`} class="bg-action text-white px-8 py-4 rounded-lg font-black text-center hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
-            <a href={contact.telHref} class="bg-steel-900 text-white px-8 py-4 rounded-lg font-black text-center hover:bg-steel-800 transition-colors focus:outline-none focus:ring-4 focus:ring-steel-900/30 min-h-[52px] flex items-center justify-center">تماس با واحد فروش</a>
-            <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-lg font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
-          </div>
-        </div>
+        /* حالت خالیِ صادقانه — هیچ محصول ساختگی ساخته نمی‌شود، هیچ «به‌زودی» با تاریخ. */
+        <EmptyState
+          title={`هنوز محصولی در «${displayName}» ثبت نشده است.`}
+          text="فهرست آنلاین این دسته در حال تکمیل است و فقط اقلامی منتشر می‌شوند که تامینشان قطعی باشد. کد فنی، پلاک دستگاه یا عکس قطعه را بفرستید تا سازگاری بررسی و پیش‌فاکتور صادر شود."
+          whatsappHref={contact.whatsappHref}
+          telHref={contact.telHref}
+        >
+          <a href={`/contact/?category=${encodeURIComponent(displayName)}`} class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4">ثبت استعلام</a>
+        </EmptyState>
       )}
     </div>
   </section>

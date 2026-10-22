@@ -54,7 +54,7 @@ const listId = `${id}-listbox`;
 ---
 
 <div class={`cy-search relative ${className}`} data-search-root>
-  <form action="/search" method="GET" role="search" class="w-full">
+  <form action="/search/" method="GET" role="search" class="w-full">
     <label for={id} class="sr-only">جستجوی نام، برند یا کد فنی قطعه</label>
 
     <div
@@ -111,238 +111,109 @@ const listId = `${id}-listbox`;
   >
   </ul>
 
-  <script is:inline define:vars={{ index, listId, id }}>
-    (function () {
-      const root = document.currentScript.closest('[data-search-root]');
-      if (!root) return;
+  {/* داده‌ی ساختاری برای اسکریپت (JSON، نه کد اجرایی). اسکریپت ماژول پایین همه‌ی SearchBoxهای صفحه را می‌خواند. */}
+  {/* ⚠️ «<» به \u003c: نامی که «</script>» داشته باشد نباید تگ را زودتر ببندد. */}
+  <script type="application/json" data-search-index set:html={JSON.stringify(index).replace(/</g, '\\u003c')} />
+</div>
 
-      const input = root.querySelector('[data-search-input]');
-      const list = root.querySelector('[data-search-list]');
-      if (!input || !list) return;
+<script>
+  /* ⚠️ منطق امتیاز از src/lib/search-score.ts import می‌شود — همان فایلی که آزمون Node اجرا می‌کند
+     (npm run test:search). نسخه‌ی قبل یک کپی inline بود که از سرور رانده بود (محدوده‌ی اعراب U+0650 به‌جای
+     U+0652): آزمون چیزی را تأیید می‌کرد که مرورگر اجرا نمی‌کرد. حالا یک منطق، باندل‌شده و کش‌شونده. */
+  import { suggest, type SuggestEntry } from '../lib/search-score';
 
-      /* ---- همان منطق امتیازدهی src/lib/search-index.ts ----
-         عمداً inline است: این کد باید پیش از هر بارگذاری شبکه‌ای آماده
-         باشد، وگرنه «آنی» بودن پیشنهادها از بین می‌رود. */
-      const STOP = new Set(['خرید','قیمت','فروش','فروشگاه','انواع','لیست','بهترین','ارزان','جرثقیل','سقفی','buy','price']);
+  const KIND_LABEL: Record<string, string> = { category: 'دسته', brand: 'برند', silo: 'گروه', product: 'محصول' };
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
-      function norm(s) {
-        return s.toLowerCase()
-          .replace(/[يى]/g, 'ی').replace(/ك/g, 'ک')
-          .replace(/[ً-ِٰ]/g, '').replace(/ـ/g, '')
-          .replace(/[‌‎‏]/g, ' ')
-          .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
-          .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-          .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
-      }
+  /* ───────── واکشی تنبل فهرست محصولات — یک‌بار برای کل صفحه ─────────
+     لایه‌ی ساختاری inline است و فوراً جواب می‌دهد؛ محصولات فقط با اولین تعامل. ⚠️ شکست واکشی جستجو را
+     نمی‌شکند — فقط به دسته و برند محدود می‌شود. */
+  let products: SuggestEntry[] | null = null;
+  let loading: Promise<SuggestEntry[]> | null = null;
+  const loadProducts = () =>
+    (loading ??= fetch('/search-index.json')
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => [])
+      .then((list) => (products = Array.isArray(list) ? list : [])));
 
-      function lev(a, b, max) {
-        if (a === b) return 0;
-        if (Math.abs(a.length - b.length) > max) return max + 1;
-        let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
-        for (let i = 1; i <= a.length; i++) {
-          const cur = [i];
-          let rowMin = i;
-          for (let j = 1; j <= b.length; j++) {
-            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-            const v = Math.min(cur[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
-            cur.push(v);
-            if (v < rowMin) rowMin = v;
-          }
-          if (rowMin > max) return max + 1;
-          prev = cur;
-        }
-        return prev[b.length];
-      }
+  document.querySelectorAll<HTMLElement>('[data-search-root]').forEach((root) => {
+    const input = root.querySelector<HTMLInputElement>('[data-search-input]');
+    const list = root.querySelector<HTMLUListElement>('[data-search-list]');
+    const data = root.querySelector('[data-search-index]');
+    if (!input || !list || !data) return;
+    const structural: SuggestEntry[] = JSON.parse(data.textContent || '[]');
+    // محصولات جلوتر از ساختار: در تساوی امتیاز، قطعه‌ی واقعیِ قابل سفارش بر صفحه‌ی دسته اولویت دارد.
+    const index = () => (products ? [...products, ...structural] : structural);
+    const id = input.id;
+    let active = -1;
 
-      function words(q) {
-        const all = q.split(' ').filter((w) => w.length >= 2);
-        const kept = all.filter((w) => !STOP.has(w));
-        return kept.length ? kept : all;
-      }
+    const close = () => {
+      list.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      active = -1;
+    };
 
-      // تطبیق بی‌فاصله: «رکتی فایر» و «رکتیفایر» یک چیزند.
-      const tight = (x) => x.replace(/\s+/g, '');
-
-      function score(entry, q) {
-        const ws = words(q);
-        if (!ws.length) return 0;
-        const qt = tight(q);
-        let phrase = 0;
-        for (const hay of entry.haystack) {
-          if (!hay) continue;
-          if (hay === q) phrase = Math.max(phrase, 100);
-          else if (hay.startsWith(q)) phrase = Math.max(phrase, 85);
-          else if (hay.includes(q)) phrase = Math.max(phrase, 65);
-          else if (qt !== q && (hay === qt || hay.startsWith(qt) || hay.includes(qt))) {
-            phrase = Math.max(phrase, hay === qt ? 100 : 65);
-          }
-        }
-        let sum = 0;
-        for (const qw of ws) {
-          let best = 0;
-          for (const hay of entry.haystack) {
-            if (!hay) continue;
-            for (const hw of hay.split(' ')) {
-              if (!hw) continue;
-              if (hw === qw) best = Math.max(best, 60);
-              else if (hw.startsWith(qw)) best = Math.max(best, 50);
-              else if (qw.length >= 3 && hw.includes(qw)) best = Math.max(best, 32);
-              else if (qw.length >= 4 && hw.length >= 4 &&
-                       Math.abs(qw.length - hw.length) <= 2 && lev(qw, hw, 1) <= 1) best = Math.max(best, 28);
-            }
-          }
-          sum += best;
-        }
-        const wordScore = sum / ws.length;
-        if (wordScore === 0) return phrase >= 65 ? phrase : 0;
-        return Math.max(phrase, wordScore);
-      }
-
-      function suggest(q, limit) {
-        const n = norm(q);
-        if (!n) return [];
-        return index
-          .map((e) => ({ e, s: score(e, n) }))
-          .filter((x) => x.s > 0)
-          // باید دقیقاً با مرتب‌سازی سمت سرور در search-index.ts یکی باشد،
-          // وگرنه تست‌های سرور چیزی را تایید می‌کنند که کاربر نمی‌بیند.
-          .sort(
-            (a, b) =>
-              b.s - a.s ||
-              Number(b.e.kind === 'product') - Number(a.e.kind === 'product') ||
-              a.e.label.length - b.e.label.length
-          )
-          .slice(0, limit)
-          .map((x) => x.e);
-      }
-
-      const KIND_LABEL = { category: 'دسته', brand: 'برند', silo: 'گروه', product: 'محصول' };
-      let active = -1;
-      let current = [];
-
-      function close() {
-        list.hidden = true;
-        input.setAttribute('aria-expanded', 'false');
-        input.removeAttribute('aria-activedescendant');
-        active = -1;
-      }
-
-      function render(items, query) {
-        current = items;
-        active = -1;
-        input.removeAttribute('aria-activedescendant');
-
-        if (!query.trim()) return close();
-
-        if (!items.length) {
-          /* حالت «پیدا نشد» — عمداً یک بن‌بست نیست.
-             کاربری که چیزی پیدا نمی‌کند نباید فقط پیام خطا ببیند؛ باید
-             راه ادامه داشته باشد. */
-          list.innerHTML =
-            '<li class="px-4 py-3 text-sm text-steel-700 leading-6">' +
-            '<strong class="block text-steel-900 mb-1">موردی با این عبارت پیدا نشد.</strong>' +
-            'می‌توانید همین عبارت را در تمام محصولات جستجو کنید یا از فهرست دسته‌ها پیش بروید.' +
-            '</li>' +
-            '<li class="border-t border-steel-100">' +
-            '<a href="/search?q=' + encodeURIComponent(query) + '" class="block px-4 py-2.5 text-sm font-bold text-accent-ink hover:bg-accent-soft">' +
-            'جستجوی «' + query.replace(/[<>&]/g, '') + '» در تمام محصولات ←</a></li>' +
-            '<li class="border-t border-steel-100">' +
-            '<a href="/categories" class="block px-4 py-2.5 text-sm font-bold text-accent-ink hover:bg-accent-soft">' +
-            'مشاهده‌ی همه‌ی دسته‌بندی‌ها ←</a></li>';
-          list.hidden = false;
-          input.setAttribute('aria-expanded', 'true');
-          return;
-        }
-
+    const render = (items: SuggestEntry[], query: string) => {
+      active = -1;
+      input.removeAttribute('aria-activedescendant');
+      if (!query.trim()) return close();
+      if (!items.length) {
+        /* «پیدا نشد» بن‌بست نیست: جستجوی کامل (با پیشنهاد عکس/تماس در /search/) یا فهرست دسته‌ها. */
+        list.innerHTML =
+          '<li class="px-4 py-3 text-sm text-steel-700 leading-6"><strong class="block text-steel-900 mb-1">موردی با این عبارت پیدا نشد.</strong>' +
+          'جستجوی کامل، ارسال عکس پلاک یا تماس را امتحان کنید.</li>' +
+          '<li class="border-t border-steel-100"><a href="/search/?q=' + encodeURIComponent(query) + '" class="block px-4 py-2.5 text-sm font-bold text-accent-ink hover:bg-accent-soft">' +
+          'جستجوی «' + esc(query) + '» در تمام محصولات ←</a></li>';
+      } else {
         list.innerHTML = items
           .map((e, i) =>
             '<li role="option" id="' + id + '-opt-' + i + '" aria-selected="false" class="border-b border-steel-100 last:border-b-0">' +
-            '<a href="' + e.href + '" tabindex="-1" class="flex items-baseline justify-between gap-3 px-4 py-2.5 hover:bg-accent-soft focus:bg-accent-soft">' +
-            '<span class="min-w-0"><span class="block font-bold text-steel-900 text-sm truncate">' + e.label + '</span>' +
-            '<span class="block text-xs text-steel-600 truncate">' + e.context + '</span></span>' +
+            '<a href="' + esc(e.href) + '" tabindex="-1" class="flex items-baseline justify-between gap-3 px-4 py-2.5 hover:bg-accent-soft focus:bg-accent-soft">' +
+            '<span class="min-w-0"><span class="block font-bold text-steel-900 text-sm truncate">' + esc(e.label) + '</span>' +
+            '<span class="block text-xs text-steel-600 truncate">' +
+            (e.code ? '<code class="font-mono font-bold text-steel-900" dir="ltr">' + esc(e.code) + '</code> · ' : '') +
+            esc(e.context) + '</span></span>' +
             '<span class="text-xs font-black rounded px-1.5 py-0.5 shrink-0 ' +
-              (e.kind === 'product' ? 'text-white bg-action' : 'text-steel-600 bg-steel-100') + '">' +
-              (KIND_LABEL[e.kind] || '') + '</span>' +
+            (e.kind === 'product' ? 'text-white bg-action' : 'text-steel-600 bg-steel-100') + '">' + (KIND_LABEL[e.kind] || '') + '</span>' +
             '</a></li>'
           )
           .join('');
-        list.hidden = false;
-        input.setAttribute('aria-expanded', 'true');
       }
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    };
 
-      function highlight(next) {
-        const opts = list.querySelectorAll('[role="option"]');
-        if (!opts.length) return;
-        if (active >= 0) opts[active].setAttribute('aria-selected', 'false');
-        active = (next + opts.length) % opts.length;
-        const el = opts[active];
-        el.setAttribute('aria-selected', 'true');
-        input.setAttribute('aria-activedescendant', el.id);
-        el.scrollIntoView({ block: 'nearest' });
+    const highlight = (next: number) => {
+      const opts = list.querySelectorAll<HTMLElement>('[role="option"]');
+      if (!opts.length) return;
+      if (active >= 0) opts[active]!.setAttribute('aria-selected', 'false');
+      active = (next + opts.length) % opts.length;
+      const el = opts[active]!;
+      el.setAttribute('aria-selected', 'true');
+      input.setAttribute('aria-activedescendant', el.id);
+      el.scrollIntoView({ block: 'nearest' });
+    };
+
+    const update = () => render(suggest(index(), input.value, 7), input.value);
+    input.addEventListener('input', () => {
+      update();
+      // پس از رسیدن محصولات همان پرس‌وجو دوباره امتیاز می‌گیرد — بدون تایپ دوباره.
+      loadProducts().then(() => { if (document.activeElement === input && input.value.trim()) update(); });
+    });
+    input.addEventListener('focus', () => { loadProducts(); if (input.value.trim()) update(); });
+    input.addEventListener('keydown', (ev) => {
+      if (list.hidden) return;
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); highlight(active + 1); }
+      else if (ev.key === 'ArrowUp') { ev.preventDefault(); highlight(active - 1); }
+      else if (ev.key === 'Escape') close();
+      else if (ev.key === 'Enter' && active >= 0) {
+        // فقط انتخاب عمدی یک پیشنهاد ارسال فرم را کنار می‌گذارد؛ در غیر این صورت جستجوی کامل.
+        const link = list.querySelectorAll<HTMLAnchorElement>('[role="option"] a')[active];
+        if (link) { ev.preventDefault(); window.location.href = link.getAttribute('href')!; }
       }
+    });
+    document.addEventListener('click', (ev) => { if (!root.contains(ev.target as Node)) close(); });
+  });
+</script>
 
-      /* ───────── واکشی تنبل فهرست محصولات ─────────
-         لایه‌ی ساختاری (دسته/برند/سیلو) از قبل inline است و فوراً جواب
-         می‌دهد. محصولات فقط وقتی دانلود می‌شوند که کاربر واقعاً سراغ
-         جستجو بیاید. یک‌بار برای کل نشست — نه یک‌بار در هر صفحه.
-
-         ⚠️ اگر واکشی شکست بخورد، جستجو *کار می‌کند*، فقط محدود به
-         دسته‌ها و برندها. شکست شبکه نباید کادر جستجو را بشکند. */
-      let productsLoaded = false;
-      let loadingProducts = null;
-
-      function loadProducts() {
-        if (productsLoaded) return Promise.resolve();
-        if (loadingProducts) return loadingProducts;
-
-        loadingProducts = fetch('/search-index.json')
-          .then((res) => (res.ok ? res.json() : []))
-          .then((list) => {
-            if (Array.isArray(list) && list.length) {
-              // محصولات جلوتر از ساختار می‌آیند: در تساوی امتیاز، یک
-              // قطعه‌ی واقعیِ قابل سفارش بر صفحه‌ی دسته اولویت دارد.
-              index.unshift(...list);
-            }
-            productsLoaded = true;
-          })
-          .catch(() => {
-            // بی‌صدا نیست، اما بیلد و جستجو را هم نمی‌شکند.
-            productsLoaded = true;
-          });
-
-        return loadingProducts;
-      }
-
-      input.addEventListener('input', () => {
-        render(suggest(input.value, 7), input.value);
-        // پس از رسیدن محصولات، همان پرس‌وجو دوباره امتیازدهی می‌شود تا
-        // کاربر بدون تایپ دوباره، نتیجه‌ی کامل را ببیند.
-        loadProducts().then(() => {
-          if (document.activeElement === input && input.value.trim()) {
-            render(suggest(input.value, 7), input.value);
-          }
-        });
-      });
-
-      input.addEventListener('focus', () => {
-        loadProducts();
-        if (input.value.trim()) render(suggest(input.value, 7), input.value);
-      });
-
-      input.addEventListener('keydown', (ev) => {
-        if (list.hidden) return;
-        if (ev.key === 'ArrowDown') { ev.preventDefault(); highlight(active + 1); }
-        else if (ev.key === 'ArrowUp') { ev.preventDefault(); highlight(active - 1); }
-        else if (ev.key === 'Escape') { close(); }
-        else if (ev.key === 'Enter' && active >= 0) {
-          // فقط وقتی کاربر عمداً یک پیشنهاد را انتخاب کرده، ارسال فرم را
-          // نادیده می‌گیریم. در غیر این صورت جستجوی کامل انجام می‌شود.
-          const link = list.querySelectorAll('[role="option"] a')[active];
-          if (link) { ev.preventDefault(); window.location.href = link.getAttribute('href'); }
-        }
-      });
-
-      document.addEventListener('click', (ev) => { if (!root.contains(ev.target)) close(); });
-    })();
-  </script>
-</div>

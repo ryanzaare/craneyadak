@@ -28,16 +28,18 @@ export interface Props {
   price: PriceState;
   whatsappHref: string | null;
   inert?: boolean;
+  /** صفت‌های data-* روی li — فیلتر صفحه‌ی دسته آن‌ها را می‌خواند (CategoryFilterBar). */
+  attrs?: Record<string, string>;
 }
 
-const { slug, name, sku, url, brand, keySpec, stock, price, whatsappHref, inert = false } = Astro.props;
+const { slug, name, sku, url, brand, keySpec, stock, price, whatsappHref, inert = false, attrs = {} } = Astro.props;
 const hook = (attrs: Record<string, string | null | undefined | boolean>) => (inert ? {} : attrs);
 const basket = { 'data-basket-name': name, 'data-basket-sku': sku ?? '' };
 const inquiryHref = price.payable ? null : whatsappInquiryHref(whatsappHref, { name, sku, url });
 const btn = 'inline-flex items-center justify-center min-h-11 px-3 rounded-md text-sm font-bold whitespace-nowrap transition-colors';
 ---
 
-<li class="grid grid-cols-[1fr_auto] lg:grid-cols-[9rem_1fr_7rem_10rem_8rem_9rem_auto] items-center gap-x-4 gap-y-2 px-3 py-3 border-t border-steel-200 first:border-t-0 hover:bg-steel-50">
+<li {...attrs} class="grid grid-cols-[1fr_auto] lg:grid-cols-[9rem_1fr_7rem_10rem_8rem_9rem_auto] items-center gap-x-4 gap-y-2 px-3 py-3 border-t border-steel-200 first:border-t-0 hover:bg-steel-50">
   {/* ⚠️ dir="ltr" فقط روی رشته‌ی کد (inline)، نه روی سلول: سلولِ ltr شروعش «چپ» است و کد از زیر سرستون «کد فنی»
       (راست) به لبه‌ی چپ سلول، کنار نام محصول، می‌رفت — بازبینی کارفرما، ۳۰ مهر ۱۴۰۵. سلول RTL و text-right می‌ماند. */}
   <span class="order-1 lg:order-none min-w-0 text-right">

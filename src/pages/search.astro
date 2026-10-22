@@ -26,6 +26,9 @@
 import Layout from '../layouts/Layout.astro';
 import SearchBox from '../components/SearchBox.astro';
 import { SILOS, siloPath, ALL_CATEGORIES } from '../data/taxonomy';
+import { getContact } from '../lib/site-options';
+
+const contact = await getContact();
 
 // دسته‌های پیشنهادی برای حالت «چیزی پیدا نشد» — از تاکسونومی واقعی.
 const fallbackSilos = SILOS;
@@ -43,6 +46,39 @@ const fallbackSilos = SILOS;
     </p>
 
     <SearchBox id="page-search" tone="light" autofocus={true} class="mb-8" />
+
+    {/* ── لایه‌ی ۰ (Frontend v2، فاز ۲): تطبیق تحمل‌گر کد فنی ──
+        ⚠️ Pagefind متن را واژه‌به‌واژه نمایه می‌کند: «saga1l12» با «SAGA1-L12» (دو واژه‌ی saga1 و l12) تطبیق
+        نمی‌خورد و کاربرِ کدبه‌دست «پیدا نشد» می‌دید. این لایه همان فهرست /search-index.json و همان منطق
+        src/lib/search-score.ts (آزمون npm run test:search) را اجرا می‌کند: جداکننده، حروف و ارقام فارسی مهم نیستند. */}
+    <section id="part-results" hidden aria-labelledby="part-results-heading" class="mb-8">
+      <h2 id="part-results-heading" class="text-base font-black text-steel-900 mb-2">قطعات منطبق</h2>
+      <ul id="part-results-list" class="bg-white border border-steel-300 rounded divide-y divide-steel-200" role="list"></ul>
+    </section>
+
+    {/* ── «پیدا نشد» صنعتی: بن‌بست نیست ──
+        خریداری که کد را از پلاک می‌خواند و پیدا نمی‌کند، همان خریداری است که با یک عکس یا تماس سفارش می‌دهد.
+        پیوندها فقط اگر شماره در وردپرس ثبت شده باشد (هرگز ثابت در کد). */}
+    <section id="zero-results" hidden aria-live="polite" class="mb-8 bg-steel-50 border border-steel-300 rounded-md p-4 md:p-5">
+      <p class="text-base font-black text-steel-900">قطعه‌ای با «<span id="zero-q" class="font-mono" dir="ltr"></span>» در کاتالوگ پیدا نشد.</p>
+      <p class="mt-1 text-sm text-steel-700 leading-7">همه‌ی قطعات هنوز در سایت ثبت نشده‌اند. عکس پلاک یا خود قطعه را بفرستید یا تماس بگیرید تا کد را بررسی کنیم.</p>
+      <div class="mt-3 flex flex-wrap gap-3">
+        {contact.whatsappHref && (
+          <a id="zero-wa" href={contact.whatsappHref} data-wa-base={contact.whatsappHref} target="_blank" rel="noopener noreferrer"
+            class="inline-flex items-center justify-center min-h-11 px-5 rounded-md bg-action text-white text-sm font-black hover:bg-accent-ink">
+            ارسال عکس پلاک در واتساپ
+          </a>
+        )}
+        {contact.telHref && (
+          <a href={contact.telHref} class="inline-flex items-center justify-center min-h-11 px-5 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-400">
+            تماس: <span class="ms-1 tabular-nums" dir="ltr">{contact.phoneDisplay}</span>
+          </a>
+        )}
+        {!contact.whatsappHref && !contact.telHref && (
+          <a href="/contact/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline">صفحه‌ی تماس</a>
+        )}
+      </div>
+    </section>
 
     {/* نتایج Pagefind اینجا می‌نشیند. اگر Pagefind در دسترس نباشد این
         بخش خالی می‌ماند و بخش «مسیرهای جایگزین» پایین همچنان کار می‌کند. */}
@@ -90,6 +126,42 @@ const fallbackSilos = SILOS;
 </Layout>
 
 <script>
+  import { suggest, type SuggestEntry } from '../lib/search-score';
+
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+  /** لایه‌ی ۰: تطبیق تحمل‌گر کد فنی و «پیدا نشد» صنعتی. */
+  async function partResults(q: string) {
+    if (!q.trim()) return;
+    const products: SuggestEntry[] = await fetch('/search-index.json').then((r) => (r.ok ? r.json() : [])).catch(() => []);
+    // همان داده‌ی ساختاری که SearchBox همین صفحه inline کرده — نسخه‌ی دوم لازم نیست.
+    const structural: SuggestEntry[] = JSON.parse(document.querySelector('[data-search-index]')?.textContent || '[]');
+    const hits = suggest(products, q, 20);
+    const anyStructural = suggest(structural, q, 1).length > 0;
+    const box = document.getElementById('part-results');
+    const ul = document.getElementById('part-results-list');
+    if (hits.length && box && ul) {
+      ul.innerHTML = hits
+        .map((e) =>
+          '<li><a href="' + esc(e.href) + '" class="flex items-baseline justify-between gap-3 px-3 py-3 hover:bg-steel-50">' +
+          '<span class="min-w-0 font-bold text-steel-900 leading-7">' + esc(e.label) + '</span>' +
+          (e.code ? '<code class="shrink-0 font-mono font-bold text-sm text-steel-900" dir="ltr">' + esc(e.code) + '</code>' : '') +
+          '</a></li>'
+        )
+        .join('');
+      box.hidden = false;
+    }
+    if (!hits.length && !anyStructural) {
+      const zero = document.getElementById('zero-results');
+      const zq = document.getElementById('zero-q');
+      if (zq) zq.textContent = q;
+      const wa = document.getElementById('zero-wa') as HTMLAnchorElement | null;
+      // پیام پرشده با همان عبارت جستجو — فروشنده بداند خریدار دنبال چه کدی بود.
+      if (wa?.dataset.waBase) wa.href = wa.dataset.waBase + '?text=' + encodeURIComponent('عکس پلاک / کد فنی: ' + q);
+      if (zero) zero.hidden = false;
+    }
+  }
+
   // ⚠️ این مسیرها عمداً از قطعات جدا ساخته می‌شوند.
   // یک رشته‌ی ثابت مثل '/pagefind/pagefind-ui.js' را Vite در زمان build
   // به‌صورت استاتیک resolve می‌کند و چون فایل هنوز ساخته نشده، بیلد
@@ -173,5 +245,6 @@ const fallbackSilos = SILOS;
     }
   }
 
+  partResults(currentQuery());
   initPagefind();
 </script>

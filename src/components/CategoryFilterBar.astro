@@ -1,0 +1,197 @@
+---
+// src/components/CategoryFilterBar.astro
+// ---------------------------------------------------------------------------
+// نوار فیلتر *بالای* فهرست صفحه‌ی دسته (Frontend v2، فاز ۲ — تصمیم ۲ کارفرما، docs/frontend-v2.md §10).
+// جایگزین نوار کناری CategoryFilters (حذف شد — قاعده‌ی ۴).
+//
+//   • سه چیپ «همه / موجود / استعلامی» — همیشه، با شمار هر کدام.
+//   • چیپ برند — فقط برندهایی که در *همین* دسته محصول دارند، و فقط وقتی ≥۲ برند است (یک برند چیزی را باریک
+//     نمی‌کند؛ چیپی که همه را نشان می‌دهد شلوغی است).
+//   • مشخصه‌های تخصصی (categoryMeta.spec_facets در وردپرس) داخل «فیلتر تخصصی» تاشونده — همان منطق قبلی:
+//     مشخصه‌ای که هنوز داده‌ی کافی ندارد فیلتر نمی‌شود، فقط یک خط توضیح.
+//   • جابه‌جایی نما: «جدول» (پیش‌فرض، ProductRow) / «کارت» (ProductCard).
+//
+// همه‌چیز ترکیب‌پذیر و در URL (stock، brand، f_<id>، max_<id>، view) تا نشانی فیلترشده قابل اشتراک با
+// همکار باشد — خرید صنعتی چندنفره است. منطق خالص و آزموده: ./category-filter.ts.
+// ⚠️ بدون JS: همه‌ی کنترل‌ها پنهان‌اند (hidden تا اسکریپت برش دارد) و فهرست کامل دیده می‌شود.
+// ---------------------------------------------------------------------------
+import { resolveFacets } from '../data/filters';
+import { getCategoryFacets } from '../lib/category-facets';
+import { BRANDS } from '../data/taxonomy';
+import { computePrice, type CraneProduct } from '../lib/wp';
+
+interface Props {
+  products: CraneProduct[];
+  categorySlug: string;
+}
+
+const { products, categorySlug } = Astro.props;
+
+const specFacets = resolveFacets(products, await getCategoryFacets(categorySlug));
+const brandCounts = new Map<string, number>();
+for (const p of products) if (p.brandSlug) brandCounts.set(p.brandSlug, (brandCounts.get(p.brandSlug) ?? 0) + 1);
+const brands = BRANDS.filter((b) => brandCounts.has(b.slug));
+const showBrands = brands.length >= 2;
+
+const inStock = products.filter((p) => p.stockStatus === 'in_stock').length;
+const rfq = products.filter((p) => !computePrice(p).payable).length;
+const usefulSpecs = specFacets.filter((f) => (f.kind === 'range' ? f.min !== f.max : f.values.length >= 2));
+const pendingSpecs = specFacets.filter((f) => !usefulSpecs.includes(f)).map((f) => f.label);
+
+const fa = (n: number) => n.toLocaleString('fa-IR');
+const chip =
+  'inline-flex items-center gap-1.5 min-h-11 px-3 rounded border border-steel-300 bg-white text-sm font-bold text-steel-700 cursor-pointer ' +
+  'hover:border-steel-400 has-[:checked]:bg-steel-900 has-[:checked]:text-white has-[:checked]:border-steel-900 has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-accent';
+---
+
+<div data-category-filters hidden class="flex flex-col gap-3 mb-4">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <fieldset class="flex flex-wrap gap-2">
+      <legend class="sr-only">وضعیت موجودی و قیمت</legend>
+      <label class={chip}><input type="radio" name="cat-stock" value="all" class="sr-only" checked />همه <span class="tabular-nums font-normal">{fa(products.length)}</span></label>
+      <label class={chip}><input type="radio" name="cat-stock" value="in" class="sr-only" />موجود <span class="tabular-nums font-normal">{fa(inStock)}</span></label>
+      <label class={chip}><input type="radio" name="cat-stock" value="rfq" class="sr-only" />استعلامی <span class="tabular-nums font-normal">{fa(rfq)}</span></label>
+    </fieldset>
+
+    {showBrands && (
+      <fieldset class="flex flex-wrap gap-2">
+        <legend class="sr-only">برند</legend>
+        {brands.map((b) => (
+          <label class={chip}><input type="checkbox" data-cat-brand value={b.slug} class="sr-only" />{b.nameFa} <span class="tabular-nums font-normal">{fa(brandCounts.get(b.slug) ?? 0)}</span></label>
+        ))}
+      </fieldset>
+    )}
+
+    {/* جابه‌جایی نما — aria-pressed؛ جدول پیش‌فرض (§4: «نمای فهرست/جدول پیش‌فرض برای دسته‌های پرمشخصه»). */}
+    <div class="ms-auto inline-flex rounded border border-steel-300 overflow-hidden" role="group" aria-label="نوع نمایش">
+      <button type="button" data-cat-view-btn="list" aria-pressed="true" class="min-h-11 px-3 text-sm font-bold text-steel-700 aria-pressed:bg-steel-900 aria-pressed:text-white">جدول</button>
+      <button type="button" data-cat-view-btn="grid" aria-pressed="false" class="min-h-11 px-3 text-sm font-bold text-steel-700 border-s border-steel-300 aria-pressed:bg-steel-900 aria-pressed:text-white">کارت</button>
+    </div>
+  </div>
+
+  {(usefulSpecs.length > 0 || pendingSpecs.length > 0) && (
+    <details class="bg-white border border-steel-300 rounded">
+      <summary class="cursor-pointer min-h-11 flex items-center px-3 text-sm font-bold text-steel-900">فیلتر تخصصی</summary>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 p-3 border-t border-steel-200">
+        {usefulSpecs.map((facet) => (
+          <fieldset>
+            <legend class="text-xs font-black text-steel-900 mb-1">
+              {facet.label}{facet.unit && <span class="font-normal text-steel-600"> ({facet.unit})</span>}
+            </legend>
+            {facet.hint && <p class="text-xs text-steel-600 leading-5 mb-2">{facet.hint}</p>}
+            {facet.kind === 'checkbox' ? (
+              facet.values.map((value) => (
+                <label class="flex items-center gap-2 min-h-11 cursor-pointer">
+                  <input type="checkbox" data-cat-spec={facet.id} value={value} class="w-4 h-4 accent-steel-900" />
+                  <span class="text-sm text-steel-700 truncate" dir="auto">{value}</span>
+                </label>
+              ))
+            ) : (
+              <div>
+                <label class="sr-only" for={`range-${facet.id}`}>حداکثر {facet.label}</label>
+                <input id={`range-${facet.id}`} type="range" data-cat-range={facet.id} min={facet.min ?? 0} max={facet.max ?? 100}
+                  value={facet.max ?? 100} step="any" class="w-full accent-steel-900" />
+                <p class="flex justify-between text-xs text-steel-600 tabular-nums mt-1">
+                  <span>{facet.min}</span><span>تا <strong data-range-out={facet.id} class="text-steel-900">{facet.max}</strong></span>
+                </p>
+              </div>
+            )}
+          </fieldset>
+        ))}
+        {pendingSpecs.length > 0 && (
+          <p class="text-xs text-steel-600 leading-5 sm:col-span-2 lg:col-span-3">
+            فیلتر روی <strong class="text-steel-800">{pendingSpecs.join('، ')}</strong> تعریف شده و به‌محض ثبت این مشخصات برای چند قطعه فعال می‌شود.
+          </p>
+        )}
+      </div>
+    </details>
+  )}
+
+  <button type="button" data-cat-clear hidden class="self-start inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4">حذف همه‌ی فیلترها</button>
+</div>
+
+<script>
+  import { matches, parseState, toQuery, EMPTY, type FilterState, type ItemData } from './category-filter';
+
+  const root = document.querySelector<HTMLElement>('[data-category-filters]');
+  if (root) {
+    root.hidden = false;
+    const items = [...document.querySelectorAll<HTMLElement>('[data-cat-item]')];
+    const views = [...document.querySelectorAll<HTMLElement>('[data-cat-view]')];
+    const countEl = document.querySelector<HTMLElement>('[data-cat-count]');
+    const emptyEl = document.querySelector<HTMLElement>('[data-cat-empty]');
+    const clear = root.querySelector<HTMLButtonElement>('[data-cat-clear]');
+    const stockRadios = [...root.querySelectorAll<HTMLInputElement>('input[name="cat-stock"]')];
+    const brandBoxes = [...root.querySelectorAll<HTMLInputElement>('[data-cat-brand]')];
+    const specBoxes = [...root.querySelectorAll<HTMLInputElement>('[data-cat-spec]')];
+    const ranges = [...root.querySelectorAll<HTMLInputElement>('[data-cat-range]')];
+    const viewBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-cat-view-btn]')];
+
+    const data = (el: HTMLElement): ItemData => {
+      const specs: Record<string, string> = {};
+      for (const a of el.getAttributeNames()) if (a.startsWith('data-spec-')) specs[a.slice(10)] = el.getAttribute(a) ?? '';
+      return { stock: el.dataset.stock ?? '', priced: el.dataset.priced === '1', brand: el.dataset.brand ?? '', specs };
+    };
+    const itemData = new Map(items.map((el) => [el, data(el)]));
+
+    const read = (): FilterState => {
+      const s: FilterState = { ...EMPTY, specs: {}, ranges: {} };
+      s.stock = (stockRadios.find((r) => r.checked)?.value as FilterState['stock']) ?? 'all';
+      s.brands = brandBoxes.filter((b) => b.checked).map((b) => b.value);
+      for (const b of specBoxes) if (b.checked) (s.specs[b.dataset.catSpec!] ??= []).push(b.value);
+      for (const r of ranges) if (r.value !== r.max) s.ranges[r.dataset.catRange!] = Number(r.value);
+      s.view = viewBtns.find((b) => b.getAttribute('aria-pressed') === 'true')?.dataset.catViewBtn === 'grid' ? 'grid' : 'list';
+      return s;
+    };
+
+    const write = (s: FilterState) => {
+      for (const r of stockRadios) r.checked = r.value === s.stock;
+      for (const b of brandBoxes) b.checked = s.brands.includes(b.value);
+      for (const b of specBoxes) b.checked = (s.specs[b.dataset.catSpec!] ?? []).includes(b.value);
+      for (const r of ranges) {
+        const v = s.ranges[r.dataset.catRange!];
+        r.value = v === undefined ? r.max : String(v);
+        const out = root.querySelector<HTMLElement>(`[data-range-out="${r.dataset.catRange}"]`);
+        if (out) out.textContent = r.value;
+      }
+      for (const b of viewBtns) b.setAttribute('aria-pressed', String(b.dataset.catViewBtn === s.view));
+    };
+
+    const apply = (push = true) => {
+      const s = read();
+      const shown = new Set<string>();
+      for (const el of items) {
+        const ok = matches(itemData.get(el)!, s);
+        el.hidden = !ok;
+        if (ok && el.dataset.slug) shown.add(el.dataset.slug);
+      }
+      for (const v of views) v.hidden = v.dataset.catView !== s.view;
+      if (countEl) countEl.textContent = shown.size.toLocaleString('fa-IR');
+      if (emptyEl) emptyEl.hidden = shown.size !== 0;
+      const q = toQuery({ ...s, view: 'list' });
+      if (clear) clear.hidden = q === '';
+      if (push) {
+        const qs = toQuery(s);
+        history.replaceState(null, '', location.pathname + (qs ? `?${qs}` : '') + location.hash);
+      }
+    };
+
+    write(parseState(new URLSearchParams(location.search)));
+    apply(false);
+
+    for (const el of [...stockRadios, ...brandBoxes, ...specBoxes]) el.addEventListener('change', () => apply());
+    for (const r of ranges) r.addEventListener('input', () => {
+      const out = root.querySelector<HTMLElement>(`[data-range-out="${r.dataset.catRange}"]`);
+      if (out) out.textContent = r.value;
+      apply();
+    });
+    for (const b of viewBtns) b.addEventListener('click', () => {
+      for (const o of viewBtns) o.setAttribute('aria-pressed', String(o === b));
+      apply();
+    });
+    clear?.addEventListener('click', () => {
+      write({ ...EMPTY, specs: {}, ranges: {}, view: read().view });
+      apply();
+    });
+  }
+</script>
