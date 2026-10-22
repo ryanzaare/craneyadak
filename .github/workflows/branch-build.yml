@@ -1,0 +1,60 @@
+# .github/workflows/branch-build.yml
+# ---------------------------------------------------------------------------
+# build شاخه‌های کاری دستیار (claude/**) با داده‌ی زنده‌ی وردپرس → dist/ به‌صورت artifact. **هیچ انتشاری نیست.**
+#
+# چرا: سرور وردپرس (admin.craneyadak.com، هاست ایرانی) اتصال از IP خروجی محیط دستیار را بی‌پاسخ می‌بندد
+# (تونل باز می‌شود، سرور هیچ بایتی برنمی‌گرداند، ~۸ ثانیه بعد ECONNRESET — ۲۹/۳۰ مهر ۱۴۰۵). همان سرور به
+# runnerهای GitHub پاسخ می‌دهد (Deploy شبانه سبز است). پس build زنده این‌جا انجام می‌شود و dist/ دانلود
+# می‌شود تا اسکرین‌شات و Lighthouse روی *خروجی واقعی* در محیط دستیار گرفته شود — نه روی build بی‌محصول.
+#
+# ⚠️ عمداً بدون secrets و بدون مرحله‌ی FTP: دو نشانی وردپرس عمومی‌اند (.env.example). این فایل نباید شبیه
+# deploy.yml شود. 📌 پیش از merge به main تصمیم با کارفرما: بماند (پیش‌نمایش شاخه‌ها) یا حذف شود — backlog.
+# ---------------------------------------------------------------------------
+name: Branch build (no deploy)
+
+on:
+  push:
+    branches: ['claude/**']
+  workflow_dispatch:
+
+concurrency:
+  group: branch-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # npm run build شامل check:plugin است و به php نیاز دارد.
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - run: npm ci
+
+      - name: Build (live WordPress)
+        run: npm run build
+        env:
+          WP_GRAPHQL_URL: https://admin.craneyadak.com
+          PUBLIC_WP_API_URL: https://admin.craneyadak.com
+
+      # taxonomy.generated.ts هم بالا می‌رود: build محلیِ بعدی همان تاکسونومی زنده را دارد.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: |
+            dist/
+            src/data/taxonomy.generated.ts
+          include-hidden-files: true
+          retention-days: 7
