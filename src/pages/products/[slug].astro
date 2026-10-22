@@ -217,7 +217,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
             {product.sku && <PartNumber sku={product.sku} id="main" compact />}
             {brand && (
               <a href={`/brands/${brand.slug}`} class="inline-flex items-center min-h-11 text-sm font-bold text-steel-700 hover:text-accent-ink hover:underline underline-offset-4">
-                {brand.nameFa}<span class="font-normal text-steel-500 ms-1" dir="ltr">({brand.nameEn})</span>
+                {brand.nameFa}{' '}<span class="font-normal text-steel-500" dir="ltr">({brand.nameEn})</span>
               </a>
             )}
           </div>
@@ -228,7 +228,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         </header>
 
         {/* ── ۳) گالری ── */}
-        <div class="lg:col-start-8 lg:col-span-5 lg:row-start-1 lg:row-span-4 lg:sticky lg:top-28 lg:self-start">
+        <div class="lg:col-start-8 lg:col-span-5 lg:row-start-1 lg:row-span-4 lg:sticky lg:top-40 xl:top-28 lg:self-start">
           <ProductGallery images={product.images} productName={product.name} />
         </div>
 
@@ -355,7 +355,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
     <section class="bg-white px-4 md:px-6 py-6 border-b border-steel-300 print:hidden" aria-label="تضمین‌ها">
       <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-10">
         <TrustBadges variant="compact" authenticity={product.authenticity} />
-        <WarrantyNotice categorySlugs={product.categorySlugs} />
+        <WarrantyNotice categorySlugs={product.categorySlugs} bare />
       </div>
     </section>
   )}

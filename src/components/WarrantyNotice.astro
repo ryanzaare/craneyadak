@@ -6,13 +6,16 @@ import { warrantyFor } from '../data/warranty';
 
 interface Props {
   categorySlugs: readonly string[];
+  /** بدون خط و فاصله‌ی بالا — وقتی کنار نوار اعتماد در ستون جدا می‌نشیند (صفحه‌ی محصول v2). */
+  bare?: boolean;
 }
 const warranty = warrantyFor(Astro.props.categorySlugs);
+const bare = Astro.props.bare ?? false;
 ---
 
 {
   warranty && (
-    <div class="mt-5 pt-4 border-t border-steel-300" data-warranty>
+    <div class:list={[bare ? 'mt-4 lg:mt-0' : 'mt-5 pt-4 border-t border-steel-300']} data-warranty>
       <p class="text-sm font-black text-steel-900 mb-1">ضمانت</p>
       <p class="text-sm text-steel-800 leading-7">{warranty.headline}</p>
       <details class="mt-2 text-xs text-steel-600 leading-6">

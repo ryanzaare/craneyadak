@@ -87,7 +87,7 @@ const navLinks = [
           enterkeyhint="search"
           autocomplete="off"
           spellcheck="false"
-          placeholder="کد فنی یا نام قطعه — مثال: SAGA1-L12"
+          placeholder="کد فنی، نام قطعه یا برند"
           class="min-w-0 flex-1 bg-transparent px-3 text-base text-steel-900 placeholder:text-steel-500 focus:outline-none"
         />
         <button type="submit" class="shrink-0 w-11 grid place-items-center text-steel-700 hover:text-steel-900" aria-label="جستجو">
@@ -97,7 +97,10 @@ const navLinks = [
     </form>
 
     {/* ------------------------- ناوبری دسکتاپ ------------------------- */}
-    <nav class="hidden md:block" aria-label="منوی اصلی">
+    {/* ⚠️ ناوبری کامل از lg، نه md (فاز ۱): در ۷۶۸px پنج پیوند + لوگو + آیکن‌ها جا نمی‌شد و برچسب‌ها دوخطی بودند
+        («دسته‌بندی / قطعات»)؛ با ردیف جستجو و flex-wrap، ناوبری به ردیف سوم می‌رفت (هدر چسبان ۱۸۹px). زیر lg همان
+        منوی همبرگری موبایل. */}
+    <nav class="hidden lg:block" aria-label="منوی اصلی">
       <ul class="flex items-center gap-7 text-sm font-normal">
         <li>
           <a href="/" class:list={['transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-accent-ink rounded', isActive('/') ? 'text-accent-ink font-bold' : 'text-steel-700 hover:text-steel-900']} aria-current={isActive('/') ? 'page' : undefined}>صفحه اصلی</a>
@@ -238,7 +241,7 @@ const navLinks = [
         </div>
       </div>
 
-      <button id="mobile-menu-btn" type="button" class="md:hidden text-steel-900 rounded-md p-2 z-50 focus:outline-none focus:ring-2 focus:ring-accent-ink" aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobile-menu">
+      <button id="mobile-menu-btn" type="button" class="lg:hidden text-steel-900 rounded-md p-2 z-50 focus:outline-none focus:ring-2 focus:ring-accent-ink" aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobile-menu">
         <svg class="w-8 h-8" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path id="hamburger-icon-path" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
@@ -295,7 +298,7 @@ const navLinks = [
   </div>
 
   {/* ------------------------- منوی موبایل ------------------------- */}
-  <div id="mobile-menu" class="hidden md:hidden absolute top-full inset-x-0 bg-white border-b border-steel-100 shadow-lg z-40 max-h-[80vh] overflow-y-auto">
+  <div id="mobile-menu" class="hidden lg:hidden absolute top-full inset-x-0 bg-white border-b border-steel-100 shadow-lg z-40 max-h-[80vh] overflow-y-auto">
     <nav aria-label="منوی موبایل">
       <ul class="flex flex-col py-4 px-5 gap-1 text-base font-normal">
         <li><a href="/" class:list={['block py-2.5', isActive('/') ? 'text-accent-ink font-bold' : 'text-steel-700']}>صفحه اصلی</a></li>
@@ -445,7 +448,7 @@ const navLinks = [
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && isOpen()) { setOpen(false); btn.focus(); }
     });
-    window.matchMedia('(min-width: 768px)').addEventListener('change', (e) => {
+    window.matchMedia('(min-width: 1024px)').addEventListener('change', (e) => {
       if (e.matches && isOpen()) setOpen(false);
     });
   }

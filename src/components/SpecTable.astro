@@ -17,7 +17,7 @@ export interface Row {
 export interface Props {
   rows: Row[];
   caption?: string;
-  /** سرستون چسبان (فقط md+). برای جدول بلند صفحه‌ی محصول. */
+  /** سرستون چسبان (فقط lg+). برای جدول بلند صفحه‌ی محصول. ⚠️ top = ارتفاع هدر چسبان: ~۱۴۱px زیر xl (با ردیف جستجو)، ~۸۹px از xl. */
   sticky?: boolean;
 }
 
@@ -32,7 +32,7 @@ const visible = rows.filter((r) => (r.value ?? '').trim() !== '');
   <div class="border border-steel-300 rounded">
     <table class="w-full text-sm text-right border-collapse">
       {caption && <caption class="sr-only">{caption}</caption>}
-      <thead class:list={['bg-steel-100 text-steel-700', sticky && 'md:sticky md:top-16 md:z-10']}>
+      <thead class:list={['bg-steel-100 text-steel-700', sticky && 'lg:sticky lg:top-[9.5rem] xl:top-24 lg:z-10']}>
         <tr>
           <th scope="col" class="px-3 py-2 font-bold w-2/5">مشخصه</th>
           <th scope="col" class="px-3 py-2 font-bold">مقدار</th>
