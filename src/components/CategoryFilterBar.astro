@@ -13,7 +13,8 @@
 //
 // همه‌چیز ترکیب‌پذیر و در URL (stock، brand، f_<id>، max_<id>، view) تا نشانی فیلترشده قابل اشتراک با
 // همکار باشد — خرید صنعتی چندنفره است. منطق خالص و آزموده: ./category-filter.ts.
-// ⚠️ بدون JS: همه‌ی کنترل‌ها پنهان‌اند (hidden تا اسکریپت برش دارد) و فهرست کامل دیده می‌شود.
+// ⚠️ نوار از ابتدا دیده می‌شود، نه hidden تا اسکریپت: نسخه‌ی اول پنهان بود و نمایانی‌اش با JS فهرست را پایین
+// می‌راند — CLS موبایل ۰٫۱۰۲ روی build زنده (Lighthouse فاز ۲). بدون JS چیپ‌ها بی‌اثرند و فهرست کامل است.
 // ---------------------------------------------------------------------------
 import { resolveFacets } from '../data/filters';
 import { getCategoryFacets } from '../lib/category-facets';
@@ -44,7 +45,7 @@ const chip =
   'hover:border-steel-400 has-[:checked]:bg-steel-900 has-[:checked]:text-white has-[:checked]:border-steel-900 has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-accent';
 ---
 
-<div data-category-filters hidden class="flex flex-col gap-3 mb-4">
+<div data-category-filters class="flex flex-col gap-3 mb-4">
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
     <fieldset class="flex flex-wrap gap-2">
       <legend class="sr-only">وضعیت موجودی و قیمت</legend>
@@ -115,7 +116,6 @@ const chip =
 
   const root = document.querySelector<HTMLElement>('[data-category-filters]');
   if (root) {
-    root.hidden = false;
     const items = [...document.querySelectorAll<HTMLElement>('[data-cat-item]')];
     const views = [...document.querySelectorAll<HTMLElement>('[data-cat-view]')];
     const countEl = document.querySelector<HTMLElement>('[data-cat-count]');
