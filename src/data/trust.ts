@@ -149,6 +149,17 @@ export const TRUST_BADGES: TrustBadge[] = [
   },
 ];
 
+/**
+ * نشان‌های حالت فشرده (صفحه‌ی محصول): فقط *تأییدشده*، و نشان وابسته به اصالت فقط با برچسب مطابق.
+ * یک منبع برای TrustBadges.astro و صفحه‌ی محصول (که باید بداند نوار اعتماد اصلاً چیزی دارد یا نه) —
+ * دو نسخه از این فیلتر یعنی روزی که یکی ادعای تأییدنشده را نشان دهد و دیگری نه.
+ */
+export function compactTrustBadges(authenticity: 'original' | 'non_original' | null): TrustBadge[] {
+  return TRUST_BADGES.filter(
+    (b) => b.verified && b.compact !== false && (!b.onlyIfAuthenticity || b.onlyIfAuthenticity === authenticity),
+  );
+}
+
 export interface Author {
   slug: string;
   name: string;

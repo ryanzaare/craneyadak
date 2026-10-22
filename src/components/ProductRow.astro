@@ -38,15 +38,19 @@ const btn = 'inline-flex items-center justify-center min-h-11 px-3 rounded-md te
 ---
 
 <li class="grid grid-cols-[1fr_auto] lg:grid-cols-[9rem_1fr_7rem_10rem_8rem_9rem_auto] items-center gap-x-4 gap-y-2 px-3 py-3 border-t border-steel-200 first:border-t-0 hover:bg-steel-50">
-  <code class="font-mono font-bold text-sm text-steel-900 lg:order-none order-1 truncate text-right" dir="ltr">{sku ?? '—'}</code>
+  {/* ⚠️ dir="ltr" فقط روی رشته‌ی کد (inline)، نه روی سلول: سلولِ ltr شروعش «چپ» است و کد از زیر سرستون «کد فنی»
+      (راست) به لبه‌ی چپ سلول، کنار نام محصول، می‌رفت — بازبینی کارفرما، ۳۰ مهر ۱۴۰۵. سلول RTL و text-right می‌ماند. */}
+  <span class="order-1 lg:order-none min-w-0 text-right">
+    <code class="inline-block max-w-full truncate align-bottom font-mono font-bold text-sm text-steel-900" dir="ltr">{sku ?? '—'}</code>
+  </span>
   <a href={inert ? '#style-guide' : url} class="col-span-2 lg:col-span-1 order-3 lg:order-none font-bold text-steel-900 hover:text-accent-ink leading-7 line-clamp-2">{name}</a>
   <span class="hidden lg:block text-sm text-steel-600 truncate">{brand ?? ''}</span>
-  <span class="hidden lg:block text-sm text-steel-700 tabular-nums truncate" dir="auto">{keySpec ?? ''}</span>
+  <span class="hidden lg:block text-sm text-steel-700 tabular-nums truncate text-right"><span dir="auto">{keySpec ?? ''}</span></span>
   <span class="order-2 lg:order-none justify-self-end lg:justify-self-start"><StockPill status={stock} /></span>
   <span class="order-4 lg:order-none"><PriceTag price={price} /></span>
   <span class="order-5 lg:order-none justify-self-end flex items-center gap-2">
     {price.payable ? (
-      <button type="button" class={`${btn} bg-accent-ink text-white hover:bg-accent-strong`}
+      <button type="button" class={`${btn} bg-action text-white hover:bg-accent-ink`}
         {...hook({ 'data-cart-add': slug, ...basket, 'data-guard-until': price.validUntil, 'data-payable-only': true })}
         aria-label={`افزودن ${name} به سبد خرید`}>
         <span data-basket-label>+ سبد</span>
@@ -55,10 +59,10 @@ const btn = 'inline-flex items-center justify-center min-h-11 px-3 rounded-md te
       <>
         {inquiryHref && (
           <a href={inert ? '#style-guide' : inquiryHref} target={inert ? undefined : '_blank'} rel="noopener noreferrer"
-            class={`${btn} bg-accent-ink text-white hover:bg-accent-strong`} aria-label={`استعلام قیمت ${name} در واتساپ`}>واتساپ</a>
+            class={`${btn} bg-action text-white hover:bg-accent-ink`} aria-label={`استعلام قیمت ${name} در واتساپ`}>واتساپ</a>
         )}
         <button type="button"
-          class={`${btn} ${inquiryHref ? 'text-accent-ink hover:text-accent-strong hover:underline' : 'bg-accent-ink text-white hover:bg-accent-strong'}`}
+          class={`${btn} ${inquiryHref ? 'text-accent-ink hover:text-accent-strong hover:underline' : 'bg-action text-white hover:bg-accent-ink'}`}
           {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'rfq', ...basket })}
           aria-label={`افزودن ${name} به سبد استعلام`}>
           <span data-basket-label>+ استعلام</span>

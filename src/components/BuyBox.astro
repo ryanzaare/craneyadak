@@ -39,13 +39,14 @@ const inquiryHref = whatsappInquiryHref(whatsappHref, { name, sku, url });
 
 // کلاس‌ها یک‌جا: هر سه دکمه‌ی اصلی ممکن دقیقاً یک شکل دارند.
 const primary =
-  'w-full inline-flex items-center justify-center gap-2 bg-accent-ink text-white rounded-md px-6 min-h-12 font-black text-base hover:bg-accent-strong transition-colors focus-visible:outline-accent';
+  'w-full inline-flex items-center justify-center gap-2 bg-action text-white rounded-md px-6 min-h-12 font-black text-base hover:bg-accent-ink transition-colors focus-visible:outline-accent';
 const link = 'inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4';
 const waIcon = 'M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2z';
 ---
 
 <div class="cy-buybox flex flex-col gap-3" data-buybox>
-  <PriceTag price={price} size="page" />
+  {/* قلم غیرپرداخت‌پذیر: برچسب وضعیت به‌جای «استعلام قیمت» — دکمه‌ی زیرش همان عمل را نام می‌برد (اصل ۵). */}
+  <PriceTag price={price} size="page" statusLabel={price.payable ? undefined : 'فروش استعلامی — قیمت روز'} />
 
   {price.payable && (
     <p {...hook({ 'data-guard-until': price.validUntil, 'data-expired-only': true })} hidden class="text-sm leading-7 text-amber-900 bg-amber-50 border border-amber-200 rounded px-3 py-2">

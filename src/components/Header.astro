@@ -48,7 +48,7 @@ const navLinks = [
   role="banner"
   data-wp-base={wpBase}
 >
-  <div class="w-full max-w-7xl mx-auto flex justify-between items-center px-4 md:px-8">
+  <div class="w-full max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-y-2 px-4 md:px-8">
     <a href="/" class="flex min-w-0 items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-accent-ink" aria-label={`صفحه اصلی ${SITE.name}`}>
       {/* چینش راست‌به‌چپ: `items-start` به‌جای `items-end`.
           در ظرف flex عمودی، محور متقاطع همان محور افقی است و با dir="rtl"
@@ -68,6 +68,33 @@ const navLinks = [
       </span>
       <Logo class="brand-mark w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 md:w-14 md:h-14 text-steel-900 shrink-0" />
     </a>
+
+    {/* ------------------------- جستجوی هدر (Frontend v2، فاز ۱) -------------------------
+        چرا: یافته‌ی §4b — بازدیدکننده‌ای که روی صفحه‌ی داخلی (اغلب صفحه‌ی محصول، از گوگل) فرود می‌آید راهی برای
+        جستجوی دوباره نداشت. «جستجو در ورودی اصلی است و کد فنی می‌فهمد» (§2 اصل ۱).
+        یک فرم، دو جا: زیر xl ردیف کامل زیر لوگو (order-last + basis-full در flex-wrap)، از xl کنار لوگو. یک فرم
+        یعنی یک landmark جستجو و یک id — نه دو فرم که یکی همیشه پنهان است.
+        ⚠️ عمداً فرم سادهٔ GET بدون جاوااسکریپت و بدون فهرست پیشنهاد: SearchBox آرایه‌ی ساختاری را در HTML هر صفحه
+        inline می‌کند و اسکریپت می‌آورد — روی *هر* صفحه یعنی وزن اضافه برای همه. پیشنهاد آنی و تحمل خط‌تیره/فاصله
+        کار فاز ۲ (جستجو) است. نتیجه در /search/ با Pagefind (پارامتر q همان است که search.astro می‌خواند). */}
+    <form action="/search/" method="get" role="search" class="order-last basis-full xl:order-none xl:basis-auto xl:flex-1 xl:max-w-sm xl:mx-6 print:hidden">
+      <label for="header-search" class="sr-only">جستجوی کد فنی، نام قطعه یا برند</label>
+      <div class="flex items-stretch h-11 rounded-md border border-steel-300 bg-steel-50 focus-within:border-steel-600 focus-within:bg-white">
+        <input
+          id="header-search"
+          name="q"
+          type="search"
+          enterkeyhint="search"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="کد فنی یا نام قطعه — مثال: SAGA1-L12"
+          class="min-w-0 flex-1 bg-transparent px-3 text-base text-steel-900 placeholder:text-steel-500 focus:outline-none"
+        />
+        <button type="submit" class="shrink-0 w-11 grid place-items-center text-steel-700 hover:text-steel-900" aria-label="جستجو">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+        </button>
+      </div>
+    </form>
 
     {/* ------------------------- ناوبری دسکتاپ ------------------------- */}
     <nav class="hidden md:block" aria-label="منوی اصلی">
@@ -140,7 +167,7 @@ const navLinks = [
         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
         </svg>
-        <span id="cart-count" class="absolute -top-0.5 -left-0.5 bg-accent-ink text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center tabular-nums text-xs font-black">0</span>
+        <span id="cart-count" class="absolute -top-0.5 -left-0.5 bg-action text-white rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center tabular-nums text-xs font-black">0</span>
       </button>
       <a
         id="account-link"

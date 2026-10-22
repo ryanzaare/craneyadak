@@ -21,9 +21,15 @@ export interface Props {
   /** اندازه‌ی نمایش: کارت فهرست یا صفحه‌ی محصول. */
   size?: 'card' | 'page';
   class?: string;
+  /**
+   * برچسب وضعیت جایگزین برای قلم غیرپرداخت‌پذیر (مرجع یا بی‌قیمت) — به رنگ خنثی، نه نارنجی.
+   * ⚠️ جعبه‌ی خرید آن را می‌دهد چون دکمه‌ی زیرش «استعلام قیمت در واتساپ» است: «استعلام قیمت» بالای «استعلام
+   * قیمت…» در ۲۰px همان تکرار است که اصل ۵ منع می‌کند (بازبینی کارفرما، ۳۰ مهر ۱۴۰۵). کارت‌ها برچسب پیش‌فرض را دارند.
+   */
+  statusLabel?: string;
 }
 
-const { price, size = 'card', class: className = '' } = Astro.props;
+const { price, size = 'card', class: className = '', statusLabel } = Astro.props;
 
 const isPage = size === 'page';
 const faDate = (iso: string | null) =>
@@ -69,16 +75,21 @@ const priceDateLabel = faDate(price.priceDate);
   <div class:list={['flex flex-col gap-1', className]}>
     <span
       class:list={[
-        'inline-flex items-center gap-2 font-bold text-accent-ink',
+        'inline-flex items-center gap-2 font-bold',
+        statusLabel ? 'text-steel-900' : 'text-accent-ink',
         isPage ? 'text-xl' : 'text-sm',
       ]}
     >
-      استعلام قیمت روز
+      {statusLabel ?? 'استعلام قیمت روز'}
     </span>
     <span class:list={['text-steel-500 tabular-nums', isPage ? 'text-sm' : 'text-xs']}>
       آخرین قیمت{priceDateLabel ? ` (${priceDateLabel})` : ''}: {formatPrice(price.effective)}
     </span>
   </div>
+) : statusLabel ? (
+  <span class:list={['inline-flex items-center gap-2 font-bold text-steel-900', isPage ? 'text-xl' : 'text-sm', className]}>
+    {statusLabel}
+  </span>
 ) : (
   <span
     class:list={[

@@ -18,13 +18,20 @@
 // ---------------------------------------------------------------------------
 import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import PriceTag from '../../components/PriceTag.astro';
-import ProductCard from '../../components/ProductCard.astro';
 import ProductGallery from '../../components/ProductGallery.astro';
 import PartNumber from '../../components/PartNumber.astro';
 import AuthenticityBadge from '../../components/AuthenticityBadge.astro';
 import TrustBadges from '../../components/TrustBadges.astro';
 import WarrantyNotice from '../../components/WarrantyNotice.astro';
+import StockPill from '../../components/StockPill.astro';
+import BuyBox from '../../components/BuyBox.astro';
+import ActionBar from '../../components/ActionBar.astro';
+import TwoTabs from '../../components/TwoTabs.astro';
+import SpecTable from '../../components/SpecTable.astro';
+import ProductRow from '../../components/ProductRow.astro';
+import { whatsappInquiryHref } from '../../components/inquiry-message';
+import { compactTrustBadges } from '../../data/trust';
+import { warrantyFor } from '../../data/warranty';
 import Community from '../../components/Community.astro';
 import ContentBlocks from '../../components/ContentBlocks.astro';
 import { getBlocks } from '../../lib/content-blocks';
@@ -43,6 +50,7 @@ import {
   productJsonLd,
   productPath,
   inquiryHref,
+  formatPrice,
   type CraneProduct,
 } from '../../lib/wp';
 
@@ -152,11 +160,10 @@ const jsonLd = {
 const hasFitment = product.oemCrossReference.length > 0 || product.compatibleModels.length > 0;
 const heroImage = product.images[0] ?? null;
 
-const stockLabel: Record<CraneProduct['stockStatus'], string | null> = {
-  in_stock: 'موجود در انبار',
-  on_order: 'تامین به‌سفارش',
-  unknown: null,
-};
+/* Frontend v2 (فاز ۱) — داده‌های نمایشی سرصفحه، اعتماد و نوار پایین. */
+const keySpecs = product.technicalSpecs.slice(0, 4);
+const hasTrust = compactTrustBadges(product.authenticity).length > 0;
+const hasWarranty = !!warrantyFor(product.categorySlugs);
 
 // تاریخ به‌روزرسانی واقعی از وردپرس — سیگنال تازگی برای کاربر و موتور
 // جستجو. اگر وردپرس تاریخی نداده باشد، چیزی ساخته نمی‌شود.
@@ -172,9 +179,14 @@ import { getContact } from '../../lib/site-options';
    زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
 const contact = await getContact();
 
+// نوار پایین: برچسب کوتاه قیمت + همان عمل اصلی جعبه‌ی خرید (تصمیم ۴: قلم استعلامی → واتساپ با نام و کد فنی).
+const barPriceLabel = price.payable && price.effective !== null ? formatPrice(price.effective) : 'فروش استعلامی';
+const barInquiryHref = price.payable ? null : whatsappInquiryHref(contact.whatsappHref, { name: product.name, sku: product.sku, url: canonical });
+const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-black whitespace-nowrap hover:bg-accent-ink';
+
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd} ogImage={heroImage?.url} noindex={!productReadiness(product).ready}>
+<Layout title={title} description={description} jsonLd={jsonLd} ogImage={heroImage?.url} noindex={!productReadiness(product).ready} mobileBar={false}>
   {product.isDemo && (
     /* رکورد نمایشی — عمداً پررنگ و غیرقابل‌چشم‌پوشی. اگر روزی سهواً روی
        سایت زنده بماند، هم بازدیدکننده و هم تیم بلافاصله متوجه می‌شوند. */
@@ -184,332 +196,145 @@ const contact = await getContact();
       </p>
     </div>
   )}
-  <section class="bg-steel-900 text-white pt-10 pb-6 px-4 print:hidden">
-    <div class="max-w-7xl mx-auto">
-      <Breadcrumb items={breadcrumbItems} />
-    </div>
-  </section>
 
-  {/* ============================ بخش اصلی ============================ */}
-  <section class="bg-white px-4 py-8 md:py-10 border-b-[8px] border-accent-ink print:border-0 print:py-0">
-    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-      <div class="lg:col-span-5">
-        <ProductGallery images={product.images} productName={product.name} />
-      </div>
+  {/* ════════════════════ Frontend v2، فاز ۱ — ترتیب §4 ════════════════════
+      موبایل، از بالا به پایین: مسیر یک‌خطی → هویت فشرده (نام، کد، برند، اصالت، موجودی) → گالری ۴:۳ → قیمت + یک
+      عمل اصلی → چیپ‌های مشخصه → سازگاری → اعتماد و ضمانت (یک‌بار) → دو زبانه → توضیحات و پرسش‌ها.
+      چرا هویت *پیش از* گالری (تحلیل کامل در §4): خریدارِ آمده از گوگل کد فنی جستجو کرده؛ اولین پرسشش «این صفحه‌ی
+      همان کد است؟» است و فقط متن به آن پاسخ می‌دهد — ده ریموت شبیه هم‌اند. معیار پذیرش: کد، تصویر، قیمت و عمل
+      اصلی همه در اولین صفحه‌ی ۳۹۰×۸۱۲.
+      دسکتاپ (lg+): دو ستون — هویت و خرید در ستون راست (شروع RTL)، گالری چسبان در ستون چپ. همان DOM، فقط
+      جای ستون‌ها با grid عوض می‌شود؛ ترتیب خواندن صفحه‌خوان همان ترتیب موبایل می‌ماند. */}
+  <div class="bg-white border-b border-steel-300 print:border-0">
+    <div class="max-w-7xl mx-auto px-4 md:px-6">
+      <div class="print:hidden"><Breadcrumb items={breadcrumbItems} surface /></div>
 
-      <div class="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
-        <div class="flex flex-wrap items-center gap-3 mb-4">
-          {brand && (
-            <a
-              href={`/brands/${brand.slug}`}
-              class="bg-steel-50 border border-steel-200 text-steel-900 text-sm font-bold px-3 py-1.5 rounded-lg hover:border-accent-ink hover:text-accent-ink transition-colors"
-            >
-              {brand.nameFa}
-              <span class="text-steel-500 font-normal" dir="ltr"> ({brand.nameEn})</span>
-              <span class="text-steel-500 font-normal"> — ساخت {brand.country}</span>
-            </a>
-          )}
-          {stockLabel[product.stockStatus] && (
-            <span
-              class:list={[
-                'text-sm font-bold px-3 py-1.5 rounded-lg border',
-                product.stockStatus === 'in_stock'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : 'bg-amber-50 text-amber-800 border-amber-200',
-              ]}
-            >
-              {stockLabel[product.stockStatus]}
-            </span>
-          )}
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-x-10 gap-y-4 pb-6 lg:pb-10">
+        {/* ── ۲) هویت فشرده ── */}
+        <header class="lg:col-start-1 lg:col-span-7 lg:row-start-1 pt-1">
+          <h1 class="text-xl md:text-2xl lg:text-3xl font-black text-steel-900 leading-[1.6] line-clamp-2 lg:line-clamp-none">{product.name}</h1>
+          <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {product.sku && <PartNumber sku={product.sku} id="main" compact />}
+            {brand && (
+              <a href={`/brands/${brand.slug}`} class="inline-flex items-center min-h-11 text-sm font-bold text-steel-700 hover:text-accent-ink hover:underline underline-offset-4">
+                {brand.nameFa}<span class="font-normal text-steel-500 ms-1" dir="ltr">({brand.nameEn})</span>
+              </a>
+            )}
+          </div>
+          <div class="mt-1 flex flex-wrap items-center gap-2">
+            {product.authenticity && <AuthenticityBadge authenticity={product.authenticity} full />}
+            <StockPill status={product.stockStatus} />
+          </div>
+        </header>
+
+        {/* ── ۳) گالری ── */}
+        <div class="lg:col-start-8 lg:col-span-5 lg:row-start-1 lg:row-span-4 lg:sticky lg:top-28 lg:self-start">
+          <ProductGallery images={product.images} productName={product.name} />
         </div>
 
-        <h1 class="text-2xl md:text-4xl font-black text-steel-900 leading-[1.45] mb-3">{product.name}</h1>
-        {product.authenticity && (
-          <p class="mb-5"><AuthenticityBadge authenticity={product.authenticity} full /></p>
-        )}
-
-        {product.sku && (
-          <div class="mb-6">
-            <PartNumber sku={product.sku} id="main" />
-          </div>
-        )}
-
-        {product.summary && <p class="text-steel-700 leading-7 mb-5">{product.summary}</p>}
-
-        {/* ------------------- مشخصات کلیدی، بالای خط تا -------------------
-            شش مشخصه‌ی اول به‌صورت جدول فشرده، دقیقاً زیر کد فنی. جدول کامل
-            پایین صفحه باقی می‌ماند؛ این نسخه فقط سوال اول خریدار را جواب
-            می‌دهد: «آیا این همان قطعه‌ای است که لازم دارم؟» */}
-        {product.technicalSpecs.length > 0 && (
-          <table class="w-full text-sm mb-5 border border-steel-300 rounded-md overflow-hidden">
-            <caption class="sr-only">مشخصات فنی کلیدی {product.name}</caption>
-            <tbody>
-              {product.technicalSpecs.slice(0, 6).map((spec, i) => (
-                <tr class={i % 2 === 1 ? 'bg-steel-50' : 'bg-white'}>
-                  <th scope="row" class="text-right font-bold text-steel-600 px-3 py-1.5 w-2/5 border-b border-steel-100 align-top">
-                    {spec.label}
-                  </th>
-                  <td class="px-3 py-1.5 text-steel-900 font-bold border-b border-steel-100">{spec.value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {product.technicalSpecs.length > 6 && (
-          <p class="text-xs mb-5 -mt-3">
-            <a href="#specs-heading" class="font-bold text-accent-ink hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded">
-              مشاهده‌ی هر {product.technicalSpecs.length} مشخصه ↓
-            </a>
-          </p>
-        )}
-
-        {/* ------------------------- جعبه‌ی خرید ------------------------- */}
-        <div id="buy-box" class="bg-steel-50 border-2 border-steel-900 rounded-lg p-5 md:p-6 mb-6 print:hidden">
-          {/* برچسب مسیر خرید — کاربر باید پیش از دیدن دکمه بداند با چه
-              فرایندی روبه‌روست. ابهام بین «خرید» و «استعلام» مکث ایجاد
-              می‌کند، و مکث در خرید صنعتی یعنی رفتن سراغ تامین‌کننده‌ی بعدی. */}
-          <p class="text-xs font-black tracking-wider text-steel-600 mb-3">
-            استعلام قیمت و پیش‌فاکتور رسمی
-          </p>
-
-          {/* قلاب‌های تبدیل — لحظه‌ی تصمیم.
-              این سه مورد عمداً *بالای* قیمت‌اند: خریدار صنعتی پیش از دیدن
-              عدد، سه نگرانی دارد — چه زمانی می‌رسد، آیا گران خریده‌ام، و
-              آیا قطعه درست است. پاسخ‌دادن به آن‌ها بعد از قیمت، دیر است. */}
-          <ul class="flex flex-wrap gap-1.5 mb-4" role="list">
-            {[
-              // ⚠️ فقط ادعای تأییدشده (۲۷ مهر ۱۴۰۵): «ارسال فوری/همان روز» با پاسخ کارفرما («زمان ارسال متغیر است») تناقض داشت
-              // و «بهترین قیمت بازار / واردکننده‌ی مستقیم» تأییدنشده بود (قاعده‌ی ۲). متن ارسال = trust.ts → delivery.
-              { t: 'ارسال سریع', d: 'ارسال در سریع‌ترین زمان ممکن' },
-              { t: 'بررسی سازگاری', d: 'پیش از صدور پیش‌فاکتور تایید می‌شود' },
-              { t: 'قیمت‌گذاری تخصصی', d: 'قیمت بر اساس کد فنی و تیراژ سفارش' },
-            ].map((hook) => (
-              <li
-                class="flex items-center gap-1.5 text-xs font-black text-accent-ink bg-accent-soft border border-accent/30 rounded px-2 py-1"
-                title={hook.d}
-              >
-                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
-                {hook.t}
-              </li>
-            ))}
-          </ul>
-          <PriceTag price={price} size="page" />
-
-          {/* ═══ دکمه‌های خرید — دو سبد جدا (ایست ۲، فاز ۳) ═══
-              قلم پرداخت‌پذیر: «افزودن به سبد خرید» + دکمه‌ی فرعی «دریافت
-              پیش‌فاکتور» (خریدار صنعتی پیش از پرداخت تأیید داخلی می‌خواهد —
-              تأیید کارفرما). بقیه: فقط «افزودن به سبد استعلام».
-              ⚠️ data-guard-until: صفحه ممکن است از build چند روز پیش باشد.
-              پس از پایان اعتبار قیمت، محافظ مرورگر (Baskets.astro) دکمه‌های
-              data-payable-only را پنهان و data-expired-only را نمایان می‌کند
-              — بدون rebuild. سرور هنگام پرداخت خودش دوباره می‌سنجد. */}
-          {price.payable && (
-            <p data-guard-until={price.validUntil} data-expired-only hidden class="mt-4 text-sm leading-7 text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-              اعتبار این قیمت به پایان رسیده است. برای قیمت روز، استعلام بگیرید.
+        {/* ── ۴) قیمت + یک عمل اصلی ──
+            ⚠️ id="buy-box" قرارداد §7 است (لنگر و اسکریپت‌ها). سه نسخه‌ی تکراری اعتماد که این‌جا بود (قرص‌های بالای
+            قیمت، TrustBadges، فهرست سه‌تایی) حذف شد — اعتماد یک‌بار، پایین‌تر (§4b). */}
+        <section id="buy-box" class="lg:col-start-1 lg:col-span-7 lg:row-start-2 print:hidden" aria-label="قیمت و خرید">
+          <BuyBox slug={product.slug} name={product.name} sku={product.sku} url={canonical} price={price} whatsappHref={contact.whatsappHref}>
+            <Fragment slot="links">
+              {/* علاقه‌مندی — وارد نشده: به ورود می‌رود و بعد به همین صفحه برمی‌گردد. ⚠️ idهای wish-* را اسکریپت پایین می‌خواند. */}
+              <button type="button" id="wish-toggle" data-wish-slug={product.slug} aria-pressed="false"
+                class="inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
+                <svg id="wish-icon" class="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.6a4.3 4.3 0 017.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" /></svg>
+                <span id="wish-label">افزودن به علاقه‌مندی‌ها</span>
+              </button>
+              {/* ابزار کار واقعی: خرید صنعتی چندنفره است — ارسال به همکار و چاپ مشخصات برای تأیید داخلی. */}
+              <button type="button" id="share-product" data-title={product.name} data-url={canonical}
+                class="inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
+                <span id="share-label">ارسال به همکار</span>
+              </button>
+              <button type="button" id="print-product" class="hidden lg:inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
+                چاپ مشخصات
+              </button>
+            </Fragment>
+          </BuyBox>
+          {contact.telHref && (
+            <p class="mt-1 text-sm text-steel-600">
+              تماس: <a href={contact.telHref} class="font-bold text-steel-900 hover:text-accent-ink tabular-nums" dir="ltr">{contact.phoneDisplay}</a>
+              <span class="text-steel-500"> — در ساعات کاری</span>
             </p>
           )}
-          <div class="flex flex-col sm:flex-row gap-3 mt-6">
-            {price.payable ? (
-              <>
-                <button
-                  type="button"
-                  data-cart-add={product.slug}
-                  data-basket-name={product.name}
-                  data-basket-sku={product.sku ?? ''}
-                  data-guard-until={price.validUntil}
-                  data-payable-only
-                  class="flex-1 bg-accent-ink text-white px-8 py-4 rounded-lg font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px]"
-                >
-                  <span data-basket-label>افزودن به سبد خرید</span>
-                </button>
-                <button
-                  type="button"
-                  data-quote-add={product.slug}
-                  data-quote-mode="rfq"
-                  data-basket-name={product.name}
-                  data-basket-sku={product.sku ?? ''}
-                  data-guard-until={price.validUntil}
-                  data-expired-only
-                  hidden
-                  class="flex-1 bg-accent-ink text-white px-8 py-4 rounded-lg font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px]"
-                >
-                  <span data-basket-label>افزودن به سبد استعلام</span>
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                data-quote-add={product.slug}
-                data-quote-mode="rfq"
-                data-basket-name={product.name}
-                data-basket-sku={product.sku ?? ''}
-                class="flex-1 bg-accent-ink text-white px-8 py-4 rounded-lg font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px]"
-              >
-                <span data-basket-label>افزودن به سبد استعلام</span>
-              </button>
+        </section>
+
+        {/* ── ۵) چیپ‌های مشخصه‌ی کلیدی (حداکثر ۴) → جدول کامل ──
+            جدول فشرده‌ی شش‌ردیفی کنار خرید حذف شد: همان مشخصات سه بار تکرار می‌شد (§3). */}
+        {keySpecs.length > 0 && (
+          <div class="lg:col-start-1 lg:col-span-7 lg:row-start-3">
+            <ul class="flex flex-wrap gap-2" role="list" aria-label="مشخصات کلیدی">
+              {keySpecs.map((spec) => (
+                <li class="rounded border border-steel-300 bg-steel-50 px-2 py-1 text-xs">
+                  <span class="text-steel-600">{spec.label}:</span> <span class="font-bold text-steel-900" dir="auto">{spec.value}</span>
+                </li>
+              ))}
+            </ul>
+            {product.technicalSpecs.length > keySpecs.length && (
+              <a href="#product-tabs-panel-1" class="mt-1 inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4">
+                همه‌ی {product.technicalSpecs.length} مشخصه ↓
+              </a>
             )}
-            <a
-              href={contact.whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="flex-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-center px-6 py-4 rounded-lg font-black hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center"
-            >
-              ارسال عکس قطعه در واتساپ
-            </a>
           </div>
-          {price.payable && (
-            <button
-              type="button"
-              data-quote-add={product.slug}
-              data-quote-mode="cart"
-              data-basket-name={product.name}
-              data-basket-sku={product.sku ?? ''}
-              data-guard-until={price.validUntil}
-              data-payable-only
-              class="mt-3 w-full border-2 border-steel-300 text-steel-800 px-6 py-3 rounded-lg font-bold hover:border-accent-ink hover:text-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/30 min-h-[48px]"
-            >
-              <span data-basket-label>دریافت پیش‌فاکتور</span>
-            </button>
-          )}
-
-          {/* علاقه‌مندی — وارد نشده: به ورود می‌رود و بعد به همین صفحه برمی‌گردد.
-              وضعیت (پر/خالی) فقط برای کاربر واردشده از سرور خوانده می‌شود. */}
-          <button
-            type="button"
-            id="wish-toggle"
-            data-wish-slug={product.slug}
-            aria-pressed="false"
-            class="mt-3 inline-flex items-center gap-2 text-sm font-bold text-steel-700 hover:text-red-700 transition-colors rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-300"
-          >
-            <svg id="wish-icon" class="w-5 h-5" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.6a4.3 4.3 0 017.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" /></svg>
-            <span id="wish-label">افزودن به علاقه‌مندی‌ها</span>
-          </button>
-
-          <p class="text-xs text-steel-600 leading-6 mt-3">
-            می‌توانید چند قطعه را در سبد جمع کنید و یک درخواست پیش‌فاکتور بفرستید —
-            بدون ثبت‌نام و بدون رمز عبور.
-          </p>
-
-          {/* بلوک اطمینان — دقیقاً کنار دکمه، جایی که تردید خرید رخ می‌دهد. */}
-          <div class="mt-5 pt-4 border-t border-steel-300">
-            <TrustBadges variant="compact" authenticity={product.authenticity} />
-          </div>
-
-          <WarrantyNotice categorySlugs={product.categorySlugs} />
-
-          <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 pt-5 border-t border-steel-300" role="list">
-            {[
-              { t: 'بررسی سازگاری', d: 'پیش از صدور پیش‌فاکتور تایید می‌شود', p: 'M9 12l2 2 4-4' },
-              { t: 'فاکتور رسمی', d: 'قابل ارائه به واحد مالی', p: 'M9 12h6m-6 4h6M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z' },
-              { t: 'ضمانت اصالت', d: 'کتبی، همراه کالا', p: 'M12 2l8 4v6c0 5-3 8-8 10-5-2-8-5-8-10V6l8-4z' },
-            ].map((item) => (
-              <li class="flex items-start gap-2.5">
-                <span class="w-8 h-8 shrink-0 rounded-lg bg-white border border-steel-200 text-accent-ink flex items-center justify-center" aria-hidden="true">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={item.p} /></svg>
-                </span>
-                <span class="min-w-0">
-                  <span class="block text-sm font-bold text-steel-900 leading-6">{item.t}</span>
-                  <span class="block text-xs text-steel-600 leading-5">{item.d}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          {/* دسترسی مستقیم — خریدارِ تحت فشار توقف خط اغلب فرم پر نمی‌کند و
-              ترجیح می‌دهد همان لحظه تماس بگیرد. پنهان‌کردن شماره پشت یک
-              صفحه‌ی دیگر، همان‌جا لید را از دست می‌دهد. */}
-          <div class="flex flex-wrap items-center gap-x-5 gap-y-2 mt-6 pt-5 border-t border-steel-200 text-sm">
-            <a href={contact.telHref} class="inline-flex items-center gap-2 font-bold text-steel-900 hover:text-accent-ink transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-              <span dir="ltr">{contact.phoneDisplay}</span>
-            </a>
-            <span class="text-steel-300" aria-hidden="true">|</span>
-            <span class="text-steel-600">پاسخ‌گویی در ساعات کاری</span>
-          </div>
-        </div>
-
-        {/* --------- ابزار کار واقعی: ارسال به همکار و چاپ مشخصات --------- */}
-        <div class="flex flex-wrap gap-2 print:hidden">
-          <button
-            type="button"
-            id="share-product"
-            data-title={product.name}
-            data-url={canonical}
-            class="inline-flex items-center gap-2 text-sm font-bold text-steel-900 bg-white border border-steel-200 rounded-lg px-4 py-2.5 hover:border-accent-ink hover:text-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/30"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342a3 3 0 100-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684zm0-12.632a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z" /></svg>
-            <span id="share-label">اشتراک گذاری</span>
-          </button>
-          <button
-            type="button"
-            id="print-product"
-            class="inline-flex items-center gap-2 text-sm font-bold text-steel-900 bg-white border border-steel-200 rounded-lg px-4 py-2.5 hover:border-accent-ink hover:text-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/30"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-            چاپ مشخصات فنی
-          </button>
-        </div>
+        )}
 
         {modifiedDate && (
-          <p class="text-xs text-steel-600 mt-5">
+          <p class="lg:col-start-1 lg:col-span-7 lg:row-start-4 text-xs text-steel-600">
             آخرین به‌روزرسانی اطلاعات این قطعه: <time datetime={product.modified!}>{modifiedDate}</time>
           </p>
         )}
       </div>
     </div>
-  </section>
+  </div>
 
-  {/* =================== کدهای معادل و سازگاری (Fitment) =================== */}
+  {/* ── ۶) کدهای معادل و سازگاری (Fitment) ── */}
   {hasFitment && (
-    <section class="bg-steel-50 px-4 py-9 border-b border-steel-100 print:bg-white print:py-4" aria-labelledby="fitment-heading">
+    <section class="bg-steel-50 px-4 md:px-6 py-8 border-b border-steel-300 print:bg-white print:py-4" aria-labelledby="fitment-heading">
       <div class="max-w-7xl mx-auto">
         <h2 id="fitment-heading" class="text-xl font-black text-steel-900 mb-2">کدهای معادل و سازگاری</h2>
-        <p class="text-steel-700 leading-8 mb-8 max-w-3xl print:hidden">
+        <p class="text-sm text-steel-700 leading-7 mb-5 max-w-3xl print:hidden">
           اگر کد روی قطعه‌ی فرسوده‌ی شما با کد بالا یکی نیست، جدول زیر را بررسی کنید؛ یک قطعه اغلب با چند کد مختلف سازنده عرضه می‌شود.
         </p>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {product.oemCrossReference.length > 0 && (
-            <div class="bg-white rounded-lg border border-steel-100 overflow-hidden">
-              <h3 class="font-black text-steel-900 px-6 py-4 border-b border-steel-100 bg-steel-50">کدهای معادل سازنده (OEM)</h3>
-              <table class="w-full text-sm">
-                <caption class="sr-only">فهرست کدهای فنی معادل این قطعه نزد سازندگان مختلف</caption>
+            <div class="bg-white rounded border border-steel-300 overflow-hidden">
+              <table class="w-full text-sm text-right">
+                <caption class="text-right font-black text-steel-900 px-3 py-2 bg-steel-100 border-b border-steel-300">کدهای معادل سازنده (OEM)</caption>
                 <thead>
                   <tr class="text-steel-600 text-xs">
-                    <th scope="col" class="text-right font-bold px-6 py-3">سازنده</th>
-                    <th scope="col" class="text-right font-bold px-6 py-3">کد فنی</th>
+                    <th scope="col" class="font-bold px-3 py-2">سازنده</th>
+                    <th scope="col" class="font-bold px-3 py-2">کد فنی</th>
                   </tr>
                 </thead>
                 <tbody>
                   {product.oemCrossReference.map((ref) => (
-                    <tr class="border-t border-steel-50">
-                      <td class="px-6 py-3 text-steel-700">{ref.oemBrand}</td>
-                      <td class="px-4 py-2 font-mono text-steel-900 font-bold select-all" dir="ltr">{ref.oemPartNumber}</td>
+                    <tr class="border-t border-steel-200 even:bg-steel-50">
+                      <td class="px-3 py-2 text-steel-700">{ref.oemBrand}</td>
+                      <td class="px-3 py-2"><span class="inline-block font-mono font-bold text-steel-900 select-all" dir="ltr">{ref.oemPartNumber}</span></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-
           {product.compatibleModels.length > 0 && (
-            <div class="bg-white rounded-lg border border-steel-100 overflow-hidden">
-              <h3 class="font-black text-steel-900 px-6 py-4 border-b border-steel-100 bg-steel-50">مدل‌های سازگار</h3>
-              <table class="w-full text-sm">
-                <caption class="sr-only">مدل‌های جرثقیل که این قطعه با آن‌ها سازگار است</caption>
+            <div class="bg-white rounded border border-steel-300 overflow-hidden">
+              <table class="w-full text-sm text-right">
+                <caption class="text-right font-black text-steel-900 px-3 py-2 bg-steel-100 border-b border-steel-300">مدل‌های سازگار</caption>
                 <thead>
                   <tr class="text-steel-600 text-xs">
-                    <th scope="col" class="text-right font-bold px-6 py-3">برند</th>
-                    <th scope="col" class="text-right font-bold px-6 py-3">مدل</th>
+                    <th scope="col" class="font-bold px-3 py-2">برند</th>
+                    <th scope="col" class="font-bold px-3 py-2">مدل</th>
                   </tr>
                 </thead>
                 <tbody>
                   {product.compatibleModels.map((model) => (
-                    <tr class="border-t border-steel-50">
-                      <td class="px-6 py-3 text-steel-700">{model.craneBrand}</td>
-                      <td class="px-4 py-2 font-mono text-steel-900 font-bold select-all" dir="ltr">{model.modelName}</td>
+                    <tr class="border-t border-steel-200 even:bg-steel-50">
+                      <td class="px-3 py-2 text-steel-700">{model.craneBrand}</td>
+                      <td class="px-3 py-2"><span class="inline-block font-mono font-bold text-steel-900 select-all" dir="ltr">{model.modelName}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -517,69 +342,77 @@ const contact = await getContact();
             </div>
           )}
         </div>
-
-        <p class="text-sm text-steel-700 leading-7 mt-6 max-w-3xl print:hidden">
+        <p class="text-sm text-steel-700 leading-7 mt-4 max-w-3xl print:hidden">
           مدل دستگاه شما در فهرست نیست؟ عکس پلاک دستگاه را بفرستید تا سازگاری بررسی شود —
-          <a href={inquiryHref(product)} class="text-accent-ink font-bold hover:underline mr-1">بررسی سازگاری</a>.
+          <a href={inquiryHref(product)} class="text-accent-ink font-bold hover:underline">بررسی سازگاری</a>.
         </p>
       </div>
     </section>
   )}
 
-  {/* ============================ مشخصات فنی ============================ */}
-  {product.technicalSpecs.length > 0 && (
-    <section class="bg-white px-4 py-9 border-b border-steel-100 print:py-4" aria-labelledby="specs-heading">
-      <div class="max-w-4xl mx-auto">
-        <h2 id="specs-heading" class="text-2xl font-black text-steel-900 mb-5">مشخصات فنی</h2>
-        <table class="w-full text-sm border border-steel-100 rounded-lg overflow-hidden">
-          <caption class="sr-only">جدول مشخصات فنی {product.name}</caption>
-          <tbody>
-            {product.technicalSpecs.map((spec, index) => (
-              <tr class:list={[index % 2 === 0 ? 'bg-steel-50' : 'bg-white']}>
-                <th scope="row" class="text-right font-bold text-steel-900 px-6 py-3.5 w-1/3 align-top">{spec.label}</th>
-                <td class="px-6 py-3.5 text-steel-700 leading-7">{spec.value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+  {/* ── ۷) اعتماد و ضمانت — یک‌بار در کل صفحه (§4b) ── */}
+  {(hasTrust || hasWarranty) && (
+    <section class="bg-white px-4 md:px-6 py-6 border-b border-steel-300 print:hidden" aria-label="تضمین‌ها">
+      <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-10">
+        <TrustBadges variant="compact" authenticity={product.authenticity} />
+        <WarrantyNotice categorySlugs={product.categorySlugs} />
       </div>
     </section>
   )}
 
-  {/* ============================ توضیحات ============================ */}
-  {product.bodyHtml && (
-    <section class="bg-steel-50 px-4 py-9 border-b border-steel-100 print:hidden" aria-labelledby="description-heading">
+  {/* ── ۸) دقیقاً دو زبانه (تصمیم ۳ کارفرما): «مشخصات فنی» و «محصولات مرتبط/سازگار». زبانه‌ی خالی رندر نمی‌شود. ── */}
+  {product.technicalSpecs.length > 0 ? (
+    <section class="bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:py-4" aria-label="مشخصات و قطعات مرتبط">
+      <div class="max-w-4xl mx-auto" id="specs-heading">
+        <TwoTabs id="product-tabs" first="مشخصات فنی" second="محصولات مرتبط/سازگار">
+          <SpecTable slot="first" caption={`جدول مشخصات فنی ${product.name}`} sticky rows={product.technicalSpecs.map((s) => ({ label: s.label, value: s.value }))} />
+          {related.length > 0 && (
+            <ul slot="second" class="bg-white border border-steel-300 rounded" role="list">
+              {related.map((item) => (
+                <ProductRow slug={item.slug} name={item.name} sku={item.sku} url={`${SITE.url}${productPath(item)}`} brand={item.brandNameFa}
+                  keySpec={item.technicalSpecs[0]?.value ?? null} stock={item.stockStatus} price={computePrice(item)} whatsappHref={contact.whatsappHref} />
+              ))}
+            </ul>
+          )}
+        </TwoTabs>
+      </div>
+    </section>
+  ) : related.length > 0 && (
+    <section class="bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:hidden" aria-labelledby="related-heading">
+      <div class="max-w-4xl mx-auto">
+        <h2 id="related-heading" class="text-xl font-black text-steel-900 mb-3">محصولات مرتبط/سازگار</h2>
+        <ul class="bg-white border border-steel-300 rounded" role="list">
+          {related.map((item) => (
+            <ProductRow slug={item.slug} name={item.name} sku={item.sku} url={`${SITE.url}${productPath(item)}`} brand={item.brandNameFa}
+              keySpec={item.technicalSpecs[0]?.value ?? null} stock={item.stockStatus} price={computePrice(item)} whatsappHref={contact.whatsappHref} />
+          ))}
+        </ul>
+      </div>
+    </section>
+  )}
+
+  {/* ── ۹) توضیحات ── */}
+  {(product.summary || product.bodyHtml) && (
+    <section class="bg-steel-50 px-4 md:px-6 py-8 border-b border-steel-300 print:hidden" aria-labelledby="description-heading">
       <div class="max-w-4xl mx-auto">
         <h2 id="description-heading" class="text-xl font-black text-steel-900 mb-4">توضیحات فنی محصول</h2>
-        {/* لینک‌دهی داخلی خودکار روی متن محصول.
-            حفره‌ای که این خط می‌بندد: متن محصول بلندترین محتوای سایت
-            است (۱۲۰۰+ کلمه) و تا این لحظه *هیچ* لینک داخلی نداشت. یعنی
-            ۲۲ مقاله‌ی عمیق، ۲۲ بن‌بست بودند و هیچ ارزش پیوندی به صفحات
-            دسته منتقل نمی‌کردند.
-            پرامپت به جمنای می‌گوید نام دسته‌های مرتبط را طبیعی در متن
-            بیاورد؛ این تابع همان نام‌ها را به آدرس درست وصل می‌کند. */}
-        <div
-          class="prose-crane text-steel-700 leading-8"
-          set:html={autolinkHtml(product.bodyHtml, { currentPath: Astro.url.pathname, max: 6 })}
-        />
+        {/* خلاصه از سرصفحه این‌جا آمد: در سرصفحه، اولین صفحه‌ی موبایل را می‌گرفت و همان چیزی را می‌گفت که توضیحات
+            کامل می‌گوید (اصل ۵). متن همان است؛ فقط جایش. */}
+        {product.summary && <p class="text-base text-steel-800 leading-8 mb-4 font-bold">{product.summary}</p>}
+        {/* لینک‌دهی داخلی خودکار روی متن محصول — بلندترین محتوای سایت که بدون این هیچ لینک داخلی نداشت. */}
+        {product.bodyHtml && (
+          <div
+            class="prose-crane text-steel-700 leading-8"
+            set:html={autolinkHtml(product.bodyHtml, { currentPath: Astro.url.pathname, max: 6 })}
+          />
+        )}
       </div>
     </section>
   )}
 
-  {/* ===================== بلوک‌های محتوا ===================== */}
-  {/* ⚠️ این بخش تا امروز وجود نداشت و نبودش یک **تناقض سند با کد** بود:
-      `ROOTS` در `content-blocks.ts` از ابتدا `product` را داشت، گروه ACF
-      هم روی post type محصول ثبت شده بود و در پنل دیده می‌شد — ولی هیچ
-      صفحه‌ای `getBlocks('product')` را صدا نمی‌زد. یعنی مدیر محتوا
-      می‌توانست برای یک محصول ده بلوک بنویسد، ذخیره کند، و هیچ‌وقت
-      نفهمد چرا روی سایت نیست. همان الگوی «شکست بی‌صدا»، این بار از سمت
-      پنل.
-
-      جای این بخش عمدی است: بعد از توضیحات ویرایشگر و **پیش از** پرسش و
-      پاسخ. محتوای تخصصی باید قبل از محتوای کاربر بیاید. */}
+  {/* بلوک‌های محتوای اختیاری محصول — پس از توضیحات ویرایشگر و پیش از پرسش‌ها (محتوای تخصصی پیش از محتوای کاربر). */}
   <ContentBlocks blocks={blocks} title={product.name} eyebrow="در این صفحه" />
 
-  {/* ===================== پرسش و پاسخ فنی ===================== */}
   <Questions
     questions={questions}
     entity="product"
@@ -589,17 +422,7 @@ const contact = await getContact();
     wpBase={wpBase}
   />
 
-  {/* ===================== پرسش، پاسخ و تجربه‌ی کاربران ===================== */}
-  {/* ⚠️ باگی که اینجا رفع شد — علت «نبودن بخش نظرات» روی سایت:
-      این کامپوننت داخل شرط `related.length > 0` قرار گرفته بود، یعنی
-      بخش پرسش و پاسخ فقط وقتی رندر می‌شد که *محصول مرتبط* وجود داشته
-      باشد. با دو محصول در پایگاه داده که هم‌دسته نبودند، `related`
-      همیشه خالی بود و کل بخش اجتماعی هرگز روی صفحه نمی‌آمد.
-
-      این دو چیز هیچ ربطی به هم ندارند: پرسش کاربر درباره‌ی این قطعه
-      وابسته به وجود قطعه‌ی مشابه نیست. حالا مستقل رندر می‌شود و فرم
-      ثبت پرسش حتی روی محصولی که هنوز هیچ پرسشی ندارد هم دیده می‌شود —
-      که دقیقاً همان جایی است که اولین پرسش باید بتواند ثبت شود. */}
+  {/* مستقل از related — پرسش کاربر درباره‌ی این قطعه به وجود قطعه‌ی مشابه وابسته نیست (باگ قبلی). */}
   <Community
     entries={product.community}
     productId={product.wpId}
@@ -608,57 +431,30 @@ const contact = await getContact();
     class="print:hidden"
   />
 
-  {/* ========================= محصولات مرتبط ========================= */}
-  {related.length > 0 && (
-    <section class="bg-white px-4 py-9 print:hidden" aria-labelledby="related-heading">
-      <div class="max-w-7xl mx-auto">
-        <h2 id="related-heading" class="text-xl font-black text-steel-900 mb-5">قطعات مرتبط</h2>
-        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" role="list">
-          {related.map((item) => (
-            <li><ProductCard product={item} /></li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  )}
-
-  {/* ------- نوار اقدام چسبان موبایل: وقتی جعبه‌ی خرید از دید خارج شد ------- */}
-  <div
-    id="sticky-bar"
-    class="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-steel-200 shadow-[0_-4px_16px_rgba(0,0,0,0.10)] px-4 py-3 translate-y-full transition-transform duration-150 md:hidden print:hidden"
-    style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));"
-    aria-hidden="true"
+  {/* ── ۱۰) نوار عمل پایین موبایل — جایگزین #sticky-bar و MobileCTA روی این صفحه (mobileBar={false}) ──
+      از لحظه‌ی بارگذاری دیده می‌شود هر وقت دکمه‌ی اصلی جعبه‌ی خرید بیرون از دید است (ActionBar). ⚠️ برای قلم
+      پرداخت‌پذیر همان دکمه‌ی سبد با data-*های قرارداد §7، و نسخه‌ی data-expired-only برای پس از انقضا. */}
+  <ActionBar
+    priceLabel={barPriceLabel}
+    primaryLabel="استعلام در واتساپ"
+    primaryHref={barInquiryHref ?? '#buy-box'}
+    primaryExternal={!!barInquiryHref}
+    whatsappHref={contact.whatsappHref}
+    telHref={contact.telHref}
   >
-    <div class="flex items-center gap-3">
-      <div class="min-w-0 flex-1">
-        <PriceTag price={price} />
-      </div>
-      {price.payable && (
-        <button
-          type="button"
-          data-cart-add={product.slug}
-          data-basket-name={product.name}
-          data-basket-sku={product.sku ?? ''}
-          data-guard-until={price.validUntil}
-          data-payable-only
-          class="bg-accent-ink text-white px-6 py-3 rounded-lg font-black text-sm shrink-0 min-h-[48px] flex items-center focus:outline-none focus:ring-4 focus:ring-accent-ink/40"
-        >
-          <span data-basket-label>افزودن به سبد خرید</span>
+    {price.payable && (
+      <Fragment slot="primary">
+        <button type="button" class={BAR_PRIMARY} data-cart-add={product.slug} data-basket-name={product.name} data-basket-sku={product.sku ?? ''}
+          data-guard-until={price.validUntil} data-payable-only>
+          <span data-basket-label>افزودن به سبد</span>
         </button>
-      )}
-      {/* بدون قیمت پرداخت‌پذیر، یا پس از انقضای آن (محافظ مرورگر). */}
-      <a
-        href={inquiryHref(product)}
-        data-guard-until={price.payable ? price.validUntil : undefined}
-        data-expired-only={price.payable ? '' : undefined}
-        hidden={price.payable}
-        class="bg-accent-ink text-white px-6 py-3 rounded-lg font-black text-sm shrink-0 min-h-[48px] flex items-center focus:outline-none focus:ring-4 focus:ring-accent-ink/40"
-      >
-        استعلام قیمت
-      </a>
-    </div>
-  </div>
-
+        <button type="button" class={BAR_PRIMARY} hidden data-quote-add={product.slug} data-quote-mode="rfq" data-basket-name={product.name}
+          data-basket-sku={product.sku ?? ''} data-guard-until={price.validUntil} data-expired-only>
+          <span data-basket-label>افزودن به سبد استعلام</span>
+        </button>
+      </Fragment>
+    )}
+  </ActionBar>
 </Layout>
 
 <script>
@@ -695,26 +491,6 @@ const contact = await getContact();
 
   // ---------------- چاپ مشخصات ----------------
   document.getElementById('print-product')?.addEventListener('click', () => window.print());
-
-  // ---------------- نوار چسبان موبایل ----------------
-  // با IntersectionObserver به‌جای رویداد scroll: بدون هزینه‌ی محاسباتی روی
-  // هر پیکسل اسکرول، که روی موبایل‌های ضعیف‌تر تفاوت محسوسی دارد.
-  const buyBox = document.getElementById('buy-box');
-  const stickyBar = document.getElementById('sticky-bar');
-
-  if (buyBox && stickyBar && 'IntersectionObserver' in window) {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const hidden = entry.isIntersecting;
-        stickyBar.classList.toggle('translate-y-full', hidden);
-        // aria-hidden همگام نگه داشته می‌شود تا صفحه‌خوان محتوای تکراریِ
-        // نامرئی را اعلام نکند.
-        stickyBar.setAttribute('aria-hidden', String(hidden));
-      },
-      { rootMargin: '0px 0px -80px 0px' }
-    );
-    observer.observe(buyBox);
-  }
 </script>
 
 <script>

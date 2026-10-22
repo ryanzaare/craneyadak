@@ -15,9 +15,9 @@
 export interface Props {
   /** متن کوتاه وضعیت قیمت: «۲٬۴۰۰٬۰۰۰ تومان» یا «استعلامی». */
   priceLabel: string;
-  primaryLabel: string;
-  /** مقصد عمل اصلی: نشانی (واتساپ) یا لنگر دکمه‌ی اصلی در صفحه. */
-  primaryHref: string;
+  primaryLabel?: string;
+  /** مقصد عمل اصلی: نشانی (واتساپ) یا لنگر دکمه‌ی اصلی در صفحه. با اسلات primary لازم نیست. */
+  primaryHref?: string;
   primaryExternal?: boolean;
   whatsappHref?: string | null;
   telHref?: string | null;
@@ -25,6 +25,8 @@ export interface Props {
 }
 
 const { priceLabel, primaryLabel, primaryHref, primaryExternal = false, whatsappHref, telHref, inline = false } = Astro.props;
+// کلاس دکمه‌ی اصلی نوار — صفحه‌ی محصول همین را برای دکمه‌های اسلات primary تکرار می‌کند.
+const ACTION_BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-black whitespace-nowrap hover:bg-accent-ink';
 const icon = 'inline-flex items-center justify-center w-11 h-11 rounded-md border border-steel-300 text-steel-700 hover:text-steel-900 hover:border-steel-400';
 ---
 
@@ -46,16 +48,21 @@ const icon = 'inline-flex items-center justify-center w-11 h-11 rounded-md borde
       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2z" /></svg>
     </a>
   )}
-  <a
-    href={primaryHref}
-    target={primaryExternal ? '_blank' : undefined}
-    rel={primaryExternal ? 'noopener noreferrer' : undefined}
-    class="inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-accent-ink text-white text-sm font-black whitespace-nowrap hover:bg-accent-strong"
-  >{primaryLabel}</a>
+  {/* اسلات «primary»: صفحه‌ی محصول برای قلم پرداخت‌پذیر همان دکمه‌ی سبد را با data-*های قرارداد §7 می‌دهد
+      (افزودن مستقیم، نه پرش به جعبه‌ی خرید). بدون اسلات، پیوند ساده. */}
+  {Astro.slots.has('primary') ? <slot name="primary" /> : (
+    <a
+      href={primaryHref}
+      target={primaryExternal ? '_blank' : undefined}
+      rel={primaryExternal ? 'noopener noreferrer' : undefined}
+      class={ACTION_BAR_PRIMARY}
+    >{primaryLabel}</a>
+  )}
 </div>
 
-{!inline && (
-  <script>
+{/* ⚠️ اسکریپت بیرون از شرط: <script> داخل عبارت JSX پردازش نمی‌شود (TS خام به مرورگر می‌رسد). روی صفحه‌ای
+    بدون نوار ثابت، [data-action-bar] نیست و اسکریپت کاری نمی‌کند. */}
+<script>
     const bar = document.querySelector<HTMLElement>('[data-action-bar]');
     const primary = document.querySelector('[data-primary-action]');
     if (bar && primary && 'IntersectionObserver' in window) {
@@ -67,4 +74,4 @@ const icon = 'inline-flex items-center justify-center w-11 h-11 rounded-md borde
       }).observe(primary);
     }
   </script>
-)}
+

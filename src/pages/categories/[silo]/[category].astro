@@ -320,7 +320,7 @@ const contact = await getContact();
             فهرست آنلاین این دسته در حال تکمیل است و تنها اقلامی منتشر می‌شود که تامین آن‌ها قطعی باشد. سریع‌ترین مسیر این است که کد فنی (Part Number)، پلاک دستگاه یا عکس قطعه‌ی فرسوده را برای کارشناسان ما بفرستید تا سازگاری بررسی و پیش‌فاکتور رسمی صادر شود.
           </p>
           <div class="flex flex-col sm:flex-row gap-3">
-            <a href={`/contact?category=${encodeURIComponent(displayName)}`} class="bg-accent-ink text-white px-8 py-4 rounded-lg font-black text-center hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
+            <a href={`/contact?category=${encodeURIComponent(displayName)}`} class="bg-action text-white px-8 py-4 rounded-lg font-black text-center hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
             <a href={contact.telHref} class="bg-steel-900 text-white px-8 py-4 rounded-lg font-black text-center hover:bg-steel-800 transition-colors focus:outline-none focus:ring-4 focus:ring-steel-900/30 min-h-[52px] flex items-center justify-center">تماس با واحد فروش</a>
             <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-lg font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
           </div>

@@ -40,14 +40,15 @@ const colors = [
   ['steel-950', 'گرافیت تیره — فوتر'], ['steel-900', 'گرافیت — هدر، متن اصلی'], ['steel-800', ''], ['steel-700', 'متن بدنه'],
   ['steel-600', 'متن ثانویه'], ['steel-500', 'متن کم‌رنگ (AA روی ۵۰/۱۰۰)'], ['steel-400', 'فقط آیکن/جداکننده'], ['steel-300', 'خط مو'],
   ['steel-200', 'خط درون جدول'], ['steel-100', 'سطح ثانویه'], ['steel-50', 'سطح خواندن'],
-  ['accent', 'فقط پرکردن بی‌متن: فوکوس، حالت فعال'], ['accent-ink', 'دکمه‌ی اصلی، متن و پیوند نارنجی'], ['accent-strong', 'hover دکمه‌ی اصلی'], ['accent-soft', 'تینت'],
+  ['action', 'دکمه‌ی اصلی (#C2410C، ۵٫۲:۱)'], ['accent-ink', 'متن و پیوند نارنجی؛ hover دکمه'], ['accent-strong', 'hover پیوند'],
+  ['accent', 'فقط پرکردن بی‌متن: فوکوس، حالت فعال'], ['accent-soft', 'تینت'],
 ];
 // ⚠️ کلاس کامل و لفظی: Tailwind فقط رشته‌ی کامل را در سورس می‌بیند؛ `bg-${c}` هیچ CSS نمی‌سازد.
 const SWATCH: Record<string, string> = {
   'steel-950': 'bg-steel-950', 'steel-900': 'bg-steel-900', 'steel-800': 'bg-steel-800', 'steel-700': 'bg-steel-700',
   'steel-600': 'bg-steel-600', 'steel-500': 'bg-steel-500', 'steel-400': 'bg-steel-400', 'steel-300': 'bg-steel-300',
   'steel-200': 'bg-steel-200', 'steel-100': 'bg-steel-100', 'steel-50': 'bg-steel-50',
-  accent: 'bg-accent', 'accent-ink': 'bg-accent-ink', 'accent-strong': 'bg-accent-strong', 'accent-soft': 'bg-accent-soft',
+  action: 'bg-action', accent: 'bg-accent', 'accent-ink': 'bg-accent-ink', 'accent-strong': 'bg-accent-strong', 'accent-soft': 'bg-accent-soft',
 };
 const sizes = [['text-4xl', '۴۰'], ['text-3xl', '۳۲'], ['text-2xl', '۲۴'], ['text-xl', '۲۰'], ['text-base', '۱۶'], ['text-sm', '۱۴'], ['text-xs', '۱۲']];
 const h2 = 'text-2xl font-black text-steel-900 mb-4';
@@ -73,7 +74,7 @@ const section = 'py-10 border-t border-steel-300';
             </li>
           ))}
         </ul>
-        <p class="mt-3 text-sm text-steel-700 leading-7 max-w-prose">نارنجی فقط برای عمل، فوکوس و حالت فعال — هیچ تزئینی. 🔶 دکمه‌ی اصلی با <code class="font-mono" dir="ltr">accent-ink</code> پر می‌شود، نه <code class="font-mono" dir="ltr">accent</code>: متن سفید روی نارنجی روشن ۳٫۶:۱ است و زیر حد AA.</p>
+        <p class="mt-3 text-sm text-steel-700 leading-7 max-w-prose">نارنجی فقط برای عمل، فوکوس و حالت فعال — هیچ تزئینی. دکمه‌ی اصلی <code class="font-mono" dir="ltr">action</code> (#C2410C) با متن سفید ۵٫۲:۱؛ <code class="font-mono" dir="ltr">accent-ink</code> فقط برای متن و پیوند نارنجی روی سطح روشن.</p>
       </section>
 
       <section class={section} aria-labelledby="sg-type">
@@ -157,7 +158,8 @@ const section = 'py-10 border-t border-steel-300';
 
       <section class={section} aria-labelledby="sg-bar">
         <h2 id="sg-bar" class={h2}>نوار عمل پایین (موبایل)</h2>
-        <div class="max-w-sm space-y-3">
+        {/* پیش‌نمایش در عرض واقعی موبایل (۳۹۰px)؛ روی صفحه‌ی محصول همین نوار md:hidden و ثابت پایین صفحه است. */}
+        <div class="max-w-[390px] space-y-3">
           <ActionBar inline priceLabel={formatPrice(payable.effective ?? 0)} primaryLabel="افزودن به سبد" primaryHref="#style-guide" whatsappHref="#style-guide" telHref="#style-guide" />
           <ActionBar inline priceLabel="استعلامی" primaryLabel="استعلام در واتساپ" primaryHref="#style-guide" telHref="#style-guide" />
         </div>

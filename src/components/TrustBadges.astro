@@ -15,7 +15,7 @@
 // نشان فقط پس از تایید دامنه از enamad.ir صادر می‌شود. ظرف با ابعاد نهایی
 // رزرو شده تا هنگام جای‌گذاری کد واقعی، چیدمان جابه‌جا نشود (CLS = 0).
 // ---------------------------------------------------------------------------
-import { TRUST_BADGES } from '../data/trust';
+import { TRUST_BADGES, compactTrustBadges } from '../data/trust';
 
 interface Props {
   variant?: 'footer' | 'compact';
@@ -28,9 +28,7 @@ const { variant = 'footer', class: className = '', authenticity = null } = Astro
 
 /** حالت فشرده فقط نشان‌های تاییدشده را نشان می‌دهد — ادعای تاییدنشده در
     جعبه‌ی خرید، ادعای نادرست است نه «جای‌گذار». */
-const compactBadges = TRUST_BADGES.filter(
-  (b) => b.verified && b.compact !== false && (!b.onlyIfAuthenticity || b.onlyIfAuthenticity === authenticity),
-);
+const compactBadges = compactTrustBadges(authenticity);
 ---
 
 {

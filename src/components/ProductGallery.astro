@@ -46,7 +46,11 @@ const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
 ---
 
 <div class="product-gallery">
-  <figure class="aspect-square bg-steel-50 rounded-lg border border-steel-100 overflow-hidden relative m-0">
+  {/* ⚠️ Frontend v2 (فاز ۱، §4 گام ۳): قاب ۴:۳ با ارتفاع سقف‌دار (~۲۷۰px روی گوشی ۳۹۰px) به‌جای مربع ۳۶۰px+.
+      گالری مربعی کد فنی و برچسب اصالت را از اولین صفحه‌ی موبایل بیرون می‌راند. object-contain، نه cover: عکس
+      قطعه برای تشخیص است و بریدن لبه‌ی آن (کانکتور، شیار) همان اطلاعاتی را حذف می‌کند که خریدار دنبالش است.
+      نسبت ثابت = CLS صفر. قاب خنثی؛ هیچ‌چیز روی خود عکس کشیده نمی‌شود (تصمیم ۱ کارفرما). */}
+  <figure id="gallery-figure" class="aspect-[4/3] bg-white rounded-lg border border-steel-300 overflow-hidden relative m-0 touch-pan-y">
     {hasImages ? (
       gallery.map((image, index) => (
         <div class="gallery-slide absolute inset-0" data-index={index} hidden={index !== 0}>
@@ -57,7 +61,7 @@ const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
             height={900}
             eager={index === 0}
             sizes="(max-width: 1024px) 100vw, 40vw"
-            class="w-full h-full object-cover"
+            class="w-full h-full object-contain"
           />
         </div>
       ))
@@ -91,8 +95,25 @@ const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
     )}
   </figure>
 
+  {/* موبایل: نقطه‌های اسلاید + کشیدن انگشت به‌جای نوار بندانگشتی (§4 گام ۳). هدف لمسی ۴۴px، نقطه‌ی ۸px. */}
   {gallery.length > 1 && (
-    <div class="mt-4 print:hidden">
+    <div class="lg:hidden flex justify-center print:hidden" role="group" aria-label="انتخاب تصویر">
+      {gallery.map((image, index) => (
+        <button
+          type="button"
+          class="gallery-dot w-11 h-11 grid place-items-center"
+          data-index={index}
+          aria-current={index === 0 ? 'true' : 'false'}
+          aria-label={`تصویر ${index + 1} از ${gallery.length}`}
+        >
+          <span class="w-2 h-2 rounded-full bg-steel-300 in-aria-current:bg-steel-900" aria-hidden="true" />
+        </button>
+      ))}
+    </div>
+  )}
+
+  {gallery.length > 1 && (
+    <div class="hidden lg:block mt-4 print:hidden">
       {/* برچسب گروه فقط وقتی هر دو نوع عکس وجود دارد — در غیر این صورت
           یک عنوان بی‌فایده روی یک گروه تنها می‌نشیند. */}
       {hasFieldShots && (
@@ -191,13 +212,33 @@ const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
       const active = document.querySelector<HTMLElement>(`.gallery-thumb[data-index="${index}"]`);
       const isField = active?.dataset.source === 'field';
       badge.textContent = isField ? 'نصب واقعی روی دستگاه مشتری' : 'عکس رسمی سازنده';
-      badge.className = badge.className.replace(/bg-\S+/, isField ? 'bg-accent-ink' : 'bg-steel-900');
+      badge.className = badge.className.replace(/bg-\S+/, isField ? 'bg-action' : 'bg-steel-900');
     }
 
-    document.querySelectorAll<HTMLButtonElement>('.gallery-thumb').forEach((thumb) => {
+    document.querySelectorAll<HTMLButtonElement>('.gallery-thumb, .gallery-dot').forEach((thumb) => {
       thumb.setAttribute('aria-current', String(thumb.dataset.index === String(index)));
     });
   };
+
+  document.querySelectorAll<HTMLButtonElement>('.gallery-dot').forEach((dot) => {
+    dot.addEventListener('click', () => show(Number(dot.dataset.index ?? 0)));
+  });
+
+  // کشیدن انگشت روی قاب: فقط حرکت افقیِ واضح (≥۴۰px و بیشتر از عمودی) — اسکرول عمودی صفحه دست نمی‌خورد.
+  // ⚠️ RTL: کشیدن به راست = تصویر بعدی (جهت خواندن). touch-pan-y روی figure اسکرول عمودی را به مرورگر می‌دهد.
+  const figure = document.getElementById('gallery-figure');
+  const total = document.querySelectorAll('.gallery-slide').length;
+  let x0 = 0;
+  let y0 = 0;
+  figure?.addEventListener('touchstart', (e) => { x0 = e.touches[0]!.clientX; y0 = e.touches[0]!.clientY; }, { passive: true });
+  figure?.addEventListener('touchend', (e) => {
+    if (total < 2) return;
+    const dx = e.changedTouches[0]!.clientX - x0;
+    const dy = e.changedTouches[0]!.clientY - y0;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    const current = [...document.querySelectorAll<HTMLElement>('.gallery-slide')].findIndex((sl) => !sl.hidden);
+    show((current + (dx > 0 ? 1 : -1) + total) % total);
+  }, { passive: true });
 
   document.querySelectorAll<HTMLButtonElement>('.gallery-thumb').forEach((thumb) => {
     thumb.addEventListener('click', () => show(Number(thumb.dataset.index ?? 0)));

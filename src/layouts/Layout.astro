@@ -16,6 +16,11 @@ export interface Props {
   jsonLd?: object;
   noindex?: boolean;
   ogImage?: string;
+  /**
+   * نوار تماس سراسری موبایل (MobileCTA). صفحه‌ی محصول false می‌دهد چون نوار عمل خودش (ActionBar) تماس و واتساپ
+   * را هم دارد — دو نوار روی هم یکی زیادی است (docs/frontend-v2.md §4). فاصله‌ی پایین body برای هر دو یکی است.
+   */
+  mobileBar?: boolean;
 }
 
 const {
@@ -25,6 +30,7 @@ const {
   jsonLd,
   noindex = false,
   ogImage = `${SITE.url}/og-default.jpg`,
+  mobileBar = true,
 } = Astro.props;
 
 /* ⚠️ محدودیت طول *اینجا* اعمال می‌شود، نه در تک‌تک صفحه‌ها.
@@ -89,14 +95,14 @@ const jsonLdOut = jsonLd ? normalizeJsonLdUrls(jsonLd, SITE.url) : undefined;
       اسکرول به بالا ناپدید یا نصفه می‌شد).
       `overflow-x: clip` همان بریدن افقی را انجام می‌دهد اما زمینه‌ی اسکرول
       نمی‌سازد، بنابراین sticky سالم می‌ماند. */}
-  <body class="bg-steel-50 text-steel-900 font-sans antialiased [overflow-x:clip] selection:bg-accent-ink selection:text-white flex flex-col min-h-screen pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
+  <body class="bg-steel-50 text-steel-900 font-sans antialiased [overflow-x:clip] selection:bg-action selection:text-white flex flex-col min-h-screen pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
     <a href="#main-content" class="skip-to-content">پرش به محتوای اصلی</a>
     <Header />
     <main id="main-content" class="flex-grow" role="main">
       <slot />
     </main>
     <Footer />
-    <MobileCTA />
+    {mobileBar && <MobileCTA />}
     {/* هر دو سبد روی همه‌ی صفحات: کالایی که از صفحه‌ی دسته افزوده شد باید
         در صفحه‌ی تماس یا پرداخت هم دیده شود. */}
     <Baskets />
