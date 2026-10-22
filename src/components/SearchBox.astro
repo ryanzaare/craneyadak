@@ -201,7 +201,11 @@ const listId = `${id}-listbox`;
       // پس از رسیدن محصولات همان پرس‌وجو دوباره امتیاز می‌گیرد — بدون تایپ دوباره.
       loadProducts().then(() => { if (document.activeElement === input && input.value.trim()) update(); });
     });
-    input.addEventListener('focus', () => { loadProducts(); if (input.value.trim()) update(); });
+    // ⚠️ فقط پس از تایپ واقعی: در /search/?q=… کادر autofocus است و مقدار از URL دارد؛ باز کردن فهرست
+    // روی focus، پنل «پیدا نشد» صفحه را زیر یک فهرست «پیدا نشد» دوم می‌پوشاند (اسکرین‌شات فاز ۲).
+    let typed = false;
+    input.addEventListener('input', () => { typed = true; }, { capture: true });
+    input.addEventListener('focus', () => { loadProducts(); if (typed && input.value.trim()) update(); });
     input.addEventListener('keydown', (ev) => {
       if (list.hidden) return;
       if (ev.key === 'ArrowDown') { ev.preventDefault(); highlight(active + 1); }
