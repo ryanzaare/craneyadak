@@ -14,6 +14,8 @@
 //
 // ⚠️ ردیف ۲ روی موبایل هم دو ستونی است (نه grid-cols-1 sm:grid-cols-2 که دستور گفته بود): دو دکمه‌ی روی هم ۵۲px
 // به اولین صفحه‌ی ۳۹۰×۸۱۲ می‌افزود و ردیف ۲ از سقف ۷۸۵px بیرون می‌زد. زیر sm برچسب کوتاه است («واتساپ»، فقط شماره).
+// ⚠️ md تا lg هم کوتاه: صفحه‌ی محصول از md دوستونی است و هر دکمه ~۱۷۰px می‌شود — برچسب بلند دوخطی می‌شکست (اسکرین‌شات
+// ۷۶۸px، build زنده‌ی 7d638a7).
 //
 // ⚠️ قرارداد §7: همه‌ی data-*های سبد همان نام‌هایی‌اند که Baskets.astro می‌خواند. `inert` فقط برای راهنمای سبک.
 // ---------------------------------------------------------------------------
@@ -86,14 +88,14 @@ const quickCount = (mobile ? 1 : 0) + (inquiryHref ? 1 : 0);
       {mobile && (
         <a href={inert ? '#style-guide' : mobile.href} class={quick} aria-label={`تماس فوری: ${mobile.display}`}>
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d={phoneIcon} /></svg>
-          <span class="hidden sm:inline">تماس فوری:</span>
+          <span class="hidden sm:inline md:hidden lg:inline">تماس فوری:</span>
           <span class="tabular-nums" dir="ltr">{mobile.display}</span>
         </a>
       )}
       {inquiryHref && (
         <a href={inert ? '#style-guide' : inquiryHref} target={inert ? undefined : '_blank'} rel="noopener noreferrer" class={quick}>
           <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d={waIcon} /></svg>
-          <span class="sm:hidden">واتساپ</span><span class="hidden sm:inline">استعلام فوری در واتساپ</span>
+          <span class="sm:hidden md:inline lg:hidden">واتساپ</span><span class="hidden sm:inline md:hidden lg:inline">استعلام فوری در واتساپ</span>
         </a>
       )}
     </div>
