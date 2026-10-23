@@ -198,6 +198,10 @@ Every phase: `npm run check` + `npm run build` + `npm run lighthouse` green, scr
    **pre-filled message containing the exact product name and SKU** (e.g. «استعلام قیمت: <نام> — کد فنی <SKU>»; if the product has no SKU,
    the name and the page URL). The «+ استعلام» quote-basket action stays available as the secondary action. The WhatsApp number comes
    from WordPress site options (`src/lib/site-options.ts`, `whatsappHref`) — never hard-coded.
+   **Superseded on the product buy box (2 Aban 1405, client — Phase 3): the «1 + 2» layout.** Row 1 = one full-width primary
+   («افزودن به سبد خرید», or «درخواست پیش‌فاکتور / افزودن به لیست استعلام» → quote basket for inquiry items); row 2 = two framed
+   50/50 buttons «تماس فوری» (mobile line, `src/components/contact-mobile.ts`) | «استعلام فوری در واتساپ» (the pre-filled message
+   above); row 3 = text links. The bottom action bar mirrors row 1. Product cards and table rows keep decision 4 unchanged.
 5. **Phase order:** 0 → 1 → 2 → 3 → 4 → 5 as in §8 (Phase 1 includes the header search).
 6. **About page:** unverified "central warehouses / immediate dispatch" wording removed (done 29 Mehr).
 7. **Manufacturer logos on brand pages:** allowed strictly as factual brand identification; never wording or layout that implies official

@@ -601,6 +601,18 @@
   }
 }
 
+/* ---- ردیف‌های جدول مشخصات (SpecTable.astro) ----
+   ⚠️ عمداً CSS، نه کلاس Tailwind روی هر ردیف: پنج رشته‌ی کلاس × ۱۴ ردیف = ~۳٫۶KB در HTML صفحه‌ی محصول — همان
+   چیزی که صفحه را از بودجه‌ی ۱۸۰KB (§6) بیرون برد (build زنده‌ی ۴۵۱c2cd: ۱۸۱٬۷۳۱ بایت). این‌جا یک‌بار، ~۶۰۰ بایت. */
+.cy-spec tbody tr { border-top: 1px solid var(--color-steel-200); }
+.cy-spec tbody tr:nth-child(even) { background: var(--color-steel-50); }
+.cy-spec tbody th,
+.cy-spec tbody td { padding: 0.5rem 0.75rem; text-align: right; }
+.cy-spec tbody th { font-weight: 400; color: var(--color-steel-600); vertical-align: top; }
+/* شماره‌ی ردیف «۰۱…» — steel-500 (۵٫۳:۱)، نه 400 (۲٫۵:۱، زیر AA). */
+.cy-spec tbody th > span { font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-steel-500); font-variant-numeric: tabular-nums; margin-inline-end: 0.5rem; }
+.cy-spec tbody td > span { display: inline-block; color: var(--color-steel-900); font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: break-word; }
+
 /* ---- نوار داده‌ی درون‌متنی (نمودار میله‌ای فقط با CSS) ----
    عرض از متغیر --cy-bar می‌آید که در HTML ست می‌شود. */
 .cy-bar {

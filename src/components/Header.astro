@@ -96,8 +96,11 @@ const navLinks = [
         inline می‌کند و اسکریپت می‌آورد — روی *هر* صفحه یعنی وزن اضافه برای همه. پیشنهاد آنی و تحمل خط‌تیره/فاصله
         کار فاز ۲ (جستجو) است. نتیجه در /search/ با Pagefind (پارامتر q همان است که search.astro می‌خواند). */}
     {/* ردیف جستجو + «خط ویژه تامین» (فاز ۳): زیر xl ردیف دوم تمام‌عرض؛ از xl کنار لوگو. قرص تلفن در همین ردیف است، نه
-        در ردیف اول: در lg ردیف اول (لوگو + ناوبری + آیکن‌ها) جای ۲۳۰px دیگر ندارد و flex-wrap ناوبری را می‌شکست. */}
-    <div class="order-last basis-full flex items-center gap-2 xl:order-none xl:basis-auto xl:flex-1 xl:max-w-xl xl:mx-6 print:hidden">
+        در ردیف اول: در lg ردیف اول (لوگو + ناوبری + آیکن‌ها) جای ۲۳۰px دیگر ندارد و flex-wrap ناوبری را می‌شکست.
+        ⚠️ xl:basis-0: با basis-auto عرض محتوای جستجو + قرص مبنای شکستن خط بود و ناوبری در ۱۲۸۰px به ردیف دوم می‌رفت
+        (هدر ۸۹ → ۱۳۷px). همراهش w-0 روی ورودی: عرض ذاتی ~۱۷۰px ورودی min-content ردیف بود و همان شکست را می‌ساخت.
+        برچسب «خط ویژه تامین:» در xl تا 2xl پنهان است — فقط نقطه + شماره جا می‌شود. */}
+    <div class="order-last basis-full flex items-center gap-2 xl:order-none xl:basis-0 xl:flex-1 xl:max-w-xl xl:mx-6 print:hidden">
     <form action="/search/" method="get" role="search" class="min-w-0 flex-1">
       <label for="header-search" class="sr-only">جستجوی کد فنی، نام قطعه یا برند</label>
       <div class="flex items-stretch h-11 rounded-md border border-steel-700 bg-steel-800 focus-within:border-steel-400">
@@ -109,7 +112,7 @@ const navLinks = [
           autocomplete="off"
           spellcheck="false"
           placeholder="جستجو"
-          class="min-w-0 flex-1 bg-transparent px-3 text-base text-white placeholder:text-steel-400 focus:outline-none"
+          class="w-0 min-w-0 flex-1 bg-transparent px-3 text-base text-white placeholder:text-steel-400 focus:outline-none"
         />
         {/* میان‌بر «/» (فاز ۳) — فقط نشانه؛ شنونده در اسکریپت پایین. aria-keyshortcuts روی ورودی نیست چون همین kbd
             زیر lg (لمسی) پنهان است و میان‌بر صفحه‌کلید آنجا معنا ندارد. */}
@@ -119,6 +122,13 @@ const navLinks = [
         </button>
       </div>
     </form>
+    {/* تماس یک‌لمسی موبایل (فاز ۳) — کنار جستجو، نه در ردیف لوگو: آن‌جا در ۳۹۰px آیکن‌ها را به ردیف سوم می‌برد
+        (هدر ۱۲۵ → ۱۸۱px، build زنده‌ی 451c2cd). همان خط همراه قرص، که زیر md پنهان است. */}
+    {mobile && (
+      <a href={mobile.href} class="md:hidden shrink-0 grid place-items-center w-11 h-11 rounded-full border border-steel-700 bg-steel-800 text-white hover:border-steel-400" aria-label={`تماس فوری: ${mobile.display}`}>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>
+      </a>
+    )}
     {mobile && (
       /* «● خط ویژه تامین: ۰۹…» — نقطه در HTML خنثی است؛ اسکریپت فقط داخل ساعت کاری وردپرس (تهران) سبزش می‌کند. */
       <a href={mobile.href} data-hotline data-hours={JSON.stringify(hours)}
@@ -136,9 +146,7 @@ const navLinks = [
         منوی همبرگری موبایل. */}
     <nav class="hidden lg:block" aria-label="منوی اصلی">
       <ul class="flex items-center gap-7 text-sm font-normal">
-        <li>
-          <a href="/" class:list={['transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-accent rounded', isActive('/') ? navOn : navOff]} aria-current={isActive('/') ? 'page' : undefined}>صفحه اصلی</a>
-        </li>
+        {/* «صفحه اصلی» از ناوبری دسکتاپ رفت (فاز ۳): لوگو همان پیوند است و ۹۰px آن برای قرص «خط ویژه تامین» لازم بود. */}
 
         <li id="mega-wrap" class="static">
           <button
@@ -180,12 +188,6 @@ const navLinks = [
           آیکن همیشه‌خالی فقط شلوغی است.
           ⚠️ روی موبایل کوچک‌تر از آیکن حساب (p-1.5، ۲۴px): با هر دو سبد پر،
           در عرض ۳۶۰px نام «کرین یدک» دو خطی می‌شد (preview دیده شد). */}
-      {/* تماس یک‌لمسی موبایل (فاز ۳) — همان خط همراه قرص بالا، که زیر md پنهان است. */}
-      {mobile && (
-        <a href={mobile.href} class="md:hidden grid place-items-center w-10 h-10 rounded-full border border-steel-700 bg-steel-800 text-white hover:border-steel-400" aria-label={`تماس فوری: ${mobile.display}`}>
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>
-        </a>
-      )}
       <button
         type="button"
         id="quote-open"

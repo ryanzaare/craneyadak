@@ -100,13 +100,16 @@ const quickCount = (mobile ? 1 : 0) + (inquiryHref ? 1 : 0);
   )}
 
   {/* ── ردیف ۳: پیوندهای کمکی زیر خط مو ── */}
-  <div class="flex flex-wrap gap-x-5 border-t border-steel-200">
-    {price.payable && (
-      <button type="button" class={link}
-        {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'cart', ...basket, 'data-guard-until': price.validUntil, 'data-payable-only': true })}>
-        <span data-basket-label>دریافت پیش‌فاکتور</span>
-      </button>
-    )}
-    <slot name="links" />
-  </div>
+  {/* بی‌پیوند (قلم استعلامی بدون اسلات) = بی‌ردیف؛ وگرنه یک خط موی تنها زیر دکمه‌ها می‌ماند (راهنمای سبک، فاز ۳). */}
+  {(price.payable || Astro.slots.has('links')) && (
+    <div class="flex flex-wrap gap-x-5 border-t border-steel-200">
+      {price.payable && (
+        <button type="button" class={link}
+          {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'cart', ...basket, 'data-guard-until': price.validUntil, 'data-payable-only': true })}>
+          <span data-basket-label>دریافت پیش‌فاکتور</span>
+        </button>
+      )}
+      <slot name="links" />
+    </div>
+  )}
 </div>
