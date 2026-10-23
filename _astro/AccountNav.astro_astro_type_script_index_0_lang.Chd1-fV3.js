@@ -1,0 +1,1 @@
+import{o as e}from"./account.DEkgJBCX.js";document.getElementById(`accnav-logout`)?.addEventListener(`click`,()=>{e()});

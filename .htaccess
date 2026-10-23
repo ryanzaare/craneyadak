@@ -1,0 +1,31 @@
+# تولیدشده توسط scripts/generate-htaccess.mjs — دستی ویرایش نکنید.
+# منبع ریدایرکت‌ها: src/data/legacy-redirects.mjs
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+# HTTP → HTTPS (پشت پروکسی X-Forwarded-Proto را هم می‌خواند). /.well-known/ مستثناست:
+# تمدید خودکار SSL (AutoSSL/ACME) آن مسیر را روی HTTP می‌خواند و ریدایرکت ممکن است آن را بشکند.
+RewriteCond %{REQUEST_URI} !^/\.well-known/ [NC]
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+RewriteRule ^ https://craneyadak.com%{REQUEST_URI} [L,R=301]
+# www → بدون www
+RewriteCond %{HTTP_HOST} ^www\.craneyadak\.com$ [NC]
+RewriteRule ^ https://craneyadak.com%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+<IfModule mod_alias.c>
+RedirectMatch 301 ^/categories/remote-control/?$ https://craneyadak.com/categories/control-safety/remote-control/
+RedirectMatch 301 ^/categories/conductor-bar/?$ https://craneyadak.com/categories/power-supply/busbar-power-line/
+RedirectMatch 301 ^/categories/crane-wheels/?$ https://craneyadak.com/categories/drive-units/crane-wheel/
+RedirectMatch 301 ^/categories/rope-guide/?$ https://craneyadak.com/categories/hoist-accessories/rope-guide/
+RedirectMatch 301 ^/categories/crane-hook/?$ https://craneyadak.com/categories/lifting-rigging/crane-hook/
+RedirectMatch 301 ^/categories/brake-disk/?$ https://craneyadak.com/categories/brake/brake-wheel-disc/
+RedirectMatch 301 ^/categories/wire-rope-hoist/?$ https://craneyadak.com/categories/drive-units/gearbox-motor/
+RedirectMatch 301 ^/categories/current-collector/?$ https://craneyadak.com/categories/power-supply/current-collector/
+RedirectMatch 301 ^/industries(/.*)?$ https://craneyadak.com/categories/
+# فایل وضعیت GitHub Actions (SamKirkland/FTP-Deploy-Action) از بیرون 410 شود
+RedirectMatch gone ^/\.ftp-deploy-sync-state\.json$
+</IfModule>
+
+ErrorDocument 404 /404.html
