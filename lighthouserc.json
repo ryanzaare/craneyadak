@@ -5,6 +5,7 @@
       "url": [
         "/index.html",
         "/products/saga-saga1-l12/index.html",
+        "/categories/control-safety/remote-control/index.html",
         "/categories/index.html",
         "/brands/index.html",
         "/about/index.html",
@@ -25,7 +26,7 @@
     "assert": {
       "assertMatrix": [
         {
-          "matchingUrlPattern": "^(?!.*/(products/[^/]+|categories|brands)/index\\.html).*$",
+          "matchingUrlPattern": "^(?!.*/(products/[^/]+|categories(/[^/]+)*|brands)/index\\.html).*$",
           "assertions": {
             "categories:performance": [
               "error",
@@ -120,7 +121,7 @@
           }
         },
         {
-          "matchingUrlPattern": "/(products/[^/]+|categories|brands)/index\\.html$",
+          "matchingUrlPattern": "/(products/[^/]+|categories(/[^/]+)*|brands)/index\\.html$",
           "assertions": {
             "categories:performance": [
               "error",

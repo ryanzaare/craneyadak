@@ -2,7 +2,7 @@
 // فیلتر صفحه‌ی دسته (Frontend v2، فاز ۲ — تصمیم ۲ کارفرما، docs/frontend-v2.md §10): چیپ‌های «همه / موجود /
 // استعلامی» + برند + مشخصه، ترکیب‌پذیر و در URL. ورودی خراب عمداً هست (قاعده‌ی ۶)؛ پیش از پیاده‌سازی، روی
 // stub قرمز دیده شد.
-import { matches, parseState, toQuery, EMPTY, type FilterState, type ItemData } from './category-filter.ts';
+import { matches, parseState, toQuery, compareItems, EMPTY, type FilterState, type ItemData } from './category-filter.ts';
 
 let failed = 0;
 const eq = (name: string, got: unknown, want: unknown) => {
@@ -11,7 +11,7 @@ const eq = (name: string, got: unknown, want: unknown) => {
   if (!ok) failed++;
 };
 
-const item = (o: Partial<ItemData>): ItemData => ({ stock: 'in_stock', priced: false, brand: 'saga', specs: {}, ...o });
+const item = (o: Partial<ItemData>): ItemData => ({ stock: 'in_stock', priced: false, brand: 'saga', specs: {}, categories: [], price: null, modified: '', ...o });
 const S = (o: Partial<FilterState>): FilterState => ({ ...EMPTY, ...o, specs: { ...(o.specs ?? {}) }, ranges: { ...(o.ranges ?? {}) } });
 
 console.log('── چیپ موجودی');
@@ -29,14 +29,29 @@ eq('بازه: بیشتر از سقف حذف', matches(item({ specs: { len: '۱۶
 // نبودِ داده دلیل ناسازگاری نیست — همان رفتار نوار کناری قبلی.
 eq('بازه: قلم بدون مقدار حذف نمی‌شود', matches(item({ specs: {} }), S({ ranges: { len: 10 } })), true);
 
+console.log('── دسته (آرشیو /products/ — فاز ۳)');
+eq('دسته: هرکدام از انتخاب‌ها', [matches(item({ categories: ['remote-control', 'x'] }), S({ cats: ['remote-control'] })), matches(item({ categories: ['brake'] }), S({ cats: ['remote-control'] }))], [true, false]);
+
+console.log('── مرتب‌سازی');
+const p = (price: number | null, modified = '') => item({ price, modified });
+const order = (mode: FilterState['sort'], list: ItemData[]) => [...list].sort((a, b) => compareItems(a, b, mode)).map((i) => i.price ?? 'rfq');
+// ⚠️ قلم استعلامی (بی‌قیمت) همیشه آخر — چه صعودی چه نزولی؛ صفر حساب‌کردنش «ارزان‌ترین» را پر از استعلامی می‌کرد.
+eq('ارزان‌ترین، استعلامی آخر', order('cheapest', [p(null), p(300), p(100)]), [100, 300, 'rfq']);
+eq('گران‌ترین، استعلامی آخر', order('expensive', [p(null), p(100), p(300)]), [300, 100, 'rfq']);
+eq('جدیدترین', [...[p(1, '2026-01'), p(2, '2026-09')]].sort((a, b) => compareItems(a, b, 'newest')).map((i) => i.price), [2, 1]);
+eq('مرتبط‌ترین = ترتیب اصلی', order('relevant', [p(300), p(100)]), [300, 100]);
+
 console.log('── URL (دوطرفه)');
-const st = S({ stock: 'rfq', brands: ['saga', 'demag'], specs: { volt: ['24 V', 'AC/DC, 48'] }, ranges: { len: 12.5 }, view: 'grid' });
+const st = S({ stock: 'rfq', brands: ['saga', 'demag'], cats: ['remote-control'], specs: { volt: ['24 V', 'AC/DC, 48'] }, ranges: { len: 12.5 }, view: 'grid', sort: 'cheapest' });
 const q = toQuery(st);
 eq('رفت و برگشت بدون از دست رفتن', parseState(new URLSearchParams(q)), st);
 eq('حالت پیش‌فرض = پرس‌وجوی خالی (URL تمیز)', toQuery(EMPTY), '');
 eq('مقدار ناشناخته‌ی stock نادیده', parseState(new URLSearchParams('stock=xyz')).stock, 'all');
 eq('view ناشناخته = list', parseState(new URLSearchParams('view=table')).view, 'list');
 eq('max_ غیرعددی نادیده', parseState(new URLSearchParams('max_len=abc')).ranges, {});
+// پیوندهای قدیمی آرشیو (پیش از فاز ۳) که کسی برای همکارش فرستاده نباید بشکنند.
+eq('سازگاری: brand=a,b و cat=x,y و stock=1', (({ brands, cats, stock }) => ({ brands, cats, stock }))(parseState(new URLSearchParams('brand=saga,demag&cat=a,b&stock=1'))), { brands: ['saga', 'demag'], cats: ['a', 'b'], stock: 'in' });
+eq('sort ناشناخته = relevant', parseState(new URLSearchParams('sort=zzz')).sort, 'relevant');
 
 if (failed) {
   console.error(`\n❌ ${failed} آزمون فیلتر دسته شکست خورد.`);

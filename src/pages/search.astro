@@ -25,13 +25,17 @@
 // ---------------------------------------------------------------------------
 import Layout from '../layouts/Layout.astro';
 import SearchBox from '../components/SearchBox.astro';
-import { SILOS, siloPath, ALL_CATEGORIES } from '../data/taxonomy';
+import { siloPath, categoryPath } from '../data/taxonomy';
+import { getCatalogPresence, fa } from '../components/catalog-presence';
+import { mobileLine } from '../components/contact-mobile';
 import { getContact } from '../lib/site-options';
 
 const contact = await getContact();
+const mobile = mobileLine(contact);
 
-// دسته‌های پیشنهادی برای حالت «چیزی پیدا نشد» — از تاکسونومی واقعی.
-const fallbackSilos = SILOS;
+// فهرست مرور — فقط گروه‌ها و دسته‌هایی که واقعاً محصول دارند (تصمیم D؛ بازبینی ۲ آبان ۱۴۰۵: «۳۱ دسته در ۷ گروه»
+// با ۲۷ دسته‌ی خالی، همان وعده‌ی تو‌خالی صفحه‌ی اصلی بود).
+const presence = await getCatalogPresence();
 ---
 
 <Layout
@@ -69,12 +73,14 @@ const fallbackSilos = SILOS;
             ارسال عکس پلاک در واتساپ
           </a>
         )}
-        {contact.telHref && (
-          <a href={contact.telHref} class="inline-flex items-center justify-center min-h-11 px-5 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-400">
-            تماس:{' '}<span class="tabular-nums" dir="ltr">{contact.phoneDisplay}</span>
+        {/* «تماس فوری» با خط همراه ۰۹… (بخش ۲ دستور کارفرما)، نه ۰۲۱. ⚠️ «:» و شماره در دو span جدا با gap فلکس:
+            فاصله‌ی ساده بین متن RTL و عدد ltr در bidi جمع می‌شد و «تماس:۰۹۱۲…» چسبیده دیده می‌شد. */}
+        {mobile && (
+          <a href={mobile.href} class="inline-flex items-center justify-center gap-1.5 min-h-11 px-5 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-500">
+            <span>تماس فوری:</span><span class="tabular-nums" dir="ltr">{mobile.display}</span>
           </a>
         )}
-        {!contact.whatsappHref && !contact.telHref && (
+        {!contact.whatsappHref && !mobile && (
           <a href="/contact/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline">صفحه‌ی تماس</a>
         )}
       </div>
@@ -94,25 +100,26 @@ const fallbackSilos = SILOS;
         یا از روی دسته‌بندی پیش بروید
       </h2>
       <p class="text-sm text-steel-600 leading-7 mb-5">
-        {ALL_CATEGORIES.length} دسته قطعه در {SILOS.length} گروه فنی.
+        {fa(presence.categoryCount)} دسته‌ی دارای کالا در {fa(presence.silos.length)} گروه فنی.
+        <a href="/categories/" class="font-bold text-accent-ink hover:underline">همه‌ی دسته‌ها ←</a>
       </p>
 
-      <ul role="list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-        {
-          fallbackSilos.map((silo) => (
-            <li>
-              <a
-                href={siloPath(silo)}
-                class="flex items-center justify-between gap-3 py-2 border-b border-steel-100 text-sm text-steel-700 hover:text-accent-ink focus:outline-none focus:ring-2 focus:ring-accent rounded"
-              >
-                <span class="font-bold truncate">{silo.name}</span>
-                <span class="text-xs text-steel-600 tabular-nums shrink-0">
-                  {silo.categories.length} دسته
-                </span>
-              </a>
-            </li>
-          ))
-        }
+      <ul role="list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        {presence.silos.map(({ silo, categories }) => (
+          <li>
+            <a href={siloPath(silo)} class="block text-sm font-black text-steel-900 hover:text-accent-ink py-1">{silo.name}</a>
+            <ul role="list" class="border-t border-steel-200">
+              {categories.map(({ category, count }) => (
+                <li>
+                  <a href={categoryPath({ ...category, silo })} class="flex items-center justify-between gap-3 min-h-11 border-b border-steel-200 text-sm text-steel-700 hover:text-accent-ink">
+                    <span class="truncate">{category.name}</span>
+                    <span class="text-xs text-steel-600 tabular-nums shrink-0">{fa(count)} قطعه</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
       </ul>
     </section>
 

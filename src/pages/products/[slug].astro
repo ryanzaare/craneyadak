@@ -29,7 +29,7 @@ import ActionBar from '../../components/ActionBar.astro';
 import TwoTabs from '../../components/TwoTabs.astro';
 import SpecTable from '../../components/SpecTable.astro';
 import ProductRow from '../../components/ProductRow.astro';
-import { whatsappInquiryHref } from '../../components/inquiry-message';
+import { mobileLine } from '../../components/contact-mobile';
 import { compactTrustBadges } from '../../data/trust';
 import { warrantyFor } from '../../data/warranty';
 import Community from '../../components/Community.astro';
@@ -179,10 +179,11 @@ import { getContact } from '../../lib/site-options';
    زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
 const contact = await getContact();
 
-// نوار پایین: برچسب کوتاه قیمت + همان عمل اصلی جعبه‌ی خرید (تصمیم ۴: قلم استعلامی → واتساپ با نام و کد فنی).
+// خط همراه «تماس فوری» (فاز ۳): جعبه‌ی خرید و نوار پایین؛ ثابت ۰۲۱ در فوتر و صفحه‌ی تماس می‌ماند.
+const mobile = mobileLine(contact);
+// نوار پایین: برچسب کوتاه قیمت + همان عمل اصلی ردیف ۱ جعبه‌ی خرید (معماری «۱ + ۲»، فاز ۳ — جای تصمیم ۴ را گرفت).
 const barPriceLabel = price.payable && price.effective !== null ? formatPrice(price.effective) : 'فروش استعلامی';
-const barInquiryHref = price.payable ? null : whatsappInquiryHref(contact.whatsappHref, { name: product.name, sku: product.sku, url: canonical });
-const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-black whitespace-nowrap hover:bg-accent-ink';
+const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-black whitespace-nowrap hover:bg-accent-strong';
 
 ---
 
@@ -214,18 +215,19 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         {/* ── ۲) هویت فشرده ── */}
         <header class="md:col-start-1 md:col-span-7 md:row-start-1">
           <h1 class="text-xl md:text-2xl lg:text-3xl font-black text-steel-900 leading-[1.5] md:leading-[1.6] line-clamp-2 lg:line-clamp-none">{product.name}</h1>
-          {/* نوار هویت یکپارچه (بازبینی ۱ آبان ۱۴۰۵): کد + برند در یک سو، اصالت + موجودی در سوی دیگر، با خط زیرین —
-              به‌جای دو ردیف ناهم‌عرض که لبه‌ی «پلکانی» می‌ساختند. */}
-          <div class="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pb-2 md:pb-3.5 border-b border-steel-200">
-            <div class="flex flex-wrap items-center gap-x-3">
+          {/* «پلاک شناسایی» (فاز ۳، بخش ۳ دستور کارفرما) — شکل پلاک فلزی روی بدنه‌ی تجهیز: قاب steel-100 با جداکننده‌ی
+              ۱px بین خانه‌ها. دو گروه (کد + برند | اصالت + موجودی) تا وقتی گروه دوم روی موبایل به خط بعد می‌رود،
+              جداکننده‌ی سرگردان در ابتدای خط نماند. ⚠️ divide-x در Tailwind v4 منطقی است (border-inline) — در RTL درست. */}
+          <div class="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-steel-100 border border-steel-300 rounded px-3.5 py-1.5 md:py-2.5">
+            <div class="flex flex-wrap items-center divide-x divide-steel-300 [&>*]:px-3 [&>*:first-child]:ps-0">
               {product.sku && <PartNumber sku={product.sku} id="main" compact />}
               {brand && (
                 <a href={`/brands/${brand.slug}`} class="inline-flex items-center min-h-11 text-sm font-bold text-steel-700 hover:text-accent-ink hover:underline underline-offset-4">
-                  {brand.nameFa}{' '}<span class="font-normal text-steel-500" dir="ltr">({brand.nameEn})</span>
+                  {brand.nameFa}{' '}<span class="font-normal text-steel-600" dir="ltr">({brand.nameEn})</span>
                 </a>
               )}
             </div>
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center divide-x divide-steel-300 [&>*]:px-3 [&>*:first-child]:ps-0 [&>*:last-child]:pe-0">
               {product.authenticity && <AuthenticityBadge authenticity={product.authenticity} full />}
               <StockPill status={product.stockStatus} />
             </div>
@@ -240,11 +242,12 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         {/* ── ۴) قیمت + یک عمل اصلی ──
             ⚠️ id="buy-box" قرارداد §7 است (لنگر و اسکریپت‌ها). سه نسخه‌ی تکراری اعتماد که این‌جا بود (قرص‌های بالای
             قیمت، TrustBadges، فهرست سه‌تایی) حذف شد — اعتماد یک‌بار، پایین‌تر (§4b). */}
-        {/* قاب «پنل مهندسی» (بازبینی ۱ آبان ۱۴۰۵): قیمت، عمل اصلی، پیوندهای فرعی و تماس یک سطح مشخص دارند — منطقه‌ی خرید
-            دیگر روی پس‌زمینه‌ی سفید شناور نیست. ⚠️ فاصله‌های موبایل فشرده‌اند تا عمل اصلی و «+ سبد استعلام» هر دو تا ۷۷۵px
-            اولین صفحه‌ی ۳۹۰×۸۱۲ دیده شوند (سنجش در backlog). */}
-        <section id="buy-box" class="md:col-start-1 md:col-span-7 md:row-start-2 bg-steel-50 border border-steel-300 rounded-md p-3 md:p-5 print:hidden" aria-label="قیمت و خرید">
-          <BuyBox slug={product.slug} name={product.name} sku={product.sku} url={canonical} price={price} whatsappHref={contact.whatsappHref}>
+        {/* قاب «پنل مهندسی» (بازبینی ۱ آبان ۱۴۰۵): قیمت و سه ردیف عمل یک سطح مشخص دارند. ریل ۴px نارنجی در لبه‌ی آغاز
+            (فاز ۳؛ border-s منطقی = راست در RTL) چشم را به منطقه‌ی خرید می‌برد — رنگ غیرمتنی، پس accent/action مجاز است.
+            ⚠️ خط «تماس: ۰۲۱…» زیر جعبه حذف شد: ردیف ۲ دکمه‌ی «تماس فوری» با خط همراه دارد. فاصله‌ها فشرده‌اند تا ردیف ۱ و
+            ۲ هر دو تا ۷۸۵px اولین صفحه‌ی ۳۹۰×۸۱۲ دیده شوند (سنجش در backlog). */}
+        <section id="buy-box" class="md:col-start-1 md:col-span-7 md:row-start-2 bg-steel-50 border border-steel-300 border-s-4 border-s-action rounded-md p-3 md:p-5 print:hidden" aria-label="قیمت و خرید">
+          <BuyBox slug={product.slug} name={product.name} sku={product.sku} url={canonical} price={price} whatsappHref={contact.whatsappHref} mobile={mobile}>
             <Fragment slot="links">
               {/* علاقه‌مندی — وارد نشده: به ورود می‌رود و بعد به همین صفحه برمی‌گردد. ⚠️ idهای wish-* را اسکریپت پایین می‌خواند. */}
               <button type="button" id="wish-toggle" data-wish-slug={product.slug} aria-pressed="false"
@@ -262,12 +265,6 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
               </button>
             </Fragment>
           </BuyBox>
-          {contact.telHref && (
-            <p class="mt-1 pt-2 border-t border-steel-200 text-sm text-steel-600">
-              تماس: <a href={contact.telHref} class="font-bold text-steel-900 hover:text-accent-ink tabular-nums" dir="ltr">{contact.phoneDisplay}</a>
-              <span class="text-steel-500"> — در ساعات کاری</span>
-            </p>
-          )}
         </section>
 
         {/* ── ۵) چیپ‌های مشخصه‌ی کلیدی (حداکثر ۴) → جدول کامل ──
@@ -275,9 +272,11 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         {keySpecs.length > 0 && (
           <div class="md:col-start-1 md:col-span-7 md:row-start-3">
             {/* شبکه‌ی ۲×۲ تمام‌عرض (بازبینی ۱ آبان ۱۴۰۵) به‌جای قرص‌های ناهم‌عرض: لبه‌ها با قاب خرید بالا هم‌ترازند. */}
-            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2" role="list" aria-label="مشخصات کلیدی">
-              {keySpecs.map((spec) => (
-                <li class="bg-white border border-steel-200 rounded px-3 py-2 flex items-baseline justify-between gap-2">
+            {/* شبکه‌ی «خط مو» سوئیسی (فاز ۳): gap-px روی زمینه‌ی steel-200 = خطوط ۱px یکدست بین خانه‌ها، بی‌دوبرابرشدن
+                مرز. ⚠️ تعداد فرد: خانه‌ی آخر دو ستون را می‌گیرد، وگرنه یک خانه‌ی خالی خاکستری می‌ماند. */}
+            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-steel-200 border border-steel-200 rounded-md overflow-hidden" role="list" aria-label="مشخصات کلیدی">
+              {keySpecs.map((spec, i) => (
+                <li class:list={['bg-white px-3 py-2 flex items-baseline justify-between gap-2', keySpecs.length % 2 === 1 && i === keySpecs.length - 1 && 'sm:col-span-2']}>
                   <span class="text-steel-600 text-xs shrink-0">{spec.label}</span>
                   <span class="font-bold text-steel-900 text-sm" dir="auto">{spec.value}</span>
                 </li>
@@ -446,24 +445,28 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
       پرداخت‌پذیر همان دکمه‌ی سبد با data-*های قرارداد §7، و نسخه‌ی data-expired-only برای پس از انقضا. */}
   <ActionBar
     priceLabel={barPriceLabel}
-    primaryLabel="استعلام در واتساپ"
-    primaryHref={barInquiryHref ?? '#buy-box'}
-    primaryExternal={!!barInquiryHref}
     whatsappHref={contact.whatsappHref}
-    telHref={contact.telHref}
+    telHref={mobile?.href ?? contact.telHref}
   >
-    {price.payable && (
-      <Fragment slot="primary">
-        <button type="button" class={BAR_PRIMARY} data-cart-add={product.slug} data-basket-name={product.name} data-basket-sku={product.sku ?? ''}
-          data-guard-until={price.validUntil} data-payable-only>
-          <span data-basket-label>افزودن به سبد</span>
+    <Fragment slot="primary">
+      {price.payable ? (
+        <>
+          <button type="button" class={BAR_PRIMARY} data-cart-add={product.slug} data-basket-name={product.name} data-basket-sku={product.sku ?? ''}
+            data-guard-until={price.validUntil} data-payable-only>
+            <span data-basket-label>افزودن به سبد</span>
+          </button>
+          <button type="button" class={BAR_PRIMARY} hidden data-quote-add={product.slug} data-quote-mode="rfq" data-basket-name={product.name}
+            data-basket-sku={product.sku ?? ''} data-guard-until={price.validUntil} data-expired-only>
+            <span data-basket-label>درخواست پیش‌فاکتور</span>
+          </button>
+        </>
+      ) : (
+        <button type="button" class={BAR_PRIMARY} data-quote-add={product.slug} data-quote-mode="rfq" data-basket-name={product.name}
+          data-basket-sku={product.sku ?? ''}>
+          <span data-basket-label>درخواست پیش‌فاکتور</span>
         </button>
-        <button type="button" class={BAR_PRIMARY} hidden data-quote-add={product.slug} data-quote-mode="rfq" data-basket-name={product.name}
-          data-basket-sku={product.sku ?? ''} data-guard-until={price.validUntil} data-expired-only>
-          <span data-basket-label>افزودن به سبد استعلام</span>
-        </button>
-      </Fragment>
-    )}
+      )}
+    </Fragment>
   </ActionBar>
 </Layout>
 

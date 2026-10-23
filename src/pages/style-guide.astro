@@ -21,11 +21,14 @@ import EmptyState from '../components/EmptyState.astro';
 import PriceTag from '../components/PriceTag.astro';
 import { computePrice, formatPrice } from '../lib/wp';
 import { getContact } from '../lib/site-options';
+import { mobileLine } from '../components/contact-mobile';
 
 const contact = await getContact();
 // شماره‌ی واقعی از وردپرس؛ اگر ثبت نشده (build آفلاین)، حالت «بدون واتساپ» هم نشان داده می‌شود و
 // حالت «با واتساپ» با پیوند نمونه — دکمه‌ها inert‌اند و به هیچ شماره‌ای نمی‌روند.
 const wa = contact.whatsappHref ?? 'https://wa.me/0';
+// خط همراه «تماس فوری» از همان منبع صفحه‌ی محصول؛ build آفلاین (بی‌وردپرس) → شماره‌ی نمونه‌ی صفرپر — دکمه inert است.
+const mobile = mobileLine(contact) ?? mobileLine({ phoneSecondary: '09120000000', whatsapp: null });
 
 const day = 86_400_000;
 const now = Date.now();
@@ -53,6 +56,8 @@ const SWATCH: Record<string, string> = {
 const sizes = [['text-4xl', '۴۰'], ['text-3xl', '۳۲'], ['text-2xl', '۲۴'], ['text-xl', '۲۰'], ['text-base', '۱۶'], ['text-sm', '۱۴'], ['text-xs', '۱۲']];
 const h2 = 'text-2xl font-black text-steel-900 mb-4';
 const section = 'py-10 border-t border-steel-300';
+const hairline = 'grid md:grid-cols-3 gap-px bg-steel-200 border border-steel-200 rounded-md overflow-hidden';
+const frame = 'bg-steel-50 border border-steel-300 border-s-4 border-s-action rounded-md p-3 md:p-5';
 ---
 
 <Layout title="راهنمای سبک (داخلی)" description="راهنمای سبک داخلی Frontend v2 کرین یدک — صفحه‌ی غیرعمومی برای بازبینی اجزا." noindex={true}>
@@ -111,19 +116,21 @@ const section = 'py-10 border-t border-steel-300';
 
       <section class={section} aria-labelledby="sg-price">
         <h2 id="sg-price" class={h2}>بلوک قیمت با تاریخ اعتبار</h2>
-        <div class="grid md:grid-cols-3 gap-4">
-          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-2">پرداخت‌پذیر</p><PriceTag price={payable} size="page" /></div>
-          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-2">مرجع (ناموجود/منقضی)</p><PriceTag price={reference} size="page" /></div>
-          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-2">بدون قیمت</p><PriceTag price={inquiry} size="page" /></div>
+        {/* شبکه‌ی خط مو (فاز ۳): gap-px روی steel-200 به‌جای سه کارت جدا با مرز دوتایی. */}
+        <div class={hairline}>
+          <div class="bg-white p-4"><p class="text-xs text-steel-600 mb-2">پرداخت‌پذیر</p><PriceTag price={payable} size="page" /></div>
+          <div class="bg-white p-4"><p class="text-xs text-steel-600 mb-2">مرجع (ناموجود/منقضی)</p><PriceTag price={reference} size="page" /></div>
+          <div class="bg-white p-4"><p class="text-xs text-steel-600 mb-2">بدون قیمت</p><PriceTag price={inquiry} size="page" /></div>
         </div>
       </section>
 
       <section class={section} aria-labelledby="sg-buy">
-        <h2 id="sg-buy" class={h2}>جعبه‌ی خرید — یک عمل اصلی</h2>
+        <h2 id="sg-buy" class={h2}>جعبه‌ی خرید — «۱ + ۲»</h2>
+        <p class="text-sm text-steel-600 mb-4">ردیف ۱: یک عمل اصلی تمام‌عرض. ردیف ۲: تماس فوری (همراه) | واتساپ. ردیف ۳: پیوندهای کمکی. قاب و ریل ۴px همان صفحه‌ی محصول.</p>
         <div class="grid md:grid-cols-3 gap-4">
-          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-3">پرداخت‌پذیر</p><BuyBox {...sample} price={payable} whatsappHref={wa} inert /></div>
-          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-3">استعلامی (واتساپ با نام + کد فنی)</p><BuyBox {...sample} price={inquiry} whatsappHref={wa} inert /></div>
-          <div class="bg-white border border-steel-300 rounded-lg p-4"><p class="text-xs text-steel-600 mb-3">استعلامی، بدون شماره‌ی واتساپ در وردپرس</p><BuyBox {...sample} price={inquiry} whatsappHref={null} inert /></div>
+          <div><p class="text-xs text-steel-600 mb-2">پرداخت‌پذیر</p><div class={frame}><BuyBox {...sample} price={payable} whatsappHref={wa} mobile={mobile} inert /></div></div>
+          <div><p class="text-xs text-steel-600 mb-2">استعلامی</p><div class={frame}><BuyBox {...sample} price={inquiry} whatsappHref={wa} mobile={mobile} inert /></div></div>
+          <div><p class="text-xs text-steel-600 mb-2">استعلامی، بدون واتساپ و همراه در وردپرس</p><div class={frame}><BuyBox {...sample} price={inquiry} whatsappHref={null} mobile={null} inert /></div></div>
         </div>
       </section>
 
@@ -161,7 +168,7 @@ const section = 'py-10 border-t border-steel-300';
         {/* پیش‌نمایش در عرض واقعی موبایل (۳۹۰px)؛ روی صفحه‌ی محصول همین نوار md:hidden و ثابت پایین صفحه است. */}
         <div class="max-w-[390px] space-y-3">
           <ActionBar inline priceLabel={formatPrice(payable.effective ?? 0)} primaryLabel="افزودن به سبد" primaryHref="#style-guide" whatsappHref="#style-guide" telHref="#style-guide" />
-          <ActionBar inline priceLabel="استعلامی" primaryLabel="استعلام در واتساپ" primaryHref="#style-guide" telHref="#style-guide" />
+          <ActionBar inline priceLabel="فروش استعلامی" primaryLabel="درخواست پیش‌فاکتور" primaryHref="#style-guide" whatsappHref="#style-guide" telHref="#style-guide" />
         </div>
       </section>
 

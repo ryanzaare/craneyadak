@@ -317,6 +317,13 @@ const jsonLd = {
       msgInput.value = `درخواست استعلام قیمت برای ${skuText} ${brandText}`.trim();
     }
 
+    // ⚠️ فهرست چندقلمی صفحه‌ی اصلی (فرم GET با name="parts"). تا فاز ۳ این پارامتر هیچ‌جا خوانده نمی‌شد: خریدار
+    // هشت کد تایپ می‌کرد، «ارسال» می‌زد و فرم تماس *خالی* باز می‌شد — فهرست بی‌صدا گم می‌شد.
+    const parts = params.get('parts')?.trim();
+    if (msgInput && parts) {
+      msgInput.value = [msgInput.value, `فهرست کدهای فنی برای پیش‌فاکتور:\n${parts}`].filter(Boolean).join('\n\n');
+    }
+
     // ------------------------------------------------------------
     // بهبود تدریجی (Progressive Enhancement) ارسال فرم.
     //

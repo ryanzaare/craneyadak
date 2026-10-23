@@ -2,7 +2,9 @@
 // src/components/Footer.astro
 import { SITE } from '../data/site';
 import { ENAMAD } from '../data/trust';
-import { SILOS, siloPath } from '../data/taxonomy';
+import { siloPath } from '../data/taxonomy';
+import { getCatalogPresence } from './catalog-presence';
+import { mobileLine } from './contact-mobile';
 import { getContact, getSiteOptions } from '../lib/site-options';
 import { getLegalPages } from '../lib/legal-pages';
 
@@ -25,7 +27,10 @@ const legalPages = await getLegalPages();
 const year = new Date().getFullYear();
 // فوتر گروه‌های سیلو را نشان می‌دهد، نه ۳۰ دسته را — لینک داخلی متمرکز
 // روی والدها، که از آن‌جا اعتبار به فرزندان توزیع می‌شود.
-const footerSilos = SILOS.slice(0, 6);
+// ⚠️ فاز ۳ (تصمیم D): فقط گروه‌های دارای کالا؛ «همه‌ی دسته‌ها» پیوند صادق به نقشه‌ی کامل است.
+const footerSilos = (await getCatalogPresence()).silos.map((s) => s.silo).slice(0, 6);
+// ثابت ۰۲۱ (تلفن اصلی) + همراه «تماس فوری» کنار هم — دستور کارفرما: ثابت در فوتر و صفحه‌ی تماس می‌ماند.
+const mobile = mobileLine(contact);
 ---
 
 {/* ⚠️ سطح گرافیت: نارنجی متن = accent (۴٫۹:۱ روی steel-900)، نه accent-ink (۲٫۴:۱ — Lighthouse فاز ۰ گرفت؛
@@ -68,6 +73,12 @@ const footerSilos = SILOS.slice(0, 6);
             <a href={contact.telHref} class="text-white hover:text-accent transition-colors focus:outline-none focus:text-accent rounded px-1 -mx-1">
               {contact.phoneDisplay}
             </a>
+            {mobile && (
+              <>
+                <span class="text-steel-500" aria-hidden="true">|</span>
+                <a href={mobile.href} class="text-white hover:text-accent transition-colors focus:outline-none focus:text-accent rounded px-1 -mx-1 tabular-nums" dir="ltr">{mobile.display}</a>
+              </>
+            )}
           </p>
           )}
           {contact.emailHref && (
@@ -91,7 +102,7 @@ const footerSilos = SILOS.slice(0, 6);
             </li>
           ))}
           <li class="pt-2">
-            <a href="/categories" class="text-accent font-bold hover:underline py-1 inline-block">مشاهده همه دسته‌بندی‌ها ←</a>
+            <a href="/categories/" class="text-accent font-bold hover:underline py-1 inline-block">نقشه‌ی کامل کاتالوگ ←</a>
           </li>
         </ul>
       </nav>

@@ -9,6 +9,7 @@
 // استاندارد اپل/گوگل) و focus ring مشخص برای کاربران کیبورد/صفحه‌خوان.
 import { SITE } from '../data/site';
 import { getContact, getSiteOptions } from '../lib/site-options';
+import { mobileLine } from './contact-mobile';
 
 /* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
    قبلاً انتهای فرontmatter بودند و کدِ بالاتر که از آن‌ها استفاده
@@ -17,6 +18,8 @@ import { getContact, getSiteOptions } from '../lib/site-options';
    زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
 const contact = await getContact();
 const social = (await getSiteOptions()).social;
+// «تماس» = تماس فوری → خط همراه (فاز ۳، دستور کارفرما)؛ ثابت ۰۲۱ فقط اگر همراهی ثبت نشده باشد.
+const callHref = mobileLine(contact)?.href ?? contact.telHref;
 
 
 ---
@@ -27,7 +30,7 @@ const social = (await getSiteOptions()).social;
   aria-label="راه‌های ارتباطی سریع"
 >
   <a
-    href={contact.telHref}
+    href={callHref}
     class="flex flex-col items-center justify-center gap-1 py-2.5 min-h-[56px] text-steel-900 hover:bg-steel-50 active:bg-steel-100 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-ink"
   >
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

@@ -254,14 +254,13 @@ const contact = await getContact();
   </section>
 
   {/* ------------------------------ محصولات ------------------------------ */}
-  <section class="bg-steel-50 px-4 md:px-6 py-6 md:py-8" aria-labelledby="products-heading">
+  {/* ⚠️ عنوان دوم («{displayName}») بالای فهرست حذف شد (بازبینی ۲ آبان ۱۴۰۵): همان H1 دو سانت بالاتر را تکرار می‌کرد
+      (اصل ۵). بخش با aria-label نام می‌گیرد، نه با سرتیتر تکراری. */}
+  <section class="bg-steel-50 px-4 md:px-6 py-6 md:py-8" aria-label={`فهرست قطعات ${displayName}`}>
     <div class="max-w-7xl mx-auto">
-      <div class="flex flex-wrap gap-2 justify-between items-baseline mb-3">
-        <h2 id="products-heading" class="text-xl font-black text-steel-900">{displayName}</h2>
-        {products.length > 0 && (
-          <p class="text-sm text-steel-600"><strong data-cat-count class="text-steel-900 font-black tabular-nums">{products.length.toLocaleString('fa-IR')}</strong> قطعه</p>
-        )}
-      </div>
+      {products.length > 0 && (
+        <p class="text-sm text-steel-600 mb-3"><strong data-cat-count class="text-steel-900 font-black tabular-nums">{products.length.toLocaleString('fa-IR')}</strong> قطعه</p>
+      )}
 
       {products.length > 0 ? (
         <>

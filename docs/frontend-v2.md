@@ -150,7 +150,7 @@ view.
 | Lighthouse (mobile and desktop) | performance ≥ 0.9, accessibility ≥ 0.9, SEO ≥ 0.95 on indexable pages, CLS ≤ 0.05, TBT ≤ 200ms, LCP ≤ 2.5s (existing `lighthouserc.json`) |
 | JavaScript per page | ≤ 30 KB gzip, islands only (search, filters, baskets, account). Today all JS in `dist/_astro` is ~42 KB raw |
 | Fonts | Vazirmatn variable (111 KB today — subset to Persian + Latin, target ≤ 70 KB) + mono subset ≤ 20 KB |
-| HTML | product page today ~200 KB raw / home ~280 KB raw (inline CSS + repeated content). Target: product ≤ 120 KB raw by removing repetition |
+| HTML | **≤ 180 KB raw including inline CSS** (revised 1 Aban 1405, client decision). `inlineStylesheets: 'always'` stays permanently (measured live, 15 Mehr: desktop 92 → 97); it puts ~77 KB of CSS in every page, so the original 120 KB target is not reachable without giving that up. Repetition (empty-category nav, duplicate blocks) is still removed |
 | LCP image | ≤ 120 KB AVIF, explicit width/height |
 
 ## 7. What must not change (the contract)

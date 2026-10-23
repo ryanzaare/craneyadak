@@ -39,9 +39,12 @@ const visible = rows.filter((r) => (r.value ?? '').trim() !== '');
         </tr>
       </thead>
       <tbody>
-        {visible.map((r) => (
+        {visible.map((r, i) => (
           <tr class="border-t border-steel-200 even:bg-steel-50">
-            <th scope="row" class="px-3 py-2 font-normal text-steel-600 align-top">{r.label}</th>
+            {/* شماره‌ی ردیف «۰۱، ۰۲…» (فاز ۳) — مرجع گفت‌وگوی تلفنی: «ردیف ۰۷ را بخوانید». مونو و لاتین مثل برگه‌ی
+                مشخصات سازنده. ⚠️ steel-500 نه 400: ۴۰۰ روی سفید ۲٫۵:۱ است و a11y را زیر ۱ می‌برد؛ ۵۰۰ = ۵٫۳:۱.
+                aria-hidden: شماره برای صفحه‌خوان نویز است (جدول ترتیب خودش را اعلام می‌کند). */}
+            <th scope="row" class="px-3 py-2 font-normal text-steel-600 align-top"><span class="font-mono text-xs text-steel-500 tabular-nums me-2" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>{r.label}</th>
             {/* ⚠️ dir="auto" فقط روی span درون سلول: سلولِ ltr مقدار لاتین («IP65»، «24-48 V») را به لبه‌ی چپ و
                 دور از سرستون «مقدار» می‌برد — همان باگ ستون کد فنی در ProductRow (بازبینی ۳۰ مهر ۱۴۰۵). */}
             <td class="px-3 py-2 text-right"><span class:list={['inline-block text-steel-900 font-bold tabular-nums break-words', r.code && 'font-mono']} dir="auto">{r.value}</span></td>

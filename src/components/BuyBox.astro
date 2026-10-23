@@ -1,22 +1,25 @@
 ---
 // src/components/BuyBox.astro
 // ---------------------------------------------------------------------------
-// جعبه‌ی خرید با **یک** عمل اصلی (Frontend v2، فاز ۰ — docs/frontend-v2.md §2 اصل ۴، §4b).
+// جعبه‌ی خرید — معماری «۱ + ۲» (Frontend v2، فاز ۳؛ دستور کارفرما ۲ آبان ۱۴۰۵).
 //
-// چرا: امروز چهار عمل هم‌وزن کنار هم‌اند (سبد نارنجی، واتساپ سبز، پیش‌فاکتور قاب‌دار، علاقه‌مندی) و
-// خریدار باید انتخاب کند که «اول چه کنم». یک دکمه‌ی پر، بقیه پیوند متنی.
+//   ردیف ۱ — یک دکمه‌ی پر، تمام‌عرض (عمل اصلی سایت):
+//     • پرداخت‌پذیر: «افزودن به سبد خرید».
+//     • استعلامی/مرجع/بی‌قیمت: «درخواست پیش‌فاکتور / افزودن به لیست استعلام» (سبد استعلام + کشوی آن).
+//   ردیف ۲ — دو دکمه‌ی قاب‌دار ۵۰/۵۰، پاسخ فوری: «تماس فوری» با خط همراه ۰۹… | «استعلام فوری در واتساپ».
+//   ردیف ۳ — پیوندهای متنی زیر خط مو: (پیش‌فاکتور برای پرداخت‌پذیر)، علاقه‌مندی، اشتراک‌گذاری، چاپ.
 //
-//   • پرداخت‌پذیر:  اصلی = «افزودن به سبد خرید»؛ فرعی = «دریافت پیش‌فاکتور» + «ارسال عکس در واتساپ».
-//   • استعلامی/مرجع/بی‌قیمت (تصمیم ۴ کارفرما): اصلی = واتساپ با پیام پرشده‌ی نام + کد فنی؛
-//     فرعی = «+ افزودن به سبد استعلام». بدون شماره‌ی واتساپ در وردپرس → سبد استعلام اصلی می‌شود.
+// چرا (کارفرما): مدیر خرید B2B اول پیش‌فاکتور رسمی را روی سایت می‌خواهد؛ خریدارِ فوریِ تک‌قطعه نیمی تلفن و نیمی
+// واتساپ. ⚠️ این جای «تصمیم ۴» (§10: واتساپ = عمل اصلی قلم استعلامی) را گرفت — تصمیم تازه‌ی کارفرما است.
 //
-// ⚠️ قرارداد §7: همه‌ی data-*های سبد (data-cart-add، data-quote-add، data-quote-mode، data-basket-name،
-// data-basket-sku، data-basket-label، data-guard-until، data-payable-only، data-expired-only) همان
-// نام‌هایی‌اند که src/components/Baskets.astro می‌خواند. تغییر نام = سبدی که بی‌صدا کار نمی‌کند.
-// `inert` فقط برای صفحه‌ی راهنمای سبک است: همان ظاهر، بدون هیچ data-* (نمونه وارد سبد واقعی کاربر نشود).
+// ⚠️ ردیف ۲ روی موبایل هم دو ستونی است (نه grid-cols-1 sm:grid-cols-2 که دستور گفته بود): دو دکمه‌ی روی هم ۵۲px
+// به اولین صفحه‌ی ۳۹۰×۸۱۲ می‌افزود و ردیف ۲ از سقف ۷۸۵px بیرون می‌زد. زیر sm برچسب کوتاه است («واتساپ»، فقط شماره).
+//
+// ⚠️ قرارداد §7: همه‌ی data-*های سبد همان نام‌هایی‌اند که Baskets.astro می‌خواند. `inert` فقط برای راهنمای سبک.
 // ---------------------------------------------------------------------------
 import PriceTag from './PriceTag.astro';
 import { whatsappInquiryHref } from './inquiry-message';
+import type { MobileLine } from './contact-mobile';
 import type { PriceState } from '../lib/wp';
 
 export interface Props {
@@ -28,24 +31,29 @@ export interface Props {
   price: PriceState;
   /** از getContact().whatsappHref — هرگز ثابت. */
   whatsappHref: string | null;
+  /** خط همراه «تماس فوری» — mobileLine(getContact()). null = دکمه‌ی تماس رندر نمی‌شود. */
+  mobile?: MobileLine | null;
   inert?: boolean;
 }
 
-const { slug, name, sku, url, price, whatsappHref, inert = false } = Astro.props;
+const { slug, name, sku, url, price, whatsappHref, mobile = null, inert = false } = Astro.props;
 
 const hook = (attrs: Record<string, string | null | undefined | boolean>) => (inert ? {} : attrs);
 const basket = { 'data-basket-name': name, 'data-basket-sku': sku ?? '' };
 const inquiryHref = whatsappInquiryHref(whatsappHref, { name, sku, url });
 
-// کلاس‌ها یک‌جا: هر سه دکمه‌ی اصلی ممکن دقیقاً یک شکل دارند.
 const primary =
-  'w-full inline-flex items-center justify-center gap-2 bg-action text-white rounded-md px-6 min-h-12 font-black text-base hover:bg-accent-ink transition-colors focus-visible:outline-accent';
-const link = 'inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4';
+  'w-full inline-flex items-center justify-center gap-2 bg-action text-white rounded-md px-4 min-h-12 font-black text-sm sm:text-base leading-6 hover:bg-accent-strong transition-colors';
+const quick =
+  'inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-md bg-white border border-steel-300 hover:border-steel-500 text-steel-900 font-bold text-sm';
+const link = 'inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900';
+const phoneIcon = 'M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z';
 const waIcon = 'M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2z';
+const quickCount = (mobile ? 1 : 0) + (inquiryHref ? 1 : 0);
 ---
 
-<div class="cy-buybox flex flex-col gap-2 md:gap-3" data-buybox>
-  {/* قلم غیرپرداخت‌پذیر: برچسب وضعیت به‌جای «استعلام قیمت» — دکمه‌ی زیرش همان عمل را نام می‌برد (اصل ۵). */}
+<div class="cy-buybox flex flex-col gap-2" data-buybox>
+  {/* قلم غیرپرداخت‌پذیر: برچسب وضعیت به‌جای «استعلام قیمت» — دکمه‌های زیرش همان عمل را نام می‌برند (اصل ۵). */}
   <PriceTag price={price} size="page" statusLabel={price.payable ? undefined : 'فروش استعلامی — قیمت روز'} />
 
   {price.payable && (
@@ -54,6 +62,7 @@ const waIcon = 'M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2z';
     </p>
   )}
 
+  {/* ── ردیف ۱ ── */}
   {price.payable ? (
     <>
       <button type="button" class={primary} data-primary-action
@@ -62,40 +71,42 @@ const waIcon = 'M12 2a10 10 0 00-8.6 15.1L2 22l5-1.3A10 10 0 1012 2z';
       </button>
       <button type="button" class={primary} hidden
         {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'rfq', ...basket, 'data-guard-until': price.validUntil, 'data-expired-only': true })}>
-        <span data-basket-label>افزودن به سبد استعلام</span>
+        <span data-basket-label>درخواست پیش‌فاکتور / افزودن به لیست استعلام</span>
       </button>
-      <div class="flex flex-wrap gap-x-5">
-        <button type="button" class={link}
-          {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'cart', ...basket, 'data-guard-until': price.validUntil, 'data-payable-only': true })}>
-          <span data-basket-label>دریافت پیش‌فاکتور</span>
-        </button>
-        {whatsappHref && (
-          <a href={inert ? '#style-guide' : whatsappHref} target={inert ? undefined : '_blank'} rel="noopener noreferrer" class={link}>
-            ارسال عکس قطعه در واتساپ
-          </a>
-        )}
-        <slot name="links" />
-      </div>
-    </>
-  ) : inquiryHref ? (
-    <>
-      <a href={inert ? '#style-guide' : inquiryHref} target={inert ? undefined : '_blank'} rel="noopener noreferrer" class={primary} data-primary-action>
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d={waIcon} /></svg>
-        استعلام قیمت در واتساپ
-      </a>
-      <div class="flex flex-wrap gap-x-5">
-        <button type="button" class={link} {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'rfq', ...basket })}>
-          <span data-basket-label>+ افزودن به سبد استعلام</span>
-        </button>
-        <slot name="links" />
-      </div>
     </>
   ) : (
-    <>
-      <button type="button" class={primary} data-primary-action {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'rfq', ...basket })}>
-        <span data-basket-label>افزودن به سبد استعلام</span>
-      </button>
-      <div class="flex flex-wrap gap-x-5"><slot name="links" /></div>
-    </>
+    <button type="button" class={primary} data-primary-action {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'rfq', ...basket })}>
+      <span data-basket-label>درخواست پیش‌فاکتور / افزودن به لیست استعلام</span>
+    </button>
   )}
+
+  {/* ── ردیف ۲: پاسخ فوری ── */}
+  {quickCount > 0 && (
+    <div class:list={['grid gap-2', quickCount === 2 ? 'grid-cols-2' : 'grid-cols-1']}>
+      {mobile && (
+        <a href={inert ? '#style-guide' : mobile.href} class={quick} aria-label={`تماس فوری: ${mobile.display}`}>
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d={phoneIcon} /></svg>
+          <span class="hidden sm:inline">تماس فوری:</span>
+          <span class="tabular-nums" dir="ltr">{mobile.display}</span>
+        </a>
+      )}
+      {inquiryHref && (
+        <a href={inert ? '#style-guide' : inquiryHref} target={inert ? undefined : '_blank'} rel="noopener noreferrer" class={quick}>
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d={waIcon} /></svg>
+          <span class="sm:hidden">واتساپ</span><span class="hidden sm:inline">استعلام فوری در واتساپ</span>
+        </a>
+      )}
+    </div>
+  )}
+
+  {/* ── ردیف ۳: پیوندهای کمکی زیر خط مو ── */}
+  <div class="flex flex-wrap gap-x-5 border-t border-steel-200">
+    {price.payable && (
+      <button type="button" class={link}
+        {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'cart', ...basket, 'data-guard-until': price.validUntil, 'data-payable-only': true })}>
+        <span data-basket-label>دریافت پیش‌فاکتور</span>
+      </button>
+    )}
+    <slot name="links" />
+  </div>
 </div>

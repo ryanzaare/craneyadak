@@ -23,12 +23,17 @@ import { computePrice, type CraneProduct } from '../lib/wp';
 
 interface Props {
   products: CraneProduct[];
-  categorySlug: string;
+  /** صفحه‌ی دسته: فیلتر تخصصی همان دسته. آرشیو /products/ ندارد (مشخصه‌ها بین دسته‌ها هم‌معنا نیستند). */
+  categorySlug?: string;
+  /** آرشیو /products/ (فاز ۳): چیپ دسته — فقط دسته‌های دارای کالا، از ۲ دسته. */
+  categories?: { slug: string; name: string; count: number }[];
+  /** آرشیو: مرتب‌سازی (مرتبط‌ترین/جدیدترین/ارزان‌ترین/گران‌ترین). */
+  sortable?: boolean;
 }
 
-const { products, categorySlug } = Astro.props;
+const { products, categorySlug, categories = [], sortable = false } = Astro.props;
 
-const specFacets = resolveFacets(products, await getCategoryFacets(categorySlug));
+const specFacets = categorySlug ? resolveFacets(products, await getCategoryFacets(categorySlug)) : [];
 const brandCounts = new Map<string, number>();
 for (const p of products) if (p.brandSlug) brandCounts.set(p.brandSlug, (brandCounts.get(p.brandSlug) ?? 0) + 1);
 const brands = BRANDS.filter((b) => brandCounts.has(b.slug));
@@ -61,6 +66,27 @@ const chip =
           <label class={chip}><input type="checkbox" data-cat-brand value={b.slug} class="sr-only" />{b.nameFa} <span class="tabular-nums font-normal">{fa(brandCounts.get(b.slug) ?? 0)}</span></label>
         ))}
       </fieldset>
+    )}
+
+    {categories.length >= 2 && (
+      <fieldset class="flex flex-wrap gap-2">
+        <legend class="sr-only">دسته</legend>
+        {categories.map((c) => (
+          <label class={chip}><input type="checkbox" data-cat-category value={c.slug} class="sr-only" />{c.name} <span class="tabular-nums font-normal">{fa(c.count)}</span></label>
+        ))}
+      </fieldset>
+    )}
+
+    {sortable && (
+      <label class="inline-flex items-center gap-2 text-sm font-bold text-steel-700">
+        مرتب‌سازی
+        <select data-cat-sort class="min-h-11 rounded border border-steel-300 bg-white px-2 text-sm font-bold text-steel-900">
+          <option value="relevant">مرتبط‌ترین</option>
+          <option value="newest">جدیدترین</option>
+          <option value="cheapest">ارزان‌ترین</option>
+          <option value="expensive">گران‌ترین</option>
+        </select>
+      </label>
     )}
 
     {/* جابه‌جایی نما — aria-pressed؛ جدول پیش‌فرض (§4: «نمای فهرست/جدول پیش‌فرض برای دسته‌های پرمشخصه»). */}
@@ -112,7 +138,7 @@ const chip =
 </div>
 
 <script>
-  import { matches, parseState, toQuery, EMPTY, type FilterState, type ItemData } from './category-filter';
+  import { matches, parseState, toQuery, compareItems, EMPTY, type FilterState, type ItemData, type SortMode } from './category-filter';
 
   const root = document.querySelector<HTMLElement>('[data-category-filters]');
   if (root) {
@@ -126,16 +152,24 @@ const chip =
     const specBoxes = [...root.querySelectorAll<HTMLInputElement>('[data-cat-spec]')];
     const ranges = [...root.querySelectorAll<HTMLInputElement>('[data-cat-range]')];
     const viewBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-cat-view-btn]')];
+    const catBoxes = [...root.querySelectorAll<HTMLInputElement>('[data-cat-category]')];
+    const sortEl = root.querySelector<HTMLSelectElement>('[data-cat-sort]');
 
     const data = (el: HTMLElement): ItemData => {
       const specs: Record<string, string> = {};
       for (const a of el.getAttributeNames()) if (a.startsWith('data-spec-')) specs[a.slice(10)] = el.getAttribute(a) ?? '';
-      return { stock: el.dataset.stock ?? '', priced: el.dataset.priced === '1', brand: el.dataset.brand ?? '', specs };
+      const price = el.dataset.price ? Number(el.dataset.price) : null;
+      return {
+        stock: el.dataset.stock ?? '', priced: el.dataset.priced === '1', brand: el.dataset.brand ?? '', specs,
+        categories: (el.dataset.categories ?? '').split(' ').filter(Boolean), price, modified: el.dataset.modified ?? '',
+      };
     };
     const itemData = new Map(items.map((el) => [el, data(el)]));
 
     const read = (): FilterState => {
-      const s: FilterState = { ...EMPTY, specs: {}, ranges: {} };
+      const s: FilterState = { ...EMPTY, specs: {}, ranges: {}, cats: [] };
+      s.cats = catBoxes.filter((b) => b.checked).map((b) => b.value);
+      s.sort = (sortEl?.value as SortMode) ?? 'relevant';
       s.stock = (stockRadios.find((r) => r.checked)?.value as FilterState['stock']) ?? 'all';
       s.brands = brandBoxes.filter((b) => b.checked).map((b) => b.value);
       for (const b of specBoxes) if (b.checked) (s.specs[b.dataset.catSpec!] ??= []).push(b.value);
@@ -155,6 +189,20 @@ const chip =
         if (out) out.textContent = r.value;
       }
       for (const b of viewBtns) b.setAttribute('aria-pressed', String(b.dataset.catViewBtn === s.view));
+      for (const b of catBoxes) b.checked = s.cats.includes(b.value);
+      if (sortEl) sortEl.value = s.sort;
+    };
+
+    /** ترتیب DOM هر نما (جدول و کارت) — مرتب‌سازی پایدار؛ «مرتبط‌ترین» ترتیب build را برمی‌گرداند. */
+    const original = new Map(items.map((el, i) => [el, i]));
+    const reorder = (mode: SortMode) => {
+      for (const v of views) {
+        const list = v.matches('ul') ? v : v.querySelector('ul');
+        if (!list) continue;
+        const own = [...list.children].filter((c): c is HTMLElement => itemData.has(c as HTMLElement));
+        own.sort((a, b) => compareItems(itemData.get(a)!, itemData.get(b)!, mode) || original.get(a)! - original.get(b)!);
+        for (const el of own) list.appendChild(el);
+      }
     };
 
     const apply = (push = true) => {
@@ -166,9 +214,10 @@ const chip =
         if (ok && el.dataset.slug) shown.add(el.dataset.slug);
       }
       for (const v of views) v.hidden = v.dataset.catView !== s.view;
+      reorder(s.sort);
       if (countEl) countEl.textContent = shown.size.toLocaleString('fa-IR');
       if (emptyEl) emptyEl.hidden = shown.size !== 0;
-      const q = toQuery({ ...s, view: 'list' });
+      const q = toQuery({ ...s, view: 'list', sort: 'relevant' });
       if (clear) clear.hidden = q === '';
       if (push) {
         const qs = toQuery(s);
@@ -179,7 +228,8 @@ const chip =
     write(parseState(new URLSearchParams(location.search)));
     apply(false);
 
-    for (const el of [...stockRadios, ...brandBoxes, ...specBoxes]) el.addEventListener('change', () => apply());
+    for (const el of [...stockRadios, ...brandBoxes, ...specBoxes, ...catBoxes]) el.addEventListener('change', () => apply());
+    sortEl?.addEventListener('change', () => apply());
     for (const r of ranges) r.addEventListener('input', () => {
       const out = root.querySelector<HTMLElement>(`[data-range-out="${r.dataset.catRange}"]`);
       if (out) out.textContent = r.value;
@@ -190,7 +240,7 @@ const chip =
       apply();
     });
     clear?.addEventListener('click', () => {
-      write({ ...EMPTY, specs: {}, ranges: {}, view: read().view });
+      write({ ...EMPTY, specs: {}, ranges: {}, cats: [], view: read().view, sort: read().sort });
       apply();
     });
   }
