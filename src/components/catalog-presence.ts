@@ -8,6 +8,9 @@
 // ⚠️ معیار «محصول دارد» است، نه «ایندکس‌پذیر است» (categoryReadiness): تصمیم D درباره‌ی چیزی است که خریدار
 // می‌بیند. 📌 وقتی INDEX_EMPTY_CATEGORIES=1 روشن شد، دسته‌های بی‌محصولِ ایندکس‌پذیر از ناوبری بی‌لینک می‌مانند —
 // پیش از انتشار با کارفرما مرور شود (backlog).
+// ⚠️ تصمیم D در ناوبری و صفحه‌ی اصلی **لغو شد** (کارفرما، ۳ آبان ۱۴۰۵: «دسته‌ها را به‌زودی خودم پر می‌کنم»): هدر، فوتر،
+// /search/ و صفحه‌ی اصلی دوباره هر ۷ گروه و ۳۱ دسته را نشان می‌دهند — از `all` (با شمار، حتی صفر). `silos` (فقط
+// دارای کالا) برای جایی است که باید فقط کالای واقعی را نشان داد (چیپ‌های «دسته‌های دارای کالا»).
 // یک‌بار در هر build محاسبه می‌شود (Promise ماژول) — Header روی هر صفحه صدایش می‌زند.
 // ---------------------------------------------------------------------------
 import { getAllProducts } from '../lib/wp';
@@ -21,6 +24,8 @@ export interface PresentSilo {
 
 export interface CatalogPresence {
   silos: PresentSilo[];
+  /** هر ۷ گروه و ۳۱ دسته به ترتیب تاکسونومی، با شمار (صفر هم). */
+  all: PresentSilo[];
   categoryCount: number;
   brands: { brand: (typeof BRANDS)[number]; count: number }[];
   /** همه‌ی دسته‌ها/برندهای تاکسونومی — برای جمله‌ی صادقانه‌ی «X از Y». */
@@ -38,14 +43,16 @@ export function getCatalogPresence(): Promise<CatalogPresence> {
       for (const slug of new Set(p.categorySlugs)) byCategory.set(slug, (byCategory.get(slug) ?? 0) + 1);
       if (p.brandSlug) byBrand.set(p.brandSlug, (byBrand.get(p.brandSlug) ?? 0) + 1);
     }
-    const silos = SILOS.map((silo) => {
-      const categories = silo.categories
-        .map((category) => ({ category, count: byCategory.get(category.slug) ?? 0 }))
-        .filter((c) => c.count > 0);
+    const all = SILOS.map((silo) => {
+      const categories = silo.categories.map((category) => ({ category, count: byCategory.get(category.slug) ?? 0 }));
       return { silo, categories, count: categories.reduce((n, c) => n + c.count, 0) };
-    }).filter((s) => s.categories.length > 0);
+    });
+    const silos = all
+      .map((s) => ({ ...s, categories: s.categories.filter((c) => c.count > 0) }))
+      .filter((s) => s.categories.length > 0);
     return {
       silos,
+      all,
       categoryCount: silos.reduce((n, s) => n + s.categories.length, 0),
       brands: BRANDS.filter((b) => byBrand.has(b.slug)).map((brand) => ({ brand, count: byBrand.get(brand.slug)! })),
       totalCategories: SILOS.reduce((n, s) => n + s.categories.length, 0),

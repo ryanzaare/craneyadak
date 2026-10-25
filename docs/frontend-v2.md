@@ -43,7 +43,9 @@ Jobs to be done, in order of value:
    approval. Both paths are first-class and clearly different (the two-basket model already exists).
 5. **Say each thing once.** One spec table, one trust block, one title. Repetition makes pages long and hides the action.
 6. **Honest catalogue.** Show only categories and brands that have products; empty ones are reachable only through search or the full list,
-   with an honest "being added" state (decision D).
+   with an honest "being added" state (decision D). **Reverted for navigation and the home page (3 Aban 1405, client): the client is
+   filling the remaining categories now, so the mega-menu, mobile menu, footer (7 groups), `/search/` directory and home page show all
+   7 groups and 31 categories again.** Empty category pages keep their honest empty state and stay noindex until they have products.
 7. **Mobile first, thumb first.** A persistent bottom bar (price state + primary action + WhatsApp/call) on product pages; 44px touch
    targets; no hover-only information.
 8. **Procurement artifacts are features.** Printable spec sheet, proforma, official invoice, order tracking by code + phone (exists).
@@ -150,7 +152,7 @@ view.
 | Lighthouse (mobile and desktop) | performance ≥ 0.9, accessibility ≥ 0.9, SEO ≥ 0.95 on indexable pages, CLS ≤ 0.05, TBT ≤ 200ms, LCP ≤ 2.5s (existing `lighthouserc.json`) |
 | JavaScript per page | ≤ 30 KB gzip, islands only (search, filters, baskets, account). Today all JS in `dist/_astro` is ~42 KB raw |
 | Fonts | Vazirmatn variable (111 KB today — subset to Persian + Latin, target ≤ 70 KB) + mono subset ≤ 20 KB |
-| HTML | **≤ 180 KB raw including inline CSS** (revised 1 Aban 1405, client decision). `inlineStylesheets: 'always'` stays permanently (measured live, 15 Mehr: desktop 92 → 97); it puts ~77 KB of CSS in every page, so the original 120 KB target is not reachable without giving that up. Repetition (empty-category nav, duplicate blocks) is still removed |
+| HTML | **≤ 205 KB raw with 77 KB inline CSS and the full 31-category mega-menu** (revised 3 Aban 1405, client decision: all 7 groups / 31 categories return to the mega-menu and mobile menu, ~20 KB per page; previous figure ≤ 180 KB). `inlineStylesheets: 'always'` stays permanently (measured live, 15 Mehr: desktop 92 → 97); it puts ~77 KB of CSS in every page, so the original 120 KB target is not reachable without giving that up. Lighthouse performance must stay 0.99–1.00. Duplicate blocks are still removed |
 | LCP image | ≤ 120 KB AVIF, explicit width/height |
 
 ## 7. What must not change (the contract)

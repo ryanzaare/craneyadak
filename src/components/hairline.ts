@@ -23,3 +23,15 @@ export function hairlineCell(i: number, n: number): string {
   out.push(LG_SPAN[cols - lastRow + 1]!);
   return out.join(' ');
 }
+
+/**
+ * خانه‌های پرکننده‌ی سفید برای شبکه‌ی ۲/۴/۶ستونه (ویترین برندها): کلاس نمایش هر پرکننده در هر نقطه‌ی شکست.
+ * پرکننده‌ی i فقط در نقطه‌ای دیده می‌شود که ردیف آخر به آن نیاز دارد.
+ */
+export function hairlineFillers(n: number): string[] {
+  const need = (cols: number) => (cols - (n % cols)) % cols;
+  const [b, m, l] = [need(2), need(4), need(6)];
+  return Array.from({ length: Math.max(b, m, l) }, (_, i) =>
+    [i < b ? 'block' : 'hidden', i < m ? 'md:block' : 'md:hidden', i < l ? 'lg:block' : 'lg:hidden', 'bg-white'].join(' '),
+  );
+}

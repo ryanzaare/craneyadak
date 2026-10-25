@@ -100,20 +100,21 @@ const presence = await getCatalogPresence();
         یا از روی دسته‌بندی پیش بروید
       </h2>
       <p class="text-sm text-steel-600 leading-7 mb-5">
-        {fa(presence.categoryCount)} دسته‌ی دارای کالا در {fa(presence.silos.length)} گروه فنی.
+        {/* هر ۳۱ دسته (لغو تصمیم D، کارفرما ۳ آبان ۱۴۰۵)؛ شمار کالا فقط کنار دسته‌ی دارای کالا — «۰ قطعه» ۲۷ بار نویز است. */}
+        {fa(presence.totalCategories)} دسته قطعه در {fa(presence.all.length)} گروه فنی.
         <a href="/categories/" class="font-bold text-accent-ink hover:underline">همه‌ی دسته‌ها ←</a>
       </p>
 
       <ul role="list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-        {presence.silos.map(({ silo, categories }) => (
+        {presence.all.map(({ silo, categories }) => (
           <li>
-            <a href={siloPath(silo)} class="block text-sm font-black text-steel-900 hover:text-accent-ink py-1">{silo.name}</a>
+            <a href={siloPath(silo)} class="flex items-baseline justify-between gap-3 text-sm font-black text-steel-900 hover:text-accent-ink py-1">{silo.name}<span class="text-xs font-normal text-steel-600">{fa(categories.length)} دسته</span></a>
             <ul role="list" class="border-t border-steel-200">
               {categories.map(({ category, count }) => (
                 <li>
                   <a href={categoryPath({ ...category, silo })} class="flex items-center justify-between gap-3 min-h-11 border-b border-steel-200 text-sm text-steel-700 hover:text-accent-ink">
                     <span class="truncate">{category.name}</span>
-                    <span class="text-xs text-steel-600 tabular-nums shrink-0">{fa(count)} قطعه</span>
+                    {count > 0 && <span class="text-xs text-steel-600 tabular-nums shrink-0">{fa(count)} قطعه</span>}
                   </a>
                 </li>
               ))}

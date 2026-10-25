@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------
 import { getHighWearParts } from '../lib/site-options';
 import { findCategory, categoryPath } from '../data/taxonomy';
+import { hairlineGrid, hairlineCell } from './hairline';
 
 interface Props {
   class?: string;
@@ -43,59 +44,35 @@ if (missing.length > 0) {
 }
 ---
 
+{/* فاز ۴ (کارفرما، ۳ آبان ۱۴۰۵ — بازگشت به صفحه‌ی اصلی): شبکه‌ی خط مو با شماره‌ی مونو «۰۱، ۰۲…» به‌جای کارت گرد. */}
 {
   items.length > 0 && (
-    <section class={`bg-white px-4 py-10 border-b border-steel-100 ${className}`} aria-labelledby="wear-heading">
+    <section class={`bg-white px-4 py-8 md:py-10 border-b border-steel-300 ${className}`} aria-labelledby="wear-heading">
       <div class="max-w-7xl mx-auto">
-        <div class="flex flex-wrap items-end justify-between gap-4 mb-6 border-b border-steel-300 pb-4">
+        <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
           <div class="min-w-0">
-            <h2 id="wear-heading" class="text-2xl md:text-3xl font-black text-steel-900 mb-2">
-              قطعات مصرفی و پرتعویض
-            </h2>
-            <p class="text-steel-600 leading-7 max-w-3xl">
-              قطعاتی که بر اساس سایش، حرارت یا خستگی مکانیکی عمر محدود دارند و در برنامه‌ی
-              نگهداری پیشگیرانه دوره‌ای تعویض می‌شوند — همان اقلامی که بهتر است همیشه در انبار
-              موجود باشند.
+            <h2 id="wear-heading" class="text-xl md:text-2xl font-black text-steel-900">قطعات مصرفی و پرتعویض جرثقیل سقفی</h2>
+            <p class="mt-1 text-sm text-steel-600 leading-7 max-w-3xl">
+              قطعاتی که بر اساس سایش، حرارت یا خستگی مکانیکی عمر محدود دارند و در برنامه‌ی نگهداری پیشگیرانه دوره‌ای تعویض
+              می‌شوند — همان اقلامی که بهتر است همیشه در انبار موجود باشند.
             </p>
           </div>
-          <a
-            href="/categories"
-            class="text-sm font-bold text-accent-ink hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded shrink-0"
-          >
-            همه‌ی دسته‌ها ←
-          </a>
+          <a href="/categories/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4 shrink-0">همه‌ی دسته‌ها ←</a>
         </div>
-
-        <ul role="list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {items.map(({ category, reason }) => (
-            <li>
-              <a
-                href={categoryPath(category)}
-                class="group h-full flex flex-col bg-steel-50 border border-steel-300 rounded-lg p-4 hover:border-accent hover:bg-white transition-colors focus:outline-none focus:ring-4 focus:ring-accent/30"
-              >
-                <span class="flex items-start gap-3 mb-2">
-                  <span
-                    class="w-9 h-9 shrink-0 rounded-md bg-white border border-steel-300 text-accent-ink group-hover:bg-accent group-hover:text-white group-hover:border-accent transition-colors flex items-center justify-center"
-                    aria-hidden="true"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d={category.icon} />
-                    </svg>
-                  </span>
-                  <span class="font-black text-steel-900 text-sm leading-6 group-hover:text-accent-ink transition-colors">
-                    {category.name}
-                  </span>
+        <ol class={hairlineGrid(items.length)}>
+          {items.map(({ category, reason }, i) => (
+            <li class={hairlineCell(i, items.length)}>
+              <a href={categoryPath(category)} class="group h-full flex flex-col gap-2 p-4 hover:bg-steel-50">
+                <span class="flex items-center gap-2">
+                  <span class="font-mono text-xs text-steel-600 tabular-nums" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                  <span class="font-black text-steel-900 text-sm leading-6 group-hover:text-accent-ink">{category.name}</span>
                 </span>
-
-                {/* دلیل فنی — همان چیزی که این ادعا را قابل ارزیابی می‌کند
-                    و از یک برچسب تبلیغاتی جدا. */}
-                <span class="text-xs text-steel-600 leading-6 mt-auto pt-2 border-t border-steel-300 group-hover:border-accent/30 transition-colors">
-                  {reason}
-                </span>
+                {/* دلیل فنی — همان چیزی که این ادعا را قابل ارزیابی می‌کند و از یک برچسب تبلیغاتی جدا. */}
+                <span class="text-xs text-steel-600 leading-6 mt-auto pt-2 border-t border-steel-200">{reason}</span>
               </a>
             </li>
           ))}
-        </ul>
+        </ol>
       </div>
     </section>
   )

@@ -18,23 +18,19 @@
 //    حالا یک مگا-منو کامل، هر ۷ گروه را همراه با تمام ۳۱ زیردسته نشان
 //    می‌دهد — بدون نیاز به کلیک. سود سئویی جانبی: هر صفحه به تمام صفحات
 //    دسته لینک داخلی می‌دهد و عمق خزش کل کاتالوگ ۱ کلیک می‌شود.
-//    ⚠️ بازنگری فاز ۳ (تصمیم D، کاتالوگ صادق): با ۲۷ دسته‌ی خالی از ۳۱، منوی کامل خریدار را به ۲۷ «هنوز کالایی
-//    نیست» می‌فرستاد. حالا فقط دسته‌های دارای کالا (catalog-presence.ts) + یک پیوند صادق به /categories/ که
-//    خودش به همه‌ی ۳۱ لینک می‌دهد — عمق خزش دسته‌های خالی ۲ کلیک می‌شود و آن‌ها فعلاً noindex‌اند.
+//    ⚠️ فاز ۳ این را به «فقط دسته‌های دارای کالا» بُرد (تصمیم D)؛ کارفرما ۳ آبان ۱۴۰۵ لغوش کرد: دسته‌ها به‌زودی پر
+//    می‌شوند و منو باید از همین حالا کامل باشد. هزینه: ~۲۰KB HTML خام روی هر صفحه (بودجه‌ی §6 ← ۲۰۵KB).
+//    شمار کالای هر دسته عمداً در منو نیست: ۳۱ «(۰)» هم بایت است هم پیام «خالی».
 // ---------------------------------------------------------------------------
 import { SITE } from '../data/site';
-import { siloPath, categoryPath } from '../data/taxonomy';
+import { SILOS, siloPath, categoryPath } from '../data/taxonomy';
 import Logo from './Logo.astro';
 import { ACCOUNT_MENU } from '../data/account-menu';
-import { getContact, getSiteOptions } from '../lib/site-options';
+import { getContact } from '../lib/site-options';
 import { mobileLine } from './contact-mobile';
-import { getCatalogPresence, fa } from './catalog-presence';
 
-// «خط ویژه تامین» (فاز ۳): خط همراه از وردپرس + ساعت کاری برای نقطه‌ی سبز (business-hours.ts). هر دو memoized‌اند.
+// «خط ویژه تامین» (فاز ۳): خط همراه از وردپرس (memoized).
 const mobile = mobileLine(await getContact());
-const { hours } = await getSiteOptions();
-// تصمیم D (کاتالوگ صادق): منوها فقط گروه/دسته‌ی دارای کالا را نشان می‌دهند + یک پیوند صادق به نقشه‌ی کامل.
-const presence = await getCatalogPresence();
 
 // متغیر محیطی build به مرورگر نمی‌رسد؛ از data-wp-base خوانده می‌شود
 // (src/scripts/account.ts). بدون آن، «خروج» در منوی هدر کار نمی‌کند.
@@ -130,10 +126,12 @@ const navLinks = [
       </a>
     )}
     {mobile && (
-      /* «● خط ویژه تامین: ۰۹…» — نقطه در HTML خنثی است؛ اسکریپت فقط داخل ساعت کاری وردپرس (تهران) سبزش می‌کند. */
-      <a href={mobile.href} data-hotline data-hours={JSON.stringify(hours)}
+      /* «● خط ویژه تامین: ۰۹…» — ⚠️ نقطه همیشه سبز است، بی‌بررسی ساعت (کارفرما، ۳ آبان ۱۴۰۵): این خط همراه فوری
+         جرثقیلِ از کار افتاده است، نه تلفن دفتر؛ نقطه‌ی خاکستری «تعطیلیم» خوانده می‌شد. ادعای ۲۴ساعته ادعای خود
+         کارفرماست. فاز ۳ آن را به ساعت کاری وردپرس بسته بود (business-hours.ts — حذف شد). */
+      <a href={mobile.href}
         class="hidden md:inline-flex shrink-0 items-center gap-2 h-11 px-3.5 rounded-full border border-steel-700 bg-steel-800 text-sm font-bold text-white hover:border-steel-400 whitespace-nowrap">
-        <span class="w-2 h-2 rounded-full bg-steel-500 data-[open]:bg-emerald-400" data-hotline-dot aria-hidden="true"></span>
+        <span class="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true"></span>
         <span class="xl:hidden 2xl:inline">خط ویژه تامین:</span>
         <span class="tabular-nums" dir="ltr">{mobile.display}</span>
       </a>
@@ -300,7 +298,7 @@ const navLinks = [
   >
     <div class="max-w-7xl mx-auto px-6 py-8">
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-8">
-        {presence.silos.map(({ silo, categories }) => (
+        {SILOS.map((silo) => (
           <div class="min-w-0">
             <a
               href={siloPath(silo)}
@@ -314,9 +312,9 @@ const navLinks = [
             {/* ⚠️ کلاس پیوندها یک‌بار روی ul (واریانت [&_a]) نه روی هر ۳۱ پیوند: رشته‌ی ~۲۰۰ بایتی تکراری ~۶KB به HTML
                 *هر* صفحه می‌افزود (ممیزی بودجه‌ی HTML، ۱ آبان ۱۴۰۵). فوکوس = همان :focus-visible سراسری (accent). */}
             <ul class="space-y-1.5 [&_a]:block [&_a]:text-sm [&_a]:leading-6 [&_a]:rounded [&_a]:px-1 [&_a]:-mx-1 [&_a]:py-0.5 [&_a]:text-steel-700 [&_a:hover]:text-accent-ink [&_a[aria-current]]:text-accent-ink [&_a[aria-current]]:font-bold" role="list">
-              {categories.map(({ category, count }) => (
+              {silo.categories.map((category) => (
                 <li>
-                  <a href={categoryPath({ ...category, silo })} aria-current={path === categoryPath({ ...category, silo }) ? 'page' : undefined}>{category.name} <span class="text-xs text-steel-600 tabular-nums">({fa(count)})</span></a>
+                  <a href={categoryPath({ ...category, silo })} aria-current={path === categoryPath({ ...category, silo }) ? 'page' : undefined}>{category.name}</a>
                 </li>
               ))}
             </ul>
@@ -325,8 +323,7 @@ const navLinks = [
       </div>
 
       <div class="mt-8 pt-5 border-t border-steel-100 flex flex-wrap items-center gap-4">
-        {/* پیوند صادق (تصمیم D): نقشه‌ی کامل هر ۳۱ دسته را دارد، که بیشترشان هنوز کالا ندارند — همین را می‌گوید. */}
-        <a href="/categories/" class="text-sm font-bold text-accent-ink hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded">نقشه‌ی کامل کاتالوگ — {fa(presence.totalCategories)} دسته، {fa(presence.categoryCount)} دسته دارای کالا ←</a>
+        <a href="/categories/" class="text-sm font-bold text-accent-ink hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded">مشاهده نقشه کامل کاتالوگ ←</a>
         <a href="/contact" class="text-sm font-bold text-steel-900 hover:text-accent-ink transition-colors focus:outline-none focus:ring-2 focus:ring-steel-900 rounded">قطعه را پیدا نکردید؟ کد فنی را استعلام بگیرید</a>
       </div>
     </div>
@@ -343,7 +340,7 @@ const navLinks = [
         <li class="border-t border-steel-100 pt-2 mt-1">
           <span class="block text-xs font-black text-steel-500 uppercase tracking-wider py-2">دسته‌بندی قطعات</span>
           <ul class="flex flex-col gap-1">
-            {presence.silos.map(({ silo, categories }) => (
+            {SILOS.map((silo) => (
               <li>
                 <details class="group">
                   <summary class="flex items-center justify-between gap-2 cursor-pointer list-none py-2.5 text-steel-900 font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink rounded">
@@ -357,14 +354,13 @@ const navLinks = [
                   </summary>
                   <ul class="flex flex-col pr-7 gap-0.5 pb-2 border-r-2 border-accent-soft mr-2.5 [&_a]:block [&_a]:text-sm [&_a]:text-steel-700 [&_a]:py-1.5" role="list">
                     <li><a href={siloPath(silo)} class="!text-xs font-bold !text-accent-ink">مشاهده کل گروه ←</a></li>
-                    {categories.map(({ category, count }) => (
-                      <li><a href={categoryPath({ ...category, silo })}>{category.name} <span class="text-xs text-steel-600">({fa(count)})</span></a></li>
+                    {silo.categories.map((category) => (
+                      <li><a href={categoryPath({ ...category, silo })}>{category.name}</a></li>
                     ))}
                   </ul>
                 </details>
               </li>
             ))}
-            <li><a href="/categories/" class="block py-2.5 text-sm font-bold text-accent-ink">نقشه‌ی کامل کاتالوگ ({fa(presence.totalCategories)} دسته) ←</a></li>
           </ul>
         </li>
 
@@ -382,18 +378,6 @@ const navLinks = [
 
 <script>
   import { api, cacheName, cachedName, getToken, logout } from '../scripts/account';
-  import { isOpenAt, type HoursRow } from './business-hours';
-
-  /* «خط ویژه تامین»: نقطه فقط داخل ساعت کاری سبز (business-hours.ts — چرا). دقیقه‌ای یک‌بار، نه بیشتر. */
-  const hotline = document.querySelector<HTMLElement>('[data-hotline]');
-  const dot = hotline?.querySelector('[data-hotline-dot]');
-  if (hotline && dot) {
-    let rows: HoursRow[] = [];
-    try { rows = JSON.parse(hotline.dataset.hours ?? '[]'); } catch { /* داده‌ی خراب = نقطه‌ی خنثی */ }
-    const tick = () => dot.toggleAttribute('data-open', isOpenAt(rows, new Date()));
-    tick();
-    setInterval(tick, 60_000);
-  }
 
   /* میان‌بر «/» → جستجو (جستجوی بزرگ صفحه‌ی اصلی اگر هست، وگرنه هدر). نه وقتی کاربر در فیلدی تایپ می‌کند. */
   document.addEventListener('keydown', (e) => {

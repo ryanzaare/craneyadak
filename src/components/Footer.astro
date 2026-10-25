@@ -2,8 +2,7 @@
 // src/components/Footer.astro
 import { SITE } from '../data/site';
 import { ENAMAD } from '../data/trust';
-import { siloPath } from '../data/taxonomy';
-import { getCatalogPresence } from './catalog-presence';
+import { SILOS, siloPath } from '../data/taxonomy';
 import { mobileLine } from './contact-mobile';
 import { getContact, getSiteOptions } from '../lib/site-options';
 import { getLegalPages } from '../lib/legal-pages';
@@ -27,8 +26,12 @@ const legalPages = await getLegalPages();
 const year = new Date().getFullYear();
 // فوتر گروه‌های سیلو را نشان می‌دهد، نه ۳۰ دسته را — لینک داخلی متمرکز
 // روی والدها، که از آن‌جا اعتبار به فرزندان توزیع می‌شود.
-// ⚠️ فاز ۳ (تصمیم D): فقط گروه‌های دارای کالا؛ «همه‌ی دسته‌ها» پیوند صادق به نقشه‌ی کامل است.
-const footerSilos = (await getCatalogPresence()).silos.map((s) => s.silo).slice(0, 6);
+// ⚠️ هر ۷ گروه (پیش از فاز ۳ فقط ۶ تای اول بود). فاز ۳ فقط گروه‌های دارای کالا را نشان می‌داد؛ کارفرما ۳ آبان ۱۴۰۵ لغو
+// کرد. ۳۱ دسته عمداً این‌جا نیستند: مگامنو همان ۳۱ را دارد و نسخه‌ی سوم، ~۵KB دیگر روی هر صفحه است.
+const footerSilos = SILOS;
+// ⚠️ getContact().fullAddress ارقام لاتین وردپرس را نگه می‌دارد («کیلومتر 19») — فقط در نمایش فارسی می‌شود (قرارداد §7:
+// src/lib دست نمی‌خورد؛ JSON-LD همان رشته‌ی خام را می‌گیرد).
+const faDigits = (t: string) => t.replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]!);
 // ثابت ۰۲۱ (تلفن اصلی) + همراه «تماس فوری» کنار هم — دستور کارفرما: ثابت در فوتر و صفحه‌ی تماس می‌ماند.
 const mobile = mobileLine(contact);
 ---
@@ -64,7 +67,7 @@ const mobile = mobileLine(contact);
           {contact.fullAddress && (
           <p class="flex items-start gap-2">
             <svg class="w-5 h-5 shrink-0 text-steel-500" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            <span>{contact.fullAddress}</span>
+            <span>{faDigits(contact.fullAddress)}</span>
           </p>
           )}
           {contact.telHref && (
@@ -102,7 +105,7 @@ const mobile = mobileLine(contact);
             </li>
           ))}
           <li class="pt-2">
-            <a href="/categories/" class="text-accent font-bold hover:underline py-1 inline-block">نقشه‌ی کامل کاتالوگ ←</a>
+            <a href="/categories/" class="text-accent font-bold hover:underline py-1 inline-block">مشاهده همه دسته‌بندی‌ها ←</a>
           </li>
         </ul>
       </nav>

@@ -19,15 +19,12 @@
 //    نمی‌داد و حس «انبار خالی» می‌داد. اگر محصول واقعی نباشد، بخش‌ها اصلاً
 //    رندر نمی‌شوند — نه این‌که با کارت ساختگی پر شوند.
 //
-// ۴) فاز ۳ Frontend v2 (۲ آبان ۱۴۰۵) — پنج بلوک، به‌جای سیزده:
-//    هیرو بنتو (جستجو | عکس پلاک در واتساپ | فهرست چندقلمی) → دسته‌های دارای کالا → کالاهای واقعی → *یک* نوار
-//    اعتماد (فقط ادعای verified + اینماد) → فرایند چهارمرحله‌ای؛ سپس AuthorityBlock و FAQ.
-//    ⚠️ FAQ و AuthorityBlock عمداً ماندند: FAQPage در JSON-LD بدون پرسش‌های *دیدنی* روی صفحه خلاف سیاست
-//    داده‌ی ساختاریافته‌ی گوگل است، و AuthorityBlock تنها متن بلند صفحه‌ی اصلی است (سئو اولویت اول).
-//    حذف‌شده‌ها: MetricsStrip/CoverageStrip/AssuranceStrip/«چرا کرین یدک» (چهار نسخه‌ی یک ادعا — §3)، سه ویترین
-//    جدا (با یک کالا، سه بار همان کارت)، HighWearParts و فهرست ۳۱ دسته و ۱۸ برند (تصمیم D: ۲۷ دسته‌ی خالی).
-//    فهرست کامل دسته‌ها با یک پیوند صادق به /categories/ در دسترس خزنده می‌ماند (آن صفحه «noindex, follow» است —
-//    پیوندهایش دنبال می‌شوند، خودش ایندکس نمی‌شود؛ همان وضع فاز ۲).
+// ۴) Frontend v2 فاز ۳ صفحه را به پنج بلوک کوتاه کرد (تصمیم D: فقط دسته‌های دارای کالا). کارفرما ۳ آبان ۱۴۰۵ این را
+//    لغو کرد — «صفحه خیلی کوتاه و خالی شد»: هر ۷ گروه و ۳۱ دسته، قطعات پرتعویض، مزیت‌ها و ۱۸ برند برگشتند، این بار
+//    در زبان بصری v2 (شبکه‌ی خط مو `gap-px bg-steel-200`، ریل ۴px). ترتیب: هیرو بنتو → ۷ گروه/۳۱ دسته → کالاهای واقعی →
+//    پرتعویض → مزیت‌ها → برندها → فرایند خرید سازمانی → نوار اعتماد → AuthorityBlock → FAQ.
+//    ⚠️ FAQ و AuthorityBlock همیشه می‌مانند: FAQPage در JSON-LD بدون پرسش‌های *دیدنی* خلاف سیاست گوگل است.
+//    ⚠️ ارقام شمارش (۳۱، ۱۸، ۷) همه از داده و با fa() — هرگز عدد دستی؛ اگر برندی در وردپرس افزوده شود، عدد خودش عوض می‌شود.
 //
 // تفکیک نیت (ضد هم‌نوع‌خواری): این صفحه مالک عبارت اصلی
 // «قطعات جرثقیل سقفی» است. صفحه‌ی /categories عمداً همین عبارت را هدف
@@ -39,13 +36,15 @@ import AuthorityBlock from '../components/AuthorityBlock.astro';
 import ProductRow from '../components/ProductRow.astro';
 import { SITE } from '../data/site';
 import { TRUST_BADGES, ENAMAD } from '../data/trust';
-import { getFaqs, getSiteOptions, getContact } from '../lib/site-options';
-import { categoryPath, ALL_CATEGORIES } from '../data/taxonomy';
+import { getFaqs, getSiteOptions, getContact, getAdvantages } from '../lib/site-options';
+import { categoryPath, siloPath, ALL_CATEGORIES, SILOS, BRAND_CLASSES } from '../data/taxonomy';
+import HighWearParts from '../components/HighWearParts.astro';
+import { getQuickSuggestions, QUICK_LINKS_LABEL } from '../data/popular-searches';
 import { getBrands } from '../lib/brands';
 import { getStorefront } from '../lib/storefront';
 import { computePrice, productPath } from '../lib/wp';
 import { getCatalogPresence, fa } from '../components/catalog-presence';
-import { hairlineGrid, hairlineCell } from '../components/hairline';
+import { hairlineGrid, hairlineCell, hairlineFillers } from '../components/hairline';
 
 /* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
    قبلاً انتهای فرontmatter بودند و کدِ بالاتر که از آن‌ها استفاده
@@ -59,7 +58,8 @@ const storefront = await getStorefront();
 // یک ویترین، بی‌تکرار: تخفیف‌دار → موجود → تازه، تا ۴ قلم (با یک کالا، سه ویترین قبلی سه بار همان کارت بودند).
 const featured = [...new Map([...storefront.onSale, ...storefront.inStock, ...storefront.latest].map((p) => [p.slug, p])).values()].slice(0, 4);
 const presence = await getCatalogPresence();
-const presentCategories = presence.silos.flatMap(({ silo, categories }) => categories.map((c) => ({ ...c, silo })));
+const advantages = await getAdvantages();
+const quickSuggestions = getQuickSuggestions();
 // اعتماد: فقط ادعای verified (trust.ts — همان قاعده‌ی JSON-LD)؛ نشان وابسته به اصالت روی صفحه‌ی اصلی معنا ندارد.
 const trust = TRUST_BADGES.filter((b) => b.verified && !b.onlyIfAuthenticity);
 const waPlate = contact.whatsappHref ? `${contact.whatsappHref}?text=${encodeURIComponent('سلام، عکس پلاک قطعه را برای شناسایی می‌فرستم.')}` : null;
@@ -69,11 +69,13 @@ const waPlate = contact.whatsappHref ? `${contact.whatsappHref}?text=${encodeURI
    (توضیح کامل در src/lib/site-options.ts) */
 
 
-// برندها از وردپرس — فقط شمارش در توضیح متا (قرارداد §7؛ 🔶 «۳۱ دسته و ۱۸ برند» با کاتالوگ امروز بیش‌ادعاست — backlog).
+// برندها از وردپرس — ویترین برندها، H1 و توضیح متا.
 const BRANDS = await getBrands();
+const brandsByClass = (c: 'oem' | 'control' | 'electrical') => BRANDS.filter((b) => b.brandClass === c);
 
 const title = 'قطعات جرثقیل سقفی | تامین تخصصی با تضمین اصالت — کرین یدک';
-const description = `تامین تخصصی قطعات جرثقیل سقفی در ${ALL_CATEGORIES.length} دسته و ${BRANDS.length} برند: ریموت کنترل، شین برق‌رسان، موتور گیربکس، ترمز و جاروبک. جستجو با کد فنی و فاکتور رسمی.`;
+// ارقام فارسی در متا (کارفرما، ۳ آبان ۱۴۰۵) — همان شمارش، فقط نمایش.
+const description = `تامین تخصصی قطعات جرثقیل سقفی در ${fa(ALL_CATEGORIES.length)} دسته و ${fa(BRANDS.length)} برند: ریموت کنترل، شین برق‌رسان، موتور گیربکس، ترمز و جاروبک. جستجو با کد فنی و فاکتور رسمی.`;
 
 // sameAs محلی فقط با لینک واقعی — لینک خالی بی‌ارزش است.
 const localSameAs = [
@@ -202,29 +204,41 @@ const jsonLd = {
   {/* ════════════════════ ۱) هیرو بنتو ════════════════════
       سه سلول در یک شبکه‌ی «خط مو» (gap-px روی steel-300): جستجو (عمل اصلی — بیشتر بازدیدکننده‌ها کد فنی دارند)،
       عکس پلاک در واتساپ (کسی که کد را نمی‌داند)، فهرست چندقلمی (مدیر خرید با فهرست توقف برنامه‌ریزی‌شده).
-      ⚠️ هیچ تصویر، گرادیان سنگین یا انیمیشنی — قفل سرعت. H1 همان عبارت هدف قبلی است (تنها H1 صفحه). */}
-  <section class="bg-steel-50 border-b border-steel-300" aria-labelledby="hero-heading">
+      ⚠️ سلول اصلی (بازبینی کارفرما، ۳ آبان ۱۴۰۵): سفیدِ روی سفید بود و کوتاه‌تر از دو سلول کنار — زیر دکمه‌ی جستجو فضای
+      مرده می‌ماند. حالا سطح steel-50 + شبکه‌ی نقطه‌ای + ریل ۴px، و flex-col justify-between با نوار سه‌تایی پایین تا
+      دو ستون هم‌قد بسته شوند. ریل با border-s (منطقی = راست در RTL)، نه border-r. هیچ تصویر یا انیمیشنی — قفل سرعت. */}
+  <section class="bg-white border-b border-steel-300" aria-labelledby="hero-heading">
     <div class="max-w-7xl mx-auto px-4 md:px-6 py-5 md:py-8">
       <div class="grid lg:grid-cols-12 gap-px bg-steel-300 border border-steel-300 rounded-md overflow-hidden">
-        <div class="lg:col-span-8 lg:row-span-2 bg-white p-4 md:p-8 min-w-0">
-          <h1 id="hero-heading" class="text-2xl md:text-3xl lg:text-4xl font-black text-steel-900 leading-[1.5] text-right">
-            مرجع تخصصی تأمین قطعات یدکی <span class="text-accent-ink">جرثقیل سقفی</span>
-            {/* ⚠️ «۳۱ دسته از ۱۸ برند» از اینجا رفت (تصمیم D): ۲۷ دسته هنوز کالا ندارند و عدد بزرگ در H1 همان
-                بیش‌ادعایی است که قاعده‌ی ۲ منع می‌کند. جمله‌ی تازه فقط ادعای تأییدشده‌ی کارفرماست. */}
-            <span class="block text-base md:text-xl font-bold text-steel-600 mt-2 leading-8">اصل، قابل ردیابی با کد فنی، با ضمانت اصالت و فاکتور رسمی</span>
-          </h1>
-          <p class="mt-3 mb-5 text-sm md:text-base text-steel-700 leading-7 md:leading-8 max-w-2xl text-right">
-            کد فنی، عکس پلاک دستگاه یا عکس قطعه‌ی فرسوده کافی است — سازگاری را <strong class="font-bold text-steel-900">پیش از صدور پیش‌فاکتور</strong> بررسی می‌کنیم.
-          </p>
-          <SearchBox id="hero-search" tone="light" slash />
-          {presentCategories.length > 0 && (
+        <div class="lg:col-span-8 lg:row-span-2 bg-steel-50 bg-blueprint border-s-4 border-s-action p-4 md:p-8 min-w-0 flex flex-col justify-between gap-5">
+          <div>
+            <h1 id="hero-heading" class="text-2xl md:text-3xl lg:text-4xl font-black text-steel-900 leading-[1.5] text-right">
+              مرجع تخصصی تأمین قطعات یدکی <span class="text-accent-ink">جرثقیل سقفی</span>
+              {/* اعداد از خودِ تاکسونومی و وردپرس، با ارقام فارسی — نه از حدس. */}
+              <span class="block text-base md:text-xl font-bold text-steel-600 mt-2 leading-8">
+                {fa(ALL_CATEGORIES.length)} دسته قطعه از {fa(BRANDS.length)} برند — اصل، قابل ردیابی با کد فنی، با ضمانت اصالت و فاکتور رسمی
+              </span>
+            </h1>
+            <p class="mt-3 mb-5 text-sm md:text-base text-steel-700 leading-7 md:leading-8 max-w-2xl text-right">
+              کد فنی، عکس پلاک دستگاه یا عکس قطعه‌ی فرسوده کافی است — سازگاری را <strong class="font-bold text-steel-900">پیش از صدور پیش‌فاکتور</strong> بررسی می‌کنیم.
+            </p>
+            <SearchBox id="hero-search" tone="light" slash />
             <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
-              <span class="text-steel-600 shrink-0">دسته‌های دارای کالا:</span>
-              {presentCategories.slice(0, 5).map(({ category, silo }) => (
-                <a href={categoryPath({ ...category, silo })} class="inline-flex items-center min-h-9 px-3 rounded border border-steel-300 bg-steel-50 text-steel-800 hover:border-steel-500">{category.name}</a>
+              <span class="text-steel-600 shrink-0">{QUICK_LINKS_LABEL}</span>
+              {quickSuggestions.map((item) => (
+                <a href={item.href} class="inline-flex items-center min-h-9 px-3 rounded border border-steel-300 bg-white text-steel-800 hover:border-steel-500">{item.label}</a>
               ))}
             </div>
-          )}
+          </div>
+          {/* سه تعهد کارفرما (متن خود کارفرما، ۳ آبان ۱۴۰۵) — جای خالی زیر جستجو را می‌گیرد و دو ستون را هم‌قد می‌کند. */}
+          <ul class="border-t border-steel-200 pt-4 grid grid-cols-3 gap-2 text-xs text-steel-700 leading-5" role="list">
+            {['ضمانت کتبی تطابق کد فنی', 'صدور پیش‌فاکتور رسمی مالیاتی', 'تامین مستقیم و ارسال سریع'].map((t) => (
+              <li class="flex items-start gap-1.5">
+                <svg class="w-4 h-4 shrink-0 text-accent-ink" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <span class="font-bold">{t}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {waPlate && (
@@ -245,40 +259,47 @@ const jsonLd = {
           <p id="bulk-parts-hint" class="mt-1 mb-2 text-sm text-steel-700 leading-7">هر کد فنی در یک خط — سازگاری هر قلم بررسی و یک پیش‌فاکتور واحد صادر می‌شود.</p>
           <textarea id="bulk-parts" name="parts" rows="2" dir="ltr" aria-describedby="bulk-parts-hint" placeholder={'SAGA1-L12\n...'}
             class="w-full rounded-md border border-steel-300 bg-steel-50 p-2.5 text-sm font-mono leading-6 text-steel-900 placeholder:text-steel-500 focus:border-steel-600 focus:bg-white resize-y max-h-40"></textarea>
-          <button type="submit" class="mt-3 inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-black hover:bg-accent-strong">درخواست پیش‌فاکتور</button>
+          <button type="submit" class="mt-auto pt-0 inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-black hover:bg-accent-strong">درخواست پیش‌فاکتور</button>
         </form>
       </div>
     </div>
   </section>
 
-  {/* ════════════════════ ۲) دسته‌های دارای کالا ════════════════════
-      تصمیم D: فقط دسته‌ای که واقعاً کالا دارد، با شمار فارسی. فهرست کامل (۳۱) یک پیوند صادق است، نه ۲۷ بن‌بست. */}
-  <section class="bg-white px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="cats-heading">
+  {/* ════════════════════ ۲) ۷ گروه فنی و ۳۱ دسته ════════════════════
+      هر ۳۱ دسته، زیر گروه خودش، در شبکه‌ی خط مو. صفحه‌ی اصلی به تمام صفحات دسته لینک مستقیم دارد (عمق خزش ۲) و هر نام
+      دسته یک عبارت جستجوی واقعی است. شمار کالا فقط کنار دسته‌ی دارای کالا — «۰ قطعه» بیست‌وچند بار نویز است. */}
+  <section class="bg-steel-50 px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="silos-heading">
     <div class="max-w-7xl mx-auto">
       <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
-        <h2 id="cats-heading" class="text-xl md:text-2xl font-black text-steel-900">دسته‌بندی قطعات جرثقیل سقفی</h2>
-        <a href="/categories/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">نقشه‌ی کامل کاتالوگ ({fa(presence.totalCategories)} دسته، در حال تکمیل) ←</a>
+        <div>
+          <h2 id="silos-heading" class="text-xl md:text-2xl font-black text-steel-900">دسته‌بندی قطعات جرثقیل سقفی</h2>
+          <p class="mt-1 text-sm text-steel-600 leading-7">{fa(ALL_CATEGORIES.length)} دسته قطعه در {fa(SILOS.length)} گروه فنی — از روی گروه پیش بروید یا مستقیم کد فنی را جستجو کنید.</p>
+        </div>
+        <a href="/categories/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">فهرست کامل ←</a>
       </div>
-      {presentCategories.length > 0 ? (
-        <ul class={hairlineGrid(presentCategories.length)} role="list">
-          {presentCategories.map(({ category, silo, count }, i) => (
-            <li class={hairlineCell(i, presentCategories.length)}>
-              <a href={categoryPath({ ...category, silo })} class="flex items-center gap-3 p-4 hover:bg-steel-50 h-full">
-                <span class="w-10 h-10 shrink-0 grid place-items-center rounded bg-steel-100 text-steel-700" aria-hidden="true">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={silo.icon} /></svg>
-                </span>
-                <span class="min-w-0 flex-1">
-                  <span class="block font-black text-steel-900 leading-6">{category.name}</span>
-                  <span class="block text-xs text-steel-600 leading-5">{silo.name}</span>
-                </span>
-                <span class="shrink-0 text-sm font-bold text-steel-700 tabular-nums">{fa(count)} قطعه</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p class="text-steel-700 leading-8">کاتالوگ در حال تکمیل است. کد فنی را جستجو کنید یا از <a href="/categories/" class="font-bold text-accent-ink underline underline-offset-4">نقشه‌ی کامل کاتالوگ</a> شروع کنید.</p>
-      )}
+      <ul class={hairlineGrid(presence.all.length)} role="list">
+        {presence.all.map(({ silo, categories }, i) => (
+          <li class={`${hairlineCell(i, presence.all.length)} flex flex-col`}>
+            <a href={siloPath(silo)} class="flex items-center gap-3 px-4 py-3 border-b border-steel-200 hover:bg-steel-50">
+              <span class="w-9 h-9 shrink-0 grid place-items-center rounded bg-steel-100 text-steel-700" aria-hidden="true">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={silo.icon} /></svg>
+              </span>
+              <h3 class="flex-1 min-w-0 font-black text-sm leading-6 text-steel-900">{silo.name}</h3>
+              <span class="shrink-0 text-xs text-steel-600">{fa(categories.length)} دسته</span>
+            </a>
+            <ul class="px-4 py-2 [&_a]:flex [&_a]:items-center [&_a]:justify-between [&_a]:gap-2 [&_a]:min-h-9 [&_a]:text-sm [&_a]:text-steel-700 [&_a:hover]:text-accent-ink" role="list">
+              {categories.map(({ category, count }) => (
+                <li>
+                  <a href={categoryPath({ ...category, silo })}>
+                    <span>{category.name}</span>
+                    {count > 0 && <span class="text-xs font-bold text-steel-900 tabular-nums">{fa(count)} قطعه</span>}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
     </div>
   </section>
 
@@ -286,7 +307,7 @@ const jsonLd = {
       ردیف جدولی (ProductRow) به‌جای کارت مربعی: کالای بی‌عکس در کارت، ۳۰۰px قاب خالی بود؛ ردیف کد فنی را اول نشان
       می‌دهد. اگر کالایی نباشد، بخش اصلاً رندر نمی‌شود. */}
   {featured.length > 0 && (
-    <section class="bg-steel-50 px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="featured-heading">
+    <section class="bg-white px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="featured-heading">
       <div class="max-w-7xl mx-auto">
         <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
           <h2 id="featured-heading" class="text-xl md:text-2xl font-black text-steel-900">قطعات موجود در کاتالوگ</h2>
@@ -303,9 +324,96 @@ const jsonLd = {
     </section>
   )}
 
-  {/* ════════════════════ ۴) یک نوار اعتماد ════════════════════
-      جای چهار بلوک قبلی. فقط نشان‌های verified در trust.ts؛ اینماد با نماد واقعی (نسخه‌ی محلی، lazy — پایین‌تر از
-      خط تا). ⚠️ قطعه‌کد رسمی کامل اینماد (referrerpolicy/code) در فوتر است؛ این‌جا فقط پیوند به صفحه‌ی تأیید. */}
+  {/* ════════════════════ ۴) قطعات مصرفی و پرتعویض (وردپرس) ════════════════════ */}
+  <HighWearParts />
+
+  {/* ════════════════════ ۵) مزیت‌های تامین (وردپرس) ════════════════════
+      «ماتریس مشخصات»: هر مزیت یک خانه با ریل ۴px و شماره‌ی مونو — متن از پنل، شکل از طراحی. */}
+  {advantages.length > 0 && (
+    <section class="bg-steel-50 px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="advantages-heading">
+      <div class="max-w-7xl mx-auto">
+        <h2 id="advantages-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-4">چرا کرین یدک — مزیت‌های تامین</h2>
+        <ul class={hairlineGrid(advantages.length)} role="list">
+          {advantages.map((item, i) => (
+            <li class={`${hairlineCell(i, advantages.length)} border-s-4 border-s-action p-4 md:p-5`}>
+              <span class="block font-mono text-xs text-steel-600 tabular-nums mb-1" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+              <h3 class="font-black text-steel-900 leading-7">{item.title}</h3>
+              <p class="mt-1 text-sm text-steel-700 leading-7">{item.body}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )}
+
+  {/* ════════════════════ ۶) برندها ════════════════════
+      سه کلاس (سازنده‌ی بدنه / سیستم کنترل / تجهیزات برقی)، هر کدام یک شبکه‌ی خط مو.
+      ⚠️ لوگوی جعلی کشیده نمی‌شود (علامت تجاری — توضیح کامل در تاریخچه‌ی همین فایل): پلاک تایپوگرافیک نام لاتین. */}
+  <section class="bg-white px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="brands-heading">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
+        <div>
+          <h2 id="brands-heading" class="text-xl md:text-2xl font-black text-steel-900">برندهای تحت پوشش</h2>
+          <p class="mt-1 text-sm text-steel-600 leading-7">روی یک جرثقیل معمولاً بدنه، سیستم کنترل و تجهیزات برقی از سه سازنده‌ی متفاوت‌اند.</p>
+        </div>
+        <a href="/brands/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">همه برندها ←</a>
+      </div>
+      <div class="space-y-5">
+        {(['oem', 'control', 'electrical'] as const).map((brandClass) => {
+          const list = brandsByClass(brandClass);
+          return list.length > 0 && (
+            <div>
+              <h3 class="text-xs font-black text-steel-600 mb-2">{BRAND_CLASSES[brandClass].name} <span class="font-normal">({fa(list.length)})</span></h3>
+              <ul class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-px bg-steel-200 border border-steel-200 rounded-md overflow-hidden" role="list">
+                {list.map((brand) => (
+                  <li class="bg-white">
+                    <a href={`/brands/${brand.slug}/`} class="flex flex-col gap-0.5 p-3 h-full hover:bg-steel-50" title={brand.seoAnchor ?? undefined}>
+                      <span class="font-mono text-xs font-bold tracking-wider text-steel-900 uppercase truncate" dir="ltr">{brand.logoText}</span>
+                      <span class="flex items-center justify-between gap-2 text-xs">
+                        <span class="font-bold text-steel-700 truncate">{brand.nameFa}</span>
+                        <span class="text-steel-600 shrink-0">{brand.country}</span>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+                {/* خانه‌های خالی ردیف آخر سفید پر می‌شوند تا لکه‌ی خاکستری نماند (همان دام hairline.ts). */}
+                {hairlineFillers(list.length).map((c) => <li class={c} aria-hidden="true"></li>)}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+
+  {/* ════════════════════ ۷) فرآیند تامین و خرید سازمانی ════════════════════
+      مسیر واقعی معامله‌ی B2B (پیش‌فاکتور → فاکتور)، نه سبد خرید مصرفی. ⚠️ بدون زمان یا عدد: «ارسال سریع» همان
+      ادعای verified در COMPANY_METRICS است؛ هیچ «۲۴ ساعته»ای ساخته نشد (قاعده‌ی ۲). */}
+  <section class="bg-steel-50 px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="process-heading">
+    <div class="max-w-7xl mx-auto">
+      <h2 id="process-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-4">فرآیند تامین و خرید سازمانی</h2>
+      <ol class={hairlineGrid(4)}>
+        {[
+          ['استعلام فنی', 'کد فنی، عکس پلاک یا فهرست اقلام را بفرستید؛ سازگاری پیش از قیمت‌دهی بررسی می‌شود.'],
+          ['پیش‌فاکتور رسمی', 'قیمت روز و وضعیت تأمین هر قلم در یک پیش‌فاکتور.'],
+          ['تایید و فاکتور مالیاتی', 'پس از تایید و پرداخت، فاکتور رسمی و مالیاتی در صورت درخواست صادر می‌شود.'],
+          ['ارسال سریع', 'ارسال در سریع‌ترین زمان ممکن.'],
+        ].map(([step, text], i) => (
+          <li class="bg-white p-4 md:p-5">
+            <span class="flex items-center gap-2 mb-1">
+              <span class="w-7 h-7 grid place-items-center rounded bg-steel-900 text-white text-sm font-black tabular-nums" aria-hidden="true">{fa(i + 1)}</span>
+              <span class="font-black text-steel-900">{step}</span>
+            </span>
+            <span class="block text-sm text-steel-700 leading-7">{text}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  {/* ════════════════════ ۸) یک نوار اعتماد ════════════════════
+      فقط نشان‌های verified در trust.ts؛ اینماد با نماد واقعی (نسخه‌ی محلی، lazy). ⚠️ قطعه‌کد رسمی کامل اینماد
+      (referrerpolicy/code) در فوتر است؛ این‌جا فقط پیوند به صفحه‌ی تأیید. */}
   <section class="bg-white px-4 py-8 border-b border-steel-300" aria-labelledby="trust-heading">
     <div class="max-w-7xl mx-auto">
       <h2 id="trust-heading" class="sr-only">تضمین‌ها</h2>
@@ -328,31 +436,6 @@ const jsonLd = {
           </li>
         ))}
       </ul>
-    </div>
-  </section>
-
-  {/* ════════════════════ ۵) فرایند چهارمرحله‌ای ════════════════════
-      مسیر واقعی معامله‌ی B2B (پیش‌فاکتور → فاکتور)، نه سبد خرید مصرفی. ⚠️ بدون زمان یا عدد: «ارسال سریع» همان
-      ادعای verified در COMPANY_METRICS است؛ هیچ «۲۴ ساعته»ای ساخته نشد (قاعده‌ی ۲). */}
-  <section class="bg-steel-50 px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="process-heading">
-    <div class="max-w-7xl mx-auto">
-      <h2 id="process-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-4">مسیر سفارش</h2>
-      <ol class={hairlineGrid(4)}>
-        {[
-          ['استعلام فنی', 'کد فنی، عکس پلاک یا فهرست اقلام را بفرستید؛ سازگاری پیش از قیمت‌دهی بررسی می‌شود.'],
-          ['پیش‌فاکتور رسمی', 'قیمت روز و وضعیت تأمین هر قلم در یک پیش‌فاکتور.'],
-          ['تایید و فاکتور مالیاتی', 'پس از تایید و پرداخت، فاکتور رسمی و مالیاتی در صورت درخواست صادر می‌شود.'],
-          ['ارسال سریع', 'ارسال در سریع‌ترین زمان ممکن.'],
-        ].map(([step, text], i) => (
-          <li class="bg-white p-4 md:p-5">
-            <span class="flex items-center gap-2 mb-1">
-              <span class="w-7 h-7 grid place-items-center rounded bg-steel-900 text-white text-sm font-black tabular-nums" aria-hidden="true">{fa(i + 1)}</span>
-              <span class="font-black text-steel-900">{step}</span>
-            </span>
-            <span class="block text-sm text-steel-700 leading-7">{text}</span>
-          </li>
-        ))}
-      </ol>
     </div>
   </section>
 
