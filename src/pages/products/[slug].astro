@@ -379,7 +379,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
             <ul slot="second" class="bg-white border border-steel-300 rounded" role="list">
               {related.map((item) => (
                 <ProductRow slug={item.slug} name={item.name} sku={item.sku} url={`${SITE.url}${productPath(item)}`} brand={item.brandNameFa}
-                  keySpec={item.technicalSpecs[0]?.value ?? null} stock={item.stockStatus} price={computePrice(item)} whatsappHref={contact.whatsappHref} />
+                  keySpec={item.technicalSpecs[0]?.value ?? null} stock={item.stockStatus} price={computePrice(item)} whatsappHref={contact.whatsappHref} image={item.images[0] ?? null} />
               ))}
             </ul>
           )}
@@ -393,7 +393,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         <ul class="bg-white border border-steel-300 rounded" role="list">
           {related.map((item) => (
             <ProductRow slug={item.slug} name={item.name} sku={item.sku} url={`${SITE.url}${productPath(item)}`} brand={item.brandNameFa}
-              keySpec={item.technicalSpecs[0]?.value ?? null} stock={item.stockStatus} price={computePrice(item)} whatsappHref={contact.whatsappHref} />
+              keySpec={item.technicalSpecs[0]?.value ?? null} stock={item.stockStatus} price={computePrice(item)} whatsappHref={contact.whatsappHref} image={item.images[0] ?? null} />
           ))}
         </ul>
       </div>

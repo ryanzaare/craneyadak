@@ -317,7 +317,7 @@ const jsonLd = {
           {featured.map((product) => (
             <ProductRow slug={product.slug} name={product.name} sku={product.sku} url={`${SITE.url}${productPath(product)}`}
               brand={product.brandNameFa} keySpec={product.technicalSpecs[0]?.value ?? null} stock={product.stockStatus}
-              price={computePrice(product)} whatsappHref={contact.whatsappHref} />
+              price={computePrice(product)} whatsappHref={contact.whatsappHref} image={product.images[0] ?? null} />
           ))}
         </ul>
       </div>

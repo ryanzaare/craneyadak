@@ -268,14 +268,14 @@ const contact = await getContact();
 
           {/* نمای جدول — پیش‌فرض (§4، تصمیم ۲): کد · نام · برند · مشخصه‌ی کلیدی · موجودی · قیمت · افزودن سریع. */}
           <div data-cat-view="list">
-            <div class="hidden lg:grid lg:grid-cols-[9rem_1fr_7rem_10rem_8rem_9rem_auto] gap-x-4 px-3 py-2 text-xs font-bold text-steel-600 bg-steel-100 border border-steel-300 border-b-0 rounded-t">
-              <span>کد فنی</span><span>نام قطعه</span><span>برند</span><span>مشخصه‌ی کلیدی</span><span>موجودی</span><span>قیمت</span><span class="sr-only">عمل</span>
+            <div class="hidden lg:grid lg:grid-cols-[3.5rem_9rem_1fr_7rem_10rem_8rem_9rem_auto] gap-x-4 px-3 py-2 text-xs font-bold text-steel-600 bg-steel-100 border border-steel-300 border-b-0 rounded-t">
+              <span><span class="sr-only">تصویر</span></span><span>کد فنی</span><span>نام قطعه</span><span>برند</span><span>مشخصه‌ی کلیدی</span><span>موجودی</span><span>قیمت</span><span class="sr-only">عمل</span>
             </div>
             <ul class="bg-white border border-steel-300 rounded lg:rounded-t-none" role="list">
               {products.map((product) => (
                 <ProductRow slug={product.slug} name={product.name} sku={product.sku} url={`${SITE.url}${productPath(product)}`}
                   brand={product.brandNameFa} keySpec={product.technicalSpecs[0]?.value ?? null} stock={product.stockStatus}
-                  price={computePrice(product)} whatsappHref={contact.whatsappHref} attrs={catAttrs(product)} />
+                  price={computePrice(product)} whatsappHref={contact.whatsappHref} image={product.images[0] ?? null} attrs={catAttrs(product)} />
               ))}
             </ul>
           </div>

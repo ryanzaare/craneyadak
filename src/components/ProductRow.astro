@@ -10,11 +10,16 @@
 // موبایل و تبلت (<lg): همان ردیف، دو خطی (کد و نام بالا؛ موجودی، قیمت و عمل پایین) — بدون اسکرول افقی جدول.
 // عمل‌ها همان قاعده‌ی BuyBox (تصمیم ۴): پرداخت‌پذیر «+ سبد»؛ استعلامی «واتساپ» اصلی + «+ استعلام» فرعی.
 // ⚠️ data-*های سبد = قرارداد §7 (Baskets.astro). `inert` فقط برای راهنمای سبک.
+//
+// تصویر بندانگشتی (کارفرما، ۳ آبان ۱۴۰۵): تکنسین قطعه را با *چشم* کنار کد فنی تشخیص می‌دهد — ردیف بی‌تصویر همین را
+// از او می‌گرفت. ۵۶px از lg (۴۸px زیر آن) در قاب ثابت = CLS صفر؛ lazy و بهینه‌شده در build (RemoteImage، ۲۸/۵۶/۸۴px).
+// قلم بی‌عکس: یک نقشه‌ی خطی خنثی — ⚠️ هرگز عکس قطعه‌ی دیگر یا تصویر ساخته‌شده (قاعده‌ی ۹).
 // ---------------------------------------------------------------------------
 import PriceTag from './PriceTag.astro';
+import RemoteImage from './RemoteImage.astro';
 import StockPill from './StockPill.astro';
 import { whatsappInquiryHref } from './inquiry-message';
-import type { PriceState } from '../lib/wp';
+import type { PriceState, CraneImage } from '../lib/wp';
 import type { StockStatus } from '../lib/pricing';
 
 export interface Props {
@@ -28,18 +33,28 @@ export interface Props {
   price: PriceState;
   whatsappHref: string | null;
   inert?: boolean;
+  /** اولین تصویر گالری (product.images[0]). نبود = نقشه‌ی خطی جایگزین. */
+  image?: CraneImage | null;
   /** صفت‌های data-* روی li — فیلتر صفحه‌ی دسته آن‌ها را می‌خواند (CategoryFilterBar). */
   attrs?: Record<string, string>;
 }
 
-const { slug, name, sku, url, brand, keySpec, stock, price, whatsappHref, inert = false, attrs = {} } = Astro.props;
+const { slug, name, sku, url, brand, keySpec, stock, price, whatsappHref, inert = false, image = null, attrs = {} } = Astro.props;
 const hook = (attrs: Record<string, string | null | undefined | boolean>) => (inert ? {} : attrs);
 const basket = { 'data-basket-name': name, 'data-basket-sku': sku ?? '' };
 const inquiryHref = price.payable ? null : whatsappInquiryHref(whatsappHref, { name, sku, url });
 const btn = 'inline-flex items-center justify-center min-h-11 px-3 rounded-md text-sm font-bold whitespace-nowrap transition-colors';
 ---
 
-<li {...attrs} class="grid grid-cols-[1fr_auto] lg:grid-cols-[9rem_1fr_7rem_10rem_8rem_9rem_auto] items-center gap-x-4 gap-y-2 px-3 py-3 border-t border-steel-200 first:border-t-0 hover:bg-steel-50">
+{/* زیر lg: تصویر ستون اول و دو ردیف بلند (کد + موجودی | نام)؛ قیمت و عمل در ردیف سوم از ستون دوم. */}
+<li {...attrs} class="grid grid-cols-[3rem_1fr_auto] lg:grid-cols-[3.5rem_9rem_1fr_7rem_10rem_8rem_9rem_auto] items-center gap-x-3 lg:gap-x-4 gap-y-2 px-3 py-3 border-t border-steel-200 first:border-t-0 hover:bg-steel-50">
+  <a href={inert ? '#style-guide' : url} tabindex="-1" aria-hidden="true" class="row-span-2 lg:row-span-1 self-start lg:self-center w-12 h-12 lg:w-14 lg:h-14 bg-steel-50 border border-steel-200 rounded p-1 shrink-0">
+    {image ? (
+      <RemoteImage src={image.url} alt="" width={56} height={56} sizes="56px" class="w-full h-full object-contain" />
+    ) : (
+      <svg class="w-full h-full text-steel-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true"><path d="M5 5h14v14H5zM5 12h14M12 5v14M9 9h6v6H9z" /></svg>
+    )}
+  </a>
   {/* ⚠️ dir="ltr" فقط روی رشته‌ی کد (inline)، نه روی سلول: سلولِ ltr شروعش «چپ» است و کد از زیر سرستون «کد فنی»
       (راست) به لبه‌ی چپ سلول، کنار نام محصول، می‌رفت — بازبینی کارفرما، ۳۰ مهر ۱۴۰۵. سلول RTL و text-right می‌ماند. */}
   <span class="order-1 lg:order-none min-w-0 text-right">
@@ -49,7 +64,7 @@ const btn = 'inline-flex items-center justify-center min-h-11 px-3 rounded-md te
   <span class="hidden lg:block text-sm text-steel-600 truncate">{brand ?? ''}</span>
   <span class="hidden lg:block text-sm text-steel-700 tabular-nums truncate text-right"><span dir="auto">{keySpec ?? ''}</span></span>
   <span class="order-2 lg:order-none justify-self-end lg:justify-self-start"><StockPill status={stock} /></span>
-  <span class="order-4 lg:order-none"><PriceTag price={price} /></span>
+  <span class="order-4 lg:order-none col-start-2 lg:col-start-auto"><PriceTag price={price} /></span>
   <span class="order-5 lg:order-none justify-self-end flex items-center gap-2">
     {price.payable ? (
       <button type="button" class={`${btn} bg-action text-white hover:bg-accent-strong`}
