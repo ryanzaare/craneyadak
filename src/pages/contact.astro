@@ -141,7 +141,8 @@ const jsonLd = {
         <div class="bg-white rounded-lg p-8 border border-steel-100 shadow-sm space-y-4">
           <h3 class="font-bold text-xl text-steel-900">اطلاعات دفتر و انبار مرکزی</h3>
           <address class="not-italic text-sm text-steel-600 leading-7 space-y-2">
-            <p><strong>آدرس:</strong> {contact.city}، {contact.street}</p>
+            {/* ارقام نشانی فقط در نمایش فارسی (همان قاعده‌ی فوتر) — mapQuery و JSON-LD رشته‌ی خام را نگه می‌دارند. */}
+            <p><strong>آدرس:</strong> {contact.city}، {contact.street?.replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]!)}</p>
             <p><strong>ایمیل رسمی:</strong> {contact.email}</p>
             <p><strong>ساعات کاری:</strong> شنبه تا چهارشنبه: ۸:۳۰ الی ۱۷:۰۰ | پنجشنبه: ۸:۳۰ الی ۱۳:۰۰</p>
           </address>
