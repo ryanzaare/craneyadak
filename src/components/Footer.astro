@@ -180,7 +180,7 @@ const mobile = mobileLine(contact);
     {/* نوار پایانی یک‌ردیفه (فاز ۵): کپی‌رایت · صفحات حقوقی · اینماد ۴۴px. ⚠️ قطعه‌کد رسمی اینماد (href با id/Code،
         referrerpolicy، صفت code) دست‌نخورده — فقط قاب کوچک‌تر. */}
     <div class="border-t border-steel-800 mt-5 pt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-xs text-steel-400">
-      <p>کپی‌رایت © {year} {SITE.name}. تمامی حقوق محفوظ است.</p>
+      <p>کپی‌رایت © {year.toLocaleString("fa-IR", { useGrouping: false })} {SITE.name}. تمامی حقوق محفوظ است.</p>
       {legalPages.length > 0 && (
         <nav aria-label="صفحات حقوقی">
           <ul class="flex flex-wrap gap-x-4 gap-y-1" role="list">
