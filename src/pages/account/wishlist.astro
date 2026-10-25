@@ -12,22 +12,23 @@ const description = 'محصولاتی که در حساب کاربری نشان �
 ---
 
 <Layout title={title} description={description} noindex>
-  <section class="bg-steel-900 text-white px-4 py-10">
+  {/* Frontend v2 فاز ۴: نوار عنوان روشن (هم‌خانواده‌ی صفحه‌ی دسته/محصول، زیر هدر گرافیت)، سطح steel-50، پنل اصلی با ریل ۴px. فقط کلاس — idها، data-*ها، endpointها و منطق فرم دست نخوردند (قرارداد §7). */}
+  <section class="bg-white text-steel-900 border-b border-steel-300 px-4 py-6 md:py-8">
     <div class="max-w-5xl mx-auto">
       <h1 class="text-2xl md:text-3xl font-black">علاقه‌مندی‌ها</h1>
     </div>
   </section>
 
-  <section class="bg-white px-4 py-10">
+  <section class="bg-steel-50 px-4 py-8 md:py-10">
     <div class="max-w-5xl mx-auto grid grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
       <AccountNav />
 
       <div class="min-w-0">
         <p id="wish-loading" class="text-steel-600">در حال بارگذاری…</p>
         <p id="wish-error" hidden class="text-sm leading-7 text-red-700 font-bold bg-red-50 border border-red-200 rounded-md p-4"></p>
-        <div id="wish-empty" hidden class="bg-steel-50 border border-steel-300 rounded-lg p-6 text-center">
+        <div id="wish-empty" hidden class="bg-white border border-steel-300 rounded-md p-6 text-center">
           <p class="text-steel-700 leading-7 mb-4">هنوز محصولی را نشان نکرده‌اید. روی صفحه‌ی هر محصول، دکمه‌ی «افزودن به علاقه‌مندی‌ها» را بزنید.</p>
-          <a href="/products" class="inline-block bg-action text-white px-6 py-3 rounded-md font-black hover:bg-accent-ink transition-colors">مشاهده‌ی محصولات</a>
+          <a href="/products" class="inline-block bg-action text-white px-6 py-3 rounded-md font-black hover:bg-accent-strong transition-colors">مشاهده‌ی محصولات</a>
         </div>
         <ul id="wish-list" role="list" class="space-y-2"></ul>
       </div>

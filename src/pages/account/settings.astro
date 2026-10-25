@@ -12,22 +12,23 @@ import { SITE } from '../../data/site';
 const title = `تنظیمات حساب | ${SITE.name}`;
 const description = 'ویرایش مشخصات و رمز عبور حساب کاربری.';
 const input = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40';
-const button = 'bg-action text-white px-6 py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px] disabled:opacity-60';
+const button = 'bg-action text-white px-6 py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px] disabled:opacity-60';
 ---
 
 <Layout title={title} description={description} noindex>
-  <section class="bg-steel-900 text-white px-4 py-10">
+  {/* Frontend v2 فاز ۴: نوار عنوان روشن (هم‌خانواده‌ی صفحه‌ی دسته/محصول، زیر هدر گرافیت)، سطح steel-50، پنل اصلی با ریل ۴px. فقط کلاس — idها، data-*ها، endpointها و منطق فرم دست نخوردند (قرارداد §7). */}
+  <section class="bg-white text-steel-900 border-b border-steel-300 px-4 py-6 md:py-8">
     <div class="max-w-5xl mx-auto">
       <h1 class="text-2xl md:text-3xl font-black">تنظیمات حساب</h1>
     </div>
   </section>
 
-  <section class="bg-white px-4 py-10">
+  <section class="bg-steel-50 px-4 py-8 md:py-10">
     <div class="max-w-5xl mx-auto grid grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
       <AccountNav />
 
       <div class="min-w-0 space-y-8">
-        <form id="profile-form" class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+        <form id="profile-form" class="bg-white border border-steel-300 border-s-4 border-s-action rounded-md p-5 space-y-3">
           <h2 class="font-black text-steel-900">مشخصات</h2>
           <div>
             <label for="set-email" class="block text-sm font-bold text-steel-900 mb-1">ایمیل</label>
@@ -54,7 +55,7 @@ const button = 'bg-action text-white px-6 py-3 rounded-md font-black hover:bg-ac
 
         {/* مشخصات ذخیره‌شده‌ی پرداخت: پس از هر پرداخت موفق به‌روز می‌شود و سفارش بعدی را
             پیش‌پر می‌کند. ویرایش = همان فرم پرداخت؛ اینجا فقط دیدن و حذف. */}
-        <div id="saved-box" hidden class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+        <div id="saved-box" hidden class="bg-white border border-steel-300 border-s-4 border-s-action rounded-md p-5 space-y-3">
           <h2 class="font-black text-steel-900">مشخصات ذخیره‌شده برای پرداخت</h2>
           <p class="text-sm leading-7 text-steel-700">
             پس از هر پرداخت موفق، مشخصات گیرنده و فاکتور (در صورت درخواست) ذخیره می‌شود تا سفارش بعدی را
@@ -65,7 +66,7 @@ const button = 'bg-action text-white px-6 py-3 rounded-md font-black hover:bg-ac
           <p id="saved-msg" class="text-sm leading-7" role="status" aria-live="polite"></p>
         </div>
 
-        <form id="password-form" class="bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3">
+        <form id="password-form" class="bg-white border border-steel-300 border-s-4 border-s-action rounded-md p-5 space-y-3">
           <h2 class="font-black text-steel-900">تغییر رمز عبور</h2>
           <div>
             <label for="set-current" class="block text-sm font-bold text-steel-900 mb-1">رمز عبور فعلی</label>

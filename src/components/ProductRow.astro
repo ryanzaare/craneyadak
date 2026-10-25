@@ -52,7 +52,7 @@ const btn = 'inline-flex items-center justify-center min-h-11 px-3 rounded-md te
   <span class="order-4 lg:order-none"><PriceTag price={price} /></span>
   <span class="order-5 lg:order-none justify-self-end flex items-center gap-2">
     {price.payable ? (
-      <button type="button" class={`${btn} bg-action text-white hover:bg-accent-ink`}
+      <button type="button" class={`${btn} bg-action text-white hover:bg-accent-strong`}
         {...hook({ 'data-cart-add': slug, ...basket, 'data-guard-until': price.validUntil, 'data-payable-only': true })}
         aria-label={`افزودن ${name} به سبد خرید`}>
         <span data-basket-label>+ سبد</span>
@@ -61,10 +61,10 @@ const btn = 'inline-flex items-center justify-center min-h-11 px-3 rounded-md te
       <>
         {inquiryHref && (
           <a href={inert ? '#style-guide' : inquiryHref} target={inert ? undefined : '_blank'} rel="noopener noreferrer"
-            class={`${btn} bg-action text-white hover:bg-accent-ink`} aria-label={`استعلام قیمت ${name} در واتساپ`}>واتساپ</a>
+            class={`${btn} bg-action text-white hover:bg-accent-strong`} aria-label={`استعلام قیمت ${name} در واتساپ`}>واتساپ</a>
         )}
         <button type="button"
-          class={`${btn} ${inquiryHref ? 'text-accent-ink hover:text-accent-strong hover:underline' : 'bg-action text-white hover:bg-accent-ink'}`}
+          class={`${btn} ${inquiryHref ? 'text-accent-ink hover:text-accent-strong hover:underline' : 'bg-action text-white hover:bg-accent-strong'}`}
           {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'rfq', ...basket })}
           aria-label={`افزودن ${name} به سبد استعلام`}>
           <span data-basket-label>+ استعلام</span>

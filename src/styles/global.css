@@ -613,6 +613,24 @@
 .cy-spec tbody th > span { font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-steel-500); font-variant-numeric: tabular-nums; margin-inline-end: 0.5rem; }
 .cy-spec tbody td > span { display: inline-block; color: var(--color-steel-900); font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: break-word; }
 
+/* ---- کاشی برند و FAQ صفحه‌ی اصلی (index.astro، فاز ۴) ----
+   ⚠️ همان دلیل .cy-spec: رشته‌ی کلاس تکراری روی ۱۹ کاشی و ۱۱ پرسش ~۱۰KB به HTML صفحه‌ی اصلی می‌افزود (build زنده‌ی
+   3a44360: ۲۲۵٬۶۰۶ بایت، بودجه‌ی §6: ۲۰۵KB). یک‌بار این‌جا. */
+.cy-brand-tile a { display: flex; flex-direction: column; gap: 0.125rem; height: 100%; padding: 0.75rem; }
+.cy-brand-tile a:hover { background: var(--color-steel-50); }
+.cy-brand-tile a > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; }
+.cy-brand-tile a > span:first-child { font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em; color: var(--color-steel-900); text-transform: uppercase; }
+.cy-brand-tile a > span:last-child { display: flex; justify-content: space-between; gap: 0.5rem; color: var(--color-steel-600); }
+.cy-brand-tile a > span:last-child b { font-weight: 700; color: var(--color-steel-700); overflow: hidden; text-overflow: ellipsis; }
+.cy-faq { background: #fff; border: 1px solid var(--color-steel-200); border-radius: 0.375rem; }
+.cy-faq details + details { border-top: 1px solid var(--color-steel-200); }
+.cy-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; cursor: pointer; list-style: none; font-weight: 700; line-height: 1.75rem; color: var(--color-steel-900); }
+.cy-faq summary::-webkit-details-marker { display: none; }
+.cy-faq summary:hover { background: var(--color-steel-50); }
+.cy-faq summary svg { width: 1.25rem; height: 1.25rem; flex-shrink: 0; color: var(--color-accent-ink); transition: transform 150ms; }
+.cy-faq details[open] summary svg { transform: rotate(180deg); }
+.cy-faq details > div { padding: 0 1.25rem 1.25rem; line-height: 2rem; text-align: right; color: var(--color-steel-700); }
+
 /* ---- نوار داده‌ی درون‌متنی (نمودار میله‌ای فقط با CSS) ----
    عرض از متغیر --cy-bar می‌آید که در HTML ست می‌شود. */
 .cy-bar {

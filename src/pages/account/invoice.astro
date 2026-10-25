@@ -17,18 +17,19 @@ import { SITE } from '../../data/site';
 
 const title = `فاکتور سفارش | ${SITE.name}`;
 const description = 'فاکتور غیررسمی سفارش پرداخت‌شده.';
-const btn = 'inline-block bg-action text-white px-5 py-2.5 rounded-md text-sm font-black hover:bg-accent-ink transition-colors';
+const btn = 'inline-block bg-action text-white px-5 py-2.5 rounded-md text-sm font-black hover:bg-accent-strong transition-colors';
 const btn2 = 'inline-block border border-steel-400 bg-white text-steel-900 px-5 py-2.5 rounded-md text-sm font-black hover:border-accent transition-colors';
 ---
 
 <Layout title={title} description={description} noindex>
-  <section class="bg-steel-900 text-white px-4 py-10">
+  {/* Frontend v2 فاز ۴: نوار عنوان روشن (هم‌خانواده‌ی صفحه‌ی دسته/محصول، زیر هدر گرافیت)، سطح steel-50، پنل اصلی با ریل ۴px. فقط کلاس — idها، data-*ها، endpointها و منطق فرم دست نخوردند (قرارداد §7). */}
+  <section class="bg-white text-steel-900 border-b border-steel-300 px-4 py-6 md:py-8">
     <div class="max-w-5xl mx-auto">
       <h1 class="text-2xl md:text-3xl font-black">فاکتور سفارش</h1>
     </div>
   </section>
 
-  <section class="bg-white px-4 py-10">
+  <section class="bg-steel-50 px-4 py-8 md:py-10">
     <div class="max-w-5xl mx-auto grid grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
       <AccountNav />
 
@@ -46,7 +47,7 @@ const btn2 = 'inline-block border border-steel-400 bg-white text-steel-900 px-5 
             id="inv-frame"
             title="فاکتور غیررسمی سفارش"
             sandbox="allow-same-origin allow-modals"
-            class="w-full min-h-[640px] border border-steel-300 rounded-lg bg-white"></iframe>
+            class="w-full min-h-[640px] border border-steel-300 rounded-md bg-white"></iframe>
         </div>
       </div>
     </div>

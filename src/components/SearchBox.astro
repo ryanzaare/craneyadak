@@ -16,6 +16,7 @@
 // کیبورد و اسکرین‌ریدر عملاً وجود ندارد.
 // ---------------------------------------------------------------------------
 import { buildStructuralIndex } from '../lib/search-index';
+import { withTrailingSlash } from '../lib/urls.mjs';
 
 interface Props {
   id?: string;
@@ -52,7 +53,10 @@ const {
      • محصولات از `/search-index.json` و فقط هنگام اولین تعامل کاربر
        با کادر جستجو واکشی می‌شوند.
    (توضیح کامل در src/pages/search-index.json.ts) */
-const index = buildStructuralIndex();
+// ⚠️ پیوندهای دسته/برند فهرست ساختاری «/» پایانی نداشتند (siloPath/categoryPath) — normalizeInternalLinks فقط href
+// داخل HTML را اصلاح می‌کند، نه این JSON؛ هر کلیک روی پیشنهاد یک ریدایرکت ۳۰۱ اضافه می‌خورد. (دیده‌شده در build زنده‌ی
+// 3a44360، فاز ۴.) محصولات (/search-index.json) از قبل درست بودند.
+const index = buildStructuralIndex().map((e) => ({ ...e, href: withTrailingSlash(e.href) }));
 const listId = `${id}-listbox`;
 ---
 

@@ -28,7 +28,8 @@
 // می‌سنجد (cyh_product_pricing).
 // ---------------------------------------------------------------------------
 const drawerClass = 'fixed inset-0 z-50 print:hidden';
-const panelClass = 'absolute inset-y-0 left-0 w-full max-w-md bg-white shadow-2xl flex flex-col';
+// Frontend v2 فاز ۴: ریل ۴px روی لبه‌ی داخلی کشو (border-s منطقی = راست در RTL، همان لبه‌ای که به صفحه باز می‌شود).
+const panelClass = 'absolute inset-y-0 left-0 w-full max-w-md bg-white border-s-4 border-s-action shadow-2xl flex flex-col';
 const headClass = 'flex items-center justify-between gap-3 px-4 py-3 bg-steel-900 text-white shrink-0';
 const closeClass = 'p-2 -m-2 hover:text-accent focus:outline-none focus:ring-2 focus:ring-white rounded';
 const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40';
@@ -65,7 +66,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
         </p>
         {/* ⚠️ پرداخت مهمان ندارد (تصمیم کارفرما): بدون توکن، مستقیم به ورود/ثبت‌نام
             و بعد برگشت به /checkout. سرور هم ۴۰۱ می‌دهد؛ این فقط راه را کوتاه می‌کند. */}
-        <a id="cart-checkout" href="/checkout" class="block text-center w-full bg-action text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+        <a id="cart-checkout" href="/checkout" class="block text-center w-full bg-action text-white py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
           ادامه جهت تسویه‌حساب
         </a>
       </div>
@@ -107,7 +108,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
         <input type="tel" name="phone" required autocomplete="tel" inputmode="tel" dir="ltr" placeholder="شماره تماس" class={`${inputClass} text-right`} />
         <input type="text" name="organization" autocomplete="organization" placeholder="نام شرکت یا کارخانه (اختیاری)" class={inputClass} />
         <textarea name="note" rows="2" placeholder="توضیح یا مدل دستگاه (اختیاری)" class={`${inputClass} resize-y`}></textarea>
-        <button type="submit" id="quote-submit" class="w-full bg-action text-white py-3 rounded-md font-black hover:bg-accent-ink transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+        <button type="submit" id="quote-submit" class="w-full bg-action text-white py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
           ثبت درخواست پیش‌فاکتور
         </button>
       </form>

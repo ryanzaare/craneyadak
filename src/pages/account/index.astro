@@ -16,13 +16,14 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
 ---
 
 <Layout title={title} description={description} noindex>
-  <section class="bg-steel-900 text-white px-4 py-10">
+  {/* Frontend v2 فاز ۴: نوار عنوان روشن (هم‌خانواده‌ی صفحه‌ی دسته/محصول، زیر هدر گرافیت)، سطح steel-50، پنل اصلی با ریل ۴px. فقط کلاس — idها، data-*ها، endpointها و منطق فرم دست نخوردند (قرارداد §7). */}
+  <section class="bg-white text-steel-900 border-b border-steel-300 px-4 py-6 md:py-8">
     <div class="max-w-5xl mx-auto">
       <h1 class="text-2xl md:text-3xl font-black">حساب من</h1>
     </div>
   </section>
 
-  <section class="bg-white px-4 py-10">
+  <section class="bg-steel-50 px-4 py-8 md:py-10">
     <div class="max-w-5xl mx-auto grid grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)] gap-6 items-start">
       <AccountNav />
 
@@ -31,7 +32,7 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
         <p id="account-error" hidden class="text-sm leading-7 text-red-700 font-bold bg-red-50 border border-red-200 rounded-md p-4"></p>
 
         <div id="account-body" hidden>
-          <div class="bg-steel-50 border border-steel-300 rounded-lg p-5 mb-8">
+          <div class="bg-white border border-steel-300 border-s-4 border-s-action rounded-md p-5 mb-8">
             <div class="flex items-center justify-between gap-3 mb-3">
               <h2 class="font-black text-steel-900">اطلاعات حساب</h2>
               <a href="/account/settings" class="text-sm text-accent-ink font-bold hover:underline">ویرایش</a>
