@@ -9,7 +9,7 @@
 //     نمی‌کند؛ چیپی که همه را نشان می‌دهد شلوغی است).
 //   • مشخصه‌های تخصصی (categoryMeta.spec_facets در وردپرس) داخل «فیلتر تخصصی» تاشونده — همان منطق قبلی:
 //     مشخصه‌ای که هنوز داده‌ی کافی ندارد فیلتر نمی‌شود، فقط یک خط توضیح.
-//   • جابه‌جایی نما: «جدول» (پیش‌فرض، ProductRow) / «کارت» (ProductCard).
+//   • جابه‌جایی نما: «کارت» (پیش‌فرض، ProductCard) / «جدول» (ProductRow، ?view=list).
 //
 // همه‌چیز ترکیب‌پذیر و در URL (stock، brand، f_<id>، max_<id>، view) تا نشانی فیلترشده قابل اشتراک با
 // همکار باشد — خرید صنعتی چندنفره است. منطق خالص و آزموده: ./category-filter.ts.
@@ -89,10 +89,11 @@ const chip =
       </label>
     )}
 
-    {/* جابه‌جایی نما — aria-pressed؛ جدول پیش‌فرض (§4: «نمای فهرست/جدول پیش‌فرض برای دسته‌های پرمشخصه»). */}
+    {/* جابه‌جایی نما — aria-pressed. ⚠️ کارت پیش‌فرض و اول (راست) است (کارفرما، ۳ آبان ۱۴۰۵ — جای «جدول پیش‌فرض» §4)؛
+        HTML اولیه هم کارت را نشان می‌دهد تا بی‌JS و بی‌پرش (CLS) همان پیش‌فرض دیده شود. */}
     <div class="ms-auto inline-flex rounded border border-steel-300 overflow-hidden" role="group" aria-label="نوع نمایش">
-      <button type="button" data-cat-view-btn="list" aria-pressed="true" class="min-h-11 px-3 text-sm font-bold text-steel-700 aria-pressed:bg-steel-900 aria-pressed:text-white">جدول</button>
-      <button type="button" data-cat-view-btn="grid" aria-pressed="false" class="min-h-11 px-3 text-sm font-bold text-steel-700 border-s border-steel-300 aria-pressed:bg-steel-900 aria-pressed:text-white">کارت</button>
+      <button type="button" data-cat-view-btn="grid" aria-pressed="true" class="min-h-11 px-3 text-sm font-bold text-steel-700 aria-pressed:bg-steel-900 aria-pressed:text-white">کارت</button>
+      <button type="button" data-cat-view-btn="list" aria-pressed="false" class="min-h-11 px-3 text-sm font-bold text-steel-700 border-s border-steel-300 aria-pressed:bg-steel-900 aria-pressed:text-white">جدول</button>
     </div>
   </div>
 
@@ -174,7 +175,7 @@ const chip =
       s.brands = brandBoxes.filter((b) => b.checked).map((b) => b.value);
       for (const b of specBoxes) if (b.checked) (s.specs[b.dataset.catSpec!] ??= []).push(b.value);
       for (const r of ranges) if (r.value !== r.max) s.ranges[r.dataset.catRange!] = Number(r.value);
-      s.view = viewBtns.find((b) => b.getAttribute('aria-pressed') === 'true')?.dataset.catViewBtn === 'grid' ? 'grid' : 'list';
+      s.view = viewBtns.find((b) => b.getAttribute('aria-pressed') === 'true')?.dataset.catViewBtn === 'list' ? 'list' : 'grid';
       return s;
     };
 
@@ -217,7 +218,8 @@ const chip =
       reorder(s.sort);
       if (countEl) countEl.textContent = shown.size.toLocaleString('fa-IR');
       if (emptyEl) emptyEl.hidden = shown.size !== 0;
-      const q = toQuery({ ...s, view: 'list', sort: 'relevant' });
+      // «پاک کردن فیلترها» فقط برای فیلتر واقعی — نما و مرتب‌سازی را نادیده بگیر (نمای پیش‌فرض = grid).
+      const q = toQuery({ ...s, view: 'grid', sort: 'relevant' });
       if (clear) clear.hidden = q === '';
       if (push) {
         const qs = toQuery(s);

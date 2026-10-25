@@ -266,9 +266,9 @@ const contact = await getContact();
         <>
           <CategoryFilterBar products={products} categorySlug={category.slug} />
 
-          {/* نمای جدول — پیش‌فرض (§4، تصمیم ۲): کد · نام · برند · مشخصه‌ی کلیدی · موجودی · قیمت · افزودن سریع. */}
-          <div data-cat-view="list">
-            <div class="hidden lg:grid lg:grid-cols-[3.5rem_9rem_1fr_7rem_10rem_8rem_9rem_auto] gap-x-4 px-3 py-2 text-xs font-bold text-steel-600 bg-steel-100 border border-steel-300 border-b-0 rounded-t">
+          {/* نمای جدول — دوم؛ کارت پیش‌فرض است (کارفرما، ۳ آبان ۱۴۰۵): کد · نام · برند · مشخصه‌ی کلیدی · موجودی · قیمت · افزودن سریع. */}
+          <div data-cat-view="list" hidden>
+            <div class="hidden lg:grid lg:grid-cols-[7rem_9rem_1fr_7rem_10rem_8rem_9rem_auto] gap-x-4 px-3 py-2 text-xs font-bold text-steel-600 bg-steel-100 border border-steel-300 border-b-0 rounded-t">
               <span><span class="sr-only">تصویر</span></span><span>کد فنی</span><span>نام قطعه</span><span>برند</span><span>مشخصه‌ی کلیدی</span><span>موجودی</span><span>قیمت</span><span class="sr-only">عمل</span>
             </div>
             <ul class="bg-white border border-steel-300 rounded lg:rounded-t-none" role="list">
@@ -281,7 +281,7 @@ const contact = await getContact();
           </div>
 
           {/* نمای کارت — با جابه‌جایی نما. ⚠️ hidden تا اسکریپت؛ تصویرهای lazy داخل display:none بار نمی‌شوند. */}
-          <ul data-cat-view="grid" hidden class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" role="list">
+          <ul data-cat-view="grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4" role="list">
             {products.map((product) => (
               <li {...catAttrs(product)}>
                 <ProductCard product={product} />

@@ -44,7 +44,8 @@ if (missing.length > 0) {
 }
 ---
 
-{/* فاز ۴ (کارفرما، ۳ آبان ۱۴۰۵ — بازگشت به صفحه‌ی اصلی): شبکه‌ی خط مو با شماره‌ی مونو «۰۱، ۰۲…» به‌جای کارت گرد. */}
+{/* فاز ۴ (کارفرما، ۳ آبان ۱۴۰۵ — بازگشت به صفحه‌ی اصلی): شبکه‌ی خط مو با شماره‌ی مونو «۰۱، ۰۲…» به‌جای کارت گرد.
+    فاز ۵: آیکن دسته + هاور قاب نارنجی درونی (ring-inset) که در شبکه‌ی خط مو مرز همسایه را نمی‌شکند. */}
 {
   items.length > 0 && (
     <section class={`bg-white px-4 py-8 md:py-10 border-b border-steel-300 ${className}`} aria-labelledby="wear-heading">
@@ -61,11 +62,14 @@ if (missing.length > 0) {
         </div>
         <ol class={hairlineGrid(items.length)}>
           {items.map(({ category, reason }, i) => (
-            <li class={hairlineCell(i, items.length)}>
-              <a href={categoryPath(category)} class="group h-full flex flex-col gap-2 p-4 hover:bg-steel-50">
-                <span class="flex items-center gap-2">
+            <li class={`${hairlineCell(i, items.length)} relative transition-all duration-150 hover:ring-2 hover:ring-inset hover:ring-action hover:z-10`}>
+              <a href={categoryPath(category)} class="group h-full flex flex-col gap-2 p-4">
+                <span class="flex items-center gap-3">
+                  <span class="w-10 h-10 shrink-0 rounded bg-steel-100 border border-steel-200 grid place-items-center" aria-hidden="true">
+                    <svg class="w-6 h-6 text-action" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={category.icon} /></svg>
+                  </span>
+                  <span class="min-w-0 flex-1 font-black text-steel-900 text-sm leading-6 group-hover:text-accent-ink">{category.name}</span>
                   <span class="font-mono text-xs text-steel-600 tabular-nums" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                  <span class="font-black text-steel-900 text-sm leading-6 group-hover:text-accent-ink">{category.name}</span>
                 </span>
                 {/* دلیل فنی — همان چیزی که این ادعا را قابل ارزیابی می‌کند و از یک برچسب تبلیغاتی جدا. */}
                 <span class="text-xs text-steel-600 leading-6 mt-auto pt-2 border-t border-steel-200">{reason}</span>

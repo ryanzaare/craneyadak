@@ -151,7 +151,7 @@ const rail = (b: ContentBlock): string =>
           <div class="max-w-7xl mx-auto">
             {b.heading && (
               <div class="flex items-start gap-4 mb-8">
-                <span class="shrink-0 w-11 h-11 rounded-lg bg-steel-900 text-white flex items-center justify-center font-black text-xl tabular-nums" aria-hidden="true">
+                <span class="shrink-0 w-11 h-11 rounded-md bg-steel-900 text-white flex items-center justify-center font-mono font-black text-base tabular-nums border-s-4 border-s-action" aria-hidden="true">
                   {numberOf(b)}
                 </span>
                 <div>
@@ -171,7 +171,7 @@ const rail = (b: ContentBlock): string =>
 
             {/* ── جدول ───────────────────────────────────────────────── */}
             {b.type === 'table' && (
-              <div class="table-scroll bg-white rounded-lg border border-steel-200">
+              <div class="table-scroll bg-white rounded-md border border-steel-300">
                 <table class="w-full text-sm">
                   <thead>
                     <tr class="bg-steel-50 border-b border-steel-200">
@@ -185,7 +185,7 @@ const rail = (b: ContentBlock): string =>
                       <tr class={`border-b border-steel-100 last:border-0 transition-colors hover:bg-accent-soft/40 ${r % 2 ? 'bg-steel-50/50' : ''}`}>
                         {row.cells.map((cell, c) => (
                           c === 0
-                            ? <th scope="row" class="text-right px-5 py-4 font-black text-steel-900 whitespace-nowrap align-top border-r-2 border-accent-ink/30">{cell || '—'}</th>
+                            ? <th scope="row" class="text-right px-5 py-4 font-black text-steel-900 whitespace-nowrap align-top border-s-2 border-s-action/40">{cell || '—'}</th>
                             : <td class="px-5 py-4 text-steel-700 leading-7 align-top">{cell || '—'}</td>
                         ))}
                       </tr>
@@ -199,7 +199,7 @@ const rail = (b: ContentBlock): string =>
             {b.type === 'faq' && (
               <div class="max-w-3xl space-y-3">
                 {b.faqs.map((f) => (
-                  <details class="group rounded-lg bg-white border border-steel-200 border-r-4 border-r-transparent open:border-r-accent-ink/60 overflow-hidden transition-colors">
+                  <details class="group rounded-md bg-white border border-steel-200 border-s-4 border-s-transparent open:border-s-action overflow-hidden transition-colors">
                     <summary class="cursor-pointer list-none px-6 py-4 font-black text-steel-900 flex items-center justify-between gap-4 hover:bg-accent-soft/50 transition-colors">
                       <span>{f.question}</span>
                       <span class="shrink-0 w-6 h-6 grid place-items-center rounded-full bg-accent-soft text-accent-ink text-xl leading-none transition-transform group-open:rotate-45" aria-hidden="true">+</span>
@@ -231,7 +231,7 @@ const rail = (b: ContentBlock): string =>
             {b.type === 'callout' && (
               <div
                 role="note"
-                class={`max-w-3xl rounded-lg border-2 px-6 py-5 ${TONE[b.tone].box}`}
+                class={`max-w-3xl rounded-md border-2 px-6 py-5 ${TONE[b.tone].box}`}
               >
                 <p class="flex items-center gap-2 font-black text-sm mb-2">
                   <span class={`w-2 h-2 rounded-full ${TONE[b.tone].dot}`} aria-hidden="true"></span>
@@ -249,7 +249,7 @@ const rail = (b: ContentBlock): string =>
                   // به سیلو منتقل می‌شود. صفحه‌ی جستجو معمولاً noindex است.
                   const cat = p.categorySlug ? findCategory(p.categorySlug) : undefined;
                   return (
-                    <li class="rounded-lg border border-steel-200 p-5 hover:border-accent-ink transition-colors">
+                    <li class="rounded-md border border-steel-300 p-5 transition-all duration-150 hover:-translate-y-0.5 hover:border-action hover:shadow-[0_6px_16px_rgba(15,23,42,0.08)]">
                       <h3 class="font-black text-steel-900 mb-2">{p.partName}</h3>
                       {p.failureReason && <p class="text-sm text-steel-600 leading-7 mb-3">{p.failureReason}</p>}
                       {cat && (
@@ -267,7 +267,7 @@ const rail = (b: ContentBlock): string =>
             {b.type === 'media' && (
               <div class={`grid gap-6 ${b.media.length > 1 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'max-w-3xl'}`}>
                 {b.media.map((m) => (
-                  <figure class="rounded-lg overflow-hidden border border-steel-200 bg-white">
+                  <figure class="rounded-md overflow-hidden border border-steel-200 bg-white">
                     {m.kind === 'video' && m.videoUrl ? (
                       /* الگوی facade: هیچ iframeای تا کلیک کاربر ساخته نمی‌شود.
                          جاسازی مستقیم بیش از ۵۰۰ کیلوبایت به هر بازدید اضافه
@@ -281,7 +281,7 @@ const rail = (b: ContentBlock): string =>
                                class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                         )}
                         <span class="absolute inset-0 grid place-items-center" aria-hidden="true">
-                          <span class="w-16 h-16 rounded-full bg-white/95 grid place-items-center shadow-lg group-hover:scale-110 transition-transform">
+                          <span class="w-16 h-16 rounded-full bg-white/95 grid place-items-center group-hover:scale-110 transition-transform">
                             <svg viewBox="0 0 24 24" class="w-7 h-7 translate-x-0.5" fill="currentColor" aria-hidden="true">
                               <path d="M8 5v14l11-7z" />
                             </svg>
@@ -306,9 +306,9 @@ const rail = (b: ContentBlock): string =>
 
             {/* ── ستون کناری ─────────────────────────────────────────── */}
             {b.asideHtml !== '' && (
-              <aside class="mt-8 lg:mt-0 lg:sticky lg:top-32 rounded-lg bg-white lg:bg-steel-50/70 border border-steel-200 p-5">
+              <aside class="mt-8 lg:mt-0 lg:sticky lg:top-32 rounded-md bg-white lg:bg-steel-50/70 border border-steel-200 p-5">
                 <p class="flex items-center gap-2 text-xs font-black text-accent-ink mb-2">
-                  <span class="w-1.5 h-1.5 rounded-full bg-action" aria-hidden="true"></span>
+                  <span class="w-1.5 h-1.5 rounded-md bg-action" aria-hidden="true"></span>
                   نکته
                 </p>
                 <div class="prose-aside text-sm text-steel-600 leading-7" set:html={asides[i]} />

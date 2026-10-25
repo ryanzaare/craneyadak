@@ -28,7 +28,7 @@ const BRANDS = await getBrands();
 const brandsByClass = (c: BrandClass) => BRANDS.filter((b) => b.brandClass === c);
 
 const title = `برندهای تحت پوشش | تامین قطعات اصلی | ${SITE.name}`;
-const description = `تامین قطعات ${BRANDS.length} برند تجهیزات بالابر صنعتی — از سازندگان جرثقیل مانند دماگ و اشتال تا سیستم‌های کنترل تله‌کرین و HBC.`;
+const description = `تامین قطعات ${fa(BRANDS.length)} برند تجهیزات بالابر صنعتی — از سازندگان جرثقیل مانند دماگ و اشتال تا سیستم‌های کنترل تله‌کرین و HBC.`;
 const canonical = `${SITE.url}/brands`;
 
 const classOrder: BrandClass[] = ['oem', 'control', 'electrical'];
@@ -69,60 +69,51 @@ const jsonLd = {
     },
   ],
 };
+import { hairlineFillers } from '../../components/hairline';
+import { fa } from '../../components/catalog-presence';
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexHub}>
-  <section class="bg-steel-900 text-white pt-10 pb-16 px-4 border-b-[8px] border-accent-ink">
+  {/* Frontend v2 فاز ۵: نوار عنوان روشن زیر هدر گرافیت (هم‌خانواده‌ی دسته/محصول)، نه نوار تیره‌ی دوم با خط ۸px. */}
+  <section class="bg-white text-steel-900 border-b border-steel-300 px-4 py-6 md:py-8 relative">
     <div class="max-w-7xl mx-auto">
-      <Breadcrumb items={breadcrumbItems} />
-      <h1 class="text-3xl md:text-4xl font-black mb-4 tracking-tight drop-shadow-md">برندهای تحت پوشش</h1>
-      <p class="text-xl text-steel-300 max-w-3xl leading-8">
-        قطعات {BRANDS.length} برند تجهیزات بالابر تامین می‌شود. برندها بر اساس نقششان دسته‌بندی شده‌اند: سازنده‌ی جرثقیل، سازنده‌ی سیستم کنترل، و سازنده‌ی تجهیزات برقی — چون معمولاً روی یک دستگاه، هر سه از شرکت‌های متفاوتی هستند.
+      <Breadcrumb surface items={breadcrumbItems} />
+      <h1 class="text-2xl md:text-3xl font-black mb-2 tracking-tight">برندهای تحت پوشش</h1>
+      <p class="text-base md:text-xl text-steel-600 max-w-3xl leading-8">
+        قطعات {fa(BRANDS.length)} برند تجهیزات بالابر تامین می‌شود. برندها بر اساس نقششان دسته‌بندی شده‌اند: سازنده‌ی جرثقیل، سازنده‌ی سیستم کنترل، و سازنده‌ی تجهیزات برقی — چون معمولاً روی یک دستگاه، هر سه از شرکت‌های متفاوتی هستند.
       </p>
     </div>
   </section>
 
-  <section class="bg-steel-50 px-4 py-14">
-    <div class="max-w-7xl mx-auto space-y-12">
+  <section class="bg-steel-50 px-4 py-8 md:py-10">
+    <div class="max-w-7xl mx-auto space-y-8">
       {classOrder.map((brandClass) => {
         const meta = BRAND_CLASSES[brandClass];
         const items = brandsByClass(brandClass);
         return (
           <section aria-labelledby={`class-${meta.slug}`}>
-            <div class="mb-6 border-b border-steel-200 pb-4">
+            <div class="mb-3">
               <h2 id={`class-${meta.slug}`} class="text-xl md:text-2xl font-black text-steel-900 mb-2">
                 {meta.name}
-                <span class="text-sm font-bold text-steel-600 bg-white border border-steel-200 px-3 py-1 rounded-full mr-3 tabular-nums align-middle">
-                  {items.length} برند
+                <span class="text-sm font-bold text-steel-600 bg-white border border-steel-200 px-2 py-0.5 rounded ms-2 tabular-nums align-middle">
+                  {fa(items.length)} برند
                 </span>
               </h2>
               <p class="text-steel-700 leading-8 max-w-3xl">{meta.intro}</p>
             </div>
 
-            <ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" role="list">
+            {/* Frontend v2 فاز ۵: همان پلاک دوطبقه‌ی صفحه‌ی اصلی (.cy-brand-tile در global.css) در شبکه‌ی خط مو + یک خط
+                توضیح وردپرس. رنگ اختصاصی برند (ACF) دیگر روی کاشی نیست — فقط نوار پایین صفحه‌ی خود برند. */}
+            <ul class="cy-brand-tile grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-px bg-steel-200 border border-steel-200 rounded-md overflow-hidden" role="list">
               {items.map((brand) => (
-                <li>
-                  {/* رنگ اختصاصی برند از ACF وردپرس.
-                      `--brand` یک متغیر CSS است؛ اگر برند رنگی ثبت نکرده
-                      باشد اصلاً ست نمی‌شود و کارت به رنگ پیش‌فرض سایت
-                      برمی‌گردد — نه یک رنگ اشتباه. */}
-                  <a
-                    href={`/brands/${brand.slug}`}
-                    class="cy-brand-card group h-full bg-white p-6 rounded-lg border border-steel-300 hover:border-steel-400 transition-colors flex flex-col items-center text-center gap-1 focus:outline-none focus:ring-4 focus:ring-accent/30"
-                    style={brand.color ? `--brand:${brand.color}` : undefined}
-                    title={brand.seoAnchor ?? undefined}
-                  >
-                    <span class="cy-brand-name text-sm font-black tracking-wider text-steel-900 transition-colors uppercase" dir="ltr">
-                      {brand.nameEn}
-                    </span>
-                    <span class="text-sm font-bold text-steel-700">{brand.nameFa}</span>
-                    <span class="text-xs text-steel-600 mt-1">{brand.country}</span>
-                    {brand.seoDesc && (
-                      <span class="text-xs text-steel-600 leading-6 mt-2 line-clamp-2">{brand.seoDesc}</span>
-                    )}
+                <li class="bg-white">
+                  <a href={`/brands/${brand.slug}/`} title={brand.seoAnchor ?? undefined}>
+                    <span><b dir="ltr">{brand.logoText}</b><i>{brand.country}</i></span>
+                    <span>{brand.nameFa}</span>
                   </a>
                 </li>
               ))}
+              {hairlineFillers(items.length).map((c) => <li class={c} aria-hidden="true"></li>)}
             </ul>
           </section>
         );
@@ -130,7 +121,7 @@ const jsonLd = {
     </div>
   </section>
 
-  <section class="bg-white px-4 py-14 border-t border-steel-100">
+  <section class="bg-white px-4 py-8 md:py-10 border-t border-steel-100">
     <div class="max-w-4xl mx-auto text-steel-700 leading-8 text-right">
       <h2 class="text-2xl font-black text-steel-900 mb-6">برند مورد نظر شما در فهرست نیست؟</h2>
       <p class="mb-4">

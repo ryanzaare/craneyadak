@@ -36,7 +36,8 @@ export interface FilterState {
   sort: SortMode;
 }
 
-export const EMPTY: FilterState = { stock: 'all', brands: [], specs: {}, ranges: {}, view: 'list', cats: [], sort: 'relevant' };
+// ⚠️ نمای پیش‌فرض «کارت» (کارفرما، ۳ آبان ۱۴۰۵): ردیف جدولی برای ویترین فروشگاه کوچک بود. پس فقط جدول در URL می‌آید.
+export const EMPTY: FilterState = { stock: 'all', brands: [], specs: {}, ranges: {}, view: 'grid', cats: [], sort: 'relevant' };
 
 /** اولین عدد یک مقدار مشخصه، با ارقام فارسی/عربی — «۱۶ mm» → 16. */
 export function firstNumber(raw: string): number | null {
@@ -93,7 +94,7 @@ export function parseState(p: URLSearchParams): FilterState {
     brands: many(p, 'brand'),
     specs: {},
     ranges: {},
-    view: p.get('view') === 'grid' ? 'grid' : 'list',
+    view: p.get('view') === 'list' ? 'list' : 'grid',
     cats: many(p, 'cat'),
     sort: sort && SORTS.includes(sort) ? sort : 'relevant',
   };
@@ -115,7 +116,7 @@ export function toQuery(s: FilterState): string {
   for (const c of s.cats) p.append('cat', c);
   for (const [id, values] of Object.entries(s.specs)) for (const v of values) p.append(`f_${id}`, v);
   for (const [id, n] of Object.entries(s.ranges)) p.set(`max_${id}`, String(n));
-  if (s.view === 'grid') p.set('view', 'grid');
+  if (s.view === 'list') p.set('view', 'list');
   if (s.sort !== 'relevant') p.set('sort', s.sort);
   return p.toString();
 }

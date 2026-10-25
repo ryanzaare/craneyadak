@@ -85,8 +85,9 @@ WhatsApp.
 4. One trust strip (verified items only) + Enamad.
 5. Short "how ordering works" (quote → proforma → payment/invoice → delivery) — answers the purchasing officer.
 
-**Category page:** title + one-paragraph guide (from WordPress content blocks) · filters (existing facets) · **list/table view by default**
-for spec-heavy categories (code · name · brand · key spec · stock · price state) with a grid toggle · content blocks below the list.
+**Category page:** title + one-paragraph guide (from WordPress content blocks) · filters (existing facets) · **card view by default** (client,
+3 Aban 1405 — was table) with a «کارت | جدول» toggle; the table (code · name · brand · key spec · stock · price state, 112px thumbnail)
+is `?view=list` · content blocks below the list.
 
 **Product page (mobile order, top to bottom) — revised 28 Mehr after the review below:**
 1. One-line scrollable breadcrumb.
@@ -152,7 +153,7 @@ view.
 | Lighthouse (mobile and desktop) | performance ≥ 0.9, accessibility ≥ 0.9, SEO ≥ 0.95 on indexable pages, CLS ≤ 0.05, TBT ≤ 200ms, LCP ≤ 2.5s (existing `lighthouserc.json`) |
 | JavaScript per page | ≤ 30 KB gzip, islands only (search, filters, baskets, account). Today all JS in `dist/_astro` is ~42 KB raw |
 | Fonts | Vazirmatn variable (111 KB today — subset to Persian + Latin, target ≤ 70 KB) + mono subset ≤ 20 KB |
-| HTML | **≤ 205 KB raw with 77 KB inline CSS and the full 31-category mega-menu** (revised 3 Aban 1405, client decision: all 7 groups / 31 categories return to the mega-menu and mobile menu, ~20 KB per page; previous figure ≤ 180 KB). `inlineStylesheets: 'always'` stays permanently (measured live, 15 Mehr: desktop 92 → 97); it puts ~77 KB of CSS in every page, so the original 120 KB target is not reachable without giving that up. Lighthouse performance must stay 0.99–1.00. Duplicate blocks are still removed |
+| HTML | **No raw-byte cap** (client decision, 3 Aban 1405 — the 180/205 KB caps forced stripping useful UI and lazy-loading instant search). The gates are Lighthouse performance 0.99–1.00, accessibility 1.00, CLS 0.000, SEO 1.00 on indexable pages, plus non-repetitive HTML/CSS: a class string repeated per item (rows, tiles, FAQ) moves to one CSS rule. `inlineStylesheets: 'always'` stays permanently (~77 KB CSS per page; measured live 15 Mehr: desktop 92 → 97). Instant search suggestions stay inline (zero latency). Raw size is still reported per phase |
 | LCP image | ≤ 120 KB AVIF, explicit width/height |
 
 ## 7. What must not change (the contract)

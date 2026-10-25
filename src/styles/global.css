@@ -615,13 +615,16 @@
 
 /* ---- کاشی برند و FAQ صفحه‌ی اصلی (index.astro، فاز ۴) ----
    ⚠️ همان دلیل .cy-spec: رشته‌ی کلاس تکراری روی ۱۹ کاشی و ۱۱ پرسش ~۱۰KB به HTML صفحه‌ی اصلی می‌افزود (build زنده‌ی
-   3a44360: ۲۲۵٬۶۰۶ بایت، بودجه‌ی §6: ۲۰۵KB). یک‌بار این‌جا. */
-.cy-brand-tile a { display: flex; flex-direction: column; gap: 0.125rem; height: 100%; padding: 0.75rem; }
-.cy-brand-tile a:hover { background: var(--color-steel-50); }
-.cy-brand-tile a > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; }
-.cy-brand-tile a > span:first-child { font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em; color: var(--color-steel-900); text-transform: uppercase; }
-.cy-brand-tile a > span:last-child { display: flex; justify-content: space-between; gap: 0.5rem; color: var(--color-steel-600); }
-.cy-brand-tile a > span:last-child b { font-weight: 700; color: var(--color-steel-700); overflow: hidden; text-overflow: ellipsis; }
+   3a44360: ۲۲۵٬۶۰۶ بایت). قاعده‌ی §6: کلاس تکراری هر قلم یک‌بار در CSS. */
+.cy-brand-tile a { position: relative; display: flex; flex-direction: column; height: 100%; transition: box-shadow 150ms; }
+/* پلاک دوطبقه (فاز ۵): بالا نشان لاتین مونو + قرص کشور روی steel-50، پایین نام فارسی. هاور = قاب نارنجی درونی (ring
+   inset) تا شبکه‌ی خط مو نشکند. */
+.cy-brand-tile a:hover { z-index: 10; box-shadow: inset 0 0 0 2px var(--color-action); }
+.cy-brand-tile a > span:first-child { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.625rem 0.75rem; background: color-mix(in oklab, var(--color-steel-50) 70%, transparent); border-bottom: 1px solid var(--color-steel-200); }
+.cy-brand-tile b { font-family: var(--font-mono); font-weight: 900; font-size: 0.875rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-steel-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cy-brand-tile i { font-style: normal; flex-shrink: 0; font-size: 0.75rem; padding: 0.125rem 0.375rem; border-radius: 0.25rem; background: #fff; border: 1px solid var(--color-steel-200); color: var(--color-steel-600); }
+.cy-brand-tile a > span:last-child { padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; color: var(--color-steel-800); }
+@media (min-width: 768px) { .cy-brand-tile b { font-size: 1rem; } }
 .cy-faq { background: #fff; border: 1px solid var(--color-steel-200); border-radius: 0.375rem; }
 .cy-faq details + details { border-top: 1px solid var(--color-steel-200); }
 .cy-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; cursor: pointer; list-style: none; font-weight: 700; line-height: 1.75rem; color: var(--color-steel-900); }
@@ -674,16 +677,7 @@
    می‌آیند و Tailwind فقط کلاس‌هایی را می‌سازد که در زمان build در کد
    دیده باشد. یک کلاس ساخته‌شده به‌صورت پویا هرگز کامپایل نمی‌شود.
 --------------------------------------------------------------------------- */
-.cy-brand-card:hover,
-.cy-brand-card:focus-visible {
-  border-color: var(--brand, var(--color-accent));
-}
-
-.cy-brand-card:hover .cy-brand-name,
-.cy-brand-card:focus-visible .cy-brand-name {
-  color: var(--brand, var(--color-accent-ink));
-}
-
+/* (.cy-brand-card حذف شد — فاز ۵: کاشی برندها همه .cy-brand-tile‌اند؛ رنگ برند فقط .cy-brand-bar صفحه‌ی برند.) */
 /* ⚠️ نوار رنگی فقط وقتی رنگ برند *واقعاً* ثبت شده باشد.
    باگ نسخه‌ی قبل: این کلاس روی پلاک لوگوی کارت‌های تیره گذاشته شده بود و
    چون `var(--brand, accent)` در نبودِ رنگ به نارنجی برند سایت برمی‌گشت،

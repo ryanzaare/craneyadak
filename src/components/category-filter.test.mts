@@ -42,12 +42,19 @@ eq('جدیدترین', [...[p(1, '2026-01'), p(2, '2026-09')]].sort((a, b) => co
 eq('مرتبط‌ترین = ترتیب اصلی', order('relevant', [p(300), p(100)]), [300, 100]);
 
 console.log('── URL (دوطرفه)');
-const st = S({ stock: 'rfq', brands: ['saga', 'demag'], cats: ['remote-control'], specs: { volt: ['24 V', 'AC/DC, 48'] }, ranges: { len: 12.5 }, view: 'grid', sort: 'cheapest' });
+const st = S({ stock: 'rfq', brands: ['saga', 'demag'], cats: ['remote-control'], specs: { volt: ['24 V', 'AC/DC, 48'] }, ranges: { len: 12.5 }, view: 'list', sort: 'cheapest' });
 const q = toQuery(st);
 eq('رفت و برگشت بدون از دست رفتن', parseState(new URLSearchParams(q)), st);
 eq('حالت پیش‌فرض = پرس‌وجوی خالی (URL تمیز)', toQuery(EMPTY), '');
 eq('مقدار ناشناخته‌ی stock نادیده', parseState(new URLSearchParams('stock=xyz')).stock, 'all');
-eq('view ناشناخته = list', parseState(new URLSearchParams('view=table')).view, 'list');
+// ⚠️ پیش‌فرض «کارت» است (کارفرما، ۳ آبان ۱۴۰۵): نمای کارت در URL نمی‌آید، جدول می‌آید (view=list).
+eq('پیش‌فرض نما = grid', EMPTY.view, 'grid');
+eq('view ناشناخته = grid', parseState(new URLSearchParams('view=table')).view, 'grid');
+eq('view=list → جدول', parseState(new URLSearchParams('view=list')).view, 'list');
+// پیوند قدیمی ?view=grid (وقتی جدول پیش‌فرض بود) همچنان کارت باز می‌کند.
+eq('سازگاری: view=grid → کارت', parseState(new URLSearchParams('view=grid')).view, 'grid');
+eq('کارت در URL نمی‌آید', toQuery(S({ view: 'grid' })), '');
+eq('جدول در URL می‌آید', toQuery(S({ view: 'list' })), 'view=list');
 eq('max_ غیرعددی نادیده', parseState(new URLSearchParams('max_len=abc')).ranges, {});
 // پیوندهای قدیمی آرشیو (پیش از فاز ۳) که کسی برای همکارش فرستاده نباید بشکنند.
 eq('سازگاری: brand=a,b و cat=x,y و stock=1', (({ brands, cats, stock }) => ({ brands, cats, stock }))(parseState(new URLSearchParams('brand=saga,demag&cat=a,b&stock=1'))), { brands: ['saga', 'demag'], cats: ['a', 'b'], stock: 'in' });
