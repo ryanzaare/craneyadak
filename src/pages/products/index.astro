@@ -130,7 +130,10 @@ function facetAttrs(p: (typeof products)[number]) {
     </div>
   </section>
 
-  <section class="bg-steel-50 px-4 md:px-6 py-6 md:py-8" aria-label="فهرست همه‌ی قطعات">
+  <section class="bg-steel-50 px-4 md:px-6 py-6 md:py-8" aria-labelledby="products-list-heading">
+    {/* ⚠️ H2 پنهان (فاز ۵): با نمای کارت پیش‌فرض، عنوان h3 کارت‌ها مستقیم بعد از H1 می‌آمد — Lighthouse «heading-order» و
+        a11y ۰٫۹۸ روی remote-control (build زنده‌ی 558f2e3). H2 دیدنی همان تکراری‌ای بود که فاز ۳ حذف کرد؛ پس sr-only. */}
+    <h2 id="products-list-heading" class="sr-only">فهرست همه‌ی قطعات</h2>
     <div class="max-w-7xl mx-auto">
       {products.length === 0 ? (
         <EmptyState title="هنوز محصولی منتشر نشده است." text="کاتالوگ در حال تکمیل است. کد فنی یا عکس پلاک را بفرستید تا مستقیم استعلام کنیم."
