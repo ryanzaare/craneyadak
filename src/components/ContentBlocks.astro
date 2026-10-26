@@ -151,11 +151,11 @@ const rail = (b: ContentBlock): string =>
           <div class="max-w-7xl mx-auto">
             {b.heading && (
               <div class="flex items-start gap-4 mb-8">
-                <span class="shrink-0 w-11 h-11 rounded-md bg-steel-900 text-white flex items-center justify-center font-mono font-black text-base tabular-nums border-s-4 border-s-action" aria-hidden="true">
+                <span class="shrink-0 w-11 h-11 rounded-md bg-steel-900 text-white flex items-center justify-center font-mono font-bold text-base tabular-nums border-s-4 border-s-action" aria-hidden="true">
                   {numberOf(b)}
                 </span>
                 <div>
-                  <h2 id={`${b.anchor}-h`} class="text-2xl md:text-3xl font-black text-steel-900 leading-relaxed">{b.heading}</h2>
+                  <h2 id={`${b.anchor}-h`} class="text-2xl md:text-3xl font-bold text-steel-900 leading-relaxed">{b.heading}</h2>
                   {b.type === 'table' && b.intro && <p class="text-steel-600 mt-1">{b.intro}</p>}
                 </div>
               </div>
@@ -176,7 +176,7 @@ const rail = (b: ContentBlock): string =>
                   <thead>
                     <tr class="bg-steel-50 border-b border-steel-200">
                       {b.columns.map((c) => (
-                        <th scope="col" class="text-right font-black text-steel-900 px-5 py-3 whitespace-nowrap">{c}</th>
+                        <th scope="col" class="text-right font-bold text-steel-900 px-5 py-3 whitespace-nowrap">{c}</th>
                       ))}
                     </tr>
                   </thead>
@@ -185,7 +185,7 @@ const rail = (b: ContentBlock): string =>
                       <tr class={`border-b border-steel-100 last:border-0 transition-colors hover:bg-accent-soft/40 ${r % 2 ? 'bg-steel-50/50' : ''}`}>
                         {row.cells.map((cell, c) => (
                           c === 0
-                            ? <th scope="row" class="text-right px-5 py-4 font-black text-steel-900 whitespace-nowrap align-top border-s-2 border-s-action/40">{cell || '—'}</th>
+                            ? <th scope="row" class="text-right px-5 py-4 font-bold text-steel-900 whitespace-nowrap align-top border-s-2 border-s-action/40">{cell || '—'}</th>
                             : <td class="px-5 py-4 text-steel-700 leading-7 align-top">{cell || '—'}</td>
                         ))}
                       </tr>
@@ -200,7 +200,7 @@ const rail = (b: ContentBlock): string =>
               <div class="max-w-3xl space-y-3">
                 {b.faqs.map((f) => (
                   <details class="group rounded-md bg-white border border-steel-200 border-s-4 border-s-transparent open:border-s-action overflow-hidden transition-colors">
-                    <summary class="cursor-pointer list-none px-6 py-4 font-black text-steel-900 flex items-center justify-between gap-4 hover:bg-accent-soft/50 transition-colors">
+                    <summary class="cursor-pointer list-none px-6 py-4 font-bold text-steel-900 flex items-center justify-between gap-4 hover:bg-accent-soft/50 transition-colors">
                       <span>{f.question}</span>
                       <span class="shrink-0 w-6 h-6 grid place-items-center rounded-full bg-accent-soft text-accent-ink text-xl leading-none transition-transform group-open:rotate-45" aria-hidden="true">+</span>
                     </summary>
@@ -219,7 +219,7 @@ const rail = (b: ContentBlock): string =>
                 {b.specs.map((sp) => (
                   <div class="flex items-baseline justify-between gap-4 border-b border-steel-100 py-3">
                     <dt class="text-steel-600 shrink-0">{sp.label}</dt>
-                    <dd class="font-black text-steel-900 text-left tabular-nums">
+                    <dd class="font-bold text-steel-900 text-left tabular-nums">
                       {sp.value}{sp.unit && <span class="font-bold text-steel-500 text-sm"> {sp.unit}</span>}
                     </dd>
                   </div>
@@ -233,7 +233,7 @@ const rail = (b: ContentBlock): string =>
                 role="note"
                 class={`max-w-3xl rounded-md border-2 px-6 py-5 ${TONE[b.tone].box}`}
               >
-                <p class="flex items-center gap-2 font-black text-sm mb-2">
+                <p class="flex items-center gap-2 font-bold text-sm mb-2">
                   <span class={`w-2 h-2 rounded-full ${TONE[b.tone].dot}`} aria-hidden="true"></span>
                   {TONE[b.tone].label}
                 </p>
@@ -250,10 +250,10 @@ const rail = (b: ContentBlock): string =>
                   const cat = p.categorySlug ? findCategory(p.categorySlug) : undefined;
                   return (
                     <li class="rounded-md border border-steel-300 p-5 transition-all duration-150 hover:-translate-y-0.5 hover:border-action hover:shadow-[0_6px_16px_rgba(15,23,42,0.08)]">
-                      <h3 class="font-black text-steel-900 mb-2">{p.partName}</h3>
+                      <h3 class="font-bold text-steel-900 mb-2">{p.partName}</h3>
                       {p.failureReason && <p class="text-sm text-steel-600 leading-7 mb-3">{p.failureReason}</p>}
                       {cat && (
-                        <a href={categoryPath(cat)} class="text-sm font-black text-accent-ink hover:underline">
+                        <a href={categoryPath(cat)} class="text-sm font-bold text-accent-ink hover:underline">
                           دیدن {p.categoryName ?? cat.name} ←
                         </a>
                       )}
@@ -307,7 +307,7 @@ const rail = (b: ContentBlock): string =>
             {/* ── ستون کناری ─────────────────────────────────────────── */}
             {b.asideHtml !== '' && (
               <aside class="mt-8 lg:mt-0 lg:sticky lg:top-32 rounded-md bg-white lg:bg-steel-50/70 border border-steel-200 p-5">
-                <p class="flex items-center gap-2 text-xs font-black text-accent-ink mb-2">
+                <p class="flex items-center gap-2 text-xs font-bold text-accent-ink mb-2">
                   <span class="w-1.5 h-1.5 rounded-md bg-action" aria-hidden="true"></span>
                   نکته
                 </p>

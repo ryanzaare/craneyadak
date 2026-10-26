@@ -240,10 +240,11 @@ const jsonLd = {
               کد فنی، عکس پلاک دستگاه یا عکس قطعه‌ی فرسوده کافی است — سازگاری را <strong class="font-bold text-steel-900">پیش از صدور پیش‌فاکتور</strong> بررسی می‌کنیم.
             </p>
             <SearchBox id="hero-search" tone="light" slash />
-            <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            {/* موبایل: یک ردیف قابل‌کشیدن (کارفرما، ۴ آبان ۱۴۰۵ — پنج چیپ هر کدام یک خط، ~۲۳۰px)؛ از md شکستنی. */}
+            <div class="mt-3 flex flex-nowrap md:flex-wrap items-center gap-2 text-sm overflow-x-auto md:overflow-visible whitespace-nowrap no-scrollbar py-1 -my-1">
               <span class="text-steel-600 shrink-0">{QUICK_LINKS_LABEL}</span>
               {quickSuggestions.map((item) => (
-                <a href={item.href} class="inline-flex items-center min-h-9 px-3 rounded border border-steel-300 bg-white text-steel-800 hover:border-steel-500">{item.label}</a>
+                <a href={item.href} class="shrink-0 inline-flex items-center min-h-9 px-3 rounded border border-steel-300 bg-white text-steel-800 hover:border-steel-500">{item.label}</a>
               ))}
             </div>
           </div>
@@ -260,7 +261,7 @@ const jsonLd = {
 
         {waPlate && (
           <div class="lg:col-span-4 bg-white p-4 md:p-6 flex flex-col">
-            <h2 class="text-base font-black text-steel-900 leading-7">کد فنی را نمی‌دانید؟</h2>
+            <h2 class="text-base font-bold text-steel-900 leading-7">کد فنی را نمی‌دانید؟</h2>
             <p class="mt-1 mb-4 text-sm text-steel-700 leading-7">از پلاک مشخصات دستگاه یا خودِ قطعه عکس بگیرید و در واتساپ بفرستید تا قطعه‌ی سازگار شناسایی شود.</p>
             <a href={waPlate} target="_blank" rel="noopener noreferrer" class="mt-auto inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-500">
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
@@ -272,11 +273,11 @@ const jsonLd = {
         {/* فهرست چندقلمی — جانشین QuickOrder. GET به /contact با name="parts" (فرم تماس از فاز ۳ آن را می‌خواند).
             بدون جاوااسکریپت کار می‌کند. */}
         <form action="/contact/" method="get" class:list={['bg-white p-4 md:p-6 flex flex-col', waPlate ? 'lg:col-span-4' : 'lg:col-span-4 lg:row-span-2']}>
-          <h2 class="text-base font-black text-steel-900 leading-7"><label for="bulk-parts">فهرست چندقلمی، یک پیش‌فاکتور</label></h2>
+          <h2 class="text-base font-bold text-steel-900 leading-7"><label for="bulk-parts">فهرست چندقلمی، یک پیش‌فاکتور</label></h2>
           <p id="bulk-parts-hint" class="mt-1 mb-2 text-sm text-steel-700 leading-7">هر کد فنی در یک خط — سازگاری هر قلم بررسی و یک پیش‌فاکتور واحد صادر می‌شود.</p>
           <textarea id="bulk-parts" name="parts" rows="2" dir="ltr" aria-describedby="bulk-parts-hint" placeholder={'SAGA1-L12\n...'}
             class="w-full rounded-md border border-steel-300 bg-steel-50 p-2.5 text-sm font-mono leading-6 text-steel-900 placeholder:text-steel-500 focus:border-steel-600 focus:bg-white resize-y max-h-40"></textarea>
-          <button type="submit" class="mt-auto pt-0 inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-black hover:bg-accent-strong">درخواست پیش‌فاکتور</button>
+          <button type="submit" class="mt-auto pt-0 inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-bold hover:bg-accent-strong">درخواست پیش‌فاکتور</button>
         </form>
       </div>
     </div>
@@ -289,7 +290,7 @@ const jsonLd = {
     <div class="max-w-7xl mx-auto">
       <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
         <div>
-          <h2 id="silos-heading" class="text-xl md:text-2xl font-black text-steel-900">دسته‌بندی قطعات جرثقیل سقفی</h2>
+          <h2 id="silos-heading" class="text-xl md:text-2xl font-bold text-steel-900">دسته‌بندی قطعات جرثقیل سقفی</h2>
           <p class="mt-1 text-sm text-steel-600 leading-7">{fa(ALL_CATEGORIES.length)} دسته قطعه در {fa(SILOS.length)} گروه فنی — از روی گروه پیش بروید یا مستقیم کد فنی را جستجو کنید.</p>
         </div>
         <a href="/categories/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">فهرست کامل ←</a>
@@ -301,7 +302,7 @@ const jsonLd = {
               <span class="w-9 h-9 shrink-0 grid place-items-center rounded bg-steel-100 text-steel-700" aria-hidden="true">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={silo.icon} /></svg>
               </span>
-              <h3 class="flex-1 min-w-0 font-black text-sm leading-6 text-steel-900">{silo.name}</h3>
+              <h3 class="flex-1 min-w-0 font-bold text-sm leading-6 text-steel-900">{silo.name}</h3>
               <span class="shrink-0 text-xs text-steel-600">{fa(categories.length)} دسته</span>
             </a>
             <ul class="px-4 py-2 [&_a]:flex [&_a]:items-center [&_a]:justify-between [&_a]:gap-2 [&_a]:min-h-9 [&_a]:text-sm [&_a]:text-steel-700 [&_a:hover]:text-accent-ink" role="list">
@@ -327,15 +328,17 @@ const jsonLd = {
     <section class="bg-white px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="featured-heading">
       <div class="max-w-7xl mx-auto">
         <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
-          <h2 id="featured-heading" class="text-xl md:text-2xl font-black text-steel-900">قطعات موجود در کاتالوگ</h2>
+          <h2 id="featured-heading" class="text-xl md:text-2xl font-bold text-steel-900">قطعات موجود در کاتالوگ</h2>
           <a href="/products/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">همه‌ی قطعات ←</a>
         </div>
         <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" role="list">
           {featured.slice(0, 3).map((product, i) => <li><ProductCard product={product} eager={i === 0} /></li>)}
           {featured.length < 3 && (
-            <li class:list={["bg-steel-50 border border-steel-300 border-s-4 border-s-action rounded-md p-6 flex flex-col justify-between gap-5", featured.length === 1 && "lg:col-span-2"]}>
+            <li class:list={["bg-steel-50 border border-steel-300 border-s-4 border-s-action rounded-md p-6 flex flex-col gap-5 self-start", featured.length === 1 && "lg:col-span-2"]}>
+              {/* ⚠️ self-start، نه کشیدن تا قد کارت محصول با justify-between (کارفرما، ۴ آبان ۱۴۰۵): همان ~۱۴۰px حفره را می‌ساخت.
+                  دکمه‌ها با فاصله‌ی طبیعی زیر گروه‌ها می‌نشینند. */}
               <div>
-                <h3 class="text-xl font-black text-steel-900 leading-8">قطعه مورد نظر شما هنوز در فهرست آنلاین نیست؟</h3>
+                <h3 class="text-xl font-bold text-steel-900 leading-8">قطعه مورد نظر شما هنوز در فهرست آنلاین نیست؟</h3>
                 <p class="mt-2 text-sm text-steel-700 leading-7">
                   فهرست آنلاین در حال تکمیل است؛ تامین ما هر {fa(SILOS.length)} گروه فنی جرثقیل سقفی را پوشش می‌دهد. کد فنی یا عکس
                   پلاک را بفرستید تا قطعه‌ی سازگار شناسایی و پیش‌فاکتور صادر شود.
@@ -352,7 +355,7 @@ const jsonLd = {
                 </ul>
                 {/* ⚠️ چک‌لیست به‌تنهایی کافی نبود: کارت همراه هم‌قد کارت محصول کشیده می‌شود و در ۱۲۸۰px هنوز ~۲۳۰px خالی می‌ماند
                     (اسکرین‌شات a326586). ۷ گروه فنی به‌صورت پیوند فشرده — همان ادعای «پوشش هر ۷ گروه» قابل‌کلیک. */}
-                <p class="mt-4 mb-2 text-xs font-black text-steel-600">گروه‌های فنی تحت پوشش</p>
+                <p class="mt-4 mb-2 text-xs font-bold text-steel-600">گروه‌های فنی تحت پوشش</p>
                 <ul class="flex flex-wrap gap-1.5" role="list">
                   {SILOS.map((silo) => (
                     <li><a href={siloPath(silo)} class="inline-flex items-center min-h-8 px-2.5 rounded border border-steel-300 bg-white text-xs font-bold text-steel-800 hover:border-action hover:text-accent-ink">{silo.name}</a></li>
@@ -360,7 +363,7 @@ const jsonLd = {
                 </ul>
               </div>
               <div class="grid gap-2">
-                {waPlate && <a href={waPlate} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-black hover:bg-accent-strong">ارسال عکس پلاک در واتساپ</a>}
+                {waPlate && <a href={waPlate} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-bold hover:bg-accent-strong">ارسال عکس پلاک در واتساپ</a>}
                 <a href="#bulk-parts" class="inline-flex items-center justify-center min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-500">ثبت فهرست چندقلمی</a>
               </div>
             </li>
@@ -378,7 +381,7 @@ const jsonLd = {
   {advantages.length > 0 && (
     <section class="bg-steel-50 px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="advantages-heading">
       <div class="max-w-7xl mx-auto">
-        <h2 id="advantages-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-4">چرا کرین یدک — مزیت‌های تامین</h2>
+        <h2 id="advantages-heading" class="text-xl md:text-2xl font-bold text-steel-900 mb-4">چرا کرین یدک — مزیت‌های تامین</h2>
         <ul class={hairlineGrid(advantages.length)} role="list">
           {advantages.map((item, i) => (
             <li class={`${hairlineCell(i, advantages.length)} border-s-4 border-s-action p-4 md:p-5`}>
@@ -388,7 +391,7 @@ const jsonLd = {
                 </span>
                 <span class="font-mono text-xs text-steel-600 tabular-nums">{String(i + 1).padStart(2, '0')}</span>
               </span>
-              <h3 class="font-black text-steel-900 leading-7">{item.title}</h3>
+              <h3 class="font-bold text-steel-900 leading-7">{item.title}</h3>
               <p class="mt-1 text-sm text-steel-700 leading-7">{item.body}</p>
             </li>
           ))}
@@ -404,7 +407,7 @@ const jsonLd = {
     <div class="max-w-7xl mx-auto">
       <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
         <div>
-          <h2 id="brands-heading" class="text-xl md:text-2xl font-black text-steel-900">برندهای تحت پوشش</h2>
+          <h2 id="brands-heading" class="text-xl md:text-2xl font-bold text-steel-900">برندهای تحت پوشش</h2>
           <p class="mt-1 text-sm text-steel-600 leading-7">روی یک جرثقیل معمولاً بدنه، سیستم کنترل و تجهیزات برقی از سه سازنده‌ی متفاوت‌اند.</p>
         </div>
         <a href="/brands/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">همه برندها ←</a>
@@ -414,7 +417,7 @@ const jsonLd = {
           const list = brandsByClass(brandClass);
           return list.length > 0 && (
             <div>
-              <h3 class="text-xs font-black text-steel-600 mb-2">{BRAND_CLASSES[brandClass].name} <span class="font-normal">({fa(list.length)})</span></h3>
+              <h3 class="text-xs font-bold text-steel-600 mb-2">{BRAND_CLASSES[brandClass].name} <span class="font-normal">({fa(list.length)})</span></h3>
               {/* ظاهر کاشی در global.css (.cy-brand-tile) — کلاس روی هر ۱۹ کاشی ~۵KB بود. */}
               <ul class="cy-brand-tile grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-px bg-steel-200 border border-steel-200 rounded-md overflow-hidden" role="list">
                 {list.map((brand) => (
@@ -443,7 +446,7 @@ const jsonLd = {
   <section class="bg-steel-900 text-white px-4 py-10 md:py-12 border-y border-steel-800" aria-labelledby="process-heading">
     <div class="max-w-7xl mx-auto">
       <p class="text-sm font-bold text-accent mb-1">از استعلام تا تحویل</p>
-      <h2 id="process-heading" class="text-xl md:text-2xl font-black mb-5">فرآیند تامین و خرید سازمانی</h2>
+      <h2 id="process-heading" class="text-xl md:text-2xl font-bold mb-5">فرآیند تامین و خرید سازمانی</h2>
       <ol class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {STEPS.map(([step, text, icon], i) => (
           <li class="bg-steel-800/90 border border-steel-700 border-s-4 border-s-action p-5 rounded-md">
@@ -451,7 +454,7 @@ const jsonLd = {
               <span class="font-mono text-sm font-black bg-action text-white px-2 py-0.5 rounded tabular-nums">{String(i + 1).padStart(2, '0')}</span>
               <svg class="w-7 h-7 text-steel-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={icon} /></svg>
             </span>
-            <h3 class="font-black text-white leading-7">{step}</h3>
+            <h3 class="font-bold text-white leading-7">{step}</h3>
             <p class="mt-1 text-sm text-steel-300 leading-7">{text}</p>
           </li>
         ))}
@@ -459,7 +462,7 @@ const jsonLd = {
       {mobile && (
         <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border border-steel-700 rounded-md px-4 py-3">
           <p class="text-sm text-steel-200 leading-7"><strong class="text-white">جرثقیل خط تولید از کار افتاده؟</strong> مستقیم با خط ویژه‌ی تامین تماس بگیرید.</p>
-          <a href={mobile.href} class="inline-flex items-center gap-2 min-h-11 px-4 rounded-md bg-action text-white text-sm font-black hover:bg-accent-strong">
+          <a href={mobile.href} class="inline-flex items-center gap-2 min-h-11 px-4 rounded-md bg-action text-white text-sm font-bold hover:bg-accent-strong">
             <span class="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true"></span>
             <span class="tabular-nums" dir="ltr">{mobile.display}</span>
           </a>
@@ -487,7 +490,7 @@ const jsonLd = {
               </span>
             )}
             <span class="min-w-0">
-              <span class="block font-black text-steel-900 text-sm leading-6">{b.title}</span>
+              <span class="block font-bold text-steel-900 text-sm leading-6">{b.title}</span>
               <span class="block text-xs text-steel-600 leading-5">{b.description}</span>
             </span>
           </li>
@@ -502,7 +505,7 @@ const jsonLd = {
   {faqs.length > 0 && (
   <section class="bg-steel-50 px-4 py-8 md:py-10" aria-labelledby="faq-heading">
     <div class="max-w-4xl mx-auto">
-      <h2 id="faq-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-4">پرسش‌های متداول فنی</h2>
+      <h2 id="faq-heading" class="text-xl md:text-2xl font-bold text-steel-900 mb-4">پرسش‌های متداول فنی</h2>
       {/* فهرست خط مو (فاز ۴)؛ ظاهر در global.css (.cy-faq). فوکوس = :focus-visible سراسری. */}
       <div class="cy-faq">
         {faqs.map((faq) => (

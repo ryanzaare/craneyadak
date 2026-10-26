@@ -179,7 +179,7 @@ const noindexBrand = !brandReadiness({
       <div class="flex flex-col md:flex-row items-start gap-5 md:gap-8">
         <div class="w-40 shrink-0 rounded-md border border-steel-300 overflow-hidden bg-white" role="img" aria-label={`نشان ${brand.nameFa}`}>
           <span class="flex items-center justify-between gap-2 px-3 py-2.5 bg-steel-50 bg-blueprint border-b border-steel-200">
-            <b class="font-mono font-black text-base tracking-wider uppercase text-steel-900 truncate" dir="ltr">{brand.logoText}</b>
+            <b class="font-mono font-bold text-base tracking-wider uppercase text-steel-900 truncate" dir="ltr">{brand.logoText}</b>
           </span>
           <span class="block px-3 py-2 text-xs font-bold text-steel-800">{brand.nameFa} · {brand.country}</span>
         </div>
@@ -203,7 +203,7 @@ const noindexBrand = !brandReadiness({
   <section class="bg-steel-50 px-4 py-8 md:py-10" aria-labelledby="brand-products-heading">
     <div class="max-w-7xl mx-auto">
       <div class="flex flex-wrap gap-4 justify-between items-end mb-8 border-b border-steel-200 pb-4">
-        <h2 id="brand-products-heading" class="text-2xl font-black text-steel-900">قطعات {brand.nameFa}</h2>
+        <h2 id="brand-products-heading" class="text-2xl font-bold text-steel-900">قطعات {brand.nameFa}</h2>
         {products.length > 0 && (
           <span class="text-sm text-steel-600 font-bold bg-white border border-steel-200 px-3 py-1 rounded-full tabular-nums">{products.length} قطعه</span>
         )}
@@ -217,15 +217,15 @@ const noindexBrand = !brandReadiness({
         </ul>
       ) : (
         <div class="bg-white rounded-md border border-steel-100 p-8 md:p-12 max-w-3xl">
-          <h3 class="text-xl md:text-2xl font-black text-steel-900 mb-4 leading-9">
+          <h3 class="text-xl md:text-2xl font-bold text-steel-900 mb-4 leading-9">
             استعلام قطعات {brand.nameFa} با کد فنی سازنده
           </h3>
           <p class="text-steel-700 leading-8 mb-8">
             فهرست آنلاین قطعات {brand.nameFa} در حال تکمیل است و تنها اقلامی منتشر می‌شود که تامین آن‌ها قطعی باشد. اگر Part Number اصلی سازنده یا عکس پلاک دستگاه را دارید، همان را بفرستید؛ کارشناسان ما قطعه‌ی اورجینال یا معادل استاندارد را شناسایی می‌کنند.
           </p>
           <div class="flex flex-col sm:flex-row gap-3">
-            <a href={`/contact?brand=${encodeURIComponent(brand.nameEn)}`} class="bg-action text-white px-8 py-4 rounded-md font-black text-center hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
-            <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-md font-black text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
+            <a href={`/contact?brand=${encodeURIComponent(brand.nameEn)}`} class="bg-action text-white px-8 py-4 rounded-md font-bold text-center hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px] flex items-center justify-center">ثبت استعلام</a>
+            <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-8 py-4 rounded-md font-bold text-center hover:bg-emerald-600 hover:text-white transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال عکس در واتساپ</a>
           </div>
         </div>
       )}
@@ -236,7 +236,7 @@ const noindexBrand = !brandReadiness({
   {categoriesWithProducts.length > 0 && (
     <section class="bg-white px-4 py-8 md:py-10 border-t border-steel-100" aria-labelledby="brand-categories-heading">
       <div class="max-w-7xl mx-auto">
-        <h2 id="brand-categories-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-8">
+        <h2 id="brand-categories-heading" class="text-xl md:text-2xl font-bold text-steel-900 mb-8">
           دسته‌بندی قطعات موجود {brand.nameFa}
         </h2>
         <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" role="list">
@@ -262,13 +262,13 @@ const noindexBrand = !brandReadiness({
   {siblings.length > 0 && (
     <section class="bg-steel-50 px-4 py-8 md:py-10 border-t border-steel-100" aria-labelledby="sibling-brands-heading">
       <div class="max-w-7xl mx-auto">
-        <h2 id="sibling-brands-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-3">سایر {classMeta.name}</h2>
+        <h2 id="sibling-brands-heading" class="text-xl md:text-2xl font-bold text-steel-900 mb-3">سایر {classMeta.name}</h2>
         <p class="text-steel-600 leading-8 mb-8 max-w-3xl">{classMeta.intro}</p>
         <ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" role="list">
           {siblings.map((sibling) => (
             <li>
               <a href={`/brands/${sibling.slug}`} class="group h-full bg-white p-5 rounded-md border border-steel-300 hover:border-steel-400 transition-colors flex flex-col items-center text-center focus:outline-none focus:ring-4 focus:ring-accent-ink/30">
-                <span class="text-sm font-black tracking-wider text-steel-900 group-hover:text-accent-ink transition-colors uppercase" dir="ltr">{sibling.nameEn}</span>
+                <span class="text-sm font-bold tracking-wider text-steel-900 group-hover:text-accent-ink transition-colors uppercase" dir="ltr">{sibling.nameEn}</span>
                 <span class="text-sm font-bold text-steel-700 mt-0.5">{sibling.nameFa}</span>
               </a>
             </li>

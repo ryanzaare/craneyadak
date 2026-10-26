@@ -56,7 +56,7 @@ const presence = await getCatalogPresence();
         نمی‌خورد و کاربرِ کدبه‌دست «پیدا نشد» می‌دید. این لایه همان فهرست /search-index.json و همان منطق
         src/lib/search-score.ts (آزمون npm run test:search) را اجرا می‌کند: جداکننده، حروف و ارقام فارسی مهم نیستند. */}
     <section id="part-results" hidden aria-labelledby="part-results-heading" class="mb-8">
-      <h2 id="part-results-heading" class="text-base font-black text-steel-900 mb-2">قطعات منطبق</h2>
+      <h2 id="part-results-heading" class="text-base font-bold text-steel-900 mb-2">قطعات منطبق</h2>
       <ul id="part-results-list" class="bg-white border border-steel-300 rounded divide-y divide-steel-200" role="list"></ul>
     </section>
 
@@ -64,12 +64,12 @@ const presence = await getCatalogPresence();
         خریداری که کد را از پلاک می‌خواند و پیدا نمی‌کند، همان خریداری است که با یک عکس یا تماس سفارش می‌دهد.
         پیوندها فقط اگر شماره در وردپرس ثبت شده باشد (هرگز ثابت در کد). */}
     <section id="zero-results" hidden aria-live="polite" class="mb-8 bg-steel-50 border border-steel-300 rounded-md p-4 md:p-5">
-      <p class="text-base font-black text-steel-900">قطعه‌ای با «<span id="zero-q" class="font-mono" dir="ltr"></span>» در کاتالوگ پیدا نشد.</p>
+      <p class="text-base font-bold text-steel-900">قطعه‌ای با «<span id="zero-q" class="font-mono" dir="ltr"></span>» در کاتالوگ پیدا نشد.</p>
       <p class="mt-1 text-sm text-steel-700 leading-7">همه‌ی قطعات هنوز در سایت ثبت نشده‌اند. عکس پلاک یا خود قطعه را بفرستید یا تماس بگیرید تا کد را بررسی کنیم.</p>
       <div class="mt-3 flex flex-wrap gap-3">
         {contact.whatsappHref && (
           <a id="zero-wa" href={contact.whatsappHref} data-wa-base={contact.whatsappHref} target="_blank" rel="noopener noreferrer"
-            class="inline-flex items-center justify-center min-h-11 px-5 rounded-md bg-action text-white text-sm font-black hover:bg-accent-strong">
+            class="inline-flex items-center justify-center min-h-11 px-5 rounded-md bg-action text-white text-sm font-bold hover:bg-accent-strong">
             ارسال عکس پلاک در واتساپ
           </a>
         )}
@@ -96,7 +96,7 @@ const presence = await getCatalogPresence();
         نتیجه گرفته هم از دیدن ساختار کاتالوگ ضرر نمی‌کند.
     --------------------------------------------------------------- */}
     <section class="mt-10 pt-8 border-t border-steel-300" aria-labelledby="browse-heading">
-      <h2 id="browse-heading" class="text-xl font-black text-steel-900 mb-1">
+      <h2 id="browse-heading" class="text-xl font-bold text-steel-900 mb-1">
         یا از روی دسته‌بندی پیش بروید
       </h2>
       <p class="text-sm text-steel-600 leading-7 mb-5">
@@ -108,7 +108,7 @@ const presence = await getCatalogPresence();
       <ul role="list" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
         {presence.all.map(({ silo, categories }) => (
           <li>
-            <a href={siloPath(silo)} class="flex items-baseline justify-between gap-3 text-sm font-black text-steel-900 hover:text-accent-ink py-1">{silo.name}<span class="text-xs font-normal text-steel-600">{fa(categories.length)} دسته</span></a>
+            <a href={siloPath(silo)} class="flex items-baseline justify-between gap-3 text-sm font-bold text-steel-900 hover:text-accent-ink py-1">{silo.name}<span class="text-xs font-normal text-steel-600">{fa(categories.length)} دسته</span></a>
             <ul role="list" class="border-t border-steel-200">
               {categories.map(({ category, count }) => (
                 <li>

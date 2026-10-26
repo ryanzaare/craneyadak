@@ -61,7 +61,7 @@ const reviewedLabel = reviewedAt
         />
       ) : (
         <span
-          class="w-16 h-16 rounded-full shrink-0 bg-steel-900 text-white flex items-center justify-center text-xl font-black"
+          class="w-16 h-16 rounded-full shrink-0 bg-steel-900 text-white flex items-center justify-center text-xl font-bold"
           aria-hidden="true"
         >
           {initials}
@@ -72,7 +72,7 @@ const reviewedLabel = reviewedAt
     <div class="min-w-0">
       <p class="text-xs font-bold text-steel-600 mb-0.5">بازبینی فنی توسط</p>
 
-      <p id={`author-${author.slug}`} class="font-black text-steel-900 leading-7 flex items-center gap-2 flex-wrap">
+      <p id={`author-${author.slug}`} class="font-bold text-steel-900 leading-7 flex items-center gap-2 flex-wrap">
         {author.name}
         {
           !author.verified && (

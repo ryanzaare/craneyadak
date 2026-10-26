@@ -61,7 +61,7 @@ const jsonLd = {
             </div>
             <div class="p-6 md:p-8 flex flex-col flex-grow">
               <time datetime={post.isoDate} class="text-xs font-bold text-steel-500 mb-3 block">{post.date}</time>
-              <h2 class="font-black text-steel-900 text-xl mb-4 leading-8">
+              <h2 class="font-bold text-steel-900 text-xl mb-4 leading-8">
                 <a href={`/blog/${post.slug}`} class="hover:text-accent-ink before:absolute before:inset-0 focus:outline-none focus:ring-4 focus:ring-accent-ink/30 rounded">{post.title}</a>
               </h2>
               <p class="text-sm text-steel-600 leading-7 line-clamp-3 mb-6">{post.excerpt}</p>

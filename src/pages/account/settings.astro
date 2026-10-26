@@ -12,7 +12,7 @@ import { SITE } from '../../data/site';
 const title = `تنظیمات حساب | ${SITE.name}`;
 const description = 'ویرایش مشخصات و رمز عبور حساب کاربری.';
 const input = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40';
-const button = 'bg-action text-white px-6 py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px] disabled:opacity-60';
+const button = 'bg-action text-white px-6 py-3 rounded-md font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px] disabled:opacity-60';
 ---
 
 <Layout title={title} description={description} noindex>
@@ -29,7 +29,7 @@ const button = 'bg-action text-white px-6 py-3 rounded-md font-black hover:bg-ac
 
       <div class="min-w-0 space-y-8">
         <form id="profile-form" class="bg-white border border-steel-300 border-s-4 border-s-action rounded-md p-5 space-y-3">
-          <h2 class="font-black text-steel-900">مشخصات</h2>
+          <h2 class="font-bold text-steel-900">مشخصات</h2>
           <div>
             <label for="set-email" class="block text-sm font-bold text-steel-900 mb-1">ایمیل</label>
             <input id="set-email" type="email" dir="ltr" readonly class={`${input} bg-steel-100 text-steel-600`} />
@@ -56,18 +56,18 @@ const button = 'bg-action text-white px-6 py-3 rounded-md font-black hover:bg-ac
         {/* مشخصات ذخیره‌شده‌ی پرداخت: پس از هر پرداخت موفق به‌روز می‌شود و سفارش بعدی را
             پیش‌پر می‌کند. ویرایش = همان فرم پرداخت؛ اینجا فقط دیدن و حذف. */}
         <div id="saved-box" hidden class="bg-white border border-steel-300 border-s-4 border-s-action rounded-md p-5 space-y-3">
-          <h2 class="font-black text-steel-900">مشخصات ذخیره‌شده برای پرداخت</h2>
+          <h2 class="font-bold text-steel-900">مشخصات ذخیره‌شده برای پرداخت</h2>
           <p class="text-sm leading-7 text-steel-700">
             پس از هر پرداخت موفق، مشخصات گیرنده و فاکتور (در صورت درخواست) ذخیره می‌شود تا سفارش بعدی را
             سریع‌تر ثبت کنید. برای تغییر، هنگام پرداخت ویرایششان کنید؛ با پرداخت بعدی به‌روز می‌شوند.
           </p>
           <dl id="saved-summary" class="text-sm space-y-1.5"></dl>
-          <button type="button" id="saved-clear" class="border border-red-600 text-red-700 bg-white px-5 py-2.5 rounded-md text-sm font-black hover:bg-red-50">حذف مشخصات ذخیره‌شده</button>
+          <button type="button" id="saved-clear" class="border border-red-600 text-red-700 bg-white px-5 py-2.5 rounded-md text-sm font-bold hover:bg-red-50">حذف مشخصات ذخیره‌شده</button>
           <p id="saved-msg" class="text-sm leading-7" role="status" aria-live="polite"></p>
         </div>
 
         <form id="password-form" class="bg-white border border-steel-300 border-s-4 border-s-action rounded-md p-5 space-y-3">
-          <h2 class="font-black text-steel-900">تغییر رمز عبور</h2>
+          <h2 class="font-bold text-steel-900">تغییر رمز عبور</h2>
           <div>
             <label for="set-current" class="block text-sm font-bold text-steel-900 mb-1">رمز عبور فعلی</label>
             <input id="set-current" name="current_password" type="password" required dir="ltr" autocomplete="current-password" class={input} />

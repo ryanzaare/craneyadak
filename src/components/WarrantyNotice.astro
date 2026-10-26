@@ -16,7 +16,7 @@ const bare = Astro.props.bare ?? false;
 {
   warranty && (
     <div class:list={[bare ? 'mt-4 lg:mt-0' : 'mt-5 pt-4 border-t border-steel-300']} data-warranty>
-      <p class="text-sm font-black text-steel-900 mb-1">ضمانت</p>
+      <p class="text-sm font-bold text-steel-900 mb-1">ضمانت</p>
       <p class="text-sm text-steel-800 leading-7">{warranty.headline}</p>
       <details class="mt-2 text-xs text-steel-600 leading-6">
         <summary class="cursor-pointer font-bold">موارد خارج از ضمانت</summary>

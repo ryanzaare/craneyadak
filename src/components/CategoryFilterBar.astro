@@ -51,8 +51,11 @@ const chip =
 ---
 
 <div data-category-filters class="flex flex-col gap-3 mb-4">
-  <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-    <fieldset class="flex flex-wrap gap-2">
+  {/* ⚠️ موبایل: یک ردیف افقی قابل‌کشیدن (کارفرما، ۴ آبان ۱۴۰۵ — سه ردیف ~۱۹۰px اولین صفحه را می‌گرفت)؛ از sm همان ردیف
+      شکستنی. py-1 تا قاب فوکوس چیپ‌ها زیر overflow بریده نشود. محتوای قابل‌کشیدن خودش فوکوس‌پذیر است (axe:
+      scrollable-region-focusable). */}
+  <div class="flex flex-nowrap sm:flex-wrap items-center gap-x-4 gap-y-2 overflow-x-auto sm:overflow-visible whitespace-nowrap no-scrollbar py-1 -my-1">
+    <fieldset class="flex flex-nowrap sm:flex-wrap gap-2 shrink-0">
       <legend class="sr-only">وضعیت موجودی و قیمت</legend>
       <label class={chip}><input type="radio" name="cat-stock" value="all" class="sr-only" checked />همه <span class="tabular-nums font-normal">{fa(products.length)}</span></label>
       <label class={chip}><input type="radio" name="cat-stock" value="in" class="sr-only" />موجود <span class="tabular-nums font-normal">{fa(inStock)}</span></label>
@@ -60,7 +63,7 @@ const chip =
     </fieldset>
 
     {showBrands && (
-      <fieldset class="flex flex-wrap gap-2">
+      <fieldset class="flex flex-nowrap sm:flex-wrap gap-2 shrink-0">
         <legend class="sr-only">برند</legend>
         {brands.map((b) => (
           <label class={chip}><input type="checkbox" data-cat-brand value={b.slug} class="sr-only" />{b.nameFa} <span class="tabular-nums font-normal">{fa(brandCounts.get(b.slug) ?? 0)}</span></label>
@@ -69,7 +72,7 @@ const chip =
     )}
 
     {categories.length >= 2 && (
-      <fieldset class="flex flex-wrap gap-2">
+      <fieldset class="flex flex-nowrap sm:flex-wrap gap-2 shrink-0">
         <legend class="sr-only">دسته</legend>
         {categories.map((c) => (
           <label class={chip}><input type="checkbox" data-cat-category value={c.slug} class="sr-only" />{c.name} <span class="tabular-nums font-normal">{fa(c.count)}</span></label>
@@ -78,7 +81,7 @@ const chip =
     )}
 
     {sortable && (
-      <label class="inline-flex items-center gap-2 text-sm font-bold text-steel-700">
+      <label class="shrink-0 inline-flex items-center gap-2 text-sm font-bold text-steel-700">
         مرتب‌سازی
         <select data-cat-sort class="min-h-11 rounded border border-steel-300 bg-white px-2 text-sm font-bold text-steel-900">
           <option value="relevant">مرتبط‌ترین</option>
@@ -91,19 +94,20 @@ const chip =
 
     {/* جابه‌جایی نما — aria-pressed. ⚠️ کارت پیش‌فرض و اول (راست) است (کارفرما، ۳ آبان ۱۴۰۵ — جای «جدول پیش‌فرض» §4)؛
         HTML اولیه هم کارت را نشان می‌دهد تا بی‌JS و بی‌پرش (CLS) همان پیش‌فرض دیده شود. */}
-    <div class="ms-auto inline-flex rounded border border-steel-300 overflow-hidden" role="group" aria-label="نوع نمایش">
+    <div class="ms-auto shrink-0 inline-flex rounded border border-steel-300 overflow-hidden" role="group" aria-label="نوع نمایش">
       <button type="button" data-cat-view-btn="grid" aria-pressed="true" class="min-h-11 px-3 text-sm font-bold text-steel-700 aria-pressed:bg-steel-900 aria-pressed:text-white">کارت</button>
       <button type="button" data-cat-view-btn="list" aria-pressed="false" class="min-h-11 px-3 text-sm font-bold text-steel-700 border-s border-steel-300 aria-pressed:bg-steel-900 aria-pressed:text-white">جدول</button>
     </div>
   </div>
 
-  {(usefulSpecs.length > 0 || pendingSpecs.length > 0) && (
+  {/* فقط با دست‌کم یک مشخصه‌ی کارآمد (کارفرما، ۴ آبان ۱۴۰۵): جعبه‌ی خالیِ «فیلتر تخصصی» یک ردیف کامل بی‌فایده بود. */}
+  {usefulSpecs.length > 0 && (
     <details class="bg-white border border-steel-300 rounded">
       <summary class="cursor-pointer min-h-11 flex items-center px-3 text-sm font-bold text-steel-900">فیلتر تخصصی</summary>
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 p-3 border-t border-steel-200">
         {usefulSpecs.map((facet) => (
           <fieldset>
-            <legend class="text-xs font-black text-steel-900 mb-1">
+            <legend class="text-xs font-bold text-steel-900 mb-1">
               {facet.label}{facet.unit && <span class="font-normal text-steel-600"> ({facet.unit})</span>}
             </legend>
             {facet.hint && <p class="text-xs text-steel-600 leading-5 mb-2">{facet.hint}</p>}

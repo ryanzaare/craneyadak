@@ -36,7 +36,7 @@ const authority = await getAuthorityBlock();
 {authority && (
   <section class={`bg-steel-50 border-t border-steel-300 px-4 py-10 ${className}`} aria-labelledby="authority-heading">
     <div class="max-w-7xl mx-auto">
-      <h2 id="authority-heading" class="text-xl md:text-2xl font-black text-steel-900 leading-9 mb-6 pb-4 border-b border-steel-300">
+      <h2 id="authority-heading" class="text-xl md:text-2xl font-bold text-steel-900 leading-9 mb-6 pb-4 border-b border-steel-300">
         {authority.heading}
       </h2>
 
@@ -57,7 +57,7 @@ const authority = await getAuthorityBlock();
               authority.highlights.map((item) => (
                 <div class="px-4 py-3">
                   <dt class="text-xs font-bold text-steel-600 mb-1">{item.label}</dt>
-                  <dd class="text-sm font-black text-steel-900 leading-6">{item.value}</dd>
+                  <dd class="text-sm font-bold text-steel-900 leading-6">{item.value}</dd>
                 </div>
               ))
             }

@@ -61,7 +61,7 @@ const faDate = (iso: string | null) => {
       در حالت خالی: یک ستون، فرم در وسط، بدون فضای مرده. */}
 
   <div class="max-w-7xl mx-auto px-4 py-10">
-    <h2 id="community-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-1">
+    <h2 id="community-heading" class="text-xl md:text-2xl font-bold text-steel-900 mb-1">
       پرسش‌ها و تجربه‌ی کاربران
     </h2>
     <p class="text-steel-600 leading-7 mb-6 pb-4 border-b border-steel-300">
@@ -85,7 +85,7 @@ const faDate = (iso: string | null) => {
             امتیاز ستاره‌ای متقاعدکننده‌تر است و دقیقاً همان سوال
             سازگاری را جواب می‌دهد. */}
         <div>
-          <h3 class="text-xl font-black text-steel-900 mb-3 flex items-center gap-2">
+          <h3 class="text-xl font-bold text-steel-900 mb-3 flex items-center gap-2">
             گزارش نصب واقعی
             {fitments.length > 0 && (
               <span class="text-xs font-bold text-white bg-action rounded px-2 py-0.5 tabular-nums">
@@ -103,7 +103,7 @@ const faDate = (iso: string | null) => {
             <ul role="list" class="grid sm:grid-cols-2 gap-3">
               {fitments.map((f) => (
                 <li class="border-2 border-accent/25 bg-accent-soft rounded-lg p-4">
-                  <p class="font-black text-steel-900 text-sm mb-1">{f.craneModel}</p>
+                  <p class="font-bold text-steel-900 text-sm mb-1">{f.craneModel}</p>
                   {f.serviceMonths > 0 && (
                     <p class="text-xs font-bold text-accent-ink mb-2 tabular-nums">
                       {f.serviceMonths} ماه کارکرد بدون مشکل
@@ -120,12 +120,12 @@ const faDate = (iso: string | null) => {
         {/* ───────────────── نظر خریداران ───────────────── */}
         {reviews.length > 0 && (
           <div>
-            <h3 class="text-xl font-black text-steel-900 mb-3">نظر خریداران</h3>
+            <h3 class="text-xl font-bold text-steel-900 mb-3">نظر خریداران</h3>
             <ul role="list" class="space-y-3">
               {reviews.map((r) => (
                 <li class="border border-steel-300 rounded-lg p-4">
                   <div class="flex items-baseline justify-between gap-3 mb-1.5">
-                    <span class="font-black text-steel-900 text-sm">{r.author}</span>
+                    <span class="font-bold text-steel-900 text-sm">{r.author}</span>
                     <span class="text-xs text-steel-600 shrink-0">{faDate(r.date)}</span>
                   </div>
                   {r.rating > 0 && (
@@ -162,7 +162,7 @@ const faDate = (iso: string | null) => {
             data-endpoint-base={`${wpBase}/wp-json/crane-yadak/v1`}
             data-post-id={productId}
           >
-            <h3 class="font-black text-steel-900 mb-3">مشارکت شما</h3>
+            <h3 class="font-bold text-steel-900 mb-3">مشارکت شما</h3>
 
             {/* انتخاب نیت — رادیو، نه تب: بدون جاوااسکریپت هم قابل استفاده
                 است و صفحه‌خوان گروه را درست اعلام می‌کند. */}
@@ -222,7 +222,7 @@ const faDate = (iso: string | null) => {
               <textarea name="body" required rows="3" class="cy-body w-full text-sm border border-steel-300 rounded-md px-3 py-2 focus:outline-none focus:ring-4 focus:ring-accent/40 resize-y"></textarea>
             </div>
 
-            <button type="submit" class="cy-submit w-full mt-3 bg-action text-white py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+            <button type="submit" class="cy-submit w-full mt-3 bg-action text-white py-3 rounded-md font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
               ارسال
             </button>
             <p class="cy-form-msg text-xs leading-6 mt-2" role="status" aria-live="polite"></p>

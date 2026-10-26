@@ -40,7 +40,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
   <div class="absolute inset-0 bg-steel-900/60" data-basket-close></div>
   <div class={panelClass}>
     <div class={headClass}>
-      <h2 id="cart-title" class="font-black">سبد خرید</h2>
+      <h2 id="cart-title" class="font-bold">سبد خرید</h2>
       <button type="button" class={closeClass} aria-label="بستن" data-basket-close>
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
@@ -66,7 +66,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
         </p>
         {/* ⚠️ پرداخت مهمان ندارد (تصمیم کارفرما): بدون توکن، مستقیم به ورود/ثبت‌نام
             و بعد برگشت به /checkout. سرور هم ۴۰۱ می‌دهد؛ این فقط راه را کوتاه می‌کند. */}
-        <a id="cart-checkout" href="/checkout" class="block text-center w-full bg-action text-white py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+        <a id="cart-checkout" href="/checkout" class="block text-center w-full bg-action text-white py-3 rounded-md font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
           ادامه جهت تسویه‌حساب
         </a>
       </div>
@@ -79,7 +79,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
   <div class="absolute inset-0 bg-steel-900/60" data-basket-close></div>
   <div class={panelClass}>
     <div class={headClass}>
-      <h2 id="quote-title" class="font-black">سبد استعلام</h2>
+      <h2 id="quote-title" class="font-bold">سبد استعلام</h2>
       <button type="button" class={closeClass} aria-label="بستن" data-basket-close>
         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
@@ -108,7 +108,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
         <input type="tel" name="phone" required autocomplete="tel" inputmode="tel" dir="ltr" placeholder="شماره تماس" class={`${inputClass} text-right`} />
         <input type="text" name="organization" autocomplete="organization" placeholder="نام شرکت یا کارخانه (اختیاری)" class={inputClass} />
         <textarea name="note" rows="2" placeholder="توضیح یا مدل دستگاه (اختیاری)" class={`${inputClass} resize-y`}></textarea>
-        <button type="submit" id="quote-submit" class="w-full bg-action text-white py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
+        <button type="submit" id="quote-submit" class="w-full bg-action text-white py-3 rounded-md font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
           ثبت درخواست پیش‌فاکتور
         </button>
       </form>

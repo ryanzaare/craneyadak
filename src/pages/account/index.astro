@@ -34,7 +34,7 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
         <div id="account-body" hidden>
           <div class="bg-white border border-steel-300 border-s-4 border-s-action rounded-md p-5 mb-8">
             <div class="flex items-center justify-between gap-3 mb-3">
-              <h2 class="font-black text-steel-900">اطلاعات حساب</h2>
+              <h2 class="font-bold text-steel-900">اطلاعات حساب</h2>
               <a href="/account/settings" class="text-sm text-accent-ink font-bold hover:underline">ویرایش</a>
             </div>
             <dl class="text-sm space-y-1.5">
@@ -46,7 +46,7 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
           </div>
 
           <div class="flex items-center justify-between gap-3 mb-3">
-            <h2 class="font-black text-steel-900">سفارش‌ها و استعلام‌ها</h2>
+            <h2 class="font-bold text-steel-900">سفارش‌ها و استعلام‌ها</h2>
             <a href="/account/orders" class="text-sm text-accent-ink font-bold hover:underline">جزئیات سفارش‌ها ←</a>
           </div>
           <p id="orders-empty" hidden class="text-steel-600 leading-7 mb-4">
@@ -123,7 +123,7 @@ const description = 'پروفایل و سفارش‌های حساب کاربری
       const li = document.createElement('li');
       li.className = 'bg-steel-50 border border-steel-300 rounded-md px-4 py-3 flex items-center justify-between gap-3 text-sm';
       const code = document.createElement('span');
-      code.className = 'font-mono font-black text-steel-900';
+      code.className = 'font-mono font-bold text-steel-900';
       code.dir = 'ltr';
       code.textContent = order.code || '';
       const meta = document.createElement('span');

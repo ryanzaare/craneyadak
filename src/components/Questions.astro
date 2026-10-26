@@ -61,7 +61,7 @@ const faDate = (iso: string) => {
 >
   <div class="max-w-7xl mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-12 lg:items-start">
     <div class="min-w-0">
-      <h2 id="qa-heading" class="text-2xl md:text-3xl font-black text-steel-900 mb-2">
+      <h2 id="qa-heading" class="text-2xl md:text-3xl font-bold text-steel-900 mb-2">
         پرسش‌های فنی درباره‌ی {entityName}
       </h2>
       <p class="text-steel-600 leading-8 mb-8">
@@ -79,7 +79,7 @@ const faDate = (iso: string) => {
           {questions.map((q) => (
             <li class="rounded-lg border border-steel-200 border-r-4 border-r-accent-ink/50 overflow-hidden">
               <div class="px-6 pt-5">
-                <h3 class="font-black text-steel-900 leading-8">{q.question}</h3>
+                <h3 class="font-bold text-steel-900 leading-8">{q.question}</h3>
                 <p class="text-xs text-steel-500 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                   {q.askerName && <span>پرسش از {q.askerName}</span>}
                   {q.craneModel && (
@@ -93,7 +93,7 @@ const faDate = (iso: string) => {
               {/* پاسخ همیشه هست: هم نگهبان افزونه و هم لایه‌ی واکشی،
                   پرسش بی‌پاسخ را کنار می‌گذارند. */}
               <div class="px-6 py-4 mt-3 bg-steel-50 border-t border-steel-100">
-                <p class="text-xs font-black text-accent-ink mb-2">پاسخ کارشناس فنی</p>
+                <p class="text-xs font-bold text-accent-ink mb-2">پاسخ کارشناس فنی</p>
                 <div class="prose-aside text-steel-700 leading-8" set:html={q.answerHtml} />
               </div>
             </li>
@@ -114,7 +114,7 @@ const faDate = (iso: string) => {
           data-product={productId ?? ''}
           novalidate
         >
-          <h3 class="font-black text-steel-900 mb-1">پرسش خود را بپرسید</h3>
+          <h3 class="font-bold text-steel-900 mb-1">پرسش خود را بپرسید</h3>
           <p class="text-sm text-steel-600 leading-7 mb-5">
             هرچه مدل دستگاه دقیق‌تر باشد، پاسخ دقیق‌تر است.
           </p>
@@ -156,7 +156,7 @@ const faDate = (iso: string) => {
 
           <button
             type="submit"
-            class="w-full bg-action text-white font-black rounded-lg py-3 min-h-[48px] hover:brightness-95 transition focus:outline-none focus:ring-4 focus:ring-accent-ink/40 disabled:opacity-60"
+            class="w-full bg-action text-white font-bold rounded-lg py-3 min-h-[48px] hover:brightness-95 transition focus:outline-none focus:ring-4 focus:ring-accent-ink/40 disabled:opacity-60"
           >
             ثبت پرسش
           </button>

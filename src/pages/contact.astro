@@ -106,7 +106,7 @@ const jsonLd = {
         
         {/* Direct Call / WhatsApp Card */}
         <div class="bg-white rounded-md p-8 border border-steel-100 space-y-6">
-          <h2 class="text-2xl font-black text-steel-900 border-b border-steel-100 pb-4">ارتباط مستقیم با واحد فروش</h2>
+          <h2 class="text-2xl font-bold text-steel-900 border-b border-steel-100 pb-4">ارتباط مستقیم با واحد فروش</h2>
           
           <div class="space-y-4">
             {mobile && (
@@ -116,7 +116,7 @@ const jsonLd = {
                 </span>
                 <div>
                   <span class="text-xs text-steel-300 group-hover:text-white block font-normal"><span class="inline-block w-2 h-2 rounded-full bg-emerald-400 me-1.5" aria-hidden="true"></span>خط ویژه تامین و استعلام فوری</span>
-                  <span class="text-xl font-black tabular-nums block text-right" dir="ltr">{mobile.display}</span>
+                  <span class="text-xl font-bold tabular-nums block text-right" dir="ltr">{mobile.display}</span>
                 </div>
               </a>
             )}
@@ -126,7 +126,7 @@ const jsonLd = {
               </span>
               <div>
                 <span class="text-xs text-steel-500 group-hover:text-white/80 block font-normal">تلفن دفتر مرکزی (تهران)</span>
-                <span class="text-xl font-black tabular-nums text-right block" dir="ltr">{contact.phoneDisplay}</span>
+                <span class="text-xl font-bold tabular-nums text-right block" dir="ltr">{contact.phoneDisplay}</span>
               </div>
             </a>
 
@@ -136,7 +136,7 @@ const jsonLd = {
               </span>
               <div>
                 <span class="text-xs text-steel-500 group-hover:text-white/80 block font-normal">ارسال عکس و مشخصات در واتساپ</span>
-                <span class="text-xl font-black dir-ltr text-right block">ارسال سریع تصویر قطعه</span>
+                <span class="text-xl font-bold dir-ltr text-right block">ارسال سریع تصویر قطعه</span>
               </div>
             </a>
 
@@ -146,7 +146,7 @@ const jsonLd = {
               </span>
               <div>
                 <span class="text-xs text-steel-500 group-hover:text-white/80 block font-normal">پاسخ‌گویی سریع در تلگرام</span>
-                <span class="text-xl font-black dir-ltr text-right block">{social.telegram}</span>
+                <span class="text-xl font-bold dir-ltr text-right block">{social.telegram}</span>
               </div>
             </a>
           </div>
@@ -207,21 +207,21 @@ const jsonLd = {
              مقصدی نمی‌رسد (و لید را بی‌صدا از بین می‌برد)، کانال‌های واقعی
              و فعال تماس نمایش داده می‌شوند. */
           <div class="bg-amber-50 border border-amber-200 rounded-md p-6" role="status">
-            <h2 class="text-2xl font-black text-steel-900 mb-3">ثبت آنلاین درخواست موقتاً در دسترس نیست</h2>
+            <h2 class="text-2xl font-bold text-steel-900 mb-3">ثبت آنلاین درخواست موقتاً در دسترس نیست</h2>
             <p class="text-sm text-steel-700 leading-7 mb-6">
               سامانه‌ی ثبت آنلاین استعلام در حال راه‌اندازی است. تا آن زمان، سریع‌ترین راه دریافت پیش‌فاکتور، تماس تلفنی یا ارسال عکس قطعه در واتساپ/تلگرام است — پاسخ‌گویی در ساعات کاری انجام می‌شود.
             </p>
             <div class="flex flex-col sm:flex-row gap-3">
-              <a href={contact.telHref} class="flex-1 bg-action text-white text-center px-6 py-4 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px] flex items-center justify-center">تماس تلفنی</a>
-              <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="flex-1 bg-emerald-600 text-white text-center px-6 py-4 rounded-md font-black hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال در واتساپ</a>
-              <a href={social.telegram} target="_blank" rel="noopener noreferrer" class="flex-1 bg-sky-500 text-white text-center px-6 py-4 rounded-md font-black hover:bg-sky-600 transition-colors focus:outline-none focus:ring-4 focus:ring-sky-500/30 min-h-[52px] flex items-center justify-center">ارسال در تلگرام</a>
+              <a href={contact.telHref} class="flex-1 bg-action text-white text-center px-6 py-4 rounded-md font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 min-h-[52px] flex items-center justify-center">تماس تلفنی</a>
+              <a href={contact.whatsappHref} target="_blank" rel="noopener noreferrer" class="flex-1 bg-emerald-600 text-white text-center px-6 py-4 rounded-md font-bold hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/30 min-h-[52px] flex items-center justify-center">ارسال در واتساپ</a>
+              <a href={social.telegram} target="_blank" rel="noopener noreferrer" class="flex-1 bg-sky-500 text-white text-center px-6 py-4 rounded-md font-bold hover:bg-sky-600 transition-colors focus:outline-none focus:ring-4 focus:ring-sky-500/30 min-h-[52px] flex items-center justify-center">ارسال در تلگرام</a>
             </div>
           </div>
         )}
 
         {inquiryEndpoint && (
         <>
-        <h2 class="text-2xl font-black text-steel-900 mb-2">فرم درخواست پیش‌فاکتور و استعلام</h2>
+        <h2 class="text-2xl font-bold text-steel-900 mb-2">فرم درخواست پیش‌فاکتور و استعلام</h2>
         <p class="text-sm text-steel-600 mb-8">مشخصات قطعه مورد نیاز را وارد کنید. کارشناسان ما در اولین فرصت کاری با شما تماس می‌گیرند.</p>
 
         {/* Progressive enhancement: `action` مستقیماً به اندپوینت REST وردپرس
@@ -266,7 +266,7 @@ const jsonLd = {
             {/* SKU / Part Number Auto-Filled */}
             <div>
               <label for="contact-sku" class="block text-sm font-bold text-steel-700 mb-2">کد فنی یا مدل قطعه (Part Number)</label>
-              <input type="text" id="contact-sku" name="sku" placeholder="مثال: DMG-1024" dir="ltr" class="w-full bg-steel-50 border border-steel-200 rounded-md px-4 py-3.5 min-h-[48px] focus:outline-none focus:ring-2 focus:ring-accent-ink focus:border-transparent text-sm text-left font-mono" />
+              <input type="text" id="contact-sku" name="sku" placeholder="SAGA1-L12 / DMG-1024" dir="ltr" class="w-full bg-steel-50 border border-steel-200 rounded-md px-4 py-3.5 min-h-[48px] focus:outline-none focus:ring-2 focus:ring-accent-ink focus:border-transparent text-sm text-left font-mono" />
             </div>
 
           </div>
@@ -299,7 +299,7 @@ const jsonLd = {
           </div>
 
           {/* Submit Button */}
-          <button id="rfq-submit-btn" type="submit" class="w-full bg-action text-white font-black py-4 rounded-md text-xl hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 flex items-center justify-center gap-2 min-h-[52px] disabled:opacity-60 disabled:cursor-not-allowed">
+          <button id="rfq-submit-btn" type="submit" class="w-full bg-action text-white font-bold py-4 rounded-md text-xl hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 flex items-center justify-center gap-2 min-h-[52px] disabled:opacity-60 disabled:cursor-not-allowed">
             <span>ثبت و ارسال درخواست استعلام</span>
             <svg class="w-5 h-5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
           </button>

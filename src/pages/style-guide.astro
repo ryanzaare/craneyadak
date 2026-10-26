@@ -54,7 +54,7 @@ const SWATCH: Record<string, string> = {
   action: 'bg-action', accent: 'bg-accent', 'accent-ink': 'bg-accent-ink', 'accent-strong': 'bg-accent-strong', 'accent-soft': 'bg-accent-soft',
 };
 const sizes = [['text-4xl', '۴۰'], ['text-3xl', '۳۲'], ['text-2xl', '۲۴'], ['text-xl', '۲۰'], ['text-base', '۱۶'], ['text-sm', '۱۴'], ['text-xs', '۱۲']];
-const h2 = 'text-2xl font-black text-steel-900 mb-4';
+const h2 = 'text-2xl font-bold text-steel-900 mb-4';
 const section = 'py-10 border-t border-steel-300';
 const hairline = 'grid md:grid-cols-3 gap-px bg-steel-200 border border-steel-200 rounded-md overflow-hidden';
 const frame = 'bg-steel-50 border border-steel-300 border-s-4 border-s-action rounded-md p-3 md:p-5';
@@ -86,11 +86,11 @@ const frame = 'bg-steel-50 border border-steel-300 border-s-4 border-s-action ro
         <h2 id="sg-type" class={h2}>تایپوگرافی</h2>
         <ul class="space-y-2" role="list">
           {sizes.map(([cls, px]) => (
-            <li class="flex items-baseline gap-4 border-b border-steel-200 pb-2"><span class="w-16 shrink-0 text-xs text-steel-600 tabular-nums">{px}px</span><span class:list={[cls, 'font-black text-steel-900']}>ترمز جرثقیل سقفی</span></li>
+            <li class="flex items-baseline gap-4 border-b border-steel-200 pb-2"><span class="w-16 shrink-0 text-xs text-steel-600 tabular-nums">{px}px</span><span class:list={[cls, 'font-bold text-steel-900']}>ترمز جرثقیل سقفی</span></li>
           ))}
         </ul>
-        <p class="mt-4 text-base text-steel-700"><span class="font-normal">۴۰۰ معمولی</span> · <span class="font-bold">۷۰۰ پررنگ</span> · <span class="font-black">۹۰۰ سیاه</span> — فقط همین سه وزن.</p>
-        <p class="mt-2 text-base text-steel-700">کد فنی با قلم مونو: <code class="font-mono font-bold text-steel-900" dir="ltr">0O 1lI 5S 8B — SAGA1-L12 / MT318-K2</code> · قیمت با ارقام هم‌عرض: <span class="tabular-nums font-black">۱۲٬۳۴۵٬۶۷۸</span></p>
+        <p class="mt-4 text-base text-steel-700"><span class="font-normal">۴۰۰ معمولی</span> · <span class="font-bold">۷۰۰ پررنگ</span> · <span class="font-bold">۹۰۰ سیاه</span> — فقط همین سه وزن.</p>
+        <p class="mt-2 text-base text-steel-700">کد فنی با قلم مونو: <code class="font-mono font-bold text-steel-900" dir="ltr">0O 1lI 5S 8B — SAGA1-L12 / MT318-K2</code> · قیمت با ارقام هم‌عرض: <span class="tabular-nums font-bold">۱۲٬۳۴۵٬۶۷۸</span></p>
       </section>
 
       <section class={section} aria-labelledby="sg-shape">

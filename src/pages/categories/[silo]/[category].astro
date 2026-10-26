@@ -262,7 +262,7 @@ const contact = await getContact();
     <h2 id="products-list-heading" class="sr-only">{`فهرست قطعات ${displayName}`}</h2>
     <div class="max-w-7xl mx-auto">
       {products.length > 0 && (
-        <p class="text-sm text-steel-600 mb-3"><strong data-cat-count class="text-steel-900 font-black tabular-nums">{products.length.toLocaleString('fa-IR')}</strong> قطعه</p>
+        <p class="text-sm text-steel-600 mb-3"><strong data-cat-count class="text-steel-900 font-bold tabular-nums">{products.length.toLocaleString('fa-IR')}</strong> قطعه</p>
       )}
 
       {products.length > 0 ? (
@@ -330,7 +330,7 @@ const contact = await getContact();
   {siblings.length > 0 && (
     <section class="bg-white px-4 py-14 border-t border-steel-100" aria-labelledby="siblings-heading">
       <div class="max-w-7xl mx-auto">
-        <h2 id="siblings-heading" class="text-xl md:text-2xl font-black text-steel-900 mb-3">
+        <h2 id="siblings-heading" class="text-xl md:text-2xl font-bold text-steel-900 mb-3">
           سایر قطعات گروه {silo.name}
         </h2>
         <p class="text-steel-600 leading-8 mb-8 max-w-3xl">

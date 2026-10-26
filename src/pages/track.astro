@@ -47,7 +47,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
     <div class="max-w-3xl mx-auto">
       {/* درخواست‌های ثبت‌شده روی همین دستگاه */}
       <div id="track-mine" hidden class="mb-8">
-        <h2 class="text-xl font-black text-steel-900 mb-3">درخواست‌های شما روی این دستگاه</h2>
+        <h2 class="text-xl font-bold text-steel-900 mb-3">درخواست‌های شما روی این دستگاه</h2>
         <ul id="track-mine-list" role="list" class="space-y-2"></ul>
       </div>
 
@@ -85,7 +85,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
         <button
           type="submit"
           id="track-submit"
-          class="w-full bg-action text-white py-3 rounded-md font-black hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]"
+          class="w-full bg-action text-white py-3 rounded-md font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]"
         >
           مشاهده‌ی وضعیت
         </button>
@@ -137,7 +137,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
             'w-full text-right bg-white border border-steel-300 rounded-md px-4 py-3 hover:border-accent focus:outline-none focus:ring-4 focus:ring-accent/30';
 
           const code = document.createElement('span');
-          code.className = 'font-mono font-black text-steel-900';
+          code.className = 'font-mono font-bold text-steel-900';
           code.dir = 'ltr';
           code.textContent = entry.code;
 
@@ -179,7 +179,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
       const head = document.createElement('div');
       head.className = 'bg-steel-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2';
       const h = document.createElement('h2');
-      h.className = 'font-black';
+      h.className = 'font-bold';
       h.textContent = data.kind === 'order' ? 'سفارش شما' : 'درخواست استعلام شما';
       const c = document.createElement('span');
       c.className = 'font-mono text-sm';
@@ -206,7 +206,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
 
       if (Array.isArray(data.items) && data.items.length) {
         const t = document.createElement('h3');
-        t.className = 'font-black text-steel-900 text-sm';
+        t.className = 'font-bold text-steel-900 text-sm';
         t.textContent = 'اقلام درخواستی';
         const ul = document.createElement('ul');
         ul.className = 'space-y-1.5';
@@ -227,7 +227,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
 
       if (data.response) {
         const t = document.createElement('h3');
-        t.className = 'font-black text-steel-900 text-sm';
+        t.className = 'font-bold text-steel-900 text-sm';
         t.textContent = 'پاسخ واحد فروش';
         const p = document.createElement('p');
         p.className = 'text-sm text-steel-700 leading-7 bg-steel-50 border border-steel-300 rounded-md p-3 whitespace-pre-line';
@@ -241,7 +241,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         a.className =
-          'inline-flex items-center gap-2 bg-action text-white px-5 py-3 rounded-md font-black text-sm hover:bg-accent-strong transition-colors';
+          'inline-flex items-center gap-2 bg-action text-white px-5 py-3 rounded-md font-bold text-sm hover:bg-accent-strong transition-colors';
         a.textContent = 'دریافت فایل پیش‌فاکتور';
         body.appendChild(a);
       }
@@ -274,7 +274,7 @@ const description = 'وضعیت درخواست استعلام یا سفارش خ
           a.href = f.officialInvoiceUrl;
           a.target = '_blank';
           a.rel = 'noopener noreferrer';
-          a.className = 'inline-flex items-center gap-2 bg-action text-white px-5 py-3 rounded-md font-black text-sm hover:bg-accent-strong transition-colors';
+          a.className = 'inline-flex items-center gap-2 bg-action text-white px-5 py-3 rounded-md font-bold text-sm hover:bg-accent-strong transition-colors';
           a.textContent = 'دریافت فاکتور رسمی';
           body.appendChild(a);
         }

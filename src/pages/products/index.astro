@@ -140,7 +140,7 @@ function facetAttrs(p: (typeof products)[number]) {
           whatsappHref={contact.whatsappHref} telHref={contact.telHref} />
       ) : (
         <>
-          <p class="text-sm text-steel-600 mb-3"><strong data-cat-count class="text-steel-900 font-black tabular-nums">{fa(products.length)}</strong> قطعه</p>
+          <p class="text-sm text-steel-600 mb-3"><strong data-cat-count class="text-steel-900 font-bold tabular-nums">{fa(products.length)}</strong> قطعه</p>
           <CategoryFilterBar products={products} categories={categoryChips} sortable />
 
           <div data-cat-view="list" hidden>

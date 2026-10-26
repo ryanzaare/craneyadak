@@ -36,7 +36,7 @@ const description = 'تاریخچه‌ی سفارش‌ها و وضعیت پرد�
         <p id="orders-error" hidden class="text-sm leading-7 text-red-700 font-bold bg-red-50 border border-red-200 rounded-md p-4" role="alert"></p>
         <div id="orders-empty" hidden class="text-steel-700 leading-7">
           <p class="mb-3">هنوز پرداخت آنلاینی از این حساب ثبت نشده است.</p>
-          <a href="/products" class="inline-block bg-action text-white px-5 py-2.5 rounded-md font-black hover:bg-accent-strong">مشاهده‌ی محصولات</a>
+          <a href="/products" class="inline-block bg-action text-white px-5 py-2.5 rounded-md font-bold hover:bg-accent-strong">مشاهده‌ی محصولات</a>
         </div>
         <ul id="orders-list" role="list" class="space-y-4"></ul>
         <p class="text-xs text-steel-600 leading-6 mt-6">
@@ -109,7 +109,7 @@ const description = 'تاریخچه‌ی سفارش‌ها و وضعیت پرد�
     const li = el('li', 'bg-steel-50 border border-steel-300 rounded-lg p-5 space-y-3');
 
     const head = el('div', 'flex flex-wrap items-center justify-between gap-2');
-    const code = el('span', 'font-mono font-black text-steel-900', o.code);
+    const code = el('span', 'font-mono font-bold text-steel-900', o.code);
     code.setAttribute('dir', 'ltr');
     const badges = el('div', 'flex flex-wrap items-center gap-2');
     badges.append(el('span', `text-xs font-bold border rounded-full px-2.5 py-0.5 ${BADGE[o.payment] ?? BADGE.pending}`, o.paymentLabel));
@@ -147,14 +147,14 @@ const description = 'تاریخچه‌ی سفارش‌ها و وضعیت پرد�
 
     const actions = el('div', 'flex flex-wrap items-center gap-x-5 gap-y-2');
     if (o.payment === 'paid') {
-      const inv = el('a', 'inline-block bg-action text-white px-4 py-2 rounded-md text-sm font-black hover:bg-accent-strong', 'دریافت فاکتور (غیررسمی)') as HTMLAnchorElement;
+      const inv = el('a', 'inline-block bg-action text-white px-4 py-2 rounded-md text-sm font-bold hover:bg-accent-strong', 'دریافت فاکتور (غیررسمی)') as HTMLAnchorElement;
       inv.href = `/account/invoice?code=${encodeURIComponent(o.code)}`;
       actions.append(inv);
     }
     // فقط نشانی http(s) لینک می‌شود (سرور هم همین را می‌سنجد؛ این‌جا دفاع دوم).
     const official = o.fulfilment?.officialInvoiceUrl ?? '';
     if (/^https?:\/\//i.test(official)) {
-      const off = el('a', 'inline-block border border-steel-400 bg-white text-steel-900 px-4 py-2 rounded-md text-sm font-black hover:border-accent', 'دریافت فاکتور رسمی') as HTMLAnchorElement;
+      const off = el('a', 'inline-block border border-steel-400 bg-white text-steel-900 px-4 py-2 rounded-md text-sm font-bold hover:border-accent', 'دریافت فاکتور رسمی') as HTMLAnchorElement;
       off.href = official;
       off.target = '_blank';
       off.rel = 'noopener noreferrer';

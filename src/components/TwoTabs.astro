@@ -33,12 +33,12 @@ const two = secondHtml !== '';
   )}
   <section id={`${id}-panel-1`} role={two ? 'tabpanel' : undefined} aria-labelledby={two ? `${id}-tab-1` : undefined} class="pt-4">
     {/* عنوان پنل فقط بدون JS دیده می‌شود (با JS، زبانه همان نقش را دارد). */}
-    <h2 class="cy-tab-heading text-xl font-black text-steel-900 mb-3">{first}</h2>
+    <h2 class="cy-tab-heading text-xl font-bold text-steel-900 mb-3">{first}</h2>
     <slot name="first" />
   </section>
   {two && (
     <section id={`${id}-panel-2`} role="tabpanel" aria-labelledby={`${id}-tab-2`} class="pt-4">
-      <h2 class="cy-tab-heading text-xl font-black text-steel-900 mb-3">{second}</h2>
+      <h2 class="cy-tab-heading text-xl font-bold text-steel-900 mb-3">{second}</h2>
       <Fragment set:html={secondHtml} />
     </section>
   )}

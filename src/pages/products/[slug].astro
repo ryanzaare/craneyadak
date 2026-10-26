@@ -183,7 +183,7 @@ const contact = await getContact();
 const mobile = mobileLine(contact);
 // نوار پایین: برچسب کوتاه قیمت + همان عمل اصلی ردیف ۱ جعبه‌ی خرید (معماری «۱ + ۲»، فاز ۳ — جای تصمیم ۴ را گرفت).
 const barPriceLabel = price.payable && price.effective !== null ? formatPrice(price.effective) : 'فروش استعلامی';
-const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-black whitespace-nowrap hover:bg-accent-strong';
+const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-bold whitespace-nowrap hover:bg-accent-strong';
 
 ---
 
@@ -209,7 +209,9 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
       جای ستون‌ها با grid عوض می‌شود؛ ترتیب خواندن صفحه‌خوان همان ترتیب موبایل می‌ماند. */}
   <div class="bg-white border-b border-steel-300 print:border-0">
     <div class="max-w-7xl mx-auto px-4 md:px-6">
-      <div class="print:hidden"><Breadcrumb items={breadcrumbItems} surface /></div>
+      {/* مسیر دیداری: آخرین قطعه = کد فنی، نه نام کامل (کارفرما، ۴ آبان ۱۴۰۵ — همان H1 را تکرار می‌کرد). ⚠️ فقط نمایش:
+          BreadcrumbList در JSON-LD همان breadcrumbItems با نام کامل می‌ماند (قرارداد §7). */}
+      <div class="print:hidden"><Breadcrumb items={breadcrumbItems.map((it, i, all) => (i === all.length - 1 && product.sku ? { ...it, label: product.sku } : it))} surface /></div>
 
       <div class="grid grid-cols-1 md:grid-cols-12 gap-x-6 lg:gap-x-10 gap-y-3 md:gap-y-4 pb-6 lg:pb-10">
         {/* ── ۲) هویت فشرده ── */}
@@ -222,8 +224,10 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
             <div class="flex flex-wrap items-center divide-x divide-steel-300 [&>*]:px-3 [&>*:first-child]:ps-0">
               {product.sku && <PartNumber sku={product.sku} id="main" compact />}
               {brand && (
-                <a href={`/brands/${brand.slug}`} class="inline-flex items-center min-h-11 text-sm font-bold text-steel-700 hover:text-accent-ink hover:underline underline-offset-4">
-                  {brand.nameFa}{' '}<span class="font-normal text-steel-600" dir="ltr">({brand.nameEn})</span>
+                <a href={`/brands/${brand.slug}/`} class="inline-flex items-center gap-1 min-h-11 text-sm font-bold text-steel-700 hover:text-accent-ink hover:underline underline-offset-4">
+                  {/* ⚠️ «ساگا(Saga)» بی‌فاصله بود: پیوند inline-flex است و flex فاصله‌ی متنیِ بین فرزندان را دور می‌اندازد — {' '}
+                      بی‌اثر بود. gap-1 روی پیوند + bdi (جهت مستقل) برای پرانتز لاتین در متن RTL. */}
+                  <span>{brand.nameFa}</span><bdi dir="ltr" class="font-normal text-steel-600">({brand.nameEn})</bdi>
                 </a>
               )}
             </div>
@@ -303,7 +307,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
   {hasFitment && (
     <section class="bg-steel-50 px-4 md:px-6 py-8 border-b border-steel-300 print:bg-white print:py-4" aria-labelledby="fitment-heading">
       <div class="max-w-7xl mx-auto">
-        <h2 id="fitment-heading" class="text-xl font-black text-steel-900 mb-2">کدهای معادل و سازگاری</h2>
+        <h2 id="fitment-heading" class="text-xl font-bold text-steel-900 mb-2">کدهای معادل و سازگاری</h2>
         <p class="text-sm text-steel-700 leading-7 mb-5 max-w-3xl print:hidden">
           اگر کد روی قطعه‌ی فرسوده‌ی شما با کد بالا یکی نیست، جدول زیر را بررسی کنید؛ یک قطعه اغلب با چند کد مختلف سازنده عرضه می‌شود.
         </p>
@@ -311,7 +315,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
           {product.oemCrossReference.length > 0 && (
             <div class="bg-white rounded border border-steel-300 overflow-hidden">
               <table class="w-full text-sm text-right">
-                <caption class="text-right font-black text-steel-900 px-3 py-2 bg-steel-100 border-b border-steel-300">کدهای معادل سازنده (OEM)</caption>
+                <caption class="text-right font-bold text-steel-900 px-3 py-2 bg-steel-100 border-b border-steel-300">کدهای معادل سازنده (OEM)</caption>
                 <thead>
                   <tr class="text-steel-600 text-xs">
                     <th scope="col" class="font-bold px-3 py-2">سازنده</th>
@@ -332,7 +336,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
           {product.compatibleModels.length > 0 && (
             <div class="bg-white rounded border border-steel-300 overflow-hidden">
               <table class="w-full text-sm text-right">
-                <caption class="text-right font-black text-steel-900 px-3 py-2 bg-steel-100 border-b border-steel-300">مدل‌های سازگار</caption>
+                <caption class="text-right font-bold text-steel-900 px-3 py-2 bg-steel-100 border-b border-steel-300">مدل‌های سازگار</caption>
                 <thead>
                   <tr class="text-steel-600 text-xs">
                     <th scope="col" class="font-bold px-3 py-2">برند</th>
@@ -389,7 +393,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
   ) : related.length > 0 && (
     <section class="bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:hidden" aria-labelledby="related-heading">
       <div class="max-w-4xl mx-auto">
-        <h2 id="related-heading" class="text-xl font-black text-steel-900 mb-3">محصولات مرتبط/سازگار</h2>
+        <h2 id="related-heading" class="text-xl font-bold text-steel-900 mb-3">محصولات مرتبط/سازگار</h2>
         <ul class="bg-white border border-steel-300 rounded" role="list">
           {related.map((item) => (
             <ProductRow slug={item.slug} name={item.name} sku={item.sku} url={`${SITE.url}${productPath(item)}`} brand={item.brandNameFa}
@@ -404,7 +408,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
   {(product.summary || product.bodyHtml) && (
     <section class="bg-steel-50 px-4 md:px-6 py-8 border-b border-steel-300 print:hidden" aria-labelledby="description-heading">
       <div class="max-w-4xl mx-auto">
-        <h2 id="description-heading" class="text-xl font-black text-steel-900 mb-4">توضیحات فنی محصول</h2>
+        <h2 id="description-heading" class="text-xl font-bold text-steel-900 mb-4">توضیحات فنی محصول</h2>
         {/* خلاصه از سرصفحه این‌جا آمد: در سرصفحه، اولین صفحه‌ی موبایل را می‌گرفت و همان چیزی را می‌گفت که توضیحات
             کامل می‌گوید (اصل ۵). متن همان است؛ فقط جایش. */}
         {product.summary && <p class="text-base text-steel-800 leading-8 mb-4 font-bold">{product.summary}</p>}
