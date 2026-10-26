@@ -21,7 +21,7 @@ import { productReadiness } from '../../lib/indexability';
 const noindexHub = !(await getAllProducts()).some((p) => productReadiness(p).ready);
 
 const title = `لیست کامل دسته‌بندی قطعات جرثقیل سقفی | ${SITE.name}`;
-const description = `مرور کامل ${ALL_CATEGORIES.length} دسته قطعه‌ی جرثقیل سقفی در ${SILOS.length} گروه تخصصی: از بالابر و برق‌رسانی تا ترمز، محرکه و ریل. یافتن سریع قطعه بر اساس گروه فنی.`;
+const description = `مرور کامل ${fa(ALL_CATEGORIES.length)} دسته قطعه‌ی جرثقیل سقفی در ${fa(SILOS.length)} گروه تخصصی: از بالابر و برق‌رسانی تا ترمز، محرکه و ریل. یافتن سریع قطعه بر اساس گروه فنی.`;
 const canonical = `${SITE.url}/categories`;
 
 const breadcrumbItems = [{ label: 'صفحه اصلی', href: '/' }, { label: 'دسته‌بندی‌ها' }];
@@ -61,6 +61,7 @@ const jsonLd = {
     },
   ],
 };
+import { fa } from '../../components/catalog-presence';
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexHub}>
@@ -72,7 +73,7 @@ const jsonLd = {
         دسته‌بندی کامل قطعات جرثقیل سقفی
       </h1>
       <p class="text-base md:text-xl text-steel-600 max-w-3xl leading-8">
-        {ALL_CATEGORIES.length} دسته قطعه در {SILOS.length} گروه فنی سازمان‌دهی شده‌اند. اگر نام دقیق قطعه را نمی‌دانید، از روی گروه پیش بروید؛ اگر کد فنی دارید، مستقیماً استعلام بگیرید.
+        {fa(ALL_CATEGORIES.length)} دسته قطعه در {fa(SILOS.length)} گروه فنی سازمان‌دهی شده‌اند. اگر نام دقیق قطعه را نمی‌دانید، از روی گروه پیش بروید؛ اگر کد فنی دارید، مستقیماً استعلام بگیرید.
       </p>
       <div class="flex flex-wrap gap-3 mt-8">
         <a href="/contact" class="bg-action text-white px-6 py-3.5 rounded-md font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40">استعلام با کد فنی</a>
@@ -96,7 +97,7 @@ const jsonLd = {
               </a>
             </h2>
             <span class="text-sm text-steel-600 font-bold bg-white border border-steel-200 px-3 py-1 rounded-full tabular-nums">
-              {silo.categories.length} دسته
+              {fa(silo.categories.length)} دسته
             </span>
             <a href={siloPath(silo)} class="md:mr-auto text-sm font-bold text-accent-ink hover:underline focus:outline-none focus:ring-2 focus:ring-accent-ink rounded">
               مشاهده گروه ←

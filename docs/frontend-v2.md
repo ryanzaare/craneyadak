@@ -183,6 +183,13 @@ Work in a **git worktree on a separate branch**; nothing reaches `main` without 
 
 Every phase: `npm run check` + `npm run build` + `npm run lighthouse` green, screenshots attached, backlog updated, commit messages in Persian.
 
+**Status (4 Aban 1405): Phases 0–5 complete, client-approved, branch `claude/magical-heisenberg-rbi9p9` ready to merge.** Later client
+decisions superseded parts of the table above: phase 3 «non-empty only» navigation was reverted (all 7 groups / 31 categories, §2
+principle 6); phase 2 «list/table view» default became card view (§4); phase 4's sandbox end-to-end purchase/quote test could not run
+from the assistant environment (WordPress and Zarinpal unreachable) and is the client's first post-merge check (backlog). Lighthouse
+gate locked: performance ≥ 0.99, accessibility 1, SEO 1 on indexable pages (`lighthouserc.json`); final live-data run all green with
+CLS 0.000 on every run. The temporary live-data CI (`branch-build.yml`) was deleted before merge.
+
 ## 9. Open questions for the client
 
 1. Analytics: there is no visitor analytics today, so "is v2 better?" cannot be measured. Accept a privacy-friendly, self-hostable or
