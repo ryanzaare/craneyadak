@@ -350,6 +350,14 @@ const jsonLd = {
                     </li>
                   ))}
                 </ul>
+                {/* ⚠️ چک‌لیست به‌تنهایی کافی نبود: کارت همراه هم‌قد کارت محصول کشیده می‌شود و در ۱۲۸۰px هنوز ~۲۳۰px خالی می‌ماند
+                    (اسکرین‌شات a326586). ۷ گروه فنی به‌صورت پیوند فشرده — همان ادعای «پوشش هر ۷ گروه» قابل‌کلیک. */}
+                <p class="mt-4 mb-2 text-xs font-black text-steel-600">گروه‌های فنی تحت پوشش</p>
+                <ul class="flex flex-wrap gap-1.5" role="list">
+                  {SILOS.map((silo) => (
+                    <li><a href={siloPath(silo)} class="inline-flex items-center min-h-8 px-2.5 rounded border border-steel-300 bg-white text-xs font-bold text-steel-800 hover:border-action hover:text-accent-ink">{silo.name}</a></li>
+                  ))}
+                </ul>
               </div>
               <div class="grid gap-2">
                 {waPlate && <a href={waPlate} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-black hover:bg-accent-strong">ارسال عکس پلاک در واتساپ</a>}
