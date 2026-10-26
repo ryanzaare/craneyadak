@@ -12,6 +12,10 @@ import { getPosts, type BlogPost } from '../../lib/posts';
 import { getAuthorByName } from '../../lib/authors';
 import AuthorBox from '../../components/AuthorBox.astro';
 import { buildToc } from '../../components/toc';
+import ProductCard from '../../components/ProductCard.astro';
+import { relatedProductsForPost } from '../../components/related-products';
+import { getAllProducts } from '../../lib/wp';
+import { ALL_CATEGORIES } from '../../data/taxonomy';
 
 export async function getStaticPaths() {
   return (await getPosts()).map((post) => ({
@@ -35,6 +39,9 @@ const author = await getAuthorByName(post.authorName);
 // فهرست مطالب (فاز ۵) فقط با ۳ سرفصل یا بیشتر — برای دو سرفصل، فهرست از خودِ متن بلندتر است.
 const toc = buildToc(post.bodyHtml);
 const showToc = toc.items.length >= 3;
+// «محصولات مرتبط به این مقاله» (کارفرما، ۴ آبان ۱۴۰۵): فقط با نشانه‌ی واقعی در متن (کد فنی، پیوند دسته، برند+دسته)؛
+// هیچ نشانه = هیچ بخش. منطق و آزمون: src/components/related-products.ts.
+const related = relatedProductsForPost({ title: post.title, bodyHtml: post.bodyHtml }, await getAllProducts(), ALL_CATEGORIES, 4);
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -117,6 +124,15 @@ const jsonLd = {
 
         {/* جعبه‌ی نویسنده — نویسنده‌ی واقعی از وردپرس؛ نبودِ پروفایل = بی‌جعبه. */}
         {author && <AuthorBox author={author} reviewedAt={post.isoModified} class="mt-10" />}
+
+        {related.length > 0 && (
+          <section class="mt-10" aria-labelledby="related-products-heading">
+            <h2 id="related-products-heading" class="text-xl font-bold text-steel-900 mb-4">محصولات مرتبط به این مقاله</h2>
+            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-5" role="list">
+              {related.map((product) => <li><ProductCard product={product} /></li>)}
+            </ul>
+          </section>
+        )}
 
         <div class="mt-10 bg-steel-50 border border-steel-300 border-s-4 border-s-action rounded-md p-5 md:p-6">
           <h2 class="text-xl font-bold text-steel-900 mb-2">قطعه مورد نظر خود را پیدا نکردید؟</h2>

@@ -60,7 +60,7 @@ const navLinks = [
   role="banner"
   data-wp-base={wpBase}
 >
-  <div class="w-full max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-y-2 px-4 md:px-8">
+  <div class="w-full max-w-7xl 2xl:max-w-[96rem] mx-auto flex flex-wrap xl:flex-nowrap justify-between items-center gap-y-2 xl:gap-x-5 px-4 md:px-8">
     <a href="/" class="flex min-w-0 items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-accent" aria-label={`صفحه اصلی ${SITE.name}`}>
       {/* چینش راست‌به‌چپ: `items-start` به‌جای `items-end`.
           در ظرف flex عمودی، محور متقاطع همان محور افقی است و با dir="rtl"
@@ -78,7 +78,7 @@ const navLinks = [
           هم هزینه‌ی ترکیب GPU روی هر اسکرول را (قفل سرعت). translateZ ارزان است و به‌عنوان بیمه ماند. */}
       <span class="flex min-w-0 flex-col items-start text-right leading-tight">
         <span class="whitespace-nowrap text-xl min-[360px]:text-2xl md:text-3xl font-bold text-white tracking-tight">{SITE.name}</span>
-        <span class="max-w-full truncate text-xs md:text-xs font-bold text-steel-300">{SITE.tagline}</span>
+        <span class="max-w-full truncate text-xs md:text-xs font-bold text-steel-300 xl:hidden 2xl:block">{SITE.tagline}</span>
       </span>
       <Logo inverse class="brand-mark w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 md:w-14 md:h-14 shrink-0" />
     </a>
@@ -96,7 +96,12 @@ const navLinks = [
         ⚠️ xl:basis-0: با basis-auto عرض محتوای جستجو + قرص مبنای شکستن خط بود و ناوبری در ۱۲۸۰px به ردیف دوم می‌رفت
         (هدر ۸۹ → ۱۳۷px). همراهش w-0 روی ورودی: عرض ذاتی ~۱۷۰px ورودی min-content ردیف بود و همان شکست را می‌ساخت.
         برچسب «خط ویژه تامین:» در xl تا 2xl پنهان است — فقط نقطه + شماره جا می‌شود. */}
-    <div class="order-last basis-full flex items-center gap-2 xl:order-none xl:basis-0 xl:flex-1 xl:max-w-xl xl:mx-6 print:hidden">
+    {/* ⚠️ (۴ آبان ۱۴۰۵، کارفرما: «هدر یک خط») از xl نوار تک‌ردیفه است (xl:flex-nowrap روی ظرف): با نام کاربر وارد‌شده
+        («نیما خان میرزایی») + سبد، ردیف اول جا نمی‌شد و حساب به خط دوم می‌رفت. جستجو تنها عضو کِش‌آمدنی است
+        (حداقل ۱۱rem)، برچسب «خط ویژه تامین:» به خواست کارفرما حذف شد. در xl (۱۲۸۰ تا ۱۵۳۵px) شعار زیر نام برند و نام
+        حساب (فقط آیکن می‌ماند) پنهان‌اند تا جستجو جا داشته باشد (اندازه‌گیری: بی‌این دو، ورودی ۶۱px بود)؛ از 2xl ظرف ۹۶rem
+        است و همه دیده می‌شوند. */}
+    <div class="order-last basis-full flex items-center gap-2 xl:order-none xl:basis-0 xl:flex-1 xl:min-w-[11rem] xl:max-w-md print:hidden">
     <form action="/search/" method="get" role="search" class="min-w-0 flex-1">
       <label for="header-search" class="sr-only">جستجوی کد فنی، نام قطعه یا برند</label>
       <div class="flex items-stretch h-11 rounded-md border border-steel-700 bg-steel-800 focus-within:border-steel-400">
@@ -112,7 +117,7 @@ const navLinks = [
         />
         {/* میان‌بر «/» (فاز ۳) — فقط نشانه؛ شنونده در اسکریپت پایین. aria-keyshortcuts روی ورودی نیست چون همین kbd
             زیر lg (لمسی) پنهان است و میان‌بر صفحه‌کلید آنجا معنا ندارد. */}
-        <kbd class="hidden lg:grid place-items-center self-center w-6 h-6 rounded border border-steel-600 font-mono text-xs text-steel-300" aria-hidden="true">/</kbd>
+        <kbd class="hidden lg:grid xl:hidden 2xl:grid place-items-center self-center w-6 h-6 rounded border border-steel-600 font-mono text-xs text-steel-300" aria-hidden="true">/</kbd>
         <button type="submit" class="shrink-0 w-11 grid place-items-center text-steel-300 hover:text-white" aria-label="جستجو">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
         </button>
@@ -130,9 +135,8 @@ const navLinks = [
          جرثقیلِ از کار افتاده است، نه تلفن دفتر؛ نقطه‌ی خاکستری «تعطیلیم» خوانده می‌شد. ادعای ۲۴ساعته ادعای خود
          کارفرماست. فاز ۳ آن را به ساعت کاری وردپرس بسته بود (business-hours.ts — حذف شد). */
       <a href={mobile.href}
-        class="hidden md:inline-flex shrink-0 items-center gap-2 h-11 px-3.5 rounded-full border border-steel-700 bg-steel-800 text-sm font-bold text-white hover:border-steel-400 whitespace-nowrap">
+        aria-label={`تماس: ${mobile.display}`} class="hidden md:inline-flex shrink-0 items-center gap-2 h-11 px-3.5 rounded-full border border-steel-700 bg-steel-800 text-sm font-bold text-white hover:border-steel-400 whitespace-nowrap">
         <span class="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true"></span>
-        <span class="xl:hidden 2xl:inline">خط ویژه تامین:</span>
         <span class="tabular-nums" dir="ltr">{mobile.display}</span>
       </a>
     )}
@@ -143,7 +147,7 @@ const navLinks = [
         («دسته‌بندی / قطعات»)؛ با ردیف جستجو و flex-wrap، ناوبری به ردیف سوم می‌رفت (هدر چسبان ۱۸۹px). زیر lg همان
         منوی همبرگری موبایل. */}
     <nav class="hidden lg:block" aria-label="منوی اصلی">
-      <ul class="flex items-center gap-7 text-sm font-normal">
+      <ul class="flex items-center gap-7 xl:gap-4 2xl:gap-6 text-sm font-normal whitespace-nowrap">
         {/* «صفحه اصلی» از ناوبری دسکتاپ رفت (فاز ۳): لوگو همان پیوند است و ۹۰px آن برای قرص «خط ویژه تامین» لازم بود. */}
 
         <li id="mega-wrap" class="static">
@@ -243,7 +247,7 @@ const navLinks = [
           <svg class="w-7 h-7 md:w-6 md:h-6" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.1a7.5 7.5 0 0115 0A17.9 17.9 0 0112 21.75c-2.68 0-5.22-.58-7.5-1.65z" />
           </svg>
-          <span id="account-name" class="hidden md:inline max-w-[9rem] truncate">حساب من</span>
+          <span id="account-name" class="hidden md:inline xl:hidden 2xl:inline max-w-[9rem] truncate">حساب من</span>
           <svg id="account-chevron" class="hidden md:block w-4 h-4 text-steel-500 transition-transform" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
         </button>
 

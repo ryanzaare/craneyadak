@@ -69,7 +69,6 @@ const jsonLd = {
     },
   ],
 };
-import { hairlineFillers } from '../../components/hairline';
 import { fa } from '../../components/catalog-presence';
 ---
 
@@ -104,16 +103,15 @@ import { fa } from '../../components/catalog-presence';
 
             {/* Frontend v2 فاز ۵: همان پلاک دوطبقه‌ی صفحه‌ی اصلی (.cy-brand-tile در global.css) در شبکه‌ی خط مو + یک خط
                 توضیح وردپرس. رنگ اختصاصی برند (ACF) دیگر روی کاشی نیست — فقط نوار پایین صفحه‌ی خود برند. */}
-            <ul class="cy-brand-tile grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-px bg-steel-200 border border-steel-200 rounded-md overflow-hidden" role="list">
+            <ul class="cy-brand-tile grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" role="list">
               {items.map((brand) => (
-                <li class="bg-white">
+                <li class="bg-white border border-steel-200 rounded-md overflow-hidden">
                   <a href={`/brands/${brand.slug}/`} title={brand.seoAnchor ?? undefined}>
                     <span><b dir="ltr">{brand.logoText}</b><i>{brand.country}</i></span>
                     <span>{brand.nameFa}</span>
                   </a>
                 </li>
               ))}
-              {hairlineFillers(items.length).map((c) => <li class={c} aria-hidden="true"></li>)}
             </ul>
           </section>
         );

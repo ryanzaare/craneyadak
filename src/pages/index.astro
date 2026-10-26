@@ -45,7 +45,7 @@ import { getBrands } from '../lib/brands';
 import { getStorefront } from '../lib/storefront';
 import { computePrice, productPath } from '../lib/wp';
 import { getCatalogPresence, fa } from '../components/catalog-presence';
-import { hairlineGrid, hairlineCell, hairlineFillers } from '../components/hairline';
+import { hairlineGrid, hairlineCell } from '../components/hairline';
 
 /* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
    قبلاً انتهای فرontmatter بودند و کدِ بالاتر که از آن‌ها استفاده
@@ -58,6 +58,9 @@ const faqs = await getFaqs();
 const storefront = await getStorefront();
 // یک ویترین، بی‌تکرار: تخفیف‌دار → موجود → تازه، تا ۴ قلم (با یک کالا، سه ویترین قبلی سه بار همان کارت بودند).
 const featured = [...new Map([...storefront.onSale, ...storefront.inStock, ...storefront.latest].map((p) => [p.slug, p])).values()].slice(0, 4);
+// ⚠️ عنوان نسخه‌ی پیشین («موجود در انبار — ارسال سریع»، کارفرما ۴ آبان ۱۴۰۵) فقط وقتی *همه‌ی* کارت‌ها واقعاً موجودند —
+// فهرست تازه‌ترین‌ها را هم دارد؛ با کالای ناموجود/استعلامی همان عنوان ادعای نادرست موجودی می‌شد (قاعده‌ی ۲).
+const featuredTitle = featured.slice(0, 3).every((p) => p.stockStatus === 'in_stock') ? 'موجود در انبار — ارسال سریع' : 'تازه‌ترین قطعات افزوده‌شده';
 const presence = await getCatalogPresence();
 const advantages = await getAdvantages();
 const mobile = mobileLine(contact);
@@ -263,10 +266,17 @@ const jsonLd = {
           <div class="lg:col-span-4 bg-white p-4 md:p-6 flex flex-col">
             <h2 class="text-base font-bold text-steel-900 leading-7">کد فنی را نمی‌دانید؟</h2>
             <p class="mt-1 mb-4 text-sm text-steel-700 leading-7">از پلاک مشخصات دستگاه یا خودِ قطعه عکس بگیرید و در واتساپ بفرستید تا قطعه‌ی سازگار شناسایی شود.</p>
-            <a href={waPlate} target="_blank" rel="noopener noreferrer" class="mt-auto inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-500">
+            <a href={waPlate} target="_blank" rel="noopener noreferrer" class="mt-auto inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md bg-whatsapp text-sm font-bold text-steel-950 hover:bg-whatsapp-strong">
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
               ارسال عکس پلاک در واتساپ
             </a>
+            {/* «تماس مستقیم با پشتیبانی» (کارفرما، ۴ آبان ۱۴۰۵): شماره‌گیری مستقیم خط همراه از تنظیمات وردپرس — هرگز ثابت در کد. */}
+            {mobile && (
+              <a href={mobile.href} class="mt-2 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-500">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>
+                تماس مستقیم با پشتیبانی
+              </a>
+            )}
           </div>
         )}
 
@@ -328,7 +338,7 @@ const jsonLd = {
     <section class="bg-white px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="featured-heading">
       <div class="max-w-7xl mx-auto">
         <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
-          <h2 id="featured-heading" class="text-xl md:text-2xl font-bold text-steel-900">قطعات موجود در کاتالوگ</h2>
+          <h2 id="featured-heading" class="text-xl md:text-2xl font-bold text-steel-900">{featuredTitle}</h2>
           <a href="/products/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">همه‌ی قطعات ←</a>
         </div>
         <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" role="list">
@@ -363,7 +373,8 @@ const jsonLd = {
                 </ul>
               </div>
               <div class="grid gap-2">
-                {waPlate && <a href={waPlate} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-bold hover:bg-accent-strong">ارسال عکس پلاک در واتساپ</a>}
+                {waPlate && <a href={waPlate} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-whatsapp text-steel-950 text-sm font-bold hover:bg-whatsapp-strong">ارسال عکس پلاک در واتساپ</a>}
+                {mobile && <a href={mobile.href} class="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-500">تماس مستقیم با پشتیبانی <span class="tabular-nums" dir="ltr">{mobile.display}</span></a>}
                 <a href="#bulk-parts" class="inline-flex items-center justify-center min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-500">ثبت فهرست چندقلمی</a>
               </div>
             </li>
@@ -419,17 +430,17 @@ const jsonLd = {
             <div>
               <h3 class="text-xs font-bold text-steel-600 mb-2">{BRAND_CLASSES[brandClass].name} <span class="font-normal">({fa(list.length)})</span></h3>
               {/* ظاهر کاشی در global.css (.cy-brand-tile) — کلاس روی هر ۱۹ کاشی ~۵KB بود. */}
-              <ul class="cy-brand-tile grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-px bg-steel-200 border border-steel-200 rounded-md overflow-hidden" role="list">
+              <ul class="cy-brand-tile grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" role="list">
                 {list.map((brand) => (
-                  <li class="bg-white">
+                  <li class="bg-white border border-steel-200 rounded-md overflow-hidden">
                     <a href={`/brands/${brand.slug}/`} title={brand.seoAnchor ?? undefined}>
                       <span><b dir="ltr">{brand.logoText}</b><i>{brand.country}</i></span>
                       <span>{brand.nameFa}</span>
                     </a>
                   </li>
                 ))}
-                {/* خانه‌های خالی ردیف آخر سفید پر می‌شوند تا لکه‌ی خاکستری نماند (همان دام hairline.ts). */}
-                {hairlineFillers(list.length).map((c) => <li class={c} aria-hidden="true"></li>)}
+                {/* ⚠️ (۴ آبان ۱۴۰۵، کارفرما) کاشی‌های جدا با قاب خودشان، نه شبکه‌ی خط مو: ردیف ناقص (مثل اشنایدر تنها) دیگر
+                    ۵ خانه‌ی خالیِ قاب‌دار نمی‌سازد — فقط فضای سفید. کاشی‌ها هم بزرگ‌تر (۴ ستون در دسکتاپ، نه ۶). */}
               </ul>
             </div>
           );
@@ -446,7 +457,8 @@ const jsonLd = {
   <section class="bg-steel-900 text-white px-4 py-10 md:py-12 border-y border-steel-800" aria-labelledby="process-heading">
     <div class="max-w-7xl mx-auto">
       <p class="text-sm font-bold text-accent mb-1">از استعلام تا تحویل</p>
-      <h2 id="process-heading" class="text-xl md:text-2xl font-bold mb-5">فرآیند تامین و خرید سازمانی</h2>
+      <h2 id="process-heading" class="text-xl md:text-2xl font-bold">فرآیند تامین و خرید سازمانی</h2>
+      <p class="mt-2 mb-5 max-w-3xl text-sm text-steel-300 leading-7">مسیری که واحد خرید سازمان شما با آن آشناست: از اولین استعلام تا رسیدن قطعه، هر مرحله مستند است — پیش‌فاکتور با اعتبار مشخص، فاکتور رسمی در صورت درخواست، و پیگیری سفارش با کد رهگیری.</p>
       <ol class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {STEPS.map(([step, text, icon], i) => (
           <li class="bg-steel-800/90 border border-steel-700 border-s-4 border-s-action p-5 rounded-md">

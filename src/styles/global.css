@@ -24,15 +24,24 @@
   src: url("/fonts/Vazirmatn-Variable.woff2") format("woff2-variations");
   font-weight: 100 900;
   font-style: normal;
-  /* ⚠️ optional، نه swap (۱۵ مهر ۱۴۰۵): با CSS درون‌خطی صفحه پیش از رسیدن فونت رنگ می‌شود و جایگزینی فونت
-     پاراگراف هیرو را جابه‌جا می‌کرد (CLS موبایل ۰٫۱۸۴، نمره‌ی ۹۶ → ۸۹). optional: اگر فونتِ preload‌شده
-     در ~۱۰۰ms نرسید، همان بازدید با فونت سیستم می‌ماند و هرگز جابه‌جا نمی‌شود؛ بازدید بعد (کش یک‌ساله) با
-     Vazirmatn است. اگر آزمون زنده نشان داد فونت سیستم زیاد دیده می‌شود، به swap + fallback متریک‌دار برگردید. */
-  font-display: optional;
+  /* ⚠️ swap + fallback متریک‌دار (۴ آبان ۱۴۰۵) — جای optional. تاریخچه: swap ساده در ۱۵ مهر CLS موبایل ۰٫۱۸۴ ساخت
+     (پاراگراف هیرو با جایگزینی فونت جابه‌جا می‌شد)، پس optional آمد؛ ولی optional یعنی بازدید اولِ شبکه‌ی کند *کل
+     بازدید* با فونت سیستم — کارفرما روی سایت زنده همین را دید («این فونت افتضاح است»: Geeza Pro مک، نه Vazirmatn).
+     حالا فونت همیشه می‌رسد و جابه‌جایی‌اش با @font-faceهای «Vazirmatn Fallback» پایین (size-adjust/ascent/descent
+     اندازه‌گیری‌شده) نزدیک صفر است. */
+  font-display: swap;
   /* بازه کاراکترهای فارسی و لاتین پایه برای رندر بهینه */
   unicode-range: U+0600-06FF, U+0750-077F, U+200C-200E, U+2010-2011,
     U+FB50-FDFF, U+FE70-FEFF, U+0000-00FF, U+2000-206F, U+20AC, U+2212;
 }
+
+/* فونت جایگزینِ هم‌اندازه‌ی Vazirmatn تا لحظه‌ی swap (اندازه‌گیری Chrome، ۴ آبان ۱۴۰۵، متن نمونه‌ی هیرو در ۱۰۰px):
+   عرض Vazirmatn ۴۰۰/۷۰۰ = ۵۸۳۴/۵۸۹۲؛ Tahoma ۶۳۱۲/۷۱۰۹ (ویندوز)، Geeza Pro ۵۳۶۵/۶۰۷۰ (مک).
+   size-adjust = عرض Vazirmatn ÷ عرض جایگزین؛ ascent/descent = متریک Vazirmatn (۱۰۳٪/۵۴٪) ÷ size-adjust. */
+@font-face { font-family: "Vazirmatn Fallback"; src: local("Tahoma"); font-weight: 400; size-adjust: 92.4%; ascent-override: 111.5%; descent-override: 58.4%; line-gap-override: 0%; }
+@font-face { font-family: "Vazirmatn Fallback"; src: local("Tahoma Bold"), local("Tahoma-Bold"); font-weight: 700 900; size-adjust: 82.9%; ascent-override: 124.2%; descent-override: 65.1%; line-gap-override: 0%; }
+@font-face { font-family: "Vazirmatn Fallback Mac"; src: local("Geeza Pro"), local("GeezaPro"); font-weight: 400; size-adjust: 108.7%; ascent-override: 94.8%; descent-override: 49.7%; line-gap-override: 0%; }
+@font-face { font-family: "Vazirmatn Fallback Mac"; src: local("Geeza Pro Bold"), local("GeezaPro-Bold"); font-weight: 700 900; size-adjust: 97.1%; ascent-override: 106.1%; descent-override: 55.6%; line-gap-override: 0%; }
 
 @theme {
   /* -------------------------------------------------------------------------
@@ -73,6 +82,11 @@
   --color-steel-100: #EDEFF2;
   --color-steel-50:  #F7F8FA;
 
+  /* سبز رسمی واتساپ (کارفرما، ۴ آبان ۱۴۰۵: «دقیقاً همان سبز آیکن واتساپ»). ⚠️ متن روی آن steel-950 است، نه سفید:
+     سفید روی #25D366 فقط ۲:۱ است (زیر AA و گیت a11y=1 لایت‌هاوس)؛ steel-950 حدود ۹:۱. */
+  --color-whatsapp: #25D366;
+  --color-whatsapp-strong: #1EBE5A;
+
   /* رنگ عمل/هشدار — تنها رنگ برند، عمداً کم‌مصرف */
   --color-accent:      #EA580C;  /* پرکردن: دکمه، نشان، نوار — ۳.۴:۱ روی سفید */
   --color-accent-ink:  #9A3412;  /* متن و لینک روی سفید — ۶.۴:۱ ✓ */
@@ -93,7 +107,7 @@
      برگشتشان را می‌گیرد. ⚠️ crane-orange = accent-ink بود (نه accent)؛ مهاجرت همان رنگ را نگه داشت. */
 
   /* تنظیم فونت پیش‌فرض سایت */
-  --font-sans: "Vazirmatn", "Segoe UI", Tahoma, sans-serif;
+  --font-sans: "Vazirmatn", "Vazirmatn Fallback", "Vazirmatn Fallback Mac", "Segoe UI", Tahoma, sans-serif;
   /* کد فنی و مدل: زیرمجموعه‌ی JetBrains Mono (فقط لاتین، رقم، - / . _ و چند نشانه؛ ~۳٫۷KB هر وزن). در کد
      فنی «O/0» و «l/1» باید از هم جدا باشند — اشتباهش یعنی قطعه‌ی اشتباه (قاعده‌ی ۲). نویسه‌ی فارسی در این
      زیرمجموعه نیست و خودکار به Vazirmatn می‌افتد. */
@@ -648,11 +662,11 @@
 /* پلاک دوطبقه (فاز ۵): بالا نشان لاتین مونو + قرص کشور روی steel-50، پایین نام فارسی. هاور = قاب نارنجی درونی (ring
    inset) تا شبکه‌ی خط مو نشکند. */
 .cy-brand-tile a:hover { z-index: 10; box-shadow: inset 0 0 0 2px var(--color-action); }
-.cy-brand-tile a > span:first-child { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.625rem 0.75rem; background: color-mix(in oklab, var(--color-steel-50) 70%, transparent); border-bottom: 1px solid var(--color-steel-200); }
+.cy-brand-tile a > span:first-child { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.875rem 1rem; background: color-mix(in oklab, var(--color-steel-50) 70%, transparent); border-bottom: 1px solid var(--color-steel-200); }
 .cy-brand-tile b { font-family: var(--font-mono); font-weight: 700; font-size: 0.875rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-steel-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cy-brand-tile i { font-style: normal; flex-shrink: 0; font-size: 0.75rem; padding: 0.125rem 0.375rem; border-radius: 0.25rem; background: #fff; border: 1px solid var(--color-steel-200); color: var(--color-steel-600); }
-.cy-brand-tile a > span:last-child { padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; color: var(--color-steel-800); }
-@media (min-width: 768px) { .cy-brand-tile b { font-size: 1rem; } }
+.cy-brand-tile a > span:last-child { padding: 0.625rem 1rem; font-size: 0.875rem; font-weight: 700; color: var(--color-steel-800); }
+@media (min-width: 768px) { .cy-brand-tile b { font-size: 1.25rem; } }
 .cy-faq { background: #fff; border: 1px solid var(--color-steel-200); border-radius: 0.375rem; }
 .cy-faq details + details { border-top: 1px solid var(--color-steel-200); }
 .cy-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; cursor: pointer; list-style: none; font-weight: 700; line-height: 1.75rem; color: var(--color-steel-900); }
