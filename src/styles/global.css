@@ -349,6 +349,15 @@
    کوچک‌کردن فونت و نه شکستن ساختار جدول با display:block (که الگوریتم
    چیدمان ستون‌ها را از بین می‌برد و ردیف‌ها را در هم می‌ریزد).
    بسته‌بندی در زمان build توسط CategoryGuide انجام می‌شود. */
+/* ⚠️ (۴ آبان ۱۴۰۵) اسکرول افقی بیرون از prose هم: بلوک جدول ContentBlocks همین کلاس را *بیرون* از
+   `.prose-crane` می‌گذارد و قاعده‌ی زیر به آن نمی‌رسید — جدول ۷۴۷px صفحه‌ی برند دماگ را در موبایل ۳۹۰px
+   به عرض ۷۶۴px می‌کشید (کل صفحه افقی جابه‌جا می‌شد؛ روی سایت زنده هم بود). */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
 .prose-crane .table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
