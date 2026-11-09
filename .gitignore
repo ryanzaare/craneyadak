@@ -8,7 +8,8 @@ dist/
 # System Files (فایل‌های زباله سیستم‌عامل)
 .DS_Store
 Thumbs.db
-
+.vscode
+.claude/skills
 # Environment variables (فایل‌های امنیتی و پسوردها)
 .env
 .env.*
