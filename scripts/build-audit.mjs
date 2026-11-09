@@ -145,6 +145,12 @@ export function productSchemaProblems(pages) {
     if (!(Array.isArray(n.image) ? n.image.length : n.image)) {
       out.push(`${p.route}: ایندکس‌پذیر است ولی Product در JSON-LD هیچ تصویری ندارد — محصول ناقص باید noindex باشد`);
     }
+    // ⚠️ قاعده‌ی ۹ (۱۸ آبان ۱۴۰۵): گالری از تصویر دوم به بعد اینفوگرافیک دارد (متن، جدول، تلفن).
+    // فقط images[0] — نمای استودیویی تمیز — حق ورود به Product.image را دارد؛ آرایه‌ی چندتایی
+    // یعنی productJsonLd به رفتار قدیم برگشته و اینفوگرافیک به Rich Result رسیده است.
+    if (Array.isArray(n.image) && n.image.length > 1) {
+      out.push(`${p.route}: Product.image ${n.image.length} تصویر دارد — فقط یک تصویر (images[0]، نمای استودیویی تمیز) مجاز است`);
+    }
     if (n.aggregateRating || n.review) {
       out.push(`${p.route}: aggregateRating/review در JSON-LD است — فقط با نظر واقعیِ دیده‌شده روی صفحه مجاز است (بازبینی دستی)`);
     }

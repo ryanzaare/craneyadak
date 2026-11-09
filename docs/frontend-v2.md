@@ -165,7 +165,7 @@ view.
 - The `data-*` attributes and IDs read by scripts and guards (`data-authenticity`, `data-warranty`, `data-guard-until`, basket/checkout
   hooks, storage keys).
 - Tokens live in `src/styles/global.css` (single source); accent / accent-ink contrast rule.
-- Rules from `CLAUDE.md`: no invented data or claims, no official-dealer claim, AI images labelled «تصویرسازی», no WooCommerce.
+- Rules from `CLAUDE.md`: no invented data or claims, no official-dealer claim, AI product images only if faithful to the real part, `images[0]` clean studio view (rule 9), no WooCommerce.
 - Guards: `npm run check`, `npm run build`, `npm run lighthouse` must stay green; `check-build-audit` must pass.
 
 ## 8. Phases and acceptance

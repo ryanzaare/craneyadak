@@ -1106,7 +1106,10 @@ export function productJsonLd(
 
   if (product.summary) node.description = product.summary;
   if (product.sku) node.sku = product.sku;
-  if (product.images.length > 0) node.image = product.images.map((i) => i.url);
+  // ⚠️ فقط تصویر اول (تصمیم کارفرما، ۱۸ آبان ۱۴۰۵): از تصویر دوم به بعد اینفوگرافیک‌اند —
+  // متن، جدول، شماره تلفن. Product.image در Rich Result/Merchant باید خود کالا را نشان دهد؛
+  // اینفوگرافیک آنجا یعنی تصویر بی‌کیفیت یا ردشده. images[0] طبق قاعده‌ی ۹ نمای استودیویی تمیز است.
+  if (product.images.length > 0) node.image = [product.images[0].url];
 
   if (product.brandNameEn || product.brandNameFa) {
     node.brand = {

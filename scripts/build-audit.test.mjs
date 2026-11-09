@@ -60,6 +60,7 @@ has('OEM نادیدنی', productSchemaProblems([prod({ additionalProperty: [{ n
 has('امتیاز بی‌پشتوانه', productSchemaProblems([prod({ aggregateRating: { ratingValue: 5 } })]), 'aggregateRating');
 has('محصول ایندکس‌پذیر بدون تصویر گرفته می‌شود', productSchemaProblems([prod({ image: undefined })]), 'هیچ تصویری ندارد');
 has('تصویر خالی هم تصویر نیست', productSchemaProblems([prod({ image: [] })]), 'هیچ تصویری ندارد');
+has('بیش از یک تصویر در Product گرفته می‌شود (قاعده‌ی ۹: فقط images[0])', productSchemaProblems([prod({ image: ['https://craneyadak.com/a.jpg', 'https://craneyadak.com/b.jpg'] })]), 'فقط یک تصویر');
 has('دو Product', productSchemaProblems([P('/products/p2/', { ld: [{ '@type': 'Product' }, { '@type': 'Product' }] })]), 'دقیقاً یک Product');
 has('بدون Product', productSchemaProblems([P('/products/p3/')]), 'دقیقاً یک Product');
 

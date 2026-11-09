@@ -2,14 +2,20 @@
 
 Status (29 Mehr 1405): **the image design pipeline is owned by the client and Gemini** and is being redesigned. The programmatic
 compositor that lived in this repository was removed at the client's decision (its output looked boxy). This document keeps only the
-rules every product image must follow — whatever tool produces it — because they protect SEO, trust and project rules 2 and 9.
+rules every product image must follow — whatever tool produces it — because they protect SEO, trust and project rules 2 and 9 (rule 9 as changed by the owner on 18 Aban 1405).
 
 ## 0. Hard rules (they protect the SEO and trust value of the site)
 
-1. **The part in the picture must be the real part.** AI may change background, light, shadow and framing. It must never
-   change the part: shape, holes, pins, label text, part number, logo, connector, proportions, colour.
-   A fully AI-generated part is an illustration, not a product photo → label it «تصویرسازی» and never use it as the
-   product image (project rule 9; also never in JSON-LD `image`).
+1. **The part in the picture must be the real part.** AI or a designer may change background, light, shadow and framing. It must
+   never change the part: shape, number and layout of buttons, antenna position, holes, pins, label text, part number, logo,
+   connector, proportions, colour. An image that changes the part is rejected, whatever it is labelled.
+   **Owner decision (18 Aban 1405, replaces the old "AI never in the gallery" rule):** studio product renders and technical
+   infographics that keep the real geometry, button layout and colours are allowed in the product gallery and count towards
+   `productReadiness` (project rule 9). Every number or claim printed on an infographic must already appear, word for word, in the
+   product's specs or text on the site (project rule 2) — the image may repeat the page, never add to it.
+1a. **`images[0]` is a clean studio view: no text, no table, no banner, no phone number.** It is the og:image and the only
+   `image` in the product's JSON-LD (`productJsonLd` in `src/lib/wp.ts` emits `[images[0]]` only), so it must show the product
+   itself. Infographics go from position 2 onwards.
 2. **Keep the raw originals forever**, untouched, in a separate folder. They are your evidence and your re-do source.
 3. **Every product gallery keeps one unretouched close-up** of the label / part number next to the branded hero image.
    The brand look sells; the raw close-up proves.
@@ -56,8 +62,8 @@ camera motion and mood, never to show how a part works. Do not use generated aud
 - File: `{sku}-{brand}-{view}-{nn}.jpg`, lowercase Latin, e.g. `saga1-l12-saga-front-01.jpg`. Max 1600 px long side before upload
   (build converts to AVIF/WebP).
 - Alt text (Persian, factual, one sentence, no keyword stuffing): «ریموت کنترل SAGA1-L12 ساگا، نمای روبه‌رو».
-- First gallery image = branded hero. Last = unretouched label close-up. The site's JSON-LD `image` may use a retouched real photo;
-  it must never use an illustration.
+- First gallery image = clean studio view (§0 rule 1a). Infographics after it. Last = unretouched label close-up when a real photo
+  exists. Only the first image reaches JSON-LD `image`.
 - A phone number drawn on an image is not text Google reads; the phone number must also exist as real text on the page (it does: header, footer, contact).
 
 ## 5. Per-image checklist (reject on any "no")

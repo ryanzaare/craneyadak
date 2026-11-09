@@ -48,7 +48,14 @@ const expected = new Set(Object.keys(LEGACY_REDIRECTS).map((from) => `${DIST}${f
 const pages = globSync(`${DIST}/**/*.html`);
 const noHtml = pages.filter((f) => !/<html[\s>]/i.test(read(f)));
 
-const orphans = noHtml.filter((f) => !expected.has(f));
+/* ⚠️ فایل تأیید مالکیت Search Console (public/google<hex>.html) عمداً HTML نیست؛ گوگل
+   محتوای دقیقش را می‌خواهد و تغییرش تأیید را باطل می‌کند. فقط وقتی معاف است که هم نام و
+   هم محتوا دقیقاً همان قالب گوگل باشد — صفحه‌ی واقعیِ شکسته با این نام ساخته نمی‌شود. */
+const isGoogleVerification = (f) => {
+  const m = /^dist\/(google[0-9a-f]{16}\.html)$/.exec(f);
+  return !!m && read(f).trim() === `google-site-verification: ${m[1]}`;
+};
+const orphans = noHtml.filter((f) => !expected.has(f) && !isGoogleVerification(f));
 const missing = [...expected].filter((f) => existsSync(f) && !noHtml.includes(f));
 
 if (orphans.length) {
