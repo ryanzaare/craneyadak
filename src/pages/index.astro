@@ -126,7 +126,7 @@ const jsonLd = {
       logo: { '@type': 'ImageObject', '@id': `${SITE.url}/#logo`, url: `${SITE.url}/logo.png`, width: 512, height: 512, caption: SITE.name },
       image: { '@id': `${SITE.url}/#logo` },
       description: SITE.description,
-      inLanguage: SITE.locale,
+      inLanguage: SITE.lang,
       // ⚠️ آدرس و تلفن فقط وقتی وارد اسکیما می‌شوند که واقعی باشند.
       //
       // انتشار NAP ساختگی در LocalBusiness، گوگل را وادار می‌کند آن را
@@ -163,6 +163,9 @@ const jsonLd = {
         : {}),
       ...(contact.phonePrimary
         ? {
+            // `telephone` در خود LocalBusiness: ویژگی‌ای که راهنمای Local Business گوگل می‌خواند؛ contactPoint
+            // به‌تنهایی آن را نمی‌دهد. همان شماره‌ی واقعی وردپرس، بدون تغییر قالب (قاعده‌ی ۲).
+            telephone: contact.phonePrimary,
             contactPoint: {
               '@type': 'ContactPoint',
               telephone: contact.phonePrimary,
@@ -180,10 +183,11 @@ const jsonLd = {
       url: SITE.url,
       name: SITE.name,
       publisher: { '@id': `${SITE.url}/#organization` },
-      inLanguage: SITE.locale,
+      inLanguage: SITE.lang,
       potentialAction: {
         '@type': 'SearchAction',
-        target: { '@type': 'EntryPoint', urlTemplate: `${SITE.url}/search?q={search_term_string}` },
+        // ⚠️ با «/» پایانی: /search?q=… روی سرور یک ۳۰۱ به /search/?q=… می‌خورد (سنجیده روی سایت زنده).
+        target: { '@type': 'EntryPoint', urlTemplate: `${SITE.url}/search/?q={search_term_string}` },
         'query-input': 'required name=search_term_string',
       },
     },
@@ -198,7 +202,7 @@ const jsonLd = {
         { '@id': `${SITE.url}/#organization` },
         { '@type': 'Thing', name: 'Overhead Crane Parts', sameAs: 'https://en.wikipedia.org/wiki/Overhead_crane' },
       ],
-      inLanguage: SITE.locale,
+      inLanguage: SITE.lang,
     },
     // FAQPage فقط وقتی پرسش واقعی در وردپرس ثبت شده باشد.
     ...(faqs.length > 0
@@ -234,11 +238,13 @@ const jsonLd = {
           <div>
             <h1 id="hero-heading" class="text-2xl md:text-3xl lg:text-4xl font-black text-steel-900 leading-[1.5] text-right">
               مرجع تخصصی تأمین قطعات یدکی <span class="text-accent-ink">جرثقیل سقفی</span>
-              {/* اعداد از خودِ تاکسونومی و وردپرس، با ارقام فارسی — نه از حدس. */}
-              <span class="block text-base md:text-xl font-bold text-steel-600 mt-2 leading-8">
-                {fa(ALL_CATEGORIES.length)} دسته قطعه از {fa(BRANDS.length)} برند — اصل، قابل ردیابی با کد فنی، با ضمانت اصالت و فاکتور رسمی
-              </span>
             </h1>
+            {/* ⚠️ زیرعنوان بیرون از <h1> (۱۹ آبان ۱۴۰۵): تا پیش از این داخل h1 بود و متن H1 صفحه‌ی اصلی ۲۳ واژه
+                می‌شد («… جرثقیل سقفی ۳۱ دسته قطعه از ۱۹ برند — اصل، قابل ردیابی …»). H1 باید همان عبارت هدف بماند؛
+                ظاهر عوض نشده (همان کلاس‌ها). اعداد از خودِ تاکسونومی و وردپرس، با ارقام فارسی — نه از حدس. */}
+            <p class="text-base md:text-xl font-bold text-steel-600 mt-2 leading-8 text-right">
+              {fa(ALL_CATEGORIES.length)} دسته قطعه از {fa(BRANDS.length)} برند — اصل، قابل ردیابی با کد فنی، با ضمانت اصالت و فاکتور رسمی
+            </p>
             <p class="mt-3 mb-5 text-sm md:text-base text-steel-700 leading-7 md:leading-8 max-w-2xl text-right">
               کد فنی، عکس پلاک دستگاه یا عکس قطعه‌ی فرسوده کافی است — سازگاری را <strong class="font-bold text-steel-900">پیش از صدور پیش‌فاکتور</strong> بررسی می‌کنیم.
             </p>

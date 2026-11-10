@@ -140,6 +140,23 @@ export function buildTitle(parts: readonly (string | null | undefined)[], where 
 }
 
 /**
+ * قطعه‌های عنوان صفحه‌ی محصول: نام، «کد <sku>» فقط اگر نام خودش کد را نداشته باشد، نام سایت.
+ *
+ * ⚠️ چرا: نام بیشتر محصول‌ها کد فنی را در خودش دارد («ریموت کنترل ساگا SAGA1-L12 …»). عنوان
+ * زنده «… SAGA1-L12 کاناله دو سرعته | کد SAGA1-L12» بود: کد دو بار، و چون `buildTitle` قطعه‌ای را
+ * که جا نشود کامل حذف می‌کند، «کرین یدک» افتاده بود — ۱۳ کاراکتر از ۶۰ صرف تکرار شد و نام برند
+ * از نتیجه‌ی جستجو رفت. تطبیق با مرز واژه است تا کد «D09» داخل «LC1D09» تکرار حساب نشود.
+ */
+export function productTitleParts(name: string, sku: string | null | undefined, siteName: string): string[] {
+  const code = (sku ?? '').trim();
+  if (!code) return [name, siteName];
+  const esc = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // مرز واژه برای کد لاتین: پیش و پس از کد، حرف/رقم لاتین نباشد (\b با حروف فارسی درست کار نمی‌کند).
+  const inName = new RegExp(`(?<![A-Za-z0-9])${esc}(?![A-Za-z0-9])`, 'i').test(name);
+  return inName ? [name, siteName] : [name, `کد ${code}`, siteName];
+}
+
+/**
  * توضیح = متن اختصاصی + بلندترین دمِ ثابتی که جا می‌شود.
  *
  * @param lead  متن اختصاصی صفحه. هرگز به نفع دم حذف نمی‌شود.

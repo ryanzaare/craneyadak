@@ -21,8 +21,17 @@
 --------------------------------------------------------- */
 @font-face {
   font-family: "Vazirmatn";
-  src: url("/fonts/Vazirmatn-Variable.woff2") format("woff2-variations");
-  font-weight: 100 900;
+  /* ⚠️ زیرمجموعه (۱۹ آبان ۱۴۰۵): فایل کامل ۱۱۱KB بود و بزرگ‌ترین درخواست بازدید اول (۲٫۷ برابر HTML فشرده).
+     دو برش، هر دو بی‌اثر بر آنچه رندر می‌شود: (۱) فقط نویسه‌های همین unicode-range پایین — مرورگر بیرون از این
+     بازه هرگز از این فونت استفاده نمی‌کرد، پس آن گلیف‌ها وزن مرده بودند؛ (۲) محور وزن ۴۰۰ تا ۹۰۰ — وزن‌های زیر
+     ۴۰۰ در @theme خاموش‌اند. نتیجه ۶۱KB (−۴۵٪)؛ متریک‌ها (ascent/descent/unitsPerEm) و همه‌ی ویژگی‌های GSUB/GPOS
+     دست‌نخورده، پس «Vazirmatn Fallback» پایین همان اعداد را می‌خواهد.
+     بازسازی از فایل اصلی Vazirmatn[wght].woff2 (fonttools + brotli):
+       fonttools varLib.instancer Vazirmatn[wght].woff2 wght=400:900 -o inst.woff2
+       pyftsubset inst.woff2 --unicodes="<همین unicode-range>" --layout-features='*' --flavor=woff2
+     ⚠️ نام فایل با هر تغییر محتوا عوض شود: /fonts/ کش یک‌ساله‌ی immutable دارد (scripts/generate-htaccess.mjs). */
+  src: url("/fonts/Vazirmatn-fa-400-900.woff2") format("woff2-variations");
+  font-weight: 400 900;
   font-style: normal;
   /* ⚠️ swap + fallback متریک‌دار (۴ آبان ۱۴۰۵) — جای optional. تاریخچه: swap ساده در ۱۵ مهر CLS موبایل ۰٫۱۸۴ ساخت
      (پاراگراف هیرو با جایگزینی فونت جابه‌جا می‌شد)، پس optional آمد؛ ولی optional یعنی بازدید اولِ شبکه‌ی کند *کل

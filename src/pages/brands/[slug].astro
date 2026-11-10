@@ -139,7 +139,7 @@ const jsonLd = {
       description,
       about: { '@id': brandNodeId },
       isPartOf: { '@id': `${SITE.url}/#website` },
-      inLanguage: SITE.locale,
+      inLanguage: SITE.lang,
       ...(itemList ? { mainEntity: itemList } : {}),
     },
   ],

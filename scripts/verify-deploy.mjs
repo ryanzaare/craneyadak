@@ -9,6 +9,7 @@
 // ---------------------------------------------------------------------------
 import { pathToFileURL } from 'node:url';
 import { LEGACY_REDIRECTS, SITE_ORIGIN } from '../src/data/legacy-redirects.mjs';
+import { SECURITY_HEADERS, HTML_MAX_AGE, NO_LISTING_DIRS } from './generate-htaccess.mjs';
 
 /** @returns {{ name: string, url: string, redirect: 'manual'|'follow', check: (r: {status:number, location:string, body:string}) => string|null }[]} */
 export function buildChecks(origin = SITE_ORIGIN) {
@@ -75,10 +76,44 @@ export function buildChecks(origin = SITE_ORIGIN) {
   // ⚠️ دارایی‌های هش‌دار و فونت باید کش یک‌ساله بگیرند (Lighthouse «cache lifetime»؛ بازدید دوم بدون شبکه).
   checks.push({
     name: 'فونت: Cache-Control یک‌ساله',
-    url: `${origin}/fonts/Vazirmatn-Variable.woff2`,
+    url: `${origin}/fonts/Vazirmatn-fa-400-900.woff2`,
     redirect: 'follow',
     check: (r) => (r.status !== 200 ? `کد ${r.status}` : /max-age=31536000/.test(r.cacheControl ?? '') ? null : `Cache-Control = «${r.cacheControl ?? ''}»`),
   });
+  // ⚠️ این سه بررسی رفتار *LiteSpeed هاست* را می‌سنجند، نه Apache محلی: .htaccess روی Apache آزموده شده، ولی
+  // اینکه سرور واقعی mod_headers/mod_expires را در ریشه اجرا می‌کند فقط از بیرون معلوم می‌شود.
+  checks.push({
+    name: 'هدرهای امنیتی (HSTS، nosniff، X-Frame-Options، Referrer-Policy)',
+    url: `${origin}/`,
+    redirect: 'follow',
+    check: (r) => {
+      const h = r.headers ?? {};
+      for (const name of ['X-Content-Type-Options', 'X-Frame-Options', 'Referrer-Policy']) {
+        const got = h[name.toLowerCase()] ?? '';
+        if (got.toLowerCase() !== SECURITY_HEADERS[name].toLowerCase()) return `${name} = «${got}» (انتظار «${SECURITY_HEADERS[name]}»)`;
+      }
+      const hsts = /max-age=(\d+)/.exec(h['strict-transport-security'] ?? '');
+      return hsts && Number(hsts[1]) >= 15552000 ? null : `Strict-Transport-Security = «${h['strict-transport-security'] ?? ''}» (انتظار دست‌کم شش ماه)`;
+    },
+  });
+  checks.push({
+    name: `کش HTML صریح و کوتاه (max-age=${HTML_MAX_AGE})`,
+    url: `${origin}/about/`,
+    redirect: 'follow',
+    check: (r) => {
+      const m = /max-age=(\d+)/.exec(r.cacheControl ?? '');
+      if (!m) return `Cache-Control = «${r.cacheControl ?? ''}» — بدون max-age مرورگر کش اکتشافی می‌کند (ده‌ها ساعت کهنگی)`;
+      return Number(m[1]) <= 3600 ? null : `max-age=${m[1]} برای HTML زیاد است (انتشار تازه دیده نمی‌شود)`;
+    },
+  });
+  for (const dir of NO_LISTING_DIRS) {
+    checks.push({
+      name: `فهرست پوشه‌ی /${dir}/ بسته`,
+      url: `${origin}/${dir}/`,
+      redirect: 'manual',
+      check: (r) => (r.status === 200 ? 'فهرست فایل‌ها از بیرون دیده می‌شود (Index of …)' : null),
+    });
+  }
   for (const path of ['/.htaccess', '/.ftp-deploy-sync-state.json']) {
     checks.push({
       name: `${path} از بیرون خوانده نشود`,
@@ -98,7 +133,7 @@ async function main() {
     try {
       const res = await fetch(c.url, { redirect: c.redirect, headers: { 'user-agent': 'craneyadak-verify-deploy' } });
       const body = (res.status === 200 || res.status === 404) && !/font|image/.test(res.headers.get('content-type') ?? '') ? await res.text() : '';
-      error = c.check({ status: res.status, location: res.headers.get('location') ?? '', body, cacheControl: res.headers.get('cache-control') ?? '' });
+      error = c.check({ status: res.status, location: res.headers.get('location') ?? '', body, cacheControl: res.headers.get('cache-control') ?? '', headers: Object.fromEntries(res.headers) });
     } catch (e) {
       error = `اتصال ناموفق: ${e instanceof Error ? e.message : e}`;
     }

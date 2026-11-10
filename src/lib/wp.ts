@@ -304,6 +304,19 @@ function cleanText(input: unknown): string | null {
   return asString(input);
 }
 
+/**
+ * متن تک‌خطی (نام محصول، نام برند، alt): فاصله‌های پشت‌سرهم و نویسه‌ی nbsp یکی می‌شوند.
+ *
+ * ⚠️ چرا: عنوان SAGA1-L12 در وردپرس با سه فاصله ذخیره شده بود («SAGA1-L12   کاناله» — عددی از
+ * وسطش پاک شده بود). مرورگر در H1 آن را یک فاصله نشان می‌دهد، پس هیچ‌کس نمی‌بیند؛ ولی همان رشته
+ * خام وارد `name` در JSON-LD، BreadcrumbList و متن پیام واتساپ می‌شد. غلط تایپی ویرایشگر نباید به
+ * داده‌ی ساختاریافته برسد. برای HTML بدنه (`bodyHtml`) به کار نرود — فاصله در <pre> معنا دارد.
+ */
+function cleanLine(input: unknown): string | null {
+  const s = asString(input);
+  return s === null ? null : s.replace(/[\s\u00a0]+/g, ' ').trim() || null;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
    تطبیق دسته‌ی وردپرس با تاکسونومی — علتِ «هیچ محصولی اضافه نشده»
    ═══════════════════════════════════════════════════════════════════════
@@ -470,7 +483,7 @@ function parseStockStatus(raw: unknown): StockStatus {
 }
 
 function normalizeProduct(node: RawProductNode): CraneProduct | null {
-  const name = cleanText(node.title);
+  const name = cleanLine(node.title);
   const slug = cleanText(node.slug);
   // بدون عنوان یا اسلاگ نه کارت معتبری قابل رندر است نه گره‌ی Product معتبر.
   if (!name || !slug) return null;
@@ -486,7 +499,7 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
     bodyHtml: cleanText(node.content),
 
     brandSlug: cleanText(brand?.slug),
-    brandNameFa: cleanText(brand?.title),
+    brandNameFa: cleanLine(brand?.title),
     brandNameEn: cleanText(brand?.brandFields?.nameEn),
     categorySlugs: resolveCategorySlugs(node.craneCategories?.nodes ?? []),
 
@@ -504,7 +517,7 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
     images: toArray<RawImageNode>(f?.gallery)
       .filter((img) => Boolean(img?.sourceUrl))
       .map((img) => {
-        const alt = cleanText(img.altText) ?? '';
+        const alt = cleanLine(img.altText) ?? '';
         return {
           url: img.sourceUrl!,
           // alt جعلی ممنوع؛ اما نام واقعی محصول یک alt توصیفی و درست است.

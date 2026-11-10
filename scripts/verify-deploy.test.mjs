@@ -57,6 +57,25 @@ t('۴۰۴ سالم', nf.check(res(404, '', '<html><body>404</body></html>')), fa
 t('soft-404 (۲۰۰)', nf.check(res(200, '', '<html>')), true);
 t('۴۰۴ با بدنه‌ی خام آپاچی', nf.check(res(404, '', 'Not Found')), true);
 
+const H = { 'x-content-type-options': 'nosniff', 'strict-transport-security': 'max-age=15552000', 'x-frame-options': 'SAMEORIGIN', 'referrer-policy': 'strict-origin-when-cross-origin' };
+const sec = by('هدرهای امنیتی')[0];
+t('هدرهای امنیتی سالم', sec.check({ status: 200, location: '', body: '', headers: H }), false);
+for (const k of Object.keys(H)) {
+  t(`هدر امنیتی: بدون ${k}`, sec.check({ status: 200, location: '', body: '', headers: { ...H, [k]: undefined } }), true);
+}
+t('هدر امنیتی: HSTS کوتاه (یک ساعت)', sec.check({ status: 200, location: '', body: '', headers: { ...H, 'strict-transport-security': 'max-age=3600' } }), true);
+t('هدرهای امنیتی: پاسخ بدون هیچ هدر', sec.check({ status: 200, location: '', body: '' }), true);
+const htmlCache = by('کش HTML')[0];
+t('کش HTML سالم', htmlCache.check({ status: 200, location: '', body: '', cacheControl: 'max-age=600' }), false);
+t('کش HTML: بدون هدر (کش اکتشافی مرورگر)', htmlCache.check({ status: 200, location: '', body: '', cacheControl: '' }), true);
+t('کش HTML: یک‌ساله', htmlCache.check({ status: 200, location: '', body: '', cacheControl: 'public, max-age=31536000, immutable' }), true);
+for (const dir of ['/fonts/', '/_astro/', '/pagefind/']) {
+  const c = by(`فهرست پوشه‌ی ${dir}`)[0];
+  t(`${dir} بسته (۴۱۰)`, c.check(res(410)), false);
+  t(`${dir} بسته (۴۰۳)`, c.check(res(403)), false);
+  t(`${dir} فهرست باز (۲۰۰)`, c.check(res(200, '', '<title>Index of /fonts/</title>')), true);
+}
+
 for (const path of ['/.htaccess', '/.ftp-deploy-sync-state.json']) {
   const c = by(path)[0];
   t(`${path} بسته`, c.check(res(403)), false);

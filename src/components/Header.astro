@@ -61,7 +61,12 @@ const navLinks = [
   data-wp-base={wpBase}
 >
   <div class="w-full max-w-7xl 2xl:max-w-[96rem] mx-auto flex flex-wrap xl:flex-nowrap justify-between items-center gap-y-2 xl:gap-x-5 px-4 md:px-8">
-    <a href="/" class="flex min-w-0 items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-accent" aria-label={`صفحه اصلی ${SITE.name}`}>
+    {/* ⚠️ max-lg:flex-1 (۱۹ آبان ۱۴۰۵؛ فقط زیر lg، چون از lg ناوبری هم در همین ردیف است و justify-between آن را وسط نگه می‌دارد): ظرف هدر زیر xl «flex-wrap» است و flex پیش از کوچک‌کردن، می‌شکند. بدون
+        پایه‌ی صفر، پیوند نشان (۲۴۷px با شعار) + آیکن‌ها (۹۶px) در ۳۷۵px و باریک‌تر جا نمی‌شد و آیکن‌ها به ردیف
+        جدا می‌افتادند: هدر چسبان ۱۸۱px به‌جای ۱۲۴px — ۲۲٪ از صفحه‌ی گوشی، روی همه‌ی صفحه‌ها (اندازه‌گیری روی
+        preview در ۳۷۵px). با flex-1 پیوند نشان باقی‌مانده‌ی ردیف را می‌گیرد و شعار با «…» کوتاه می‌شود — همان
+        رفتاری که کامنت min-w-0 پایین از اول قصدش را داشت. */}
+    <a href="/" class="flex max-lg:flex-1 min-w-0 items-center gap-3 rounded-lg p-1 focus:outline-none focus:ring-2 focus:ring-accent" aria-label={`صفحه اصلی ${SITE.name}`}>
       {/* چینش راست‌به‌چپ: `items-start` به‌جای `items-end`.
           در ظرف flex عمودی، محور متقاطع همان محور افقی است و با dir="rtl"
           مقدار `start` یعنی سمت راست. نسخه‌ی قبل `items-end` بود که در

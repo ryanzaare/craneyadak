@@ -64,7 +64,7 @@ const jsonLd = {
       datePublished: post.isoDate,
       dateModified: post.isoModified,
       articleSection: post.category,
-      inLanguage: SITE.locale,
+      inLanguage: SITE.lang,
       image: `${SITE.url}/og-default.jpg`,
       /* ⚠️ نویسنده‌ی واقعی، نه سازمان. در دسته‌ی YMYL (قطعه‌ای که بار
          چندتنی را نگه می‌دارد)، نویسنده‌ی قابل‌شناسایی یک سیگنال E-E-A-T
@@ -87,7 +87,7 @@ const jsonLd = {
       name: title,
       description,
       isPartOf: { '@id': `${SITE.url}/#website` },
-      inLanguage: SITE.locale,
+      inLanguage: SITE.lang,
     },
   ],
 };

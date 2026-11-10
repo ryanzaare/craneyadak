@@ -40,7 +40,7 @@ import Questions from '../../components/Questions.astro';
 import { getQuestions, questionsJsonLd } from '../../lib/questions';
 import { autolinkHtml } from '../../lib/autolink';
 import { productReadiness } from '../../lib/indexability';
-import { buildTitle, buildDescription } from '../../lib/seo-meta';
+import { buildTitle, buildDescription, productTitleParts } from '../../lib/seo-meta';
 import { SITE } from '../../data/site';
 import { findCategory, categoryPath, siloPath, findBrand } from '../../data/taxonomy';
 import {
@@ -82,10 +82,7 @@ const brand = product.brandSlug ? findBrand(product.brandSlug) : undefined;
 /* ⚠️ نام محصول تنها قطعه‌ی غیرقابل‌حذف است. عنوان SAGA1-L12 در ۹۱
    کاراکتر ساخته می‌شد و بریده می‌شد به ۵۷ — و چیزی که می‌افتاد «| کرین یدک»
    بود، یعنی نام برند از SERP حذف می‌شد و «…» جایش می‌نشست. */
-const title = buildTitle(
-  [product.name, product.sku ? `کد ${product.sku}` : null, SITE.name],
-  `/products/${product.slug}/`,
-);
+const title = buildTitle(productTitleParts(product.name, product.sku, SITE.name), `/products/${product.slug}/`);
 
 /* متا دیسکریپشن از داده‌ی واقعی ساخته می‌شود، نه از یک قالب عمومی.
    ⚠️ این یکی `join(' — ').slice(0, 300)` بود — یعنی دقیقاً همان «قطعه‌ها را
@@ -296,7 +293,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
 
         {modifiedDate && (
           <p class="md:col-start-1 md:col-span-7 md:row-start-4 text-xs text-steel-600">
-            آخرین به‌روزرسانی اطلاعات این قطعه: <time datetime={product.modified!}>{modifiedDate}</time>
+            آخرین به‌روزرسانی اطلاعات این قطعه: <time data-lastmod datetime={product.modified!}>{modifiedDate}</time>
           </p>
         )}
       </div>

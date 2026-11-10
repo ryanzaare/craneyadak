@@ -176,3 +176,33 @@ export function shrinkageProblems(prev, curr, { minLost = 5, minRatio = 0.15 } =
   }
   return [];
 }
+
+/**
+ * تاریخ آخرین تغییر *واقعی* صفحه برای `<lastmod>` در sitemap، یا null.
+ *
+ * ⚠️ گوگل lastmod را فقط وقتی به کار می‌برد که «همواره و قابل‌راستی‌آزمایی درست» باشد؛ زمان build
+ * برای همه‌ی صفحه‌ها (هر شب یک تاریخ تازه) دقیقاً همان چیزی است که باعث می‌شود کل ستون نادیده گرفته
+ * شود. پس فقط دو منبع که از وردپرس می‌آیند: `dateModified` در JSON-LD (مقاله، صفحه‌ی حقوقی) و
+ * `<time data-lastmod datetime>` (صفحه‌ی محصول). صفحه‌ای که هیچ‌کدام را ندارد lastmod نمی‌گیرد.
+ *
+ * @param {string} html
+ * @param {number} [now] برای آزمون
+ * @returns {string|null} YYYY-MM-DD
+ */
+export function sitemapLastmod(html, now = Date.now()) {
+  const m =
+    /"dateModified"\s*:\s*"(\d{4}-\d{2}-\d{2})/.exec(html) ??
+    /<time\b(?=[^>]*\bdata-lastmod\b)[^>]*\bdatetime=["'](\d{4}-\d{2}-\d{2})/.exec(html);
+  if (!m) return null;
+  const ts = Date.parse(`${m[1]}T00:00:00Z`);
+  // Date.parse تاریخ ناممکن را NaN می‌دهد، ولی «۲۰۲۶-۰۲-۳۰» را به مارس می‌غلتاند — رفت‌وبرگشت همین را می‌گیرد.
+  if (Number.isNaN(ts) || new Date(ts).toISOString().slice(0, 10) !== m[1]) return null;
+  if (ts > now + 86_400_000) return null; // ساعت سرور وردپرس جلو باشد یا نوشته‌ی زمان‌بندی‌شده
+  return m[1];
+}
+
+/** `<lastmod>` را پس از `<loc>` یک بلوک `<url>` می‌گذارد؛ اگر تاریخ نیست یا lastmod هست، دست نمی‌زند. */
+export function addSitemapLastmod(block, date) {
+  if (!date || /<lastmod>/.test(block)) return block;
+  return block.replace('</loc>', `</loc><lastmod>${date}</lastmod>`);
+}

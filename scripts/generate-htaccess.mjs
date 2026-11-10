@@ -31,6 +31,38 @@ export const CACHE_DIRS = {
   fonts: 'public, max-age=31536000, immutable',
 };
 
+/**
+ * هدرهای امنیتی همه‌ی پاسخ‌ها. تا ۱۹ آبان ۱۴۰۵ سایت زنده *هیچ‌کدام* را نمی‌فرستاد (سنجیده با fetch روی
+ * craneyadak.com). هیچ‌کدام رفتار صفحه را عوض نمی‌کند:
+ *  • HSTS شش‌ماهه، بدون includeSubDomains (admin.craneyadak.com جدا می‌ماند) و بدون preload (برگشت‌ناپذیر است).
+ *  • nosniff: مرورگر نوع فایل را حدس نزند.
+ *  • X-Frame-Options: سایت داخل iframe دامنه‌ی دیگر باز نشود (کلیک‌دزدی روی پرداخت/حساب). فاکتور خود سایت srcdoc
+ *    است و نقشه‌ی تماس iframe *خروجی* — این هدر به هیچ‌کدام کاری ندارد.
+ *  • Permissions-Policy: سایت دوربین/میکروفون/موقعیت نمی‌خواهد؛ iframe نقشه هم نگیرد.
+ * ⚠️ `Header set` نه `Header always set`: همین شکل در .htaccess پوشه‌ی /fonts/ روی LiteSpeed هاست کار می‌کند
+ * (verify-deploy آن را می‌سنجد)؛ شکل always روی این سرور آزموده نشده است.
+ * ⚠️ CSP عمداً نیست: CSS و اسکریپت‌های inline (inlineStylesheets: 'always'، JSON-LD، نماد اینماد) بدون nonce
+ * زیر CSP سخت‌گیر می‌شکنند و سایت استاتیک nonce ندارد.
+ */
+export const SECURITY_HEADERS = {
+  'Strict-Transport-Security': 'max-age=15552000',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
+
+/**
+ * عمر کش HTML به ثانیه. ⚠️ چرا لازم است: سرور برای HTML هیچ Cache-Control نمی‌فرستاد، پس مرورگر «کش اکتشافی»
+ * می‌کرد: ۱۰٪ از سنّ Last-Modified. صفحه‌ای که دو هفته دست نخورده بود ~۳۳ ساعت بدون پرسیدن از سرور از کش می‌آمد —
+ * یعنی پس از انتشار، بازدیدکننده‌ی برگشتی (و خود کارفرما) تا یک روز و نیم نسخه‌ی قدیمی را می‌دید، با اسکریپت‌های
+ * هش‌داری که دیگر روی سرور نیستند. ۱۰ دقیقه: prefetch «tap» هنوز ناوبری آنی می‌دهد و کهنگی سقف دارد.
+ */
+export const HTML_MAX_AGE = 600;
+
+/** پوشه‌های دارایی که index ندارند: LiteSpeed فهرست فایل‌هایشان را نشان می‌داد («Index of /fonts/» روی سایت زنده). */
+export const NO_LISTING_DIRS = ['_astro', 'fonts', 'pagefind'];
+
 export function buildCacheHtaccess(value) {
   return `# تولیدشده توسط scripts/generate-htaccess.mjs — دستی ویرایش نکنید.
 <IfModule mod_headers.c>
@@ -67,7 +99,21 @@ export function buildHtaccess(redirects = LEGACY_REDIRECTS, wildcards = LEGACY_W
   }
   // فایل وضعیت انتشار FTP (فهرست همه‌ی فایل‌های سایت) از بیرون قابل‌خواندن نباشد.
   lines.push('# فایل وضعیت GitHub Actions (SamKirkland/FTP-Deploy-Action) از بیرون 410 شود', 'RedirectMatch gone ^/\\.ftp-deploy-sync-state\\.json$');
-  lines.push('</IfModule>', '', 'ErrorDocument 404 /404.html', '');
+  // ⚠️ `gone` (۴۱۰) نه `Options -Indexes`: Options در .htaccess به AllowOverride وابسته است و خطایش ۵۰۰ روی *کل*
+  // سایت است؛ `RedirectMatch gone` همان دستوری است که خط بالا را روی همین سرور اجرا می‌کند. ۴۱۰ ضمناً صفحه‌های
+  // «Index of …» را که شاید ایندکس شده باشند زودتر از ۴۰۴ از گوگل بیرون می‌برد.
+  lines.push('# فهرست پوشه‌های دارایی (Index of /fonts/ …) بسته شود', `RedirectMatch gone ^/(${NO_LISTING_DIRS.map(escapeRe).join('|')})(/.*)?/$`);
+  lines.push('</IfModule>', '');
+  lines.push('<IfModule mod_headers.c>', ...Object.entries(SECURITY_HEADERS).map(([k, v]) => `Header set ${k} "${v}"`), '</IfModule>', '');
+  lines.push(
+    '# HTML: کش کوتاه و صریح (بدون این، مرورگر تا ده‌ها ساعت نسخه‌ی قدیمی را نشان می‌دهد)',
+    '<IfModule mod_expires.c>',
+    'ExpiresActive On',
+    `ExpiresByType text/html "access plus ${HTML_MAX_AGE} seconds"`,
+    '</IfModule>',
+    '',
+  );
+  lines.push('ErrorDocument 404 /404.html', '');
   return lines.join('\n');
 }
 
@@ -81,5 +127,5 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   for (const [dir, value] of Object.entries(CACHE_DIRS)) {
     if (existsSync(`${dist}/${dir}`)) writeFileSync(`${dist}/${dir}/.htaccess`, buildCacheHtaccess(value));
   }
-  console.log(`✅ ${dist}/.htaccess ساخته شد — ${Object.keys(LEGACY_REDIRECTS).length} ریدایرکت ۳۰۱ + HTTPS + www + 404.`);
+  console.log(`✅ ${dist}/.htaccess ساخته شد — ${Object.keys(LEGACY_REDIRECTS).length} ریدایرکت ۳۰۱ + HTTPS + www + 404 + ${Object.keys(SECURITY_HEADERS).length} هدر امنیتی + کش HTML ${HTML_MAX_AGE} ثانیه.`);
 }

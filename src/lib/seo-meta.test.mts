@@ -18,7 +18,7 @@
 // اجرا:  npm run test:seo
 // ---------------------------------------------------------------------------
 
-import { buildTitle, buildDescription, metaExcerpt, TITLE_MAX, DESC_MAX } from './seo-meta.ts';
+import { buildTitle, buildDescription, metaExcerpt, productTitleParts, TITLE_MAX, DESC_MAX } from './seo-meta.ts';
 
 let failed = 0;
 const ok = (cond: unknown, msg: string) => {
@@ -27,6 +27,21 @@ const ok = (cond: unknown, msg: string) => {
 };
 
 const SITE = 'کرین یدک';
+
+console.log('\n── عنوان محصول: کد فنی دو بار نمی‌آید ──');
+
+// عنوان واقعی سایت زنده (۱۹ آبان ۱۴۰۵): «ریموت کنترل ساگا SAGA1-L12 کاناله دو سرعته | کد SAGA1-L12» —
+// کد دو بار، و «کرین یدک» به‌خاطر همان تکرار جا نشده بود.
+const dup = buildTitle(productTitleParts('ریموت کنترل ساگا SAGA1-L12 ۱۲ کاناله دو سرعته', 'SAGA1-L12', SITE));
+ok(dup === 'ریموت کنترل ساگا SAGA1-L12 ۱۲ کاناله دو سرعته | کرین یدک', `نام حاوی کد: کد تکرار نمی‌شود و نام سایت می‌ماند («${dup}»)`);
+ok((dup.match(/SAGA1-L12/g) ?? []).length === 1, 'کد فنی دقیقاً یک بار در عنوان است');
+const caseIns = productTitleParts('ریموت saga1-l12 ساگا', 'SAGA1-L12', SITE);
+ok(caseIns.length === 2 && caseIns[1] === SITE, 'تطبیق کد بی‌توجه به بزرگی/کوچکی حروف');
+const noSkuInName = productTitleParts('چرخ جرثقیل دماگ', 'DRS-200', SITE);
+ok(noSkuInName.join('|') === `چرخ جرثقیل دماگ|کد DRS-200|${SITE}`, 'نام بدون کد: «کد …» مثل قبل اضافه می‌شود');
+ok(productTitleParts('قلاب ۵ تن', null, SITE).join('|') === `قلاب ۵ تن|${SITE}`, 'محصول بدون کد فنی: فقط نام و سایت');
+// کد کوتاهی که تصادفاً زیررشته‌ی یک واژه است نباید «موجود در نام» حساب شود.
+ok(productTitleParts('کنتاکتور LC1D09 اشنایدر', 'D09', SITE).length === 3, 'کد زیررشته‌ی یک کد دیگر = تکرار نیست (مرز واژه)');
 
 console.log('\n── عنوان: قطعه حذف می‌شود، نه نصفه می‌شود ──');
 

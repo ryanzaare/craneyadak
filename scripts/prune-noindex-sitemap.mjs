@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------
 import { readFileSync, writeFileSync, existsSync, globSync } from 'node:fs';
 import path from 'node:path';
+import { sitemapLastmod, addSitemapLastmod } from './build-audit.mjs';
 
 const dist = process.argv[2] || 'dist';
 const maps = globSync(`${dist}/sitemap-*.xml`).filter((f) => !f.endsWith('sitemap-index.xml'));
@@ -24,6 +25,7 @@ if (!maps.length) {
 
 const pruned = [];
 let kept = 0;
+let dated = 0;
 for (const map of maps) {
   const xml = readFileSync(map, 'utf8');
   const out = xml.replace(/<url>\s*<loc>([^<]+)<\/loc>[\s\S]*?<\/url>/g, (block, loc) => {
@@ -36,12 +38,15 @@ for (const map of maps) {
       return '';
     }
     kept++;
-    return block;
+    // lastmod فقط از تاریخ واقعی خود صفحه (مقاله/حقوقی/محصول)؛ بقیه بدون lastmod می‌مانند — دلیل در build-audit.mjs.
+    const withDate = addSitemapLastmod(block, sitemapLastmod(html));
+    if (withDate !== block) dated++;
+    return withDate;
   });
   if (out !== xml) writeFileSync(map, out);
 }
 
-console.log(`✅ sitemap: ${kept} نشانی ایندکس‌پذیر؛ ${pruned.length} نشانی noindex برداشته شد.`);
+console.log(`✅ sitemap: ${kept} نشانی ایندکس‌پذیر (${dated} با lastmod واقعی)؛ ${pruned.length} نشانی noindex برداشته شد.`);
 // ⚠️ هر نوع صفحه‌ی noindex جدا چاپ می‌شود تا «صفحه‌ی ناقص» دیده شود نه فراموش.
 // دلیل ناقص‌بودن هر محصول در لاگ `[seo]` مرحله‌ی واکشی هست (src/lib/indexability.ts).
 for (const [label, re] of [

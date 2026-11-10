@@ -1,6 +1,6 @@
 // scripts/build-audit.test.mjs — node scripts/build-audit.test.mjs
 // ورودی خراب شناخته‌شده عمداً هست (قاعده‌ی ۶): اگر ممیزی چیزی را نگیرد، این‌جا قرمز می‌شود.
-import { parsePage, routeOf, routeMatrixProblems, metadataProblems, productSchemaProblems, shrinkageProblems, emptyListingProblems, SITE_ORIGIN } from './build-audit.mjs';
+import { parsePage, routeOf, routeMatrixProblems, metadataProblems, productSchemaProblems, shrinkageProblems, emptyListingProblems, sitemapLastmod, addSitemapLastmod, SITE_ORIGIN } from './build-audit.mjs';
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -84,6 +84,19 @@ eq('حذف دو مسیر عادی است', shrinkageProblems(prev, prev.slice(2)
 has('ریزش بزرگ', shrinkageProblems(prev, prev.slice(20)), 'ALLOW_SHRINK=1');
 eq('اولین build', shrinkageProblems([], prev), []);
 eq('رشد مجاز', shrinkageProblems(prev, [...prev, '/new/']), []);
+
+console.log('\n── lastmod در sitemap: فقط تاریخ واقعی، وگرنه هیچ ──');
+const NOW = Date.parse('2026-11-10T00:00:00Z');
+eq('dateModified از JSON-LD', sitemapLastmod(page({ ld: [{ '@type': 'Article', dateModified: '2026-09-12' }] }), NOW), '2026-09-12');
+eq('<time data-lastmod> صفحه‌ی محصول (فقط بخش تاریخ)', sitemapLastmod(page({ body: '<time data-lastmod datetime="2026-10-26T15:13:33">۴ آبان</time>' }), NOW), '2026-10-26');
+eq('<time> بدون data-lastmod (تاریخ انتشار مقاله) شمرده نمی‌شود', sitemapLastmod(page({ body: '<time datetime="2026-09-12">x</time>' }), NOW), null);
+eq('صفحه‌ی بدون تاریخ = null (lastmod ساختگی ممنوع)', sitemapLastmod(page(), NOW), null);
+eq('تاریخ آینده رد می‌شود', sitemapLastmod(page({ ld: [{ dateModified: '2027-01-01' }] }), NOW), null);
+eq('تاریخ ناممکن رد می‌شود', sitemapLastmod(page({ ld: [{ dateModified: '2026-13-45' }] }), NOW), null);
+eq('رشته‌ی غیرتاریخ رد می‌شود', sitemapLastmod(page({ ld: [{ dateModified: 'دیروز' }] }), NOW), null);
+eq('lastmod پس از loc درج می‌شود', addSitemapLastmod('<url><loc>https://x/a/</loc></url>', '2026-09-12'), '<url><loc>https://x/a/</loc><lastmod>2026-09-12</lastmod></url>');
+eq('lastmod موجود دوباره‌نویسی نمی‌شود', addSitemapLastmod('<url><loc>https://x/a/</loc><lastmod>2026-01-01</lastmod></url>', '2026-09-12'), '<url><loc>https://x/a/</loc><lastmod>2026-01-01</lastmod></url>');
+eq('بدون تاریخ، بلوک دست‌نخورده', addSitemapLastmod('<url><loc>https://x/a/</loc></url>', null), '<url><loc>https://x/a/</loc></url>');
 
 if (failed) {
   console.error(`\n❌ ${failed} مورد ناموفق`);

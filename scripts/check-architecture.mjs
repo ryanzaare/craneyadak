@@ -645,6 +645,13 @@ for (const [from, to] of Object.entries(LEGACY_REDIRECTS)) {
 if (!/X-Forwarded-Proto/.test(htaccess)) problems.push('شرط HTTPS در .htaccess X-Forwarded-Proto را نمی‌بیند — پشت پروکسی حلقه‌ی ریدایرکت می‌شود.');
 if (!/RewriteCond %\{REQUEST_URI\} !\^\/\\\.well-known\//.test(htaccess)) problems.push('شرط HTTPS در .htaccess /.well-known/ را مستثنا نکرده — تمدید خودکار SSL می‌شکند.');
 if (!/ErrorDocument 404 \/404\.html/.test(htaccess)) problems.push('.htaccess ErrorDocument 404 ندارد.');
+// هدرهای امنیتی، کش HTML و بستن فهرست پوشه‌ها (۱۹ آبان ۱۴۰۵) — هر سه روی سایت زنده نبودند.
+for (const h of ['Strict-Transport-Security', 'X-Content-Type-Options', 'X-Frame-Options']) {
+  if (!new RegExp(`^Header set ${h} "`, 'm').test(htaccess)) problems.push(`.htaccess هدر امنیتی ${h} را نمی‌فرستد.`);
+}
+if (/includeSubDomains|preload/i.test(htaccess)) problems.push('.htaccess: HSTS با includeSubDomains/preload — زیردامنه‌ی admin و برگشت‌ناپذیری preload را در نظر بگیرید و با کارفرما هماهنگ کنید.');
+if (!/^ExpiresByType text\/html "access plus \d+ seconds"$/m.test(htaccess)) problems.push('.htaccess برای HTML عمر کش صریح ندارد — مرورگر کش اکتشافی می‌کند و انتشار تازه دیده نمی‌شود.');
+if (!/^RedirectMatch gone \^\/\(_astro\|fonts\|pagefind\)\(\/\.\*\)\?\/\$$/m.test(htaccess)) problems.push('.htaccess فهرست پوشه‌های دارایی (/_astro/، /fonts/، /pagefind/) را نمی‌بندد.');
 
 /* ═══ ۷) قرارداد workflow انتشار ═══════════════════════════════════════
    .github/workflows/deploy.yml: (الف) روی push اجرا نشود — هر کامیت نباید سایت زنده را
