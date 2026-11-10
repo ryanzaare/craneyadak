@@ -131,7 +131,10 @@ function add_options_page( ...$args ) {}
 function register_setting( ...$args ) {}
 function settings_fields( $group ) {}
 function submit_button( $label = '' ) { echo $label; }
-function current_user_can( $cap ) { return true; }
+// ⚠️ پیش‌فرض true (همه‌ی آزمون‌های قدیمی مدیر فرض می‌کنند)؛ آزمون سخت‌سازی با cyh_test_can «بازدیدکننده» می‌سازد.
+function current_user_can( $cap ) { return $GLOBALS['cyh_test_can'] ?? true; }
+function is_author() { return $GLOBALS['cyh_test_is_author'] ?? false; }
+function is_ssl() { return $GLOBALS['cyh_test_is_ssl'] ?? true; }
 function is_admin() { return $GLOBALS['cyh_test_is_admin'] ?? false; }
 function admin_url( $path = '' ) { return 'https://cms.example.com/wp-admin/' . $path; }
 function status_header( $code ) {}
@@ -3114,6 +3117,78 @@ $nc_routes = apply_filters( 'rest_endpoints', [ '/wp/v2/comments' => 1, '/wp/v2/
 $mail_ck( false === apply_filters( 'comments_open', true, 1 ) && false === apply_filters( 'pings_open', true, 1 ) && $nc_blocked
 		&& ! isset( $nc_routes['/wp/v2/comments'] ) && ! isset( $nc_routes['/wp/v2/comments/(?P<id>[\\d]+)'] ) && isset( $nc_routes['/wp/v2/posts'] ) && isset( $nc_routes['/crane-yadak/v1/contact'] ),
 	'کامنت بومی: comments_open/pings_open بسته، POST فرم بومی ۴۰۳، مسیر REST کامنت حذف؛ مسیرهای دیگر دست‌نخورده', 'کامنت بومی وردپرس باید کاملاً بسته باشد' );
+
+// ── سخت‌سازی هسته‌ی وردپرس (class-hardening.php) ──
+// هر بررسی هم حالت «بسته» و هم حالت «نباید بسته شود» را دارد: سپری که کارکنان را هم بیرون کند خرابی است، نه امنیت.
+$hd_routes = [ '/wp/v2/users' => 1, '/wp/v2/users/(?P<id>[\\d]+)' => 1, '/wp/v2/users/me' => 1, '/wp/v2/posts' => 1, '/crane-yadak/v1/contact' => 1, '/wp/v2/comments' => 1 ];
+$GLOBALS['cyh_test_can'] = false;
+$hd_anon = apply_filters( 'rest_endpoints', $hd_routes );
+$GLOBALS['cyh_test_can'] = true;
+$hd_staff = apply_filters( 'rest_endpoints', $hd_routes );
+$mail_ck( ! isset( $hd_anon['/wp/v2/users'] ) && ! isset( $hd_anon['/wp/v2/users/(?P<id>[\\d]+)'] ) && ! isset( $hd_anon['/wp/v2/users/me'] )
+		&& isset( $hd_anon['/wp/v2/posts'] ) && isset( $hd_anon['/crane-yadak/v1/contact'] ),
+	'REST: بازدیدکننده‌ی ناشناس هیچ مسیر /wp/v2/users نمی‌بیند؛ مسیرهای دیگر دست‌نخورده', 'فهرست کاربران REST برای ناشناس باز است (نشت نام کاربری)' );
+$mail_ck( isset( $hd_staff['/wp/v2/users'] ) && isset( $hd_staff['/wp/v2/users/me'] ),
+	'REST: کارمند (edit_posts) مسیر کاربران را دارد — منوی نویسنده‌ی ویرایشگر نمی‌شکند', 'مسیر کاربران برای کارکنان هم بسته شد' );
+$mail_ck( 'x' === apply_filters( 'rest_endpoints', 'x' ), 'REST: ورودی غیرآرایه fatal نمی‌دهد', 'rest_endpoints با ورودی غیرآرایه شکست' );
+
+$mail_ck( false === apply_filters( 'xmlrpc_enabled', true ) && [] === apply_filters( 'xmlrpc_methods', [ 'pingback.ping' => 'x', 'system.multicall' => 'y', 'wp.getUsersBlogs' => 'z' ] ),
+	'XML-RPC: غیرفعال و بدون هیچ متد (pingback و multicall هم)', 'XML-RPC هنوز متد دارد' );
+$hd_h = apply_filters( 'wp_headers', [ 'X-Pingback' => 'https://x/xmlrpc.php', 'Content-Type' => 'text/html' ] );
+$mail_ck( ! isset( $hd_h['X-Pingback'] ) && isset( $hd_h['Content-Type'] ), 'هدر X-Pingback برداشته شد، بقیه ماند', 'X-Pingback هنوز فرستاده می‌شود' );
+
+$hd_author = static function ( $is_author, $query, $can ) {
+	$GLOBALS['cyh_test_is_author'] = $is_author;
+	$GLOBALS['cyh_test_can']       = $can;
+	$_GET                          = $query;
+	try {
+		cyh_hardening_block_author_archive();
+		$blocked = false;
+	} catch ( Exception $e ) {
+		$blocked = 0 === strpos( $e->getMessage(), 'wp_die' );
+	}
+	$_GET                          = [];
+	$GLOBALS['cyh_test_is_author'] = false;
+	$GLOBALS['cyh_test_can']       = true;
+	return $blocked;
+};
+$mail_ck( $hd_author( true, [], false ) && $hd_author( false, [ 'author' => '1' ], false ),
+	'شمارش نام کاربری: /author/… و ?author=1 برای ناشناس ۴۰۴', '?author=N هنوز نام کاربری را لو می‌دهد' );
+$mail_ck( ! $hd_author( false, [], false ) && ! $hd_author( true, [ 'author' => '1' ], true ),
+	'شمارش نام کاربری: صفحه‌ی عادی و کارمند وارد‌شده بسته نمی‌شوند', 'سپر ?author= صفحه‌ی عادی یا کارمند را هم بست' );
+
+$_SERVER['REMOTE_ADDR'] = '203.0.113.7';
+$hd_key                 = cyh_login_fail_key( '203.0.113.7' );
+delete_transient( $hd_key );
+$hd_user = (object) [ 'ID' => 1 ];
+for ( $i = 0; $i < CYH_LOGIN_MAX_FAILS - 1; $i++ ) {
+	do_action( 'wp_login_failed', 'ryan', new WP_Error( 'incorrect_password', 'x' ) );
+}
+$hd_before = apply_filters( 'authenticate', $hd_user, 'ryan', 'secret' );
+do_action( 'wp_login_failed', 'ryan', new WP_Error( 'incorrect_password', 'x' ) );
+$hd_locked = apply_filters( 'authenticate', $hd_user, 'ryan', 'secret' );
+$hd_page   = apply_filters( 'authenticate', null, '', '' );
+$_SERVER['REMOTE_ADDR'] = '198.51.100.9';
+$hd_other               = apply_filters( 'authenticate', $hd_user, 'ryan', 'secret' );
+$_SERVER['REMOTE_ADDR'] = '203.0.113.7';
+$mail_ck( $hd_before === $hd_user, 'ورود: ' . ( CYH_LOGIN_MAX_FAILS - 1 ) . ' شکست هنوز قفل نمی‌کند', 'سقف ورود زودتر از حد قفل کرد' );
+$mail_ck( is_wp_error( $hd_locked ) && 'cyh_login_locked' === $hd_locked->get_error_code(),
+	'ورود: شکست ' . CYH_LOGIN_MAX_FAILS . 'م قفل می‌کند — حتی با رمز درست', 'پس از ' . CYH_LOGIN_MAX_FAILS . ' شکست، ورود هنوز باز است' );
+$mail_ck( null === $hd_page, 'ورود: بارگذاری صفحه‌ی ورود (نام کاربری خالی) در حالت قفل خطا نمی‌گیرد', 'صفحه‌ی ورود پیش از هر تلاش پیام قفل می‌دهد' );
+$mail_ck( $hd_other === $hd_user, 'ورود: قفل به IP است — IP دیگر آزاد است (مدیر از بیرون قفل نمی‌شود)', 'قفل ورود به IP محدود نیست' );
+do_action( 'wp_login', 'ryan', $hd_user );
+$mail_ck( false === get_transient( $hd_key ) && apply_filters( 'authenticate', $hd_user, 'ryan', 'secret' ) === $hd_user,
+	'ورود: ورود موفق شمارنده را پاک می‌کند', 'شمارنده‌ی شکست پس از ورود موفق ماند' );
+cyh_login_record_failure();
+cyh_login_clear_failures();
+$mail_ck( true, 'ورود: هوک‌ها بدون آرگومان fatal نمی‌دهند (PHP 8)', '' );
+
+$hd_ssl  = cyh_hardening_headers( true );
+$hd_http = cyh_hardening_headers( false );
+$mail_ck( 'nosniff' === $hd_ssl['X-Content-Type-Options'] && 'max-age=15552000' === $hd_ssl['Strict-Transport-Security']
+		&& false === strpos( $hd_ssl['Strict-Transport-Security'], 'includeSubDomains' ) && false === strpos( $hd_ssl['Strict-Transport-Security'], 'preload' ),
+	'هدرها: nosniff + HSTS شش‌ماهه بدون includeSubDomains/preload روی HTTPS', 'هدرهای امنیتی HTTPS ناقص یا HSTS بیش از حد سخت‌گیر است' );
+$mail_ck( ! isset( $hd_http['Strict-Transport-Security'] ) && isset( $hd_http['X-Content-Type-Options'] ), 'هدرها: روی HTTP بدون HSTS', 'HSTS روی HTTP فرستاده می‌شود' );
 
 echo "\n----------------------------------------\n";
 if ( empty( $errors ) ) {

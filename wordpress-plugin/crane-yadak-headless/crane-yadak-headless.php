@@ -5,7 +5,7 @@
  * Description:       بک‌اند Headless برای فرانت‌اند Astro سایت کرین یدک. CPTهای محصول و برند
  *                     را با پشتیبانی WPGraphQL ثبت می‌کند، فیلدهای ACF Pro را از طریق Local JSON همگام
  *                     نگه می‌دارد، و یک اندپوینت REST امن برای فرم استعلام قیمت فراهم می‌کند.
- * Version:           3.28.1
+ * Version:           3.29.0
  * Requires PHP:      8.0
  * Requires Plugins:  advanced-custom-fields-pro, wp-graphql
  * Author:            Crane Yadak Engineering
@@ -60,7 +60,7 @@ if ( defined( 'CYH_VERSION' ) ) {
 	return;
 }
 
-define( 'CYH_VERSION', '3.28.1' );
+define( 'CYH_VERSION', '3.29.0' );
 define( 'CYH_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CYH_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -395,6 +395,8 @@ require_once CYH_PLUGIN_DIR . 'includes/class-mail.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-order-invoice.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-order-fulfilment.php';
 require_once CYH_PLUGIN_DIR . 'includes/class-product-authenticity.php';
+// سخت‌سازی هسته‌ی وردپرس (XML-RPC، فهرست کاربران، سقف ورود). پس از class-rest-contact.php که cyh_client_ip را دارد.
+require_once CYH_PLUGIN_DIR . 'includes/class-hardening.php';
 
 /**
  * فلاش‌کردن Rewrite Rules هنگام فعال/غیرفعال‌سازی — بدون این، اسلاگ‌های

@@ -33,6 +33,12 @@
 | `CYH_SMTP_HOST`، `CYH_SMTP_PORT`، `CYH_SMTP_SECURE`، `CYH_SMTP_USER`، `CYH_SMTP_PASS` | ارسال ایمیل از راه SMTP (`includes/class-mail.php`) |
 | `CYH_MAIL_FROM`، `CYH_MAIL_FROM_NAME` | اختیاری: فرستنده‌ی ایمیل |
 
+## سخت‌سازی (از ۳.۲۹.۰)
+
+`includes/class-hardening.php` بدون هیچ تنظیمی فعال است: XML-RPC بسته، فهرست کاربران REST و `?author=N` فقط برای
+کارکنان، سقف ۱۰ تلاش ناموفق ورود در ۱۵ دقیقه به‌ازای هر IP (اگر خودتان قفل شدید: ۱۵ دقیقه صبر، یا از اینترنت دیگر).
+فهرست پوشه‌ی `uploads` از cPanel بسته می‌شود — `docs/deployment-guide.md`.
+
 ## آزمون محلی (بدون وردپرس)
 
 ```bash

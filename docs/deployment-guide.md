@@ -72,4 +72,16 @@ Verify (سبز = سرور واقعاً ۳۰۱/HTTPS/۴۰۴ را درست می‌
    `curl -I http://www.craneyadak.com/about` (یک ۳۰۱ مستقیم به `https://craneyadak.com/about/`)
    `curl -I https://craneyadak.com/does-not-exist` (کد ۴۰۴)
 3. ریدایرکت جدید = فقط یک ویرایش در `src/data/legacy-redirects.mjs`؛ بقیه خودکار.
+4. همان فایل از ۱۹ آبان ۱۴۰۵ سه چیز دیگر هم دارد (`scripts/generate-htaccess.mjs`): پنج هدر امنیتی (HSTS
+   شش‌ماهه بدون includeSubDomains/preload، nosniff، X-Frame-Options، Referrer-Policy، Permissions-Policy)، عمر کش
+   صریح HTML (۱۰ دقیقه — بدون آن مرورگر تا ده‌ها ساعت نسخه‌ی قدیمی نشان می‌داد)، و ۴۱۰ برای فهرست پوشه‌های
+   `/_astro/`، `/fonts/`، `/pagefind/`. روی Apache محلی آزموده شده؛ رفتار LiteSpeed هاست را گام «Verify live
+   behaviour» پس از هر انتشار می‌سنجد (`scripts/verify-deploy.mjs`).
+
+## سخت‌سازی وردپرس (افزونه ۳.۲۹.۰)
+
+`includes/class-hardening.php`: XML-RPC بسته، `/wp-json/wp/v2/users` و `?author=N` فقط برای کارکنان، سقف ۱۰ تلاش
+ناموفق ورود در ۱۵ دقیقه به‌ازای هر IP، حذف `X-Powered-By`. ⚠️ دو مورد از افزونه برنمی‌آید و در cPanel انجام می‌شود:
+بستن فهرست پوشه‌ی `/wp-content/uploads/` (cPanel ← Indexes ← پوشه‌ی وردپرس ← No Indexing) و، اگر خواستید،
+حذف `readme.html` از ریشه‌ی وردپرس.
 
