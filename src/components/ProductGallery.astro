@@ -43,6 +43,14 @@ const gallery = [...manufacturerShots, ...fieldShots].slice(0, 8);
 const hasImages = gallery.length > 0;
 const hasFieldShots = gallery.some((img) => img.source === 'field');
 const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
+
+// ⚠️ نسبت قاب از md = نسبت تصویر اول (کارفرما، ۲۴ آبان ۱۴۰۵: «اندازه‌ی قاب و عکس نمی‌خواند»). قاب ثابت ۴:۳ برای عکس‌های
+// مربعی SAGA1-L12 دو نوار خالی ۶۰px کنار عکس می‌گذاشت. نسبت از mediaDetails وردپرس است (پیش از بارگذاری HTML معلوم ⇒ CLS
+// صفر)، بین ۳:۴ و ۳:۲ محدود می‌شود تا یک عکس خیلی باریک/پهن قاب را به هم نریزد؛ بی‌ابعاد = ۴:۳ قبلی.
+// زیر md همان ۳:۲ می‌ماند — آنجا تصمیم Frontend v2 است: کد، قیمت و دکمه‌ی اصلی باید در صفحه‌ی اول ۳۹۰×۸۱۲ جا شوند.
+const first = gallery[0];
+const firstRatio = first?.width && first?.height ? Math.min(1.5, Math.max(0.75, first.width / first.height)) : 4 / 3;
+const frameRatio = `${Math.round(firstRatio * 1000)} / 1000`;
 ---
 
 <div class="product-gallery">
@@ -56,7 +64,7 @@ const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
       (تصمیم ۱ کارفرما). */}
   {/* ⚠️ بی‌عکس (کارفرما، ۴ آبان ۱۴۰۵): قاب کوتاه‌تر ۲:۱ / ۱۶:۹ — قاب خالی ۴:۳ در دسکتاپ ~۳۷۰px فضای مرده بود. نسبت ثابت
       می‌ماند (CLS صفر)؛ با اولین عکس، خودکار ۳:۲ / ۴:۳. */}
-  <figure id="gallery-figure" class:list={['bg-white bg-blueprint rounded-lg border border-steel-300 overflow-hidden relative m-0 touch-pan-y', hasImages ? 'aspect-[3/2] md:aspect-[4/3]' : 'aspect-[2/1] md:aspect-[16/9]']}>
+  <figure id="gallery-figure" style={hasImages ? `--gallery-ar: ${frameRatio}` : undefined} class:list={['bg-white bg-blueprint rounded-lg border border-steel-300 overflow-hidden relative m-0 touch-pan-y', hasImages ? 'aspect-[3/2] md:aspect-(--gallery-ar)' : 'aspect-[2/1] md:aspect-[16/9]']}>
     {['top-2 start-2 border-t border-s', 'top-2 end-2 border-t border-e', 'bottom-2 start-2 border-b border-s', 'bottom-2 end-2 border-b border-e'].map((corner) => (
       <span class={`absolute z-10 w-2 h-2 border-steel-400 pointer-events-none print:hidden ${corner}`} aria-hidden="true" />
     ))}
@@ -93,16 +101,18 @@ const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
       </span>
     )}
 
+    {/* ⚠️ دکمه‌ی آیکنی ۴۴px (کارفرما، ۲۴ آبان ۱۴۰۵): قرص «بزرگ‌نمایی» ۱۷۰×۵۰px بخشی از اینفوگرافیک را می‌پوشاند (شماره تلفن و
+        متن پایین تصاویر SAGA1-L12) — خلاف تصمیم ۱ کارفرما «هیچ‌چیز روی خود عکس». حالا فقط یک دایره‌ی کوچک در گوشه، و کلیک
+        روی خود عکس هم نمای بزرگ را باز می‌کند. برچسب متنی برای صفحه‌خوان می‌ماند. */}
     {hasImages && (
       <button
         type="button"
         id="gallery-zoom"
-        class="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur text-steel-900 border border-steel-200 rounded-lg px-4 py-2.5 text-sm font-bold shadow-sm hover:bg-white transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 hidden print:hidden"
+        aria-label="بزرگ‌نمایی تصویر"
+        title="بزرگ‌نمایی"
+        class="absolute bottom-2 left-2 z-10 w-11 h-11 grid place-items-center rounded-full bg-white/90 text-steel-900 border border-steel-300 shadow-sm hover:bg-white transition-colors focus:outline-none focus:ring-4 focus:ring-accent-ink/40 hidden print:hidden"
       >
-        <span class="flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" /></svg>
-          بزرگ‌نمایی
-        </span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" /></svg>
       </button>
     )}
   </figure>
@@ -261,6 +271,12 @@ const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
   if (zoomBtn && dialog && typeof dialog.showModal === 'function') {
     zoomBtn.classList.remove('hidden');
     zoomBtn.addEventListener('click', () => dialog.showModal());
+    // کلیک روی خود عکس هم نمای بزرگ را باز می‌کند (دکمه حالا فقط یک آیکن کوچک است). کشیدن انگشت click نمی‌سازد.
+    figure?.classList.add('cursor-zoom-in');
+    figure?.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('button')) return;
+      dialog.showModal();
+    });
   }
 
   closeBtn?.addEventListener('click', () => dialog?.close());
