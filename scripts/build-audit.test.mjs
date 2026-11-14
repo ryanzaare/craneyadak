@@ -76,6 +76,17 @@ has('فهرست برندها و محصولات', emptyListingProblems([P('/brand
 eq('فهرست noindex معاف است', emptyListingProblems([P('/categories/a/b/', { robots: 'noindex' })]), []);
 eq('INDEX_EMPTY_CATEGORIES=1 بازنویسی عمدی', emptyListingProblems([P('/categories/a/b/')], { allowEmpty: true }), []);
 eq('صفحه‌ی غیرفهرست (درباره) معاف است', emptyListingProblems([P('/about/')]), []);
+// ⚠️ ۲۴ آبان ۱۴۰۵: هاب‌های /categories/ و /brands/ به دسته/برند لینک می‌دهند، نه مستقیم به محصول. با اولین محصول کامل
+// ایندکس‌پذیر شدند و نگهبان (که فقط لینک مستقیم محصول را می‌شمرد) انتشار را چهار شب پشت سر هم شکست. معیار درست: «یک گام تا محصول».
+const goodCat = P('/categories/a/b/', { body: link('p1') });
+const lnk = (r) => `<a href="${r}">x</a>`;
+eq('هاب دسته‌ها با لینک به دسته‌ی دارای محصول سالم است', emptyListingProblems([readyProduct, goodCat, P('/categories/', { body: lnk('/categories/a/b/') })]), []);
+eq('هاب برندها با لینک به برند دارای محصول سالم است', emptyListingProblems([readyProduct, P('/brands/saga/', { body: link('p1') }), P('/brands/', { body: lnk('/brands/saga/') })]), []);
+eq('سیلو با لینک به دسته‌ی دارای محصول سالم است', emptyListingProblems([readyProduct, goodCat, P('/categories/a/', { body: lnk('/categories/a/b/') })]), []);
+has('هاب با لینک فقط به دسته‌ی noindex', emptyListingProblems([readyProduct, P('/categories/a/b/', { robots: 'noindex', body: link('p1') }), P('/categories/', { body: lnk('/categories/a/b/') })]), '/categories/:');
+has('هاب با لینک به دسته‌ی ایندکس‌پذیرِ بی‌محصول (خودش خطاست) هم رد می‌شود', emptyListingProblems([readyProduct, P('/categories/a/b/'), P('/categories/', { body: lnk('/categories/a/b/') })]), '/categories/:');
+has('یک گام فقط: هاب → سیلو → دسته کافی نیست', emptyListingProblems([readyProduct, goodCat, P('/categories/a/', { robots: 'noindex', body: lnk('/categories/a/b/') }), P('/categories/', { body: lnk('/categories/a/') })]), '/categories/:');
+has('دسته‌ی برگ (سطح سوم) همچنان لینک مستقیم محصول می‌خواهد', emptyListingProblems([readyProduct, goodCat, P('/categories/x/y/', { body: lnk('/categories/a/b/') })]), '/categories/x/y/');
 
 console.log('── کوچک‌شدن بی‌صدا');
 const prev = Array.from({ length: 40 }, (_, i) => `/p${i}/`);

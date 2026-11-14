@@ -59,6 +59,8 @@ export function parsePage(route, html) {
     text: squash(html.replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ')),
     jsonld,
     productLinks: [...new Set([...html.matchAll(/href=["']\/products\/([^"'\/?#]+)\/["']/g)].map((m) => `/products/${m[1]}/`))],
+    // لینک‌های داخلی به صفحه‌های فهرست (دسته/برند) — برای هاب‌ها که «یک گام» تا محصول فاصله دارند.
+    listingLinks: [...new Set([...html.matchAll(/href=["'](\/(?:categories|brands)\/[^"'?#]*)["']/g)].map((m) => (m[1].endsWith('/') ? m[1] : `${m[1]}/`)))],
     authenticity: /data-authenticity=["'](original|non_original)["']/.exec(html)?.[1] ?? '',
   };
 }
@@ -75,15 +77,27 @@ const LISTING = [/^\/brands\/$/, /^\/brands\/[^/]+\/$/, /^\/categories\/$/, /^\/
  * (نه از منطق خود src/lib/indexability.ts که ممکن است خودش باگ داشته باشد): صفحه‌ی فهرستِ ایندکس‌پذیر باید به دست‌کم یک
  * صفحه‌ی محصولِ ایندکس‌پذیر لینک بدهد. `allowEmpty` = INDEX_EMPTY_CATEGORIES=1 (بازنویسی عمدی).
  */
+/**
+ * ⚠️ هاب‌ها (۲۴ آبان ۱۴۰۵): /categories/، /brands/ و سیلوی /categories/<x>/ به دسته/برند لینک می‌دهند، نه مستقیم به محصول.
+ * با اولین محصول کامل (SAGA1-L12) ایندکس‌پذیر شدند — درست، چون محصول یک کلیک دورتر است — ولی این نگهبان فقط لینک مستقیم
+ * محصول را می‌شمرد و انتشار را چهار شب پشت سر هم (۲۱ تا ۲۴ آبان) شکست. برای هاب، لینک به یک صفحه‌ی فهرستِ ایندکس‌پذیر که
+ * *خودش* لینک مستقیم محصول ایندکس‌پذیر دارد کافی است — دقیقاً یک گام، نه زنجیره، تا «هاب → هاب خالی» از قلم نیفتد.
+ * دسته‌ی برگ، صفحه‌ی برند و /products/ همچنان لینک مستقیم می‌خواهند.
+ */
+const HUB = [/^\/categories\/$/, /^\/brands\/$/, /^\/categories\/[^/]+\/$/];
+
 export function emptyListingProblems(pages, { allowEmpty = false } = {}) {
   if (allowEmpty) return [];
   const indexableProducts = new Set(pages.filter((p) => /^\/products\/[^/]+\/$/.test(p.route) && isIndexable(p) && !isUtility(p.route)).map((p) => p.route));
+  const direct = (p) => (p.productLinks ?? []).some((l) => indexableProducts.has(l));
+  // صفحه‌های فهرستِ ایندکس‌پذیر که مستقیم به محصول ایندکس‌پذیر لینک می‌دهند (فقط این‌ها «گام» هاب حساب می‌شوند)
+  const stocked = new Set(pages.filter((p) => isIndexable(p) && LISTING.some((re) => re.test(p.route)) && direct(p)).map((p) => p.route));
   const out = [];
   for (const p of pages) {
     if (!isIndexable(p) || !LISTING.some((re) => re.test(p.route))) continue;
-    if (!(p.productLinks ?? []).some((l) => indexableProducts.has(l))) {
-      out.push(`${p.route}: ایندکس‌پذیر است ولی به هیچ صفحه‌ی محصولِ ایندکس‌پذیر لینک نمی‌دهد — صفحه‌ی خالی باید noindex باشد`);
-    }
+    if (direct(p)) continue;
+    if (HUB.some((re) => re.test(p.route)) && (p.listingLinks ?? []).some((l) => l !== p.route && stocked.has(l))) continue;
+    out.push(`${p.route}: ایندکس‌پذیر است ولی به هیچ صفحه‌ی محصولِ ایندکس‌پذیر لینک نمی‌دهد — صفحه‌ی خالی باید noindex باشد`);
   }
   return out;
 }
