@@ -51,6 +51,10 @@ const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
 const first = gallery[0];
 const firstRatio = first?.width && first?.height ? Math.min(1.5, Math.max(0.75, first.width / first.height)) : 4 / 3;
 const frameRatio = `${Math.round(firstRatio * 1000)} / 1000`;
+// ⚠️ sizes = عرض *نمایش واقعی* عکس، نه عرض قاب (۲۵ آبان ۱۴۰۵). زیر md قاب ۳:۲ است و عکس مربعی object-contain فقط به
+// ارتفاع قاب، یعنی ~۶۲٪ عرض صفحه، نمایش داده می‌شود؛ «100vw» مرورگر را به نسخه‌ی ۹۰۰px (۵۳KB) می‌فرستاد به‌جای ۴۵۰px
+// (۱۸KB). نتیجه: Performance موبایل صفحه‌ی محصول ۰٫۹۸ و گیت Lighthouse (≥۰٫۹۹) سه انتشار پشت سر هم را شکست. از md قاب ستون
+// ۵/۱۲ است (حداکثر ۴۹۰px).
 ---
 
 <div class="product-gallery">
@@ -77,7 +81,7 @@ const frameRatio = `${Math.round(firstRatio * 1000)} / 1000`;
             width={900}
             height={900}
             eager={index === 0}
-            sizes="(max-width: 1024px) 100vw, 40vw"
+            sizes="(max-width: 767px) 62vw, (max-width: 1279px) 40vw, 490px"
             class="w-full h-full object-contain"
           />
         </div>
