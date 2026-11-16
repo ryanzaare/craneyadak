@@ -16,6 +16,9 @@ import { autolinkHtml } from '../lib/autolink';
 import { wrapProseTables, normalizeProseImages, optimizeProseImages, mergeAudit, reportImageAudit, EMPTY_AUDIT } from '../lib/prose-html';
 import { findCategory, categoryPath } from '../data/taxonomy';
 import type { ContentBlock } from '../lib/content-blocks';
+import { parseVideoUrl, videoBlocksFirst } from '../lib/video-embed';
+import RemoteImage from './RemoteImage.astro';
+import Logo from './Logo.astro';
 
 export interface Props {
   blocks: readonly ContentBlock[];
@@ -23,9 +26,14 @@ export interface Props {
   title: string;
   reviewMode?: boolean;
   eyebrow?: string;
+  /** تصویر اصلی صفحه (مثلاً عکس اول محصول) برای جلد طراحی‌شده‌ی ویدیوهایی که جلد ندارند. */
+  coverImage?: { url: string; alt: string } | null;
 }
 
-const { blocks, title, reviewMode = false, eyebrow = 'در این صفحه' } = Astro.props;
+const { blocks: rawBlocks, title, reviewMode = false, eyebrow = 'در این صفحه', coverImage = null } = Astro.props;
+// ⚠️ بلوک‌های ویدیودار همیشه اول (کارفرما، ۲۵ آبان ۱۴۰۵: «بلوک ویدیو بالای هر محتوا»). مرتب‌سازی پایدار؛ شماره‌گذاری و
+// نوار ناوبری از همین ترتیب ساخته می‌شوند، پس با چیدمان روی صفحه یکی می‌مانند.
+const blocks = videoBlocksFirst(rawBlocks);
 
 let imgAudit = EMPTY_AUDIT;
 const prose = async (html: string) => {
@@ -268,30 +276,64 @@ const rail = (b: ContentBlock): string =>
               <div class={`grid gap-6 ${b.media.length > 1 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'max-w-3xl'}`}>
                 {b.media.map((m) => (
                   <figure class="rounded-md overflow-hidden border border-steel-200 bg-white">
-                    {m.kind === 'video' && m.videoUrl ? (
-                      /* الگوی facade: هیچ iframeای تا کلیک کاربر ساخته نمی‌شود.
-                         جاسازی مستقیم بیش از ۵۰۰ کیلوبایت به هر بازدید اضافه
-                         می‌کند — یعنی LCP بدتر، نه سئوی بهتر. */
-                      <a href={m.videoUrl} target="_blank" rel="noopener"
-                         class="group block relative aspect-video bg-steel-900"
-                         aria-label={`پخش ویدیو: ${m.alt || m.caption || 'ویدیو'}`}>
-                        {m.url && (
-                          <img src={m.url} alt={m.alt} width={m.width ?? undefined} height={m.height ?? undefined}
-                               loading="lazy" decoding="async"
-                               class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                        )}
-                        <span class="absolute inset-0 grid place-items-center" aria-hidden="true">
-                          <span class="w-16 h-16 rounded-full bg-white/95 grid place-items-center group-hover:scale-110 transition-transform">
-                            <svg viewBox="0 0 24 24" class="w-7 h-7 translate-x-0.5" fill="currentColor" aria-hidden="true">
-                              <path d="M8 5v14l11-7z" />
-                            </svg>
+                    {m.kind === 'video' && m.videoUrl ? (() => {
+                      const embed = parseVideoUrl(m.videoUrl);
+                      const label = m.alt || m.caption || b.heading || 'ویدیو';
+                      const cover = (
+                        /* ⚠️ جلد طراحی‌شده‌ی یکسان برای همه‌ی ویدیوها (کارفرما: «جلد با سبک ثابت»): زمینه‌ی گرافیت، عکس
+                           واقعی قطعه در کاشی سفید، عنوان، نشان و دکمه‌ی پخش نارنجی — تمام CSS، بدون فایل تصویر تازه و بدون
+                           هوش مصنوعی (قاعده‌ی ۹: عکس قطعه دست‌نخورده). جلد آپلودی کارفرما (m.url) اگر باشد جای آن می‌نشیند. */
+                        m.url ? (
+                          <RemoteImage src={m.url} alt={m.alt} width={960} height={540} sizes="(max-width: 768px) 100vw, 768px" class="w-full h-full object-cover" />
+                        ) : (
+                          <span class="absolute inset-0 grid grid-cols-[1fr_auto] items-center gap-3 p-4 md:gap-4 md:p-8 bg-gradient-to-l from-steel-900 to-steel-800 text-right" aria-hidden="true">
+                            <span class="flex flex-col gap-2 min-w-0">
+                              <span class="text-xs font-bold text-accent">ویدیو · {embed?.provider === 'youtube' ? 'یوتیوب' : 'آپارات'}</span>
+                              <span class="text-base md:text-2xl font-black text-white leading-7 md:leading-10 line-clamp-2 md:line-clamp-3">{label}</span>
+                              <span class="hidden sm:flex items-center gap-2 mt-1 text-xs text-steel-300"><Logo inverse class="w-6 h-6" /> کرین یدک</span>
+                              {/* دکمه‌ی پخش در ستون متن، نه وسط قاب: وسط قاب روی عنوان می‌نشست (preview، ۲۵ آبان). */}
+                              <span class="mt-1 md:mt-2 inline-flex items-center gap-2 self-start rounded-full bg-action text-white text-sm font-bold ps-3 pe-4 py-2 group-hover:bg-accent-ink transition-colors">
+                                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+                                پخش ویدیو
+                              </span>
+                            </span>
+                            {coverImage && (
+                              <span class="w-24 h-24 sm:w-28 sm:h-28 md:w-48 md:h-48 rounded-md bg-white p-1.5 md:p-2 shadow-sm">
+                                <RemoteImage src={coverImage.url} alt="" width={240} height={240} sizes="(max-width: 768px) 112px, 192px" class="w-full h-full object-contain" />
+                              </span>
+                            )}
+                          </span>
+                        )
+                      );
+                      const play = (
+                        <span class="absolute inset-0 grid place-items-center pointer-events-none" aria-hidden="true">
+                          <span class="w-16 h-16 rounded-full bg-action text-white grid place-items-center shadow-sm group-hover:scale-110 transition-transform">
+                            <svg viewBox="0 0 24 24" class="w-7 h-7 translate-x-0.5" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
                           </span>
                         </span>
-                      </a>
-                    ) : (
+                      );
+                      /* الگوی facade: هیچ iframeای تا کلیک کاربر ساخته نمی‌شود (جاسازی مستقیم آپارات بیش از ۵۰۰KB به هر بازدید
+                         می‌افزاید). کلیک ← iframe همان‌جا، داخل سایت (کارفرما: «نه زبانه‌ی تازه»). نشانی ناشناخته: لینک زبانه‌ی تازه. */
+                      return embed ? (
+                        <div class="video-facade relative aspect-video bg-steel-900" data-embed={embed.embedUrl} data-title={label}>
+                          <button type="button" class="group absolute inset-0 w-full h-full cursor-pointer" aria-label={`پخش ویدیو: ${label}`}>
+                            {cover}
+                            {m.url && play}
+                          </button>
+                          <noscript><a href={m.videoUrl} class="absolute bottom-2 start-2 text-xs text-white underline">تماشا در {embed.provider === 'youtube' ? 'یوتیوب' : 'آپارات'}</a></noscript>
+                        </div>
+                      ) : (
+                        <a href={m.videoUrl} target="_blank" rel="noopener" class="group block relative aspect-video bg-steel-900" aria-label={`پخش ویدیو: ${label}`}>
+                          {cover}
+                          {m.url && play}
+                        </a>
+                      );
+                    })() : (
                       m.url && (
-                        <img src={m.url} alt={m.alt} width={m.width ?? undefined} height={m.height ?? undefined}
-                             loading="lazy" decoding="async" class="w-full h-auto" />
+                        /* AVIF مثل بقیه‌ی تصاویر سایت (کارفرما: «همه‌ی عکس‌ها avif»). تا ۲۵ آبان ۱۴۰۵ این‌جا <img> خام
+                           وردپرس بود — JPEG اصلی بی‌تغییر اندازه. */
+                        <RemoteImage src={m.url} alt={m.alt} width={Math.min(m.width ?? 1200, 1200)} height={Math.round(Math.min(m.width ?? 1200, 1200) * ((m.height ?? 1) / (m.width ?? 1)))}
+                          sizes="(max-width: 768px) 100vw, 768px" class="w-full h-auto" />
                       )
                     )}
                     {m.caption && (
@@ -321,3 +363,20 @@ const rail = (b: ContentBlock): string =>
     </div>
   </>
 )}
+
+<script>
+  // پخش ویدیو داخل سایت: با کلیک، جلد جای خود را به iframe می‌دهد (فقط نشانی‌هایی که parseVideoUrl ساخته — data-embed).
+  document.querySelectorAll<HTMLElement>('.video-facade').forEach((box) => {
+    box.querySelector('button')?.addEventListener('click', () => {
+      const src = box.dataset.embed;
+      if (!src) return;
+      const f = document.createElement('iframe');
+      f.src = src;
+      f.title = box.dataset.title ?? 'ویدیو';
+      f.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
+      f.allowFullscreen = true;
+      f.className = 'absolute inset-0 w-full h-full border-0';
+      box.replaceChildren(f);
+    }, { once: true });
+  });
+</script>

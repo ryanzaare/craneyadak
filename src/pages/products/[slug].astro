@@ -39,6 +39,9 @@ import { aggregateRatingJsonLd, reviewsJsonLd } from '../../lib/community';
 import Questions from '../../components/Questions.astro';
 import { getQuestions, questionsJsonLd } from '../../lib/questions';
 import { autolinkHtml } from '../../lib/autolink';
+import { getImage } from 'astro:assets';
+import { wrapProseTables, optimizeProseImages, normalizeProseImages, reportImageAudit } from '../../lib/prose-html';
+import { videoBlocksFirst } from '../../lib/video-embed';
 import { productReadiness } from '../../lib/indexability';
 import { buildTitle, buildDescription, productTitleParts } from '../../lib/seo-meta';
 import { SITE } from '../../data/site';
@@ -75,6 +78,22 @@ const price = computePrice(product);
 /* بلوک‌های محتوای اختیاری این محصول. برند و دسته از همان ابتدا این را
    داشتند؛ محصول فقط هرگز صدا زده نشده بود. */
 const blocks = await getBlocks('product', product.slug);
+// ⚠️ بلوک‌های ویدیودار بالای همه‌ی محتوا، پیش از «توضیحات فنی محصول» (کارفرما، ۲۵ آبان ۱۴۰۵)؛ بقیه‌ی بلوک‌ها سر جای قبلی.
+const isVideoBlock = (b: (typeof blocks)[number]) => b.media.some((m) => m.kind === 'video' && Boolean(m.videoUrl));
+const videoBlocks = videoBlocksFirst(blocks).filter(isVideoBlock);
+const otherBlocks = blocks.filter((b) => !isVideoBlock(b));
+const videoCover = product.images[0] ? { url: product.images[0].url, alt: product.images[0].altText } : null;
+
+// ⚠️ تصویرهای داخل متن ویرایشگر (۲۵ آبان ۱۴۰۵): تا پیش از این set:html خام بود و <img> وردپرس همان JPEG اصلی می‌ماند —
+// astro:assets داخل رشته را نمی‌بیند (CLAUDE.md، «دام‌ها»). حالا مثل بلوک‌ها: AVIF با getImage، lazy و ابعاد.
+let bodyHtml = '';
+if (product.bodyHtml) {
+  const linked = wrapProseTables(autolinkHtml(product.bodyHtml, { currentPath: Astro.url.pathname, max: 6 }));
+  const { html: optimised } = await optimizeProseImages(linked, getImage);
+  const { html, audit } = normalizeProseImages(optimised);
+  reportImageAudit(audit, product.name);
+  bodyHtml = html;
+}
 
 const primaryCategory = product.categorySlugs.map((s) => findCategory(s)).find(Boolean) ?? null;
 const brand = product.brandSlug ? findBrand(product.brandSlug) : undefined;
@@ -401,6 +420,9 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
     </section>
   )}
 
+  {/* ── ویدیو: بالای همه‌ی محتوا ── */}
+  <ContentBlocks blocks={videoBlocks} title={product.name} eyebrow="در این صفحه" coverImage={videoCover} />
+
   {/* ── ۹) توضیحات ── */}
   {(product.summary || product.bodyHtml) && (
     <section class="bg-steel-50 px-4 md:px-6 py-8 border-b border-steel-300 print:hidden" aria-labelledby="description-heading">
@@ -413,7 +435,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         {product.bodyHtml && (
           <div
             class="prose-crane text-steel-700 leading-8"
-            set:html={autolinkHtml(product.bodyHtml, { currentPath: Astro.url.pathname, max: 6 })}
+            set:html={bodyHtml}
           />
         )}
       </div>
@@ -421,7 +443,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
   )}
 
   {/* بلوک‌های محتوای اختیاری محصول — پس از توضیحات ویرایشگر و پیش از پرسش‌ها (محتوای تخصصی پیش از محتوای کاربر). */}
-  <ContentBlocks blocks={blocks} title={product.name} eyebrow="در این صفحه" />
+  <ContentBlocks blocks={otherBlocks} title={product.name} eyebrow="در این صفحه" coverImage={videoCover} />
 
   <Questions
     questions={questions}
