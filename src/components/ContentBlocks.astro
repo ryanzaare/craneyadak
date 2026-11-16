@@ -62,7 +62,10 @@ const nav = blocks
   .map((b) => ({ id: b.anchor, label: b.navLabel }))
   .filter((s) => s.label !== '');
 
-const numbered = blocks.filter((b) => b.heading !== '');
+// ⚠️ بلوک ویدیو شماره نمی‌گیرد و وسط‌چین است (کارفرما، ۲۶ آبان ۱۴۰۵: «آن ۱ چیست؟ ویدیو وسط صفحه بهتر است»). شماره
+// ترتیب بخش‌های *متنی* راهنماست؛ ویدیوی معرفی، بخشی از آن ترتیب نیست و «۱» تنهایش بالای صفحه بی‌معنا بود.
+const isVideo = (b: ContentBlock) => b.media.some((m) => m.kind === 'video' && Boolean(m.videoUrl));
+const numbered = blocks.filter((b) => b.heading !== '' && !isVideo(b));
 const numberOf = (b: ContentBlock) => numbered.indexOf(b) + 1;
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -157,7 +160,10 @@ const rail = (b: ContentBlock): string =>
           aria-labelledby={b.heading ? `${b.anchor}-h` : undefined}
         >
           <div class="max-w-7xl mx-auto">
-            {b.heading && (
+            {b.heading && isVideo(b) && (
+              <h2 id={`${b.anchor}-h`} class="max-w-3xl mx-auto mb-8 text-2xl md:text-3xl font-bold text-steel-900 leading-relaxed text-center">{b.heading}</h2>
+            )}
+            {b.heading && !isVideo(b) && (
               <div class="flex items-start gap-4 mb-8">
                 <span class="shrink-0 w-11 h-11 rounded-md bg-steel-900 text-white flex items-center justify-center font-mono font-bold text-base tabular-nums border-s-4 border-s-action" aria-hidden="true">
                   {numberOf(b)}
@@ -273,7 +279,7 @@ const rail = (b: ContentBlock): string =>
 
             {/* ── رسانه ──────────────────────────────────────────────── */}
             {b.type === 'media' && (
-              <div class={`grid gap-6 ${b.media.length > 1 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'max-w-3xl'}`}>
+              <div class={`grid gap-6 ${b.media.length > 1 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'max-w-3xl'} ${isVideo(b) ? 'mx-auto' : ''}`}>
                 {b.media.map((m) => (
                   <figure class="rounded-md overflow-hidden border border-steel-200 bg-white">
                     {m.kind === 'video' && m.videoUrl ? (() => {

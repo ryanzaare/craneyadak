@@ -62,6 +62,22 @@ jobs:
 
       - run: npm ci
 
+      # ⚠️ کش تصاویر بهینه‌شده‌ی Astro (node_modules/.astro) پس از npm ci — npm ci پوشه‌ی node_modules را پاک می‌کند،
+      # پس بدون این هر انتشار همه‌ی تصاویر وردپرس را از نو دانلود و AVIF می‌کرد (~۵۰ ثانیه از ۷۷ ثانیه‌ی build).
+      - uses: actions/cache@v4
+        with:
+          path: node_modules/.astro
+          key: astro-assets-${{ github.run_id }}
+          restore-keys: astro-assets-
+
+      # مانیفست آخرین Lighthouse سبز: فقط صفحه‌های تغییرکرده دوباره سنجیده می‌شوند (scripts/lhci-changed.mjs).
+      # فقط پس از اجرای موفق کش می‌شود — صفحه‌ی شکست‌خورده هرگز «سنجیده» ثبت نمی‌شود.
+      - uses: actions/cache@v4
+        with:
+          path: .astro/lhci-passed.json
+          key: lhci-passed-${{ github.run_id }}
+          restore-keys: lhci-passed-
+
       - name: Build
         run: npm run build
         env:
@@ -73,6 +89,8 @@ jobs:
       # گیت کیفیت پیش از آپلود: Lighthouse روی همین dist (دسکتاپ+موبایل). قرمز = انتشار انجام نمی‌شود.
       - name: Lighthouse CI (quality gate)
         run: npm run lighthouse
+        env:
+          LHCI_ONLY_CHANGED: '1'
 
       # dist/ شامل فایل مخفی .htaccess است (۳۰۱ واقعی، HTTPS، ۴۰۴) — باید آپلود شود.
       - name: Upload dist/ to cPanel

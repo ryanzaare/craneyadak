@@ -10,6 +10,13 @@
 // ---------------------------------------------------------------------------
 import { spawnSync } from 'node:child_process';
 import { existsSync, rmSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { pickChangedUrls } from './lhci-changed.mjs';
+
+// ⚠️ فقط صفحه‌های تغییرکرده (LHCI_ONLY_CHANGED=1، در workflow انتشار) — دلیل و ضمانت‌ها در scripts/lhci-changed.mjs.
+// اجرای محلی `npm run lighthouse` همیشه همه را می‌سنجد.
+const MANIFEST = '.astro/lhci-passed.json';
+const sha = (s) => createHash('sha256').update(s).digest('hex');
 
 if (!existsSync('dist/index.html')) {
   console.error('❌ dist/ نیست — اول `npm run build`.');
@@ -22,6 +29,21 @@ try {
   // ⚠️ preset 'mobile' در lhci نامعتبر است؛ موبایل = پیش‌فرض Lighthouse (بدون preset).
   const base = JSON.parse(readFileSync('lighthouserc.json', 'utf8'));
   mkdirSync('.astro', { recursive: true });
+  const allUrls = base.ci.collect.url;
+  const hashes = Object.fromEntries(allUrls.map((u) => [u, existsSync(`dist${u}`) ? sha(readFileSync(`dist${u}`)) : '']));
+  const configHash = sha(readFileSync('lighthouserc.json', 'utf8') + readFileSync(new URL(import.meta.url), 'utf8'));
+  let prev = null;
+  try { prev = JSON.parse(readFileSync(MANIFEST, 'utf8')); } catch { /* نیست = همه */ }
+  const pick = process.env.LHCI_ONLY_CHANGED === '1' ? pickChangedUrls(allUrls, hashes, prev, configHash) : { urls: allUrls, reason: 'اجرای کامل (همه‌ی صفحه‌ها)' };
+  console.log(`Lighthouse: ${pick.reason}${pick.urls.length && pick.urls.length < allUrls.length ? ` — ${pick.urls.join(' ')}` : ''}`);
+  base.ci.collect.url = pick.urls;
+  const writeManifest = () => writeFileSync(MANIFEST, JSON.stringify({ configHash, pages: hashes, at: new Date().toISOString() }, null, 2));
+  if (pick.urls.length === 0) {
+    writeManifest();
+    console.log('\n✅ Lighthouse CI: هیچ صفحه‌ی سنجیدنی از آخرین اجرای سبز تغییر نکرده — گیت بی‌تغییر گذشت.');
+    process.exit(0);
+  }
+  process.on('exit', (code) => { if (code === 0) writeManifest(); });
   for (const preset of ['desktop', 'mobile']) {
     console.log(`\n── Lighthouse CI (${preset}) ──`);
     const cfg = structuredClone(base);
