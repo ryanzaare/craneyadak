@@ -156,7 +156,7 @@ const rail = (b: ContentBlock): string =>
       {blocks.map((b, i) => (
         <section
           id={b.anchor}
-          class={`px-4 py-16 border-t border-steel-100 scroll-mt-32 ${band(i)} ${flag(b.needsReview)}`}
+          class={`px-4 py-16 border-t border-steel-100 scroll-mt-(--anchor-off) ${band(i)} ${flag(b.needsReview)}`}
           aria-labelledby={b.heading ? `${b.anchor}-h` : undefined}
         >
           <div class="max-w-7xl mx-auto">
@@ -354,7 +354,7 @@ const rail = (b: ContentBlock): string =>
 
             {/* ── ستون کناری ─────────────────────────────────────────── */}
             {b.asideHtml !== '' && (
-              <aside class="mt-8 lg:mt-0 lg:sticky lg:top-32 rounded-md bg-white lg:bg-steel-50/70 border border-steel-200 p-5">
+              <aside class="mt-8 lg:mt-0 lg:sticky lg:top-(--sticky-off) rounded-md bg-white lg:bg-steel-50/70 border border-steel-200 p-5">
                 <p class="flex items-center gap-2 text-xs font-bold text-accent-ink mb-2">
                   <span class="w-1.5 h-1.5 rounded-md bg-action" aria-hidden="true"></span>
                   نکته

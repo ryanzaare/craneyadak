@@ -43,7 +43,7 @@ const { sections, eyebrow, ariaLabel } = Astro.props;
 
 {sections.length > 2 && (
   <nav
-    class="section-nav sticky top-[68px] z-30 bg-white/95 backdrop-blur-sm border-y border-steel-200 print:hidden"
+    class="section-nav sticky top-(--hdr-h) z-30 bg-white/95 backdrop-blur-sm border-y border-steel-200 print:hidden"
     style="transform: translateZ(0);"
     aria-label={ariaLabel}
   >
@@ -105,7 +105,8 @@ const { sections, eyebrow, ariaLabel } = Astro.props;
         if (visible?.target.id) setActive(visible.target.id);
       },
       // بالای ناحیه به اندازه‌ی هدر + نوار ناوبری کنار گذاشته می‌شود.
-      { rootMargin: '-120px 0px -55% 0px', threshold: 0 },
+      // ⚠️ از ارتفاع واقعی هدر + نوار، نه عدد ثابت ۱۲۰ (هدر موبایل/تبلت ۱۲۵ و ۱۴۱ است).
+      { rootMargin: `-${Math.round(document.querySelector('header')?.getBoundingClientRect().height ?? 120) + nav.offsetHeight}px 0px -55% 0px`, threshold: 0 },
     );
 
     targets.forEach((el) => observer.observe(el));

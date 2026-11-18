@@ -155,7 +155,7 @@ const faDate = (iso: string | null) => {
           حالا یک فرم با سه نیت: پرسش، تجربه‌ی نصب، نظر کلی. فیلدهای
           غیرمرتبط با نیتِ انتخاب‌شده پنهان و از اعتبارسنجی خارج می‌شوند،
           و اندپوینت هم بر همان اساس عوض می‌شود. */}
-      <aside class:list={[!isEmpty && 'lg:sticky lg:top-24']}>
+      <aside class:list={[!isEmpty && 'lg:sticky lg:top-(--sticky-off)']}>
         {canSubmit ? (
           <form
             class="cy-community-form bg-steel-50 border border-steel-300 rounded-lg p-4"

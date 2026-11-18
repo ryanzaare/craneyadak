@@ -388,6 +388,15 @@ const navLinks = [
 <script>
   import { api, cacheName, cachedName, getToken, logout } from '../scripts/account';
 
+  /* ارتفاع واقعی هدر ← --hdr-h (global.css). ResizeObserver، نه scroll: فقط وقتی اندازه واقعاً عوض شود (چرخش، تغییر عرض،
+     شکستن خط) اجرا می‌شود — بی هزینه‌ی اسکرول و بی layout thrashing. */
+  {
+    const hdr = document.querySelector<HTMLElement>('header');
+    if (hdr && 'ResizeObserver' in window) {
+      new ResizeObserver(([e]) => document.documentElement.style.setProperty('--hdr-h', `${Math.round(e.borderBoxSize?.[0]?.blockSize ?? hdr.offsetHeight)}px`)).observe(hdr);
+    }
+  }
+
   /* میان‌بر «/» → جستجو (جستجوی بزرگ صفحه‌ی اصلی اگر هست، وگرنه هدر). نه وقتی کاربر در فیلدی تایپ می‌کند. */
   document.addEventListener('keydown', (e) => {
     if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
