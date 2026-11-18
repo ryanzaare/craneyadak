@@ -47,6 +47,13 @@ const all = globSync(`${ROOT}/**/index.md`).sort();
 const targets = args.length
   ? args.flatMap((a) => (a.endsWith('.md') ? [a] : globSync(`${a.replace(/\/$/, '')}/**/index.md`)))
   : all;
+// ⚠️ مسیرِ داده‌شده که هیچ فایلی پیدا نکند = خطا، نه سبز (۲۸ آبان ۱۴۰۵): اجرای دستی «Content» با مسیر
+// «content/products/saga-saga1-l12.» (نقطه‌ی اضافه) هیچ فایلی نیافت و سبز تمام شد — کارفرما آن را موفق دید.
+const unmatched = args.filter((a) => !(a.endsWith('.md') ? existsSync(a) : globSync(`${a.replace(/\/$/, '')}/**/index.md`).length));
+if (unmatched.length) {
+  console.error(`❌ این مسیرها هیچ فایل محتوایی ندارند: ${unmatched.map((a) => `«${a}»`).join('، ')}\n   موجود: ${all.map((f) => path.dirname(f)).join('، ') || '—'}`);
+  process.exit(1);
+}
 if (!targets.length) {
   console.log(`هیچ فایل محتوایی (${ROOT}/**/index.md) پیدا نشد.`);
   process.exit(0);

@@ -57,11 +57,16 @@ jobs:
 
       # کدام محتوا؟ push: فقط پوشه‌هایی که در این push عوض شده‌اند. ⚠️ فهرست خالی روی push = هیچ (نه «همه»):
       # push که فقط پوشه‌ای را حذف کرده نباید کل مخزن را دوباره منتشر کند.
+      # ⚠️ ورودی دستی از راه env، نه درج مستقیم ${{ }} در اسکریپت: درج مستقیم یعنی هر چه در فیلد path تایپ شود
+      # به‌عنوان دستور bash اجرا می‌شود (script injection). فقط الگوی مسیر مجاز است.
       - name: Changed content
         id: files
+        env:
+          INPUT_PATH: ${{ inputs.path }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "list=${{ inputs.path }}" >> "$GITHUB_OUTPUT"
+            if ! printf '%s' "$INPUT_PATH" | grep -Eq '^[a-z0-9/_ -]*$'; then echo "❌ مسیر فقط حروف لاتین کوچک، رقم، / و - : «$INPUT_PATH»"; exit 1; fi
+            echo "list=$INPUT_PATH" >> "$GITHUB_OUTPUT"
             echo "run=1" >> "$GITHUB_OUTPUT"
             exit 0
           fi
