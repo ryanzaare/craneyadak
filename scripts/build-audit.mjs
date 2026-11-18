@@ -165,8 +165,28 @@ export function productSchemaProblems(pages) {
     if (Array.isArray(n.image) && n.image.length > 1) {
       out.push(`${p.route}: Product.image ${n.image.length} تصویر دارد — فقط یک تصویر (images[0]، نمای استودیویی تمیز) مجاز است`);
     }
-    if (n.aggregateRating || n.review) {
-      out.push(`${p.route}: aggregateRating/review در JSON-LD است — فقط با نظر واقعیِ دیده‌شده روی صفحه مجاز است (بازبینی دستی)`);
+    // ⚠️ نظر و امتیاز (۲۸ آبان ۱۴۰۵): نسخه‌ی قبلی هر review را «بازبینی دستی» می‌خواست و build را می‌شکست — با اولین نظر
+    // تأییدشده‌ی واقعی (SAGA1-L12، ۲۳ آبان) دو انتشار پشت سر هم قرمز شد. خودِ «واقعی بودن» نظر را تأیید دیدگاه در پنل وردپرس
+    // تضمین می‌کند؛ این‌جا آنچه از خروجی قابل‌سنجش است سنجیده می‌شود (راهنمای Google: داده‌ی ساختاریافته = آنچه روی صفحه هست).
+    const reviews = Array.isArray(n.review) ? n.review : n.review ? [n.review] : [];
+    if (n.aggregateRating && !reviews.length) {
+      out.push(`${p.route}: aggregateRating بی هیچ review — امتیاز بی‌پشتوانه`);
+    }
+    const ratings = [];
+    for (const r of reviews) {
+      const v = Number(r?.reviewRating?.ratingValue);
+      if (!(v >= 1 && v <= 5)) out.push(`${p.route}: امتیاز نظر «${v}» بیرون از ۱ تا ۵`);
+      else ratings.push(v);
+      const bodyText = squash(String(r?.reviewBody ?? ''));
+      if (!bodyText || !p.text.includes(bodyText)) out.push(`${p.route}: متن نظر «${bodyText.slice(0, 30)}…» در JSON-LD هست ولی روی صفحه دیده نمی‌شود`);
+      const author = squash(String(r?.author?.name ?? ''));
+      if (!author || !p.text.includes(author)) out.push(`${p.route}: نویسنده‌ی نظر «${author}» روی صفحه دیده نمی‌شود`);
+    }
+    if (n.aggregateRating && reviews.length) {
+      const count = Number(n.aggregateRating.reviewCount ?? n.aggregateRating.ratingCount);
+      if (count !== reviews.length) out.push(`${p.route}: reviewCount=${count} ولی ${reviews.length} نظر در JSON-LD هست`);
+      const avg = ratings.length ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : NaN;
+      if (Number(n.aggregateRating.ratingValue) !== avg) out.push(`${p.route}: میانگین امتیاز ${n.aggregateRating.ratingValue} با نظرها (${avg}) نمی‌خواند`);
     }
   }
   return out;

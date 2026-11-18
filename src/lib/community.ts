@@ -113,7 +113,8 @@ export function aggregateRatingJsonLd(entries: CommunityEntry[]): Record<string,
 
 /** نظرهای واقعی به‌صورت آرایه‌ی `Review` — باز هم فقط اگر وجود داشته باشند. */
 export function reviewsJsonLd(entries: CommunityEntry[]): Record<string, unknown>[] | undefined {
-  const rated = entries.filter((e) => e.type === 'review' && e.rating >= 1);
+  // ⚠️ همان فیلتر aggregateRatingJsonLd (۱ تا ۵) — اگر یکی ۱+ و دیگری ۱..۵ باشد، میانگین و فهرست نظرها از هم جدا می‌شوند.
+  const rated = entries.filter((e) => e.type === 'review' && e.rating >= 1 && e.rating <= 5);
   if (rated.length === 0) return undefined;
 
   return rated.map((r) => ({
@@ -121,6 +122,7 @@ export function reviewsJsonLd(entries: CommunityEntry[]): Record<string, unknown
     reviewRating: { '@type': 'Rating', ratingValue: r.rating, bestRating: 5, worstRating: 1 },
     author: { '@type': 'Person', name: r.author },
     reviewBody: r.content,
-    ...(r.date ? { datePublished: r.date } : {}),
+    // ISO 8601: وردپرس «2026-11-14 13:42:07» می‌دهد (فاصله، بی منطقه‌ی زمانی) که قالب تاریخ schema.org نیست؛ فقط تاریخ.
+    ...(r.date && /^\d{4}-\d{2}-\d{2}/.test(r.date) ? { datePublished: r.date.slice(0, 10) } : {}),
   }));
 }

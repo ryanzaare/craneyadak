@@ -57,7 +57,18 @@ has('name ناهمخوان', productSchemaProblems([prod({ name: 'چیز دیگ�
 has('sku نادیدنی', productSchemaProblems([prod({ sku: 'X-999' })]), 'در متن صفحه دیده نمی‌شود');
 has('برند نادیدنی', productSchemaProblems([prod({ brand: { name: 'دماگ' } })]), 'برند «دماگ»');
 has('OEM نادیدنی', productSchemaProblems([prod({ additionalProperty: [{ name: 'کد معادل', value: 'ZZ-1' }] })]), 'ZZ-1');
-has('امتیاز بی‌پشتوانه', productSchemaProblems([prod({ aggregateRating: { ratingValue: 5 } })]), 'aggregateRating');
+has('امتیاز بی‌پشتوانه (aggregateRating بی review)', productSchemaProblems([prod({ aggregateRating: { ratingValue: 5, reviewCount: 1 } })]), 'aggregateRating');
+// ⚠️ ۲۸ آبان ۱۴۰۵: نگهبان قبلی هر review را «بازبینی دستی» می‌خواست و با اولین نظر تأییدشده‌ی واقعی (SAGA1-L12) دو انتشار را
+// شکست. حالا خودکار می‌سنجد که هر نظرِ JSON-LD روی صفحه دیده می‌شود و میانگین/تعداد با آن‌ها یکی است.
+const REV_BODY = '<p>SAGA1-L12</p><p>ساگا</p><section><h3>نظر خریداران</h3><p>مرتضی حسنی</p><p>بسیار عالی بود و زود رسید</p></section>';
+const rev = (o = {}) => ({ '@type': 'Review', reviewRating: { ratingValue: 5 }, author: { name: 'مرتضی حسنی' }, reviewBody: 'بسیار عالی بود و زود رسید', ...o });
+const agg = (o = {}) => ({ '@type': 'AggregateRating', ratingValue: 5, reviewCount: 1, ...o });
+eq('نظر واقعی دیده‌شده روی صفحه + میانگین درست = سالم', productSchemaProblems([prod({ aggregateRating: agg(), review: [rev()] }, REV_BODY)]), []);
+has('متن نظر روی صفحه نیست', productSchemaProblems([prod({ aggregateRating: agg(), review: [rev({ reviewBody: 'متنی که روی صفحه نیست' })] }, REV_BODY)]), 'روی صفحه دیده نمی‌شود');
+has('نویسنده‌ی نظر روی صفحه نیست', productSchemaProblems([prod({ aggregateRating: agg(), review: [rev({ author: { name: 'شخص ساختگی' } })] }, REV_BODY)]), 'نویسنده');
+has('reviewCount با تعداد نظرها نمی‌خواند', productSchemaProblems([prod({ aggregateRating: agg({ reviewCount: 12 }), review: [rev()] }, REV_BODY)]), 'reviewCount');
+has('میانگین با نظرها نمی‌خواند', productSchemaProblems([prod({ aggregateRating: agg({ ratingValue: 4.8 }), review: [rev({ reviewRating: { ratingValue: 3 } })] }, REV_BODY)]), 'میانگین');
+has('امتیاز بیرون از ۱ تا ۵', productSchemaProblems([prod({ review: [rev({ reviewRating: { ratingValue: 9 } })] }, REV_BODY)]), 'بیرون از ۱ تا ۵');
 has('محصول ایندکس‌پذیر بدون تصویر گرفته می‌شود', productSchemaProblems([prod({ image: undefined })]), 'هیچ تصویری ندارد');
 has('تصویر خالی هم تصویر نیست', productSchemaProblems([prod({ image: [] })]), 'هیچ تصویری ندارد');
 has('بیش از یک تصویر در Product گرفته می‌شود (قاعده‌ی ۹: فقط images[0])', productSchemaProblems([prod({ image: ['https://craneyadak.com/a.jpg', 'https://craneyadak.com/b.jpg'] })]), 'فقط یک تصویر');
