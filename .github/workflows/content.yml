@@ -83,7 +83,9 @@ jobs:
         if: steps.files.outputs.run == '1'
         # ⚠️ force به dry-run هم می‌رسد (۲۸ آبان ۱۴۰۵): بدون آن، پیش‌نمایش «واگذاری با force» ممکن نبود و dry-run همیشه به قفل
         # مالکیت می‌خورد — یعنی apply + force بی پیش‌نمایش اجرا می‌شد.
-        run: node scripts/content/cli.mjs publish ${{ steps.files.outputs.list }} ${{ inputs.force && '--force' || '' }}
+        # ⚠️ --create هم به dry-run می‌رسد (۲۸ آبان ۱۴۰۵): بی آن، اولین مقاله‌ی تازه (saga-remote-pairing) در dry-run با «در وردپرس
+        # نیست» قرمز شد و مرحله‌ی نوشتن — که create دارد — هرگز اجرا نشد. پیش‌نمایش باید همان کاری را نشان دهد که نوشتن می‌کند.
+        run: node scripts/content/cli.mjs publish ${{ steps.files.outputs.list }} --create ${{ inputs.force && '--force' || '' }}
 
       - name: Publish to WordPress
         id: apply
