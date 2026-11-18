@@ -1,6 +1,6 @@
 # سیستم محتوا — از فایل تا سایت، بی کپی/پیست
 
-وضعیت (۲۷ آبان ۱۴۰۵): **مرحله‌ی ۱ و ۲ ساخته و آزموده شد** (کامپایلر + بازبین). مرحله‌ی ۳ و ۴ (انتشار خودکار) طراحی شده، ساخته نشده.
+وضعیت (۲۸ آبان ۱۴۰۵): **هر چهار مرحله ساخته و آزموده شد** (کامپایلر، بازبین، اندپوینت افزونه‌ی ۳.۳۰.۰ + اسکریپت انتشار، workflow «Content»). روی سایت زنده هنوز اجرا نشده — منتظر نصب افزونه، Sync گروه ACF و سه secret.
 
 ## چرا
 
@@ -16,8 +16,8 @@ content/<نوع>/<اسلاگ>/index.md  +  images/*.jpg
         │
         ▼  npm run content -- lint        (scripts/content/lint.mjs — خطا = توقف)
         ▼  npm run content -- build       (scripts/content/compile.mjs → .astro/content-out/<نوع>-<اسلاگ>.json)
-        ▼  npm run content -- publish     ⏳ مرحله‌ی ۳: تصاویر → وردپرس، {{asset:…}} → نشانی واقعی، payload → اندپوینت افزونه
-        ▼  انتشار (Deploy)                ⏳ مرحله‌ی ۴: GitHub Action روی push به content/
+        ▼  npm run content -- publish     (scripts/content/publish.mjs — dry-run؛ --apply --create --force)
+        ▼  workflow «Content»             (.github/workflows/content.yml — push به content/ ← وردپرس ← Deploy)
 ```
 
 `npm run check` همه‌ی فایل‌های `content/` را هر بار می‌سنجد؛ فایل خراب کامیت نمی‌شود.
@@ -86,7 +86,7 @@ sources: [ { title, url } ]    # الزامی برای محصول و مقاله 
 - **فرستنده‌ی تنها (مثلاً L12-TX) محصول جداست** با کلیدواژه‌ی خودش («فرستنده ریموت ساگا L12»)، متن خودش و لینک دوطرفه به ست کامل.
   هم‌نوع‌خواری از متن تکراری می‌آید، نه از دو محصول مرتبط.
 
-## ⏳ مرحله‌ی ۳ — انتشار (طراحی)
+## مرحله‌ی ۳ — انتشار (ساخته شد، ۲۸ آبان ۱۴۰۵)
 
 1. **افزونه:** اندپوینت `POST /crane-yadak/v1/content` با احراز «رمز برنامه‌ی وردپرس» (Application Password) و قابلیت
    `edit_others_posts`؛ پیش‌فرض dry-run با گزارش تفاوت، `apply: true` برای نوشتن. روی `cyh_hub_import()` ساخته می‌شود و آن را گسترش
@@ -98,6 +98,19 @@ sources: [ { title, url } ]    # الزامی برای محصول و مقاله 
    `{{asset:…}}` را با نشانی واقعی عوض می‌کند، dry-run را نشان می‌دهد و با `--apply` می‌نویسد.
 4. **رمز:** کارفرما یک Application Password در وردپرس می‌سازد و در GitHub Secrets / `.env` می‌گذارد؛ دستیار هرگز آن را نمی‌بیند.
 
-## ⏳ مرحله‌ی ۴ — خودکار کامل
+## مرحله‌ی ۴ — خودکار کامل (ساخته شد)
 
 GitHub Action روی push به `content/`: lint → publish (dry-run در PR، apply روی main) → Deploy.
+
+## ساخته‌شده — جزئیات و آزمون‌ها (۲۸ آبان ۱۴۰۵)
+
+- افزونه `includes/class-content-api.php`: `POST /crane-yadak/v1/content/import|media|media-meta`، مجوز `edit_others_posts`.
+  ۱۷ آزمون هارنس: ساختن فقط با create، dry-run بی نوشتن، **نیمه‌نوشتن ممنوع** (بلوک/گالری/برند/دسته‌ی خراب = هیچ فیلدی نوشته
+  نمی‌شود — آزمون همین باگ را در نسخه‌ی اول گرفت)، محتوای دستی و ویرایش پس از انتشار فقط با force، دسته ساخته نمی‌شود،
+  تصویر هم‌نام با محتوای دیگر = conflict. چهار جهش عمدی در کد، هر چهار قرمز شد.
+- مقاله‌ها بلوکی شدند: گروه ACF روی `post` + `Post` در graphql_types؛ `blog/[slug].astro` با `ContentBlocks`. تا Sync گروه،
+  نبود فیلد فقط هشدار build است (برای مقاله، نه برند/محصول/دسته). بررسی معماری حالا نوع‌های هسته (post، page) را می‌شناسد —
+  پیش از این با graphql_types غلط سبز می‌شد.
+- `scripts/content/publish.mjs` + ۱۵ آزمون با سرور ساختگی: dry-run بارگذاری نمی‌کند، فقط تصویر ناموجود بارگذاری می‌شود، اثر انگشت
+  و alt ثبت می‌شود، نشانگر حل‌نشده یا پاسخ ناشناخته‌ی سرور = توقف پیش از نوشتن.
+- workflow «Content»: push ← فقط پوشه‌های تغییرکرده؛ فهرست خالی = هیچ (نه همه)؛ force فقط دستی.

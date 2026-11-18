@@ -44,7 +44,7 @@
     "test:video": "node --experimental-strip-types --no-warnings src/lib/video-embed.test.mts",
     "test:lhci-changed": "node scripts/lhci-changed.test.mjs",
     "content": "node scripts/content/cli.mjs",
-    "test:content": "node scripts/content/content.test.mjs"
+    "test:content": "node scripts/content/content.test.mjs && node scripts/content/publish.test.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.2.1",

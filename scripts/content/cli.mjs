@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // scripts/content/cli.mjs — `npm run content -- <lint|build> [مسیر…]`
 // ---------------------------------------------------------------------------
+//   publish [--apply] [--create] [--force]  پس از lint سبز، تصاویر و محتوا را به وردپرس می‌فرستد (scripts/content/publish.mjs).
+//          پیش‌فرض dry-run. متغیرهای محیطی: WP_SITE_URL (یا WP_GRAPHQL_URL)، WP_APP_USER، WP_APP_PASSWORD.
 //   lint   همه‌ی فایل‌های content/**/index.md (یا مسیرهای داده‌شده) را می‌سنجد. خطا = کد خروج ۱.
 //   build  پس از lint سبز، برای هر فایل یک payload به قالب ورود افزونه (cyh_hub_import) در .astro/content-out/ می‌سازد.
 //
@@ -11,6 +13,7 @@ import { globSync, existsSync, mkdirSync, writeFileSync, readFileSync } from 'no
 import path from 'node:path';
 import { compileFile } from './compile.mjs';
 import { lintDoc } from './lint.mjs';
+import { publishDoc, authHeader, restBase } from './publish.mjs';
 
 const ROOT = 'content';
 const ROOT_KEY = { product: 'products', category: 'categories', brand: 'brands', article: 'articles' };
@@ -21,10 +24,23 @@ const ROUTE = {
   category: (m) => (m.silo ? `/categories/${m.silo}/${m.slug}/` : `/categories/${m.slug}/`),
 };
 
-const [cmd = 'lint', ...args] = process.argv.slice(2);
-if (!['lint', 'build'].includes(cmd)) {
-  console.error('استفاده: npm run content -- <lint|build> [مسیر فایل یا پوشه…]');
+const [cmd = 'lint', ...rest] = process.argv.slice(2);
+const flags = new Set(rest.filter((a) => a.startsWith('--')));
+const args = rest.filter((a) => !a.startsWith('--'));
+if (!['lint', 'build', 'publish'].includes(cmd)) {
+  console.error('استفاده: npm run content -- <lint|build|publish> [مسیر فایل یا پوشه…] [--apply] [--create] [--force]');
   process.exit(2);
+}
+let wp = null;
+if (cmd === 'publish') {
+  const site = process.env.WP_SITE_URL || process.env.WP_GRAPHQL_URL;
+  const user = process.env.WP_APP_USER;
+  const pass = process.env.WP_APP_PASSWORD;
+  if (!site || !user || !pass) {
+    console.error('❌ انتشار به WP_SITE_URL، WP_APP_USER و WP_APP_PASSWORD نیاز دارد (GitHub Secrets — docs/content-system.md).');
+    process.exit(2);
+  }
+  wp = { base: restBase(site), auth: authHeader(user, pass) };
 }
 
 const all = globSync(`${ROOT}/**/index.md`).sort();
@@ -55,7 +71,7 @@ for (const file of targets) {
   for (const i of e) console.log(`   ✗ [${i.rule}] ${i.msg}`);
   for (const i of w) console.log(`   ⚠ [${i.rule}] ${i.msg}`);
 
-  if (cmd === 'build' && !e.length) {
+  if ((cmd === 'build' || cmd === 'publish') && !e.length) {
     const m = doc.meta;
     const payload = {
       _source: file,
@@ -74,6 +90,18 @@ for (const file of targets) {
     const out = `.astro/content-out/${m.kind}-${m.slug}.json`;
     writeFileSync(out, JSON.stringify(payload, null, 2));
     console.log(`   → ${out}`);
+    if (cmd === 'publish') {
+      const opt = { fetch, ...wp, apply: flags.has('--apply'), create: flags.has('--create'), force: flags.has('--force'), log: (s) => console.log(s) };
+      try {
+        const res = await publishDoc(doc, payload, opt);
+        for (const [kind, slug, field, msg] of res.rows ?? []) console.log(`   ${String(msg).startsWith('✗') ? '' : '•'} ${kind}:${slug}${field !== '—' ? ` (${field})` : ''} — ${msg}`);
+        if (!res.ok) errors += res.errors || 1;
+        console.log(`   ${opt.apply ? '✍️  نوشته شد' : '👁  dry-run (بدون نوشتن؛ برای نوشتن --apply)'} — ${res.written} مورد`);
+      } catch (ex) {
+        errors++;
+        console.error(`   ✗ انتشار: ${ex.message}`);
+      }
+    }
   }
 }
 

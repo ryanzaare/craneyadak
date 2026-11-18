@@ -549,6 +549,13 @@
                 "operator": "==",
                 "value": "crane_category"
             }
+        ],
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "post"
+            }
         ]
     ],
     "menu_order": 5,
@@ -562,7 +569,8 @@
     "graphql_types": [
         "CraneBrand",
         "CraneProduct",
-        "CraneCategory"
+        "CraneCategory",
+        "Post"
     ],
-    "modified": 1789902312
+    "modified": 1795013477
 }

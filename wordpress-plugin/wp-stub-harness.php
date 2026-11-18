@@ -3190,6 +3190,88 @@ $mail_ck( 'nosniff' === $hd_ssl['X-Content-Type-Options'] && 'max-age=15552000' 
 	'هدرها: nosniff + HSTS شش‌ماهه بدون includeSubDomains/preload روی HTTPS', 'هدرهای امنیتی HTTPS ناقص یا HSTS بیش از حد سخت‌گیر است' );
 $mail_ck( ! isset( $hd_http['Strict-Transport-Security'] ) && isset( $hd_http['X-Content-Type-Options'] ), 'هدرها: روی HTTP بدون HSTS', 'HSTS روی HTTP فرستاده می‌شود' );
 
+// ── سیستم محتوا: اندپوینت انتشار (class-content-api.php) ──
+// هر قاعده‌ی ایمنی روی ورودی خراب سنجیده می‌شود (قاعده‌ی ۶): نیمه‌نوشتن، ساختن بی‌اجازه، بازنویسی کار دست انسان.
+$ca_ck = $mail_ck;
+$ca_routes = $GLOBALS['cyh_test_routes'] ?? [];
+$ca_ck( isset( $ca_routes['crane-yadak/v1/content/import'], $ca_routes['crane-yadak/v1/content/media'], $ca_routes['crane-yadak/v1/content/media-meta'] )
+		&& 'cyh_content_permission' === ( $ca_routes['crane-yadak/v1/content/import']['permission_callback'] ?? '' ),
+	'محتوا: سه مسیر REST با permission_callback ثبت شد', 'مسیرهای اندپوینت محتوا ثبت نشده یا بی‌مجوزند' );
+$GLOBALS['cyh_test_can'] = false;
+$ca_ck( false === cyh_content_permission(), 'محتوا: کاربر بی edit_others_posts رد می‌شود', 'اندپوینت محتوا برای هر کاربری باز است' );
+$GLOBALS['cyh_test_can'] = true;
+
+$GLOBALS['cyh_test_terms'][9001] = (object) [ 'term_id' => 9001, 'slug' => 'remote-control', 'name' => 'ریموت', 'taxonomy' => 'crane_category' ];
+$ca_brand = wp_insert_post( [ 'post_type' => 'brand', 'post_name' => 'saga', 'post_title' => 'ساگا', 'post_status' => 'publish' ] );
+$ca_att   = wp_insert_post( [ 'post_type' => 'attachment', 'post_name' => 'saga-img', 'post_status' => 'inherit' ] );
+update_post_meta( $ca_att, CYH_MEDIA_KEY, 'saga1-l12-saga-studio-01' );
+$ca_entity = [
+	'_post'    => [ 'title' => 'ریموت تازه', 'excerpt' => 'چکیده', 'status' => 'publish' ],
+	'_product' => [ 'sku' => 'NEW-1', 'brand' => 'saga', 'categories' => [ 'remote-control' ], 'specs' => [ [ 'label' => 'برد', 'value' => '۱۰۰ متر' ], [ 'label' => '', 'value' => 'x' ] ], 'gallery' => [ [ 'file' => 'images/saga1-l12-saga-studio-01.jpg' ] ] ],
+	'blocks'   => [ [ 'type' => 'text', 'heading' => 'الف', 'body' => '<p>متن</p>' ], [ 'type' => 'faq', 'heading' => 'پرسش‌ها', 'faqs' => [ [ 'q' => 'چرا؟', 'a' => 'چون' ] ] ] ],
+];
+$ca_payload = [ 'products' => [ 'new-remote' => $ca_entity ] ];
+$ca_count = count( $GLOBALS['cyh_test_posts'] );
+
+$r = cyh_content_import( $ca_payload, [] );
+$ca_ck( ! $r['ok'] && $r['errors'] > 0 && count( $GLOBALS['cyh_test_posts'] ) === $ca_count, 'محتوا: موجودیت ناموجود بی create ساخته نمی‌شود', 'بی create محصول ساخته شد یا خطا نداد' );
+$r = cyh_content_import( $ca_payload, [ 'create' => true ] );
+$ca_ck( $r['ok'] && 1 === $r['written'] && count( $GLOBALS['cyh_test_posts'] ) === $ca_count, 'محتوا: dry-run با create فقط گزارش می‌دهد', 'dry-run چیزی ساخت یا گزارش نداد' );
+$r = cyh_content_import( $ca_payload, [ 'create' => true, 'apply' => true ] );
+$ca_new = count( $GLOBALS['cyh_test_posts'] );
+$ca_ck( $r['ok'] && $ca_new === $ca_count + 1 && 'NEW-1' === get_field( 'sku', $ca_new ) && [ $ca_brand ] === get_field( 'brand', $ca_new )
+		&& [ $ca_att ] === get_field( 'gallery', $ca_new ) && 1 === count( get_field( 'technical_specs', $ca_new ) )
+		&& 2 === count( get_field( 'content_blocks', $ca_new ) ) && [ 9001 ] === ( $GLOBALS['cyh_test_object_terms'][ $ca_new ]['crane_category'] ?? null )
+		&& '' !== get_post_meta( $ca_new, CYH_CONTENT_HASH, true ),
+	'محتوا: apply + create — نوشته، کد فنی، برند، دسته، گالری، مشخصات (ردیف ناقص حذف)، بلوک‌ها و اثر انگشت', 'ساختن محصول ناقص یا نادرست انجام شد' );
+$r = cyh_content_import( $ca_payload, [ 'apply' => true ] );
+$ca_ck( $r['ok'] && 0 === $r['written'] && 'بی‌تغییر' === $r['rows'][0][3], 'محتوا: انتشار دوباره‌ی همان فایل = بی‌تغییر', 'محتوای بی‌تغییر دوباره نوشته شد' );
+
+$GLOBALS['cyh_test_posts'][ $ca_new ]['post_modified_gmt'] = '2026-12-01 10:00:00';
+update_post_meta( $ca_new, CYH_CONTENT_SYNCED, '2026-11-01 10:00:00' );
+$ca_changed = $ca_payload;
+$ca_changed['products']['new-remote']['_product']['sku'] = 'NEW-2';
+$r = cyh_content_import( $ca_changed, [ 'apply' => true ] );
+$ca_ck( ! $r['ok'] && 'NEW-1' === get_field( 'sku', $ca_new ), 'محتوا: ویرایش دستی پس از انتشار بی force بازنویسی نمی‌شود', 'ویرایش پنل بی‌صدا بازنویسی شد' );
+$r = cyh_content_import( $ca_changed, [ 'apply' => true, 'force' => true ] );
+$ca_ck( $r['ok'] && 'NEW-2' === get_field( 'sku', $ca_new ), 'محتوا: با force بازنویسی می‌شود', 'force بازنویسی نکرد' );
+
+$ca_hand = wp_insert_post( [ 'post_type' => 'product', 'post_name' => 'hand-made', 'post_title' => 'دستی', 'post_status' => 'publish' ] );
+update_field( 'sku', 'HAND', $ca_hand );
+$r = cyh_content_import( [ 'products' => [ 'hand-made' => $ca_entity ] ], [ 'apply' => true ] );
+$ca_ck( ! $r['ok'] && 'HAND' === get_field( 'sku', $ca_hand ), 'محتوا: محصول دستی که هرگز از فایل منتشر نشده بی force دست نمی‌خورد', 'محتوای دستی بی force بازنویسی شد' );
+
+$ca_bad = $ca_entity;
+$ca_bad['blocks'][] = [ 'type' => 'text', 'heading' => 'خالی', 'body' => '' ];
+$ca_bad['_product']['sku'] = 'BROKEN';
+$r = cyh_content_import( [ 'products' => [ 'hand-made' => $ca_bad ] ], [ 'apply' => true, 'force' => true ] );
+$ca_ck( ! $r['ok'] && 'HAND' === get_field( 'sku', $ca_hand ), 'محتوا: یک بلوک خراب = هیچ فیلدی نوشته نمی‌شود (نه نیمه‌نوشتن)', 'بلوک خراب ولی بقیه‌ی فیلدها نوشته شد' );
+$ca_bad = $ca_entity;
+$ca_bad['_product']['gallery'] = [ [ 'file' => 'images/not-uploaded.jpg' ] ];
+$r = cyh_content_import( [ 'products' => [ 'hand-made' => $ca_bad ] ], [ 'apply' => true, 'force' => true ] );
+$ca_ck( ! $r['ok'] && 'HAND' === get_field( 'sku', $ca_hand ), 'محتوا: تصویر گالری ناموجود = هیچ چیز نوشته نمی‌شود', 'گالری ناقص ولی محصول نوشته شد' );
+$ca_bad = $ca_entity;
+$ca_bad['_product']['categories'] = [ 'no-such-category' ];
+$r = cyh_content_import( [ 'products' => [ 'hand-made' => $ca_bad ] ], [ 'apply' => true, 'force' => true ] );
+$ca_ck( ! $r['ok'] && 'HAND' === get_field( 'sku', $ca_hand ), 'محتوا: دسته‌ی ناموجود = خطا، نوشته نمی‌شود', 'دسته‌ی ناموجود پذیرفته شد' );
+$r = cyh_content_import( [ 'categories' => [ 'no-such-category' => [ 'blocks' => $ca_entity['blocks'] ] ] ], [ 'apply' => true, 'create' => true ] );
+$ca_ck( ! $r['ok'], 'محتوا: دسته‌ی تازه حتی با create ساخته نمی‌شود (تاکسونومی مرجعش وردپرس است)', 'دسته از فایل ساخته شد' );
+$r = cyh_content_import( [ 'categories' => [ 'remote-control' => [ 'blocks' => $ca_entity['blocks'] ] ] ], [ 'apply' => true, 'force' => true ] );
+$ca_ck( $r['ok'] && 2 === count( get_field( 'content_blocks', 'crane_category_9001' ) ) && '' !== get_term_meta( 9001, CYH_CONTENT_HASH, true ),
+	'محتوا: بلوک‌های دسته روی ترم نوشته و اثر انگشت در متای ترم', 'بلوک دسته نوشته نشد' );
+$r = cyh_content_import( [ 'articles' => [ 'how-to' => [ '_post' => [ 'title' => 'راهنما' ], 'blocks' => $ca_entity['blocks'] ] ] ], [ 'apply' => true, 'create' => true ] );
+$ca_art = count( $GLOBALS['cyh_test_posts'] );
+$ca_ck( $r['ok'] && 'post' === ( $GLOBALS['cyh_test_posts'][ $ca_art ]['post_type'] ?? '' ) && 'draft' === $GLOBALS['cyh_test_posts'][ $ca_art ]['post_status'] && 2 === count( get_field( 'content_blocks', $ca_art ) ),
+	'محتوا: مقاله‌ی تازه = نوشته‌ی post با بلوک؛ بی status صریح پیش‌نویس می‌ماند', 'مقاله درست ساخته نشد' );
+
+update_post_meta( $ca_att, CYH_MEDIA_SHA, str_repeat( 'a', 64 ) );
+$ca_m = cyh_content_media_lookup( [ [ 'name' => 'saga1-l12-saga-studio-01.jpg', 'sha256' => str_repeat( 'a', 64 ) ], [ 'name' => 'saga1-l12-saga-studio-01.jpg', 'sha256' => str_repeat( 'b', 64 ) ], [ 'name' => 'new-photo.jpg' ] ] );
+$ca_ck( 'exists' === $ca_m[0]['status'] && 'conflict' === $ca_m[1]['status'] && 'missing' === $ca_m[2]['status'] && $ca_att === $ca_m[0]['id'],
+	'محتوا: تصویر موجود/هم‌نام با محتوای متفاوت (conflict)/ناموجود', 'وضعیت تصاویر نادرست' );
+delete_post_meta( $ca_att, CYH_MEDIA_SHA );
+$ca_m = cyh_content_media_lookup( [ [ 'name' => 'saga1-l12-saga-studio-01.jpg', 'sha256' => str_repeat( 'b', 64 ) ] ] );
+$ca_ck( 'exists-unverified' === $ca_m[0]['status'], 'محتوا: تصویر بارگذاری‌شده‌ی دستی (بی اثر انگشت) = exists-unverified', 'تصویر دستی conflict یا missing شد' );
+
 echo "\n----------------------------------------\n";
 if ( empty( $errors ) ) {
 	echo "✅ همه‌ی بررسی‌ها با موفقیت گذشت (بدون هیچ خطا).\n";

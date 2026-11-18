@@ -1,0 +1,90 @@
+# سیستم محتوا — مرحله‌ی ۴: فایل‌های content/ ← وردپرس ← انتشار سایت (docs/content-system.md)
+#
+# push به main که content/ را عوض کند: lint → dry-run → نوشتن (ساختن موجودیت تازه مجاز، بازنویسی کار دستی نه) → Deploy.
+# دستی (Run workflow): برای واگذاری یک‌باره‌ی محتوای دستی به فایل (force) یا انتشار دوباره.
+# ⚠️ force هرگز روی push خودکار نیست: بازنویسی ویرایش پنل فقط با تصمیم انسان.
+name: Content
+
+on:
+  push:
+    branches: [main]
+    paths: ['content/**']
+  workflow_dispatch:
+    inputs:
+      path:
+        description: 'مسیر فایل یا پوشه (مثلاً content/products/saga-saga1-l12) — خالی = همه'
+        required: false
+        default: ''
+      apply:
+        description: 'نوشتن در وردپرس (خاموش = فقط dry-run)'
+        type: boolean
+        default: false
+      force:
+        description: 'بازنویسی محتوای دستی یا ویرایش‌شده در پنل'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: write # فقط برای اجرای workflow انتشار پس از نوشتن
+
+concurrency:
+  group: content-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      WP_SITE_URL: ${{ secrets.WP_SITE_URL }}
+      WP_APP_USER: ${{ secrets.WP_APP_USER }}
+      WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint (همه‌ی محتوا)
+        run: npm run -s test:content && node scripts/content/cli.mjs lint
+
+      # کدام محتوا؟ push: فقط پوشه‌هایی که در این push عوض شده‌اند. ⚠️ فهرست خالی روی push = هیچ (نه «همه»):
+      # push که فقط پوشه‌ای را حذف کرده نباید کل مخزن را دوباره منتشر کند.
+      - name: Changed content
+        id: files
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "list=${{ inputs.path }}" >> "$GITHUB_OUTPUT"
+            echo "run=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            LIST=$(ls -d content/*/*/ 2>/dev/null | sed 's#/$##' | tr '\n' ' ')
+          else
+            LIST=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- content/ | sed -n 's#^\(content/[^/]*/[^/]*\)/.*#\1#p' | sort -u | while read d; do [ -f "$d/index.md" ] && echo "$d"; done | tr '\n' ' ')
+          fi
+          echo "list=$LIST" >> "$GITHUB_OUTPUT"
+          if [ -n "$(echo "$LIST" | tr -d ' ')" ]; then echo "run=1" >> "$GITHUB_OUTPUT"; else echo "run=0" >> "$GITHUB_OUTPUT"; echo "هیچ فایل محتوای تغییرکرده‌ای نیست."; fi
+
+      - name: Dry run
+        if: steps.files.outputs.run == '1'
+        run: node scripts/content/cli.mjs publish ${{ steps.files.outputs.list }}
+
+      - name: Publish to WordPress
+        id: apply
+        if: steps.files.outputs.run == '1' && (github.event_name == 'push' || inputs.apply)
+        run: node scripts/content/cli.mjs publish ${{ steps.files.outputs.list }} --apply --create ${{ inputs.force && '--force' || '' }}
+
+      - name: Deploy site
+        if: steps.apply.outcome == 'success'
+        run: gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}

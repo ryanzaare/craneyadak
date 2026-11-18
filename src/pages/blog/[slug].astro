@@ -16,6 +16,8 @@ import ProductCard from '../../components/ProductCard.astro';
 import { relatedProductsForPost } from '../../components/related-products';
 import { getAllProducts } from '../../lib/wp';
 import { ALL_CATEGORIES } from '../../data/taxonomy';
+import ContentBlocks from '../../components/ContentBlocks.astro';
+import { getBlocks } from '../../lib/content-blocks';
 
 export async function getStaticPaths() {
   return (await getPosts()).map((post) => ({
@@ -41,7 +43,11 @@ const toc = buildToc(post.bodyHtml);
 const showToc = toc.items.length >= 3;
 // «محصولات مرتبط به این مقاله» (کارفرما، ۴ آبان ۱۴۰۵): فقط با نشانه‌ی واقعی در متن (کد فنی، پیوند دسته، برند+دسته)؛
 // هیچ نشانه = هیچ بخش. منطق و آزمون: src/components/related-products.ts.
-const related = relatedProductsForPost({ title: post.title, bodyHtml: post.bodyHtml }, await getAllProducts(), ALL_CATEGORIES, 4);
+// بلوک‌های مقاله (سیستم محتوا، docs/content-system.md) — همان پالت و سبک محصول و دسته. متن بلوک‌ها هم در یافتن
+// «محصولات مرتبط» شمرده می‌شود؛ وگرنه مقاله‌ی تمام‌بلوکی هیچ محصول مرتبطی نمی‌گرفت.
+const blocks = await getBlocks('post', post.slug);
+const blocksText = blocks.map((b) => [b.bodyHtml, ...b.faqs.map((f) => `${f.question} ${f.answer}`)].join(' ')).join(' ');
+const related = relatedProductsForPost({ title: post.title, bodyHtml: `${post.bodyHtml} ${blocksText}` }, await getAllProducts(), ALL_CATEGORIES, 4);
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -162,4 +168,7 @@ const jsonLd = {
       )}
     </div>
   </section>
+
+  {/* بلوک‌های مقاله (سیستم محتوا): ویدیو، جدول، FAQ، کادرها — همان سبک صفحه‌ی محصول و دسته. */}
+  <ContentBlocks blocks={blocks} title={post.title} eyebrow="در این مقاله" />
 </Layout>

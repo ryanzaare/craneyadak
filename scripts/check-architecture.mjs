@@ -48,6 +48,10 @@ const problems = [];
 
 // نگاشت «نام post type / taxonomy» → «تایپ گراف‌کیوال» از روی ثبت واقعی.
 const gqlNames = new Map();
+// ⚠️ نوع‌های هسته‌ی وردپرس (۲۸ آبان ۱۴۰۵): افزونه register_post_type('post') ندارد، پس این بررسی «post» را «ناشناخته» می‌دید
+// و کل مقایسه را رد می‌کرد — با graphql_types غلط («BlogPost») سبز می‌شد. روی ورودی خراب سنجیده شد.
+gqlNames.set('post', 'Post');
+gqlNames.set('page', 'Page');
 for (const f of PHP) {
   const src = read(f);
   // register_post_type( 'brand', [ ... 'graphql_single_name' => 'craneBrand' ... ] )

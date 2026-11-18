@@ -134,7 +134,16 @@ const ROOTS = {
   brand: 'craneBrands',
   product: 'craneProducts',
   category: 'craneCategories',
+  post: 'posts',
 } as const;
+
+/*
+ * ⚠️ بلوک روی مقاله (۲۸ آبان ۱۴۰۵، سیستم محتوا): گروه ACF در افزونه‌ی ۳.۳۰.۰ روی `post` هم فعال شد، ولی تا کارفرما
+ * افزونه را نصب و گروه را Sync نکند، تایپ Post فیلد contentBlocks ندارد و کوئری با خطای اسکیما می‌افتد. برای برند/محصول/
+ * دسته آن خطا عمداً build را می‌شکند (سایت بی‌محتوا بدتر از نساختن است)؛ برای مقاله نه — مقاله‌ها امروز متن ویرایشگر
+ * (bodyHtml) دارند و بلوک افزوده است، نه جایگزین. پس فقط هشدار بلند.
+ */
+const OPTIONAL_ENTITIES: ReadonlySet<BlockEntity> = new Set(['post']);
 
 export type BlockEntity = keyof typeof ROOTS;
 
@@ -211,6 +220,11 @@ async function fetchBlocks(entity: BlockEntity): Promise<Map<string, ContentBloc
   }
 
   const detail = failures.map((f) => `        • ${f}`).join('\n');
+
+  if (schemaBroken && OPTIONAL_ENTITIES.has(entity)) {
+    console.warn(`[blocks] ⚠ «${entity}»: فیلد contentBlocks هنوز در اسکیما نیست (افزونه ۳.۳۰.۰ نصب و گروه «بلوک‌های محتوا» Sync شود).\n${detail}`);
+    return map;
+  }
 
   if (schemaBroken) {
     // شکست اسکیما یعنی پیکربندی، نه شبکه. اجازه نمی‌دهیم سایتِ بی‌محتوا
