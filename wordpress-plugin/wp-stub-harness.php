@@ -3236,6 +3236,12 @@ $ca_ck( ! $r['ok'] && 'NEW-1' === get_field( 'sku', $ca_new ), 'محتوا: وی
 $r = cyh_content_import( $ca_changed, [ 'apply' => true, 'force' => true ] );
 $ca_ck( $r['ok'] && 'NEW-2' === get_field( 'sku', $ca_new ), 'محتوا: با force بازنویسی می‌شود', 'force بازنویسی نکرد' );
 
+$ca_body_id = wp_insert_post( [ 'post_type' => 'product', 'post_name' => 'with-body', 'post_title' => 'متن‌دار', 'post_status' => 'publish', 'post_content' => '<p>متن قدیمی Ni-MH</p>' ] );
+$ca_body_e = $ca_entity;
+$ca_body_e['_post']['content'] = '';
+$r = cyh_content_import( [ 'products' => [ 'with-body' => $ca_body_e ] ], [ 'apply' => true, 'force' => true ] );
+$ca_ck( $r['ok'] && '<p>متن قدیمی Ni-MH</p>' === get_post_meta( $ca_body_id, '_cyh_content_backup', true ) && false !== strpos( $r['rows'][0][3], 'متن ویرایشگر' ),
+	'محتوا: متن قدیمی ویرایشگر جایگزین و پشتیبانش در متا نگه داشته می‌شود', 'متن قدیمی ویرایشگر بی پشتیبان جایگزین شد یا ماند' );
 $ca_hand = wp_insert_post( [ 'post_type' => 'product', 'post_name' => 'hand-made', 'post_title' => 'دستی', 'post_status' => 'publish' ] );
 update_field( 'sku', 'HAND', $ca_hand );
 $r = cyh_content_import( [ 'products' => [ 'hand-made' => $ca_entity ] ], [ 'apply' => true ] );

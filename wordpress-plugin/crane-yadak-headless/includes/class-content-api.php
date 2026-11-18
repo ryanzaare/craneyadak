@@ -204,12 +204,24 @@ function cyh_content_import( $payload, $opt = [] ) {
 			$what = [];
 			if ( $post_type && $post ) {
 				$what[] = 'عنوان/چکیده';
+				$update = [
+					'ID'           => $target,
+					'post_title'   => sanitize_text_field( (string) ( $post['title'] ?? get_the_title( $target ) ) ),
+					'post_excerpt' => sanitize_text_field( (string) ( $post['excerpt'] ?? '' ) ),
+				];
+				/* ⚠️ متن ویرایشگر (۲۸ آبان ۱۴۰۵): محتوای فایل در بلوک‌هاست. اگر متن قدیمی ویرایشگر بماند، صفحه هر دو را نشان
+				   می‌دهد — متن قدیمی SAGA1-L12 (با Ni-MH و ادعاهای حذف‌شده) بالای بلوک‌های تازه. پس فایل متن ویرایشگر را هم
+				   تعیین می‌کند؛ نسخه‌ی قبلی یک بار در متا نگه داشته می‌شود تا برگشت‌پذیر باشد. */
+				if ( array_key_exists( 'content', $post ) ) {
+					$old = (string) get_post_field( 'post_content', $target );
+					if ( '' !== trim( $old ) ) {
+						$what[] = 'متن ویرایشگر جایگزین شد (پشتیبان در متا)';
+						$apply && update_post_meta( $target, '_cyh_content_backup', $old );
+					}
+					$update['post_content'] = wp_kses( (string) $post['content'], cyh_import_allowed_html() );
+				}
 				if ( $apply ) {
-					wp_update_post( [
-						'ID'           => $target,
-						'post_title'   => sanitize_text_field( (string) ( $post['title'] ?? get_the_title( $target ) ) ),
-						'post_excerpt' => sanitize_text_field( (string) ( $post['excerpt'] ?? '' ) ),
-					] );
+					wp_update_post( $update );
 				}
 			}
 			if ( 'product' === $kind && $product ) {
