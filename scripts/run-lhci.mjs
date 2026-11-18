@@ -49,6 +49,9 @@ try {
     const cfg = structuredClone(base);
     if (preset === 'desktop') cfg.ci.collect.settings = { ...cfg.ci.collect.settings, preset: 'desktop' };
     cfg.ci.upload.outputDir = `./.astro/lhci-${preset}`;
+    // ⚠️ فقط گزارش آخرین اجرا نگه داشته می‌شود (۲۷ آبان ۱۴۰۵): گزارش‌ها هر بار انباشته می‌شدند و پوشه به ۱ گیگابایت
+    // (۷۷۵ فایل) رسیده بود. تاریخچه‌ی امتیاز در لاگ CI هست؛ این پوشه فقط برای بازکردن گزارش همین اجراست.
+    rmSync(cfg.ci.upload.outputDir, { recursive: true, force: true });
     const file = `.astro/lighthouserc.${preset}.json`;
     writeFileSync(file, JSON.stringify(cfg, null, 2));
     const r = spawnSync('npx', ['lhci', 'autorun', `--config=./${file}`], { stdio: 'inherit' });
