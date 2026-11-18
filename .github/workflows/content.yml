@@ -81,7 +81,9 @@ jobs:
 
       - name: Dry run
         if: steps.files.outputs.run == '1'
-        run: node scripts/content/cli.mjs publish ${{ steps.files.outputs.list }}
+        # ⚠️ force به dry-run هم می‌رسد (۲۸ آبان ۱۴۰۵): بدون آن، پیش‌نمایش «واگذاری با force» ممکن نبود و dry-run همیشه به قفل
+        # مالکیت می‌خورد — یعنی apply + force بی پیش‌نمایش اجرا می‌شد.
+        run: node scripts/content/cli.mjs publish ${{ steps.files.outputs.list }} ${{ inputs.force && '--force' || '' }}
 
       - name: Publish to WordPress
         id: apply
