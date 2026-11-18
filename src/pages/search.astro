@@ -64,7 +64,7 @@ const presence = await getCatalogPresence();
         خریداری که کد را از پلاک می‌خواند و پیدا نمی‌کند، همان خریداری است که با یک عکس یا تماس سفارش می‌دهد.
         پیوندها فقط اگر شماره در وردپرس ثبت شده باشد (هرگز ثابت در کد). */}
     <section id="zero-results" hidden aria-live="polite" class="mb-8 bg-steel-50 border border-steel-300 rounded-md p-4 md:p-5">
-      <p class="text-base font-bold text-steel-900">قطعه‌ای با «<span id="zero-q" class="font-mono" dir="ltr"></span>» در کاتالوگ پیدا نشد.</p>
+      <p class="text-base font-bold text-steel-900">کد دقیق «<span id="zero-q" class="font-mono" dir="ltr"></span>» را پیدا نکردید؟</p>
       <p class="mt-1 text-sm text-steel-700 leading-7">همه‌ی قطعات هنوز در سایت ثبت نشده‌اند. عکس پلاک یا خود قطعه را بفرستید یا تماس بگیرید تا کد را بررسی کنیم.</p>
       <div class="mt-3 flex flex-wrap gap-3">
         {contact.whatsappHref && (
@@ -134,7 +134,7 @@ const presence = await getCatalogPresence();
 </Layout>
 
 <script>
-  import { suggest, type SuggestEntry } from '../lib/search-score';
+  import { suggestAlways, type SuggestEntry, type SearchMode } from '../lib/search-score';
 
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
@@ -144,10 +144,19 @@ const presence = await getCatalogPresence();
     const products: SuggestEntry[] = await fetch('/search-index.json').then((r) => (r.ok ? r.json() : [])).catch(() => []);
     // همان داده‌ی ساختاری که SearchBox همین صفحه inline کرده — نسخه‌ی دوم لازم نیست.
     const structural: SuggestEntry[] = JSON.parse(document.querySelector('[data-search-index]')?.textContent || '[]');
-    const hits = suggest(products, q, 20);
-    const anyStructural = suggest(structural, q, 1).length > 0;
+    // ⚠️ هرگز خالی (کارفرما، ۲۸ آبان ۱۴۰۵): محصول و ساختار با هم، با پله‌های suggestAlways. عنوان فهرست پله را
+    // صادقانه می‌گوید — نتیجه‌ی تقریبی هرگز «قطعات منطبق» نامیده نمی‌شود (قاعده‌ی ۲: کد اشتباه = مسئله‌ی ایمنی).
+    const { items: hits, mode, corrected } = suggestAlways([...products, ...structural], q, 20);
+    const HEAD: Record<SearchMode, string> = {
+      exact: 'قطعات منطبق',
+      layout: `منظورتان «${corrected ?? ''}» بود؟ (صفحه‌کلید فارسی/انگلیسی)`,
+      approximate: 'عبارت دقیق پیدا نشد — نزدیک‌ترین نتایج',
+      popular: 'عبارت دقیق پیدا نشد — پرکاربردترین قطعات و دسته‌ها',
+    };
     const box = document.getElementById('part-results');
     const ul = document.getElementById('part-results-list');
+    const head = document.getElementById('part-results-heading');
+    if (head) head.textContent = HEAD[mode];
     if (hits.length && box && ul) {
       ul.innerHTML = hits
         .map((e) =>
@@ -159,7 +168,7 @@ const presence = await getCatalogPresence();
         .join('');
       box.hidden = false;
     }
-    if (!hits.length && !anyStructural) {
+    if (mode === 'approximate' || mode === 'popular') {
       const zero = document.getElementById('zero-results');
       const zq = document.getElementById('zero-q');
       if (zq) zq.textContent = q;
@@ -227,7 +236,8 @@ const presence = await getCatalogPresence();
           clear_search: 'پاک کردن',
           load_more: 'نمایش نتایج بیشتر',
           search_label: 'جستجو در محصولات',
-          zero_results: 'محصولی برای [SEARCH_TERM] پیدا نشد.',
+          // نتیجه‌ی نزدیک همیشه بالای همین بخش هست (suggestAlways)؛ این پیام فقط می‌گوید متن کامل صفحه‌ها چه داشت.
+          zero_results: 'عبارت «[SEARCH_TERM]» عیناً در متن صفحه‌ها نیامده — نزدیک‌ترین نتایج بالاتر آمده‌اند.',
           many_results: '[COUNT] محصول برای [SEARCH_TERM]',
           one_result: 'یک محصول برای [SEARCH_TERM]',
           searching: 'در حال جستجو...',

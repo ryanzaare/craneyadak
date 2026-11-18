@@ -129,7 +129,7 @@ const listId = `${id}-listbox`;
   /* ⚠️ منطق امتیاز از src/lib/search-score.ts import می‌شود — همان فایلی که آزمون Node اجرا می‌کند
      (npm run test:search). نسخه‌ی قبل یک کپی inline بود که از سرور رانده بود (محدوده‌ی اعراب U+0650 به‌جای
      U+0652): آزمون چیزی را تأیید می‌کرد که مرورگر اجرا نمی‌کرد. حالا یک منطق، باندل‌شده و کش‌شونده. */
-  import { suggest, type SuggestEntry } from '../lib/search-score';
+  import { suggestAlways, type SuggestEntry, type SearchMode } from '../lib/search-score';
 
   const KIND_LABEL: Record<string, string> = { category: 'دسته', brand: 'برند', silo: 'گروه', product: 'محصول' };
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -163,7 +163,8 @@ const listId = `${id}-listbox`;
       active = -1;
     };
 
-    const render = (items: SuggestEntry[], query: string) => {
+    const NOTE: Partial<Record<SearchMode, string>> = { approximate: 'عبارت دقیق پیدا نشد — نزدیک‌ترین نتایج:', popular: 'عبارت دقیق پیدا نشد — پرکاربردها:' };
+    const render = (items: SuggestEntry[], query: string, mode: SearchMode = 'exact', corrected?: string) => {
       active = -1;
       input.removeAttribute('aria-activedescendant');
       if (!query.trim()) return close();
@@ -175,7 +176,10 @@ const listId = `${id}-listbox`;
           '<li class="border-t border-steel-100"><a href="/search/?q=' + encodeURIComponent(query) + '" class="block px-4 py-2.5 text-sm font-bold text-accent-ink hover:bg-accent-soft">' +
           'جستجوی «' + esc(query) + '» در تمام محصولات ←</a></li>';
       } else {
-        list.innerHTML = items
+        // ⚠️ پله‌ی غیردقیق همیشه برچسب دارد (کارفرما: «هرگز خالی»؛ قاعده‌ی ۲: تقریبی هرگز دقیق جلوه نکند).
+        const note = mode === 'layout' ? 'منظورتان «' + esc(corrected ?? '') + '» بود؟' : NOTE[mode] ? esc(NOTE[mode]!) : '';
+        list.innerHTML = (note ? '<li class="px-4 py-2 text-xs font-bold text-steel-600 bg-steel-50 border-b border-steel-100">' + note + '</li>' : '') +
+          items
           .map((e, i) =>
             '<li role="option" id="' + id + '-opt-' + i + '" aria-selected="false" class="border-b border-steel-100 last:border-b-0">' +
             '<a href="' + esc(e.href) + '" tabindex="-1" class="flex items-baseline justify-between gap-3 px-4 py-2.5 hover:bg-accent-soft focus:bg-accent-soft">' +
@@ -187,7 +191,8 @@ const listId = `${id}-listbox`;
             (e.kind === 'product' ? 'text-white bg-action' : 'text-steel-600 bg-steel-100') + '">' + (KIND_LABEL[e.kind] || '') + '</span>' +
             '</a></li>'
           )
-          .join('');
+          .join('') +
+          (mode === 'exact' ? '' : '<li class="border-t border-steel-100"><a href="/search/?q=' + encodeURIComponent(query) + '" class="block px-4 py-2.5 text-sm font-bold text-accent-ink hover:bg-accent-soft">جستجوی کامل، یا ارسال عکس پلاک ←</a></li>');
       }
       list.hidden = false;
       input.setAttribute('aria-expanded', 'true');
@@ -204,7 +209,7 @@ const listId = `${id}-listbox`;
       el.scrollIntoView({ block: 'nearest' });
     };
 
-    const update = () => render(suggest(index(), input.value, 7), input.value);
+    const update = () => { const r = suggestAlways(index(), input.value, 7); render(r.items, input.value, r.mode, r.corrected); };
     input.addEventListener('input', () => {
       update();
       // پس از رسیدن محصولات همان پرس‌وجو دوباره امتیاز می‌گیرد — بدون تایپ دوباره.

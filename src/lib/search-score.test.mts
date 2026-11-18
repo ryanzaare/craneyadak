@@ -5,7 +5,7 @@
 // ورودی خراب شناخته‌شده عمداً هست (قاعده‌ی ۶): این آزمون پیش از جابه‌جایی منطق به search-score.ts نوشته و
 // روی stub قرمز دیده شد.
 // ---------------------------------------------------------------------------
-import { normalizeFa, partCodeKey, productEntry, suggest, type SuggestEntry } from './search-score.ts';
+import { normalizeFa, partCodeKey, productEntry, suggest, suggestAlways, swapLayout, type SuggestEntry } from './search-score.ts';
 
 let failed = 0;
 const eq = (name: string, got: unknown, want: unknown) => {
@@ -57,6 +57,25 @@ eq('بخشی از کد دیگر (saga2) SAGA1 را اول نمی‌آورد', to
 console.log('── نمایش');
 eq('مدخل محصول کد فنی جدا دارد (برای font-mono)', saga.code, 'SAGA1-L12');
 eq('نشانی محصول با «/» پایانی', saga.href, '/products/saga-saga1-l12/');
+
+console.log('── هرگز خالی (کارفرما، ۲۸ آبان ۱۴۰۵)');
+const always = (q: string) => suggestAlways(index, q, 5);
+eq('چیدمان انگلیسی برای «ساگا» (sh\'h) → layout + SAGA1-L12', [always("sh'h").mode, always("sh'h").items[0]?.href, always("sh'h").corrected], ['layout', '/products/saga-saga1-l12/', 'ساگا']);
+eq('چیدمان فارسی برای «demag» (یثپشل) → مگنت دماگ', [always('یثپشل').mode, always('یثپشل').items[0]?.href], ['layout', '/products/magnet-mt318/']);
+eq('غلط سنگین «رموتکنترول» → ریموت (تقریبی، نه دقیق)', [always('رموتکنترول').mode, always('رموتکنترول').items.some((e) => e.href === '/categories/x/')], ['approximate', true]);
+eq('بی‌ربط کامل «xyz999» → هرگز خالی، برچسب popular، محصول اول', [always('xyz999').mode, always('xyz999').items.length > 0, always('xyz999').items[0]?.kind], ['popular', true, 'product']);
+eq('عبارت دقیق همان نتیجه‌ی suggest را می‌دهد', always('SAGA1-L12').items.map((e) => e.href), suggest(index, 'SAGA1-L12', 5).map((e) => e.href));
+eq('عبارت خالی = فهرست بسته', always('  ').items, []);
+// دو باگ که روی فهرست واقعی سایت دیده شد (preview، ۲۸ آبان):
+const inverter: SuggestEntry = { label: 'اینورتر', kind: 'category', href: '/categories/inv/', context: '', haystack: ['اینورتر', 'کنترل دور موتور', 'کنترلدورموتور'] };
+const shock: SuggestEntry = { label: 'ضربه گیر', kind: 'category', href: '/categories/shock/', context: '', haystack: ['ضربه گیر', 'shock absorber', 'shockabsorber'] };
+const real = [inverter, shock, ...index];
+eq('«رموت کنترول» ریموت را بالاتر از اینورتر می‌آورد («رموت» درون «دورموتور»)', suggest(real, 'رموت کنترول', 3)[0]?.href !== '/categories/inv/', true);
+eq("«sh'h» = ساگا (چیدمان)، نه ضربه‌گیر از پیشوند «sh»", [suggestAlways(real, "sh'h", 3).mode, suggestAlways(real, "sh'h", 3).items[0]?.href], ['layout', '/products/saga-saga1-l12/']);
+eq('ترکیب دو خط = بی تعویض چیدمان', swapLayout('saga ساگا'), null);
+for (const q of ['saga1l12', 'ساگا', 'sag', 'dmeag', 'رکتیفایر', '؟؟؟', 'zzzz', '12', 'ب']) {
+  eq(`«${q}» هرگز خالی نیست`, always(q).items.length > 0, true);
+}
 
 if (failed) {
   console.error(`\n❌ ${failed} آزمون جستجو شکست خورد.`);

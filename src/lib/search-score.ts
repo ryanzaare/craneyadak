@@ -207,7 +207,10 @@ export function scoreEntry(entry: SuggestEntry, queryNorm: string): number {
         if (!hw) continue;
         if (hw === qw) bestForWord = Math.max(bestForWord, 60);
         else if (hw.startsWith(qw)) bestForWord = Math.max(bestForWord, 50);
-        else if (qw.length >= 3 && hw.includes(qw)) bestForWord = Math.max(bestForWord, 32);
+        // ⚠️ «شامل» فقط در واژه‌ای که خیلی بلندتر نیست (۲۸ آبان ۱۴۰۵): شکل بی‌فاصله‌ی «کنترل دور موتور»
+        // («کنترلدورموتور») «رموت» را در دل «دورموتور» دارد — «رموت کنترول» اینورتر را بالاتر از ریموت می‌آورد.
+        // شکل بافاصله‌ی همان انبار تطبیق واقعی را با واژه‌ی خودش می‌گیرد، پس این محدودیت چیزی را گم نمی‌کند.
+        else if (qw.length >= 3 && hw.length <= qw.length + 6 && hw.includes(qw)) bestForWord = Math.max(bestForWord, 32);
         // تطبیق فازی فقط برای کلمات به‌قدر کافی بلند و با اختلاف طول کم.
         // بدون این دو شرط، کلمات کوتاه به هر چیزی وصل می‌شوند و فهرست
         // پیشنهاد پر از نتیجه‌ی بی‌ربط می‌شود.
@@ -280,4 +283,100 @@ export function suggest(index: SuggestEntry[], query: string, limit = 7): Sugges
     )
     .slice(0, limit)
     .map((x) => x.entry);
+}
+
+/* -------------------------------------------------------------------------
+   جستجوی «هرگز خالی» (کارفرما، ۲۸ آبان ۱۴۰۵: «کاربر هرگز نباید نتیجه‌ی خالی ببیند؛ همیشه مرتبط‌ترین نتیجه،
+   حتی اگر اشتباه تایپ کند»). `suggest` بالا دقیق می‌ماند — آزمون‌ها و ترتیب نتیجه‌ی دقیق به آن تکیه دارند. این
+   لایه فقط وقتی وارد می‌شود که آن هیچ نیاورد، و به رابط کاربری می‌گوید نتیجه از کدام پله آمده تا برچسب درست
+   بزند («منظورتان … بود؟» / «نزدیک‌ترین نتایج»). ⚠️ نتیجه‌ی تقریبی هرگز «دقیق» نشان داده نمی‌شود: در سایت قطعات
+   جرثقیل، القای «این همان کد شماست» وقتی نیست، مسئله‌ی ایمنی است (قاعده‌ی ۲).
+------------------------------------------------------------------------- */
+
+/**
+ * صفحه‌کلید اشتباه: کاربر ایرانی بسیار پیش می‌آید که با چیدمان انگلیسی فارسی تایپ کند («sh'h» به‌جای «ساگا») یا
+ * برعکس («یثپشل» به‌جای «demag»). نگاشت چیدمان استاندارد فارسی (ISIRI 9147).
+ */
+const EN_FA: Record<string, string> = {
+  q: 'ض', w: 'ص', e: 'ث', r: 'ق', t: 'ف', y: 'غ', u: 'ع', i: 'ه', o: 'خ', p: 'ح', '[': 'ج', ']': 'چ',
+  a: 'ش', s: 'س', d: 'ی', f: 'ب', g: 'ل', h: 'ا', j: 'ت', k: 'ن', l: 'م', ';': 'ک', "'": 'گ', '\\': 'پ',
+  z: 'ظ', x: 'ط', c: 'ز', v: 'ر', b: 'ذ', n: 'د', m: 'پ', ',': 'و',
+};
+const FA_EN: Record<string, string> = Object.fromEntries(Object.entries(EN_FA).filter(([k]) => k !== '\\').map(([k, v]) => [v, k]));
+
+/** همان کلیدها روی چیدمان دیگر؛ null اگر عبارت ترکیبی از هر دو خط باشد یا تغییری نکند. */
+export function swapLayout(query: string): string | null {
+  const q = query.toLowerCase();
+  const latin = /[a-z;'\[\]\\,]/.test(q);
+  const persian = /[؀-ۿ]/.test(q);
+  if (latin === persian) return null;
+  const map = latin ? EN_FA : FA_EN;
+  const out = [...q].map((c) => map[c] ?? c).join('');
+  return out !== q ? out : null;
+}
+
+/** جفت‌نویسه‌های یک رشته‌ی بی‌فاصله — پایه‌ی شباهت Dice. */
+function bigrams(s: string): Map<string, number> {
+  const m = new Map<string, number>();
+  for (let i = 0; i < s.length - 1; i++) {
+    const g = s.slice(i, i + 2);
+    m.set(g, (m.get(g) ?? 0) + 1);
+  }
+  return m;
+}
+
+/** شباهت Dice (۰ تا ۱) بین عبارت و بهترین رشته‌ی انبار؛ برای غلط تایپی سنگین که Levenshtein ≤۱ نمی‌گیرد. */
+export function fuzzySimilarity(entry: SuggestEntry, queryNorm: string): number {
+  const q = despace(queryNorm);
+  if (q.length < 2) return 0;
+  const qg = bigrams(q);
+  const qn = q.length - 1;
+  let best = 0;
+  for (const hay of entry.haystack) {
+    // هر واژه‌ی انبار و کل انبار بی‌فاصله — تا «ریموت» در «ریموت کنترل ساگا» هم کامل شمرده شود.
+    for (const h of new Set([despace(hay), ...hay.split(' ')])) {
+      if (h.length < 2) continue;
+      const hg = bigrams(h);
+      let inter = 0;
+      for (const [g, n] of qg) inter += Math.min(n, hg.get(g) ?? 0);
+      const dice = (2 * inter) / (qn + h.length - 1);
+      if (dice > best) best = dice;
+    }
+  }
+  return best;
+}
+
+export type SearchMode = 'exact' | 'layout' | 'approximate' | 'popular';
+
+/**
+ * هرگز خالی. پله‌ها به ترتیب: (۱) دقیق/فازی معمول؛ (۲) همان کلیدها روی چیدمان دیگر؛ (۳) شباهت جفت‌نویسه
+ * (آستانه‌ی ۰٫۲۵)؛ (۴) پرکاربردها — محصول واقعی اول، بعد دسته. عبارت خالی = [] (فهرست بسته).
+ * `corrected`: عبارتی که پله‌ی ۲ با آن نتیجه گرفت، برای «منظورتان … بود؟».
+ */
+export function suggestAlways(index: SuggestEntry[], query: string, limit = 7): { items: SuggestEntry[]; mode: SearchMode; corrected?: string } {
+  const RANK = { product: 0, category: 1, brand: 2, silo: 3 } as const;
+  const popular = () => ({ items: [...index].sort((a, b) => RANK[a.kind] - RANK[b.kind]).slice(0, limit), mode: 'popular' as const });
+  const q = normalizeFa(query);
+  // فقط نقطه‌گذاری («؟؟؟») = پرکاربردها؛ فقط فاصله = فهرست بسته.
+  if (!q) return query.trim() ? popular() : { items: [], mode: 'exact' };
+  const exact = suggest(index, query, limit);
+  const swapped = swapLayout(query);
+  // ⚠️ چیدمان دیگر رقابت می‌کند، نه فقط وقتی دقیق خالی است: «sh'h» (ساگا با چیدمان انگلیسی) واژه‌ی «sh» را
+  // پیشوند «shock absorber» می‌بیند و «ضربه‌گیر» را «دقیق» می‌آورد. برنده بهترین امتیاز است.
+  const best = (q2: string) => Math.max(0, ...index.map((e) => scoreEntry(e, normalizeFa(q2))));
+  if (swapped && best(swapped) > (exact.length ? best(query) : 0)) {
+    const viaLayout = suggest(index, swapped, limit);
+    if (viaLayout.length) return { items: viaLayout, mode: 'layout', corrected: swapped };
+  }
+  if (exact.length) return { items: exact, mode: 'exact' };
+
+  const near = index
+    .map((entry) => ({ entry, s: Math.max(fuzzySimilarity(entry, q), swapped ? fuzzySimilarity(entry, normalizeFa(swapped)) : 0) }))
+    .filter((x) => x.s >= 0.25)
+    .sort((a, b) => b.s - a.s || Number(b.entry.kind === 'product') - Number(a.entry.kind === 'product'))
+    .slice(0, limit)
+    .map((x) => x.entry);
+  if (near.length) return { items: near, mode: 'approximate' };
+
+  return popular();
 }
