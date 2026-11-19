@@ -8,6 +8,7 @@ secondaryKeywords: [SAGA1-L12, ریموت ساگا L12, ریموت ۱۲ کانا
 excerpt: ریموت کنترل ساگا L12 (SAGA1-L12) تایوان؛ ۱۱ کلید دو سرعته + استارت، فرستنده و گیرنده، IP65 و برد ۱۰۰ متر. مقایسه با L10 و L12-1 و راهنمای سفارش.
 sku: SAGA1-L12
 brand: saga
+authenticity: original
 categories: [remote-control]
 gallery:
   - { file: images/saga1-l12-saga-studio-01.jpg, alt: ریموت کنترل جرثقیل سقفی ساگا مدل SAGA1-L12 به همراه گیرنده رادیویی }

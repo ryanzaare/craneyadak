@@ -8,6 +8,7 @@ secondaryKeywords: [رسیور ساگا L12, SAGA1-L12 RX, گیرنده ریمو
 excerpt: گیرنده ریموت ساگا L12 (SAGA1-L12 RX) به‌تنهایی برای جایگزینی گیرنده‌ی سوخته؛ نقشه‌ی ۳۰ ترمینال پلاک، فیوزها، ولتاژ ترانس و نصب.
 sku: SAGA1-L12 RX
 brand: saga
+authenticity: original
 categories: [remote-control]
 gallery:
   - { file: images/saga1-l12-receiver-photo-01.jpg, alt: گیرنده ریموت ساگا L12 با بدنه‌ی نارنجی و پلاک نقشه‌ی ترمینال SAGA1-L12 RX }
