@@ -4,24 +4,20 @@
 // ⚠️ چرا (کارفرما، ۲۹ آبان ۱۴۰۵): «سمت چپ هر متن جای خالی است؛ راه‌حل برای همه‌ی صفحه‌ها، نه فقط ساگا». ستون متن
 // عمداً ~۷۰ نویسه است (خوانایی) و در ظرف ۱۲۸۰px نیمی از عرض خالی می‌ماند. پهن کردن متن خوانایی را می‌کشد؛ پس آن
 // نیمه کار مفید می‌گیرد — همان کاری که دیجی‌کالا با جعبه‌ی خرید چسبان می‌کند:
-//   محصول: کارت سفارش (عکس، نام، کد، پیش‌فاکتور، واتساپ) + راهنماهای مرتبط (src/lib/related-guides.ts)
-//   مقاله: محصول مرتبط
-//   دسته/برند: قطعه‌یاب
-// ⚠️ فهرست بخش‌ها این‌جا نیست: نوار چسبان «در این صفحه» (SectionNav) همان را بالای صفحه دارد — دو فهرست = تکرار.
-//   همه: قطعه‌یاب
+//   محصول: کارت سفارش (عکس، نام، کد، پیش‌فاکتور، واتساپ) + قطعه‌یاب. بقیه‌ی صفحه‌ها: قطعه‌یاب.
+// ⚠️ فقط عمل سریع، هیچ فهرستی (۳۰ آبان ۱۴۰۵): راهنماهای مرتبط و محصول مرتبط که روز قبل این‌جا بودند به «ادامه‌ی
+// مسیر» (ExploreMore) رفتند — این ستون فقط دسکتاپ است، پس فهرست این‌جا یا در موبایل گم بود یا در دسکتاپ تکرار می‌شد.
+// ⚠️ فهرست بخش‌ها هم نه: نوار چسبان «در این صفحه» (SectionNav) همان را دارد.
 // ⚠️ موبایل (زیر lg) رندر نمی‌شود: آنجا نوار پایین (ActionBar) کار کارت سفارش را می‌کند و ستون کناری جایی ندارد.
-// ⚠️ فقط داده‌ی واقعی: کارتی که داده ندارد (بی واتساپ، بی راهنما) رندر نمی‌شود.
+// ⚠️ فقط داده‌ی واقعی: کارتی که داده ندارد (بی واتساپ) رندر نمی‌شود.
 // ---------------------------------------------------------------------------
 import RemoteImage from './RemoteImage.astro';
 import { getContact } from '../lib/site-options';
-import type { GuideLink } from '../lib/related-guides';
 
 export interface Props {
   product?: { name: string; sku: string | null; image: { url: string; altText?: string | null } | null } | null;
-  guides?: GuideLink[];
-  relatedProduct?: { name: string; href: string; image: { url: string; altText?: string | null } | null } | null;
 }
-const { product = null, guides = [], relatedProduct = null } = Astro.props;
+const { product = null } = Astro.props;
 const contact = await getContact();
 const wa = contact.whatsappHref && product ? `${contact.whatsappHref}?text=${encodeURIComponent(`استعلام ${product.sku ?? product.name}`)}` : contact.whatsappHref;
 const card = 'rounded-md border border-steel-300 bg-white p-4';
@@ -45,31 +41,6 @@ const card = 'rounded-md border border-steel-300 bg-white p-4';
       <a href={wa} target="_blank" rel="noopener noreferrer" class="mt-2 flex items-center justify-center min-h-11 rounded-md border border-steel-300 text-sm font-bold text-steel-900 hover:border-steel-500">استعلام در واتساپ</a>
     )}
   </div>
-)}
-
-{relatedProduct && (
-  <a href={relatedProduct.href} class={`${card} flex items-center gap-3 hover:border-action`}>
-    {relatedProduct.image && (
-      <span class="w-16 h-16 shrink-0 rounded-md border border-steel-200 bg-white p-1">
-        <RemoteImage src={relatedProduct.image.url} alt="" width={128} height={128} sizes="64px" class="w-full h-full object-contain" />
-      </span>
-    )}
-    <span class="min-w-0">
-      <span class="block text-xs font-bold text-accent-ink">محصول مرتبط</span>
-      <span class="block text-sm font-bold text-steel-900 leading-6 line-clamp-2">{relatedProduct.name}</span>
-    </span>
-  </a>
-)}
-
-{guides.length > 0 && (
-  <nav class={card} aria-label="راهنماهای مرتبط">
-    <p class="text-sm font-bold text-steel-900 mb-2">راهنماهای مرتبط</p>
-    <ul class="space-y-2 text-sm">
-      {guides.map((g) => (
-        <li><a href={g.href} class="text-steel-700 hover:text-accent-ink leading-6">{g.title} ←</a></li>
-      ))}
-    </ul>
-  </nav>
 )}
 
 <a href="/part-finder/" class={`${card} block bg-steel-50 hover:border-action`}>

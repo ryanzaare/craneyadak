@@ -28,9 +28,7 @@ import WarrantyNotice from '../../components/WarrantyNotice.astro';
 import StockPill from '../../components/StockPill.astro';
 import BuyBox from '../../components/BuyBox.astro';
 import ActionBar from '../../components/ActionBar.astro';
-import TwoTabs from '../../components/TwoTabs.astro';
 import SpecTable from '../../components/SpecTable.astro';
-import ProductRow from '../../components/ProductRow.astro';
 import { mobileLine } from '../../components/contact-mobile';
 import { compactTrustBadges } from '../../data/trust';
 import { warrantyFor } from '../../data/warranty';
@@ -197,6 +195,10 @@ import { getContact } from '../../lib/site-options';
    زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
 const contact = await getContact();
 const guides = await relatedGuidesForProduct(product.slug);
+// «بازدیدهای اخیر» (ExploreMore): نسخه‌ی ۱۶۰px بهینه‌ی عکس اول، نه JPEG اصلی وردپرس.
+const recentThumb = product.images[0]
+  ? (await getImage({ src: product.images[0].url, width: 160, height: 160, format: 'avif', inferSize: false })).src
+  : null;
 
 // خط همراه «تماس فوری» (فاز ۳): جعبه‌ی خرید و نوار پایین؛ ثابت ۰۲۱ در فوتر و صفحه‌ی تماس می‌ماند.
 const mobile = mobileLine(contact);
@@ -206,7 +208,8 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
 
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd} ogImage={heroImage?.url} noindex={!productReadiness(product).ready} mobileBar={false}>
+<Layout title={title} description={description} jsonLd={jsonLd} ogImage={heroImage?.url} noindex={!productReadiness(product).ready} mobileBar={false}
+  explore={{ products: related, guides, recordSelf: { href: productPath(product), name: product.name, image: recentThumb } }}>
   {product.isDemo && (
     /* رکورد نمایشی — عمداً پررنگ و غیرقابل‌چشم‌پوشی. اگر روزی سهواً روی
        سایت زنده بماند، هم بازدیدکننده و هم تیم بلافاصله متوجه می‌شوند. */
@@ -308,7 +311,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
               ))}
             </ul>
             {product.technicalSpecs.length > keySpecs.length && (
-              <a href="#product-tabs-panel-1" class="mt-1 inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4">
+              <a href="#specs" class="mt-1 inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4">
                 همه‌ی {product.technicalSpecs.length.toLocaleString('fa-IR')} مشخصه ↓
               </a>
             )}
@@ -395,33 +398,15 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
     </section>
   )}
 
-  {/* ── ۸) دقیقاً دو زبانه (تصمیم ۳ کارفرما): «مشخصات فنی» و «محصولات مرتبط/سازگار». زبانه‌ی خالی رندر نمی‌شود. ── */}
-  {product.technicalSpecs.length > 0 ? (
-    <section class="bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:py-4" aria-label="مشخصات و قطعات مرتبط">
-      <div class="max-w-4xl mx-auto" id="specs-heading">
-        <TwoTabs id="product-tabs" first="مشخصات فنی" second="محصولات مرتبط/سازگار">
-          <SpecTable slot="first" caption={`جدول مشخصات فنی ${product.name}`} sticky rows={product.technicalSpecs.map((s) => ({ label: s.label, value: s.value }))} />
-          {related.length > 0 && (
-            <ul slot="second" class="bg-white border border-steel-300 rounded" role="list">
-              {related.map((item) => (
-                <ProductRow slug={item.slug} name={item.name} sku={item.sku} url={`${SITE.url}${productPath(item)}`} brand={item.brandNameFa}
-                  keySpec={item.technicalSpecs[0]?.value ?? null} stock={item.stockStatus} price={computePrice(item)} whatsappHref={contact.whatsappHref} image={item.images[0] ?? null} />
-              ))}
-            </ul>
-          )}
-        </TwoTabs>
-      </div>
-    </section>
-  ) : related.length > 0 && (
-    <section class="bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:hidden" aria-labelledby="related-heading">
+  {/* ── ۸) مشخصات فنی ──
+      ⚠️ زبانه‌ی «محصولات مرتبط/سازگار» برداشته شد (کارفرما، ۳۰ آبان ۱۴۰۵: «صفحه‌ی هر محصول باید محصولات مرتبط را
+      نشان دهد»). پشت زبانه‌ی دوم پنهان بود و دیده نمی‌شد؛ تصمیم ۳ پیشین («دقیقاً دو زبانه») با این خواسته جایگزین شد.
+      محصولات مرتبط حالا کارت‌های دیده‌شده در «ادامه‌ی مسیر» (ExploreMore) پایین صفحه‌اند — یک فهرست، یک جا. */}
+  {product.technicalSpecs.length > 0 && (
+    <section id="specs" class="bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:py-4 scroll-mt-(--anchor-off)" aria-labelledby="specs-heading">
       <div class="max-w-4xl mx-auto">
-        <h2 id="related-heading" class="text-xl font-bold text-steel-900 mb-3">محصولات مرتبط/سازگار</h2>
-        <ul class="bg-white border border-steel-300 rounded" role="list">
-          {related.map((item) => (
-            <ProductRow slug={item.slug} name={item.name} sku={item.sku} url={`${SITE.url}${productPath(item)}`} brand={item.brandNameFa}
-              keySpec={item.technicalSpecs[0]?.value ?? null} stock={item.stockStatus} price={computePrice(item)} whatsappHref={contact.whatsappHref} image={item.images[0] ?? null} />
-          ))}
-        </ul>
+        <h2 id="specs-heading" class="text-xl font-bold text-steel-900 mb-3">مشخصات فنی</h2>
+        <SpecTable caption={`جدول مشخصات فنی ${product.name}`} sticky rows={product.technicalSpecs.map((s) => ({ label: s.label, value: s.value }))} />
       </div>
     </section>
   )}
@@ -450,7 +435,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
 
   {/* بلوک‌های محتوای اختیاری محصول — پس از توضیحات ویرایشگر و پیش از پرسش‌ها (محتوای تخصصی پیش از محتوای کاربر). */}
   <ContentBlocks blocks={otherBlocks} title={product.name} eyebrow="در این صفحه" coverImage={videoCover}>
-    <ContentRail slot="rail" product={{ name: product.name, sku: product.sku, image: product.images[0] ?? null }} guides={guides} />
+    <ContentRail slot="rail" product={{ name: product.name, sku: product.sku, image: product.images[0] ?? null }} />
   </ContentBlocks>
 
   <Questions

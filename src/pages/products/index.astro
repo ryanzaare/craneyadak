@@ -117,7 +117,7 @@ function facetAttrs(p: (typeof products)[number]) {
 }
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexArchive}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexArchive} explore={{ skipProducts: true }}>
   {/* Frontend v2 فاز ۳ (بازبینی ۲ آبان ۱۴۰۵): همان نوار فیلتر افقی و نمای جدول صفحه‌ی دسته، تا «فروشگاه» در هدر
       دقیقاً همان تجربه باشد — نه نوار کناری و مرتب‌سازی جدا. پیوندهای قدیمی (brand=a,b، cat=…، stock=1) هنوز کار می‌کنند. */}
   <section class="bg-white border-b border-steel-300 px-4 md:px-6">

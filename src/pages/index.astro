@@ -224,7 +224,7 @@ const jsonLd = {
 
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd}>
+<Layout title={title} description={description} jsonLd={jsonLd} explore={{ excludeProducts: featured.map((p) => p.slug) }}>
   {/* ════════════════════ ۱) هیرو بنتو ════════════════════
       سه سلول در یک شبکه‌ی «خط مو» (gap-px روی steel-300): جستجو (عمل اصلی — بیشتر بازدیدکننده‌ها کد فنی دارند)،
       عکس پلاک در واتساپ (کسی که کد را نمی‌داند)، فهرست چندقلمی (مدیر خرید با فهرست توقف برنامه‌ریزی‌شده).

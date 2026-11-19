@@ -1,4 +1,5 @@
 ---
+import ExploreMore, { type Props as ExploreProps } from '../components/ExploreMore.astro';
 import { clampDescription, clampTitle } from '../lib/seo-meta';
 import { normalizeJsonLdUrls, withTrailingSlash } from '../lib/urls.mjs';
 // src/layouts/Layout.astro
@@ -21,6 +22,11 @@ export interface Props {
    * را هم دارد — دو نوار روی هم یکی زیادی است (docs/frontend-v2.md §4). فاصله‌ی پایین body برای هر دو یکی است.
    */
   mobileBar?: boolean;
+  /**
+   * «ادامه‌ی مسیر» پیش از فوتر (ExploreMore) — کارفرما، ۳۰ آبان ۱۴۰۵: «هیچ صفحه‌ای بن‌بست نیست». پیش‌فرض روشن و بی
+   * زمینه (تازه‌ترین قطعات و مقاله‌ها)؛ صفحه زمینه‌اش را می‌دهد؛ false فقط برای پرداخت و حساب کاربری.
+   */
+  explore?: false | ExploreProps;
 }
 
 const {
@@ -31,6 +37,7 @@ const {
   noindex = false,
   ogImage = `${SITE.url}/og-default.jpg`,
   mobileBar = true,
+  explore = {},
 } = Astro.props;
 
 /* ⚠️ محدودیت طول *اینجا* اعمال می‌شود، نه در تک‌تک صفحه‌ها.
@@ -100,6 +107,7 @@ const jsonLdOut = jsonLd ? normalizeJsonLdUrls(jsonLd, SITE.url) : undefined;
     <Header />
     <main id="main-content" class="flex-grow" role="main">
       <slot />
+      {explore !== false && <ExploreMore {...explore} />}
     </main>
     <Footer />
     {mobileBar && <MobileCTA />}

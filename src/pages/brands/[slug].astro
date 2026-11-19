@@ -168,7 +168,7 @@ const noindexBrand = !brandReadiness({
 
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexBrand}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexBrand} explore={{ excludeProducts: products.map((p) => p.slug) }}>
   {/* نوار پایین هدر با رنگ اختصاصی برند. اگر برند رنگی ثبت نکرده باشد،
       `var(--brand, …)` به رنگ پیش‌فرض سایت برمی‌گردد. */}
   {/* Frontend v2 فاز ۵: نوار روشن + پلاک دوطبقه‌ی برند (هم‌خانواده‌ی کاشی‌های صفحه‌ی اصلی). رنگ اختصاصی برند (ACF) فقط

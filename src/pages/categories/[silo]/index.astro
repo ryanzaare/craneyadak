@@ -106,7 +106,7 @@ const jsonLd = {
 };
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexSilo}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexSilo} explore={{ excludeProducts: featured.map((p) => p.slug) }}>
   {/* Frontend v2 فاز ۵: نوار عنوان روشن زیر هدر گرافیت (هم‌خانواده‌ی دسته/محصول)، نه نوار تیره‌ی دوم با خط ۸px. */}
   <section class="bg-white text-steel-900 border-b border-steel-300 px-4 py-6 md:py-8 relative">
     <div class="max-w-7xl mx-auto">

@@ -1,0 +1,166 @@
+---
+// src/components/ExploreMore.astro — «ادامه‌ی مسیر»: هیچ صفحه‌ای بن‌بست نیست
+// ---------------------------------------------------------------------------
+// ⚠️ چرا (کارفرما، ۳۰ آبان ۱۴۰۵): «کرین یدک هرگز نمی‌گذارد کاربر کارش را در صفحه تمام کند؛ همیشه پیشنهادی برای
+// گشتن در سایت هست — ایده‌ی دیجی‌کالا که ندیدی». تا امروز «محصولات مرتبط» صفحه‌ی محصول پشت زبانه‌ی دوم پنهان بود،
+// و صفحه‌های تماس، قطعه‌یاب، حقوقی، ۴۰۴ و … با فوتر تمام می‌شدند. Layout این بخش را پیش از فوتر روی *همه‌ی* صفحه‌ها
+// می‌گذارد (جز پرداخت و حساب کاربری — آنجا حواس خریدار پرت نمی‌شود) و هر صفحه فقط زمینه‌اش را می‌دهد.
+//
+// چهار ردیف، هر کدام فقط اگر داده‌ی واقعی دارد (ردیف خالی رندر نمی‌شود):
+//   ۱) محصولات — مرتبط (زمینه‌ی صفحه) یا تازه‌ترین‌ها؛ صفحه‌ای که خودش فهرست محصول است (`skipProducts`) نمی‌گیرد.
+//   ۲) راهنماها — مرتبط با محصول (src/lib/related-guides.ts) یا تازه‌ترین مقاله‌ها؛ مقاله‌ی جاری کنار می‌رود.
+//   ۳) بازدیدهای اخیر شما — localStorage همین مرورگر (ایده‌ی دیجی‌کالا)؛ بی جاوااسکریپت یا بی سابقه پنهان. صفحه‌ی
+//      محصول خودش را ثبت می‌کند (`recordSelf`). هیچ داده‌ای به سرور نمی‌رود.
+//   ۴) مرور دسته‌ها — فقط دسته‌های دارای کالا + قطعه‌یاب.
+// ⚠️ هرگز تکرار: فهرست‌ها فقط این‌جا؛ ستون کناری (ContentRail) فقط عمل سریع دارد (سفارش، قطعه‌یاب).
+// ---------------------------------------------------------------------------
+import ProductCard from './ProductCard.astro';
+import { getAllProducts, productPath, type CraneProduct } from '../lib/wp';
+import { getPosts } from '../lib/posts';
+import { categoryPath } from '../data/taxonomy';
+import { getCatalogPresence } from './catalog-presence';
+import type { GuideLink } from '../lib/related-guides';
+
+export interface Props {
+  /** محصولات مرتبطِ از پیش محاسبه‌شده (صفحه‌ی محصول، مقاله). خالی ⇒ تازه‌ترین‌ها. */
+  products?: CraneProduct[];
+  productsHeading?: string;
+  skipProducts?: boolean;
+  /** اسلاگ‌هایی که همین صفحه خودش نشان داده (مثلاً محصولات یک دسته). */
+  excludeProducts?: string[];
+  guides?: GuideLink[];
+  skipGuides?: boolean;
+  /** مقاله‌ی جاری — در «راهنماهای پیشنهادی» نمی‌آید. */
+  articleSlug?: string;
+  /** صفحه‌ی محصول: این کالا در «بازدیدهای اخیر» ثبت شود. */
+  recordSelf?: { href: string; name: string; image: string | null } | null;
+}
+const {
+  products: given,
+  productsHeading,
+  skipProducts = false,
+  excludeProducts = [],
+  guides: givenGuides,
+  skipGuides = false,
+  articleSlug,
+  recordSelf = null,
+} = Astro.props;
+
+const all = (await getAllProducts()).filter((p) => !p.isDemo && p.images.length > 0);
+const exclude = new Set(excludeProducts);
+const products = skipProducts ? [] : (given?.length ? given : all.filter((p) => !exclude.has(p.slug))).slice(0, 4);
+const heading = productsHeading ?? (given?.length ? 'محصولات مرتبط' : 'قطعات پیشنهادی');
+
+const guides: GuideLink[] = skipGuides
+  ? []
+  : givenGuides?.length
+    ? givenGuides
+    : (await getPosts()).filter((p) => p.slug !== articleSlug).slice(0, 3).map((p) => ({ title: p.title, href: `/blog/${p.slug}/` }));
+const guidesHeading = givenGuides?.length ? 'راهنماهای مرتبط' : 'از مجله‌ی تخصصی';
+
+const presence = await getCatalogPresence();
+const cats = presence.silos.flatMap((s) => s.categories.map((c) => ({ href: categoryPath({ ...c.category, silo: s.silo }), name: c.category.name, count: c.count })));
+const selfAttr = recordSelf ? JSON.stringify(recordSelf) : undefined;
+---
+
+<section class="bg-white border-t border-steel-300 px-4 md:px-6 py-10 print:hidden" aria-labelledby="explore-h" data-explore data-recent-self={selfAttr}>
+  <div class="max-w-7xl mx-auto space-y-10">
+    <p id="explore-h" class="sr-only">ادامه‌ی مسیر در کرین یدک</p>
+
+    {products.length > 0 && (
+      <div>
+        <div class="flex items-baseline justify-between gap-4 mb-4">
+          <h2 class="text-xl font-bold text-steel-900">{heading}</h2>
+          <a href="/products/" class="text-sm font-bold text-accent-ink hover:underline shrink-0">همه‌ی قطعات ←</a>
+        </div>
+        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" role="list">
+          {products.map((p) => <li><ProductCard product={p} /></li>)}
+        </ul>
+      </div>
+    )}
+
+    {guides.length > 0 && (
+      <div>
+        <div class="flex items-baseline justify-between gap-4 mb-4">
+          <h2 class="text-xl font-bold text-steel-900">{guidesHeading}</h2>
+          <a href="/blog/" class="text-sm font-bold text-accent-ink hover:underline shrink-0">همه‌ی مقاله‌ها ←</a>
+        </div>
+        <ul class="grid grid-cols-1 md:grid-cols-3 gap-4" role="list">
+          {guides.map((g) => (
+            <li>
+              <a href={g.href} class="flex h-full items-start gap-3 rounded-md border border-steel-300 bg-steel-50 p-4 hover:border-action">
+                <span class="w-10 h-10 shrink-0 rounded-md bg-white border border-steel-200 text-accent-ink grid place-items-center" aria-hidden="true">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13M12 6.253C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                </span>
+                <span class="text-base font-bold text-steel-900 leading-7">{g.title}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    <div data-recent hidden>
+      <h2 class="text-xl font-bold text-steel-900 mb-4">بازدیدهای اخیر شما</h2>
+      <ul class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" role="list" data-recent-list></ul>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-bold text-steel-900 mb-4">مرور کاتالوگ</h2>
+      <ul class="flex flex-wrap gap-2" role="list">
+        {cats.map((c) => (
+          <li><a href={c.href} class="inline-flex items-center gap-2 min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-800 hover:border-action">{c.name} <span class="text-xs text-steel-500 tabular-nums">{c.count.toLocaleString('fa-IR')}</span></a></li>
+        ))}
+        <li><a href="/categories/" class="inline-flex items-center min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-accent-ink hover:border-action">همه‌ی دسته‌ها ←</a></li>
+        <li><a href="/part-finder/" class="inline-flex items-center min-h-11 px-4 rounded-md bg-steel-900 text-white text-sm font-bold hover:bg-steel-800">قطعه‌یاب: کد یا عکس پلاک ←</a></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<script>
+  /* بازدیدهای اخیر — فقط localStorage همین مرورگر. تصویر فقط نسخه‌ی کوچک بهینه‌ی خود سایت (/_astro/…، ۱۶۰px) — نه
+     JPEG اصلی وردپرس. ⚠️ هر خطای ذخیره‌سازی (حالت خصوصی، سهمیه) بی‌صدا: این بخش
+     تزئینی است و نباید صفحه را بشکند. نشانی‌ها از همین سایت‌اند (href نسبی با «/» شروع می‌شود) — ورودی دست‌کاری‌شده‌ی
+     localStorage نمی‌تواند پیوند بیرونی یا javascript: بسازد. */
+  const KEY = 'cy-recent-v1';
+  const MAX = 12;
+  type Item = { href: string; name: string; image: string | null };
+  const safe = (i: unknown): i is Item =>
+    !!i && typeof (i as Item).href === 'string' && /^\/[a-z0-9/-]*$/.test((i as Item).href) && typeof (i as Item).name === 'string';
+  const read = (): Item[] => {
+    try { const v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v.filter(safe) : []; } catch { return []; }
+  };
+  document.querySelectorAll<HTMLElement>('[data-explore]').forEach((root) => {
+    let list = read();
+    let self: Item | null = null;
+    try { self = root.dataset.recentSelf ? JSON.parse(root.dataset.recentSelf) : null; } catch { self = null; }
+    const shown = list.filter((i) => i.href !== self?.href && i.href !== location.pathname).slice(0, 6);
+    if (self && safe(self)) {
+      list = [self, ...list.filter((i) => i.href !== self!.href)].slice(0, MAX);
+      try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* حالت خصوصی */ }
+    }
+    const box = root.querySelector<HTMLElement>('[data-recent]');
+    const ul = root.querySelector<HTMLElement>('[data-recent-list]');
+    if (!box || !ul || !shown.length) return;
+    for (const i of shown) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = i.href;
+      a.className = 'flex h-full flex-col gap-2 rounded-md border border-steel-300 bg-white p-3 hover:border-action';
+      if (i.image && /^\/_astro\/[\w.-]+$/.test(i.image)) {
+        const img = document.createElement('img');
+        img.src = i.image; img.alt = ''; img.loading = 'lazy'; img.width = 160; img.height = 160;
+        img.className = 'w-full aspect-square object-contain';
+        a.appendChild(img);
+      }
+      const t = document.createElement('span');
+      t.className = 'text-sm font-bold text-steel-900 leading-6 line-clamp-2';
+      t.textContent = i.name;
+      a.appendChild(t);
+      li.appendChild(a);
+      ul.appendChild(li);
+    }
+    box.hidden = false;
+  });
+</script>

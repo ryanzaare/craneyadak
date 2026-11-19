@@ -13,7 +13,6 @@ import Layout from '../layouts/Layout.astro';
 import PartNumber from '../components/PartNumber.astro';
 import StockPill from '../components/StockPill.astro';
 import SpecTable from '../components/SpecTable.astro';
-import TwoTabs from '../components/TwoTabs.astro';
 import ProductRow from '../components/ProductRow.astro';
 import BuyBox from '../components/BuyBox.astro';
 import ActionBar from '../components/ActionBar.astro';
@@ -60,7 +59,7 @@ const hairline = 'grid md:grid-cols-3 gap-px bg-steel-200 border border-steel-20
 const frame = 'bg-steel-50 border border-steel-300 border-s-4 border-s-action rounded-md p-3 md:p-5';
 ---
 
-<Layout title="راهنمای سبک (داخلی)" description="راهنمای سبک داخلی Frontend v2 کرین یدک — صفحه‌ی غیرعمومی برای بازبینی اجزا." noindex={true}>
+<Layout explore={false} title="راهنمای سبک (داخلی)" description="راهنمای سبک داخلی Frontend v2 کرین یدک — صفحه‌ی غیرعمومی برای بازبینی اجزا." noindex={true}>
   <div class="bg-steel-50" data-pagefind-ignore="all">
     <div class="max-w-6xl mx-auto px-4 md:px-6 py-10" id="style-guide">
       <p class="text-sm font-bold text-amber-900 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-6">
@@ -135,20 +134,19 @@ const frame = 'bg-steel-50 border border-steel-300 border-s-4 border-s-action ro
       </section>
 
       <section class={section} aria-labelledby="sg-spec">
-        <h2 id="sg-spec" class={h2}>جدول مشخصات + دو زبانه</h2>
-        <TwoTabs id="sg-tabs" first="مشخصات فنی" second="محصولات مرتبط/سازگار">
-          <SpecTable slot="first" caption="مشخصات فنی قطعه‌ی نمونه" sticky rows={[
+        <h2 id="sg-spec" class={h2}>جدول مشخصات + ردیف محصول</h2>
+        <SpecTable caption="مشخصات فنی قطعه‌ی نمونه" sticky rows={[
             { label: 'کد فنی', value: sample.sku, code: true },
             { label: 'ولتاژ تغذیه', value: '24-48 V AC/DC' },
             { label: 'تعداد دکمه', value: '6 + Start/Stop' },
             { label: 'درجه حفاظت', value: 'IP65' },
             { label: 'ردیف بدون مقدار (نمایش داده نمی‌شود)', value: '' },
           ]} />
-          <ul slot="second" class="bg-white border border-steel-300 rounded-md" role="list">
+        <h3 class="mt-6 mb-2 font-bold text-steel-900">ردیف محصول</h3>
+        <ul class="bg-white border border-steel-300 rounded-md" role="list">
             <ProductRow {...sample} slug="demo-0002" sku="DEMO-0002" name="قطعه‌ی نمونه — گیرنده" brand="برند نمونه" keySpec="24 V" stock="in_stock" price={payable} whatsappHref={wa} inert />
             <ProductRow {...sample} slug="demo-0003" sku="DEMO-0003" name="قطعه‌ی نمونه — فرستنده" brand="برند نمونه" keySpec="433 MHz" stock="unknown" price={inquiry} whatsappHref={wa} inert />
           </ul>
-        </TwoTabs>
       </section>
 
       <section class={section} aria-labelledby="sg-rows">

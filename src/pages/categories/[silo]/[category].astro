@@ -238,7 +238,7 @@ const contact = await getContact();
 
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexEmpty}>
+<Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexEmpty} explore={{ excludeProducts: products.map((p) => p.slug) }}>
   {/* ── Frontend v2 (فاز ۲): سرصفحه‌ی روشن به‌جای نوار گرافیتی (§5: گرافیت فقط هدر و فوتر) — عنوان، یک
       پاراگراف راهنما، مترادف‌ها؛ بعد بلافاصله فهرست. «یک کار در هر صفحه»: خریدار برای پیدا کردن قطعه آمده. ── */}
   <section class="bg-white border-b border-steel-300 px-4 md:px-6">

@@ -12,13 +12,11 @@ import { getPosts, type BlogPost } from '../../lib/posts';
 import { getAuthorByName } from '../../lib/authors';
 import AuthorBox from '../../components/AuthorBox.astro';
 import { buildToc } from '../../components/toc';
-import ProductCard from '../../components/ProductCard.astro';
 import { relatedProductsForPost } from '../../components/related-products';
 import { getAllProducts } from '../../lib/wp';
 import { ALL_CATEGORIES } from '../../data/taxonomy';
 import ContentBlocks from '../../components/ContentBlocks.astro';
 import ContentRail from '../../components/ContentRail.astro';
-import { productPath } from '../../lib/wp';
 import { getBlocks } from '../../lib/content-blocks';
 
 export async function getStaticPaths() {
@@ -101,7 +99,7 @@ const jsonLd = {
 };
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd} isArticle={true}>
+<Layout title={title} description={description} jsonLd={jsonLd} isArticle={true} explore={{ products: related, productsHeading: 'محصولات مرتبط به این مقاله', articleSlug: post.slug }}>
   {/* Frontend v2 فاز ۵: نوار عنوان روشن زیر هدر گرافیت (هم‌خانواده‌ی دسته/محصول)، نه نوار تیره‌ی دوم با خط ۸px. */}
   <section class="bg-white text-steel-900 border-b border-steel-300 px-4 py-6 md:py-8 relative">
     <div class="max-w-6xl mx-auto relative z-10">
@@ -133,14 +131,7 @@ const jsonLd = {
         {/* جعبه‌ی نویسنده — نویسنده‌ی واقعی از وردپرس؛ نبودِ پروفایل = بی‌جعبه. */}
         {author && <AuthorBox author={author} reviewedAt={post.isoModified} class="mt-10" />}
 
-        {related.length > 0 && (
-          <section class="mt-10" aria-labelledby="related-products-heading">
-            <h2 id="related-products-heading" class="text-xl font-bold text-steel-900 mb-4">محصولات مرتبط به این مقاله</h2>
-            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-5" role="list">
-              {related.map((product) => <li><ProductCard product={product} /></li>)}
-            </ul>
-          </section>
-        )}
+        {/* «محصولات مرتبط به این مقاله» به «ادامه‌ی مسیر» (ExploreMore، پایین صفحه) رفت — یک فهرست، یک جا. */}
 
         <div class="mt-10 bg-steel-50 border border-steel-300 border-s-4 border-s-action rounded-md p-5 md:p-6">
           <h2 class="text-xl font-bold text-steel-900 mb-2">قطعه مورد نظر خود را پیدا نکردید؟</h2>
@@ -173,6 +164,6 @@ const jsonLd = {
 
   {/* بلوک‌های مقاله (سیستم محتوا): ویدیو، جدول، FAQ، کادرها — همان سبک صفحه‌ی محصول و دسته. */}
   <ContentBlocks blocks={blocks} title={post.title} eyebrow="در این مقاله">
-    <ContentRail slot="rail" relatedProduct={related[0] ? { name: related[0].name, href: productPath(related[0]), image: related[0].images[0] ?? null } : null} />
+    <ContentRail slot="rail" />
   </ContentBlocks>
 </Layout>
