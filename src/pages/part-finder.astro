@@ -1,0 +1,109 @@
+---
+// src/pages/part-finder.astro — قطعه‌یاب (O1، کارفرما ۲۹ آبان ۱۴۰۵: «build part finder»)
+// ---------------------------------------------------------------------------
+// دو راه، به ترتیب سرعت برای خریدار:
+//   ۱) کد یا مدل را تایپ کن — همان جستجوی «هرگز خالی» (src/lib/search-score.ts → suggestAlways): جداکننده، ارقام
+//      فارسی، صفحه‌کلید اشتباه و غلط تایپی مهم نیستند.
+//   ۲) کد را نمی‌دانی یا پیدا نشد — عکس پلاک را بفرست (src/components/InquiryForm.astro، همان اندپوینت و اعتبارسنجی
+//      /contact/؛ ۳ عکس، ۵MB، بی ورود به حساب).
+// ⚠️ بی ورود به حساب (برخلاف craneset): خریداری که جرثقیلش خوابیده، فرم ثبت‌نام پر نمی‌کند. ضداسپم: هانی‌پات و سقف
+// نرخ سمت سرور (class-rest-contact.php).
+// ⚠️ «نتیجه‌ی جستجو تأیید سازگاری نیست» صریح روی صفحه است: کد مشابه ≠ قطعه‌ی سازگار، و در قطعات جرثقیل این مسئله‌ی
+// ایمنی است (قاعده‌ی ۲). تطبیق نهایی با پلاک، پیش از پیش‌فاکتور.
+// ---------------------------------------------------------------------------
+import Layout from '../layouts/Layout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import SearchBox from '../components/SearchBox.astro';
+import InquiryForm from '../components/InquiryForm.astro';
+import { SITE } from '../data/site';
+
+const title = 'قطعه‌یاب جرثقیل سقفی؛ جستجو با کد فنی یا عکس پلاک';
+const description = 'قطعه‌ی جرثقیل سقفی را با کد فنی، مدل یا عکس پلاک پیدا کنید؛ جستجو با غلط تایپی هم نتیجه می‌دهد و تطبیق نهایی با پلاک دستگاه انجام می‌شود.';
+const url = `${SITE.url}/part-finder/`;
+
+const plate = [
+  { field: 'MODEL', where: 'مدل دستگاه یا قطعه — مهم‌ترین داده', example: 'SAGA1-L12 RX' },
+  { field: 'S/N', where: 'شماره‌ی سریال؛ نسخه و سال ساخت را مشخص می‌کند', example: '12005836' },
+  { field: 'CH', where: 'فقط ریموت‌ها: کانال فرکانس، برای کریستال', example: '009' },
+  { field: 'V / Hz / A', where: 'ولتاژ، فرکانس برق و جریان — برای موتور، ترمز، گیرنده', example: '380V 50Hz' },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebPage',
+      '@id': `${url}#webpage`,
+      url,
+      name: title,
+      description,
+      inLanguage: 'fa-IR',
+      isPartOf: { '@id': `${SITE.url}/#website` },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: `${SITE.url}/` },
+        { '@type': 'ListItem', position: 2, name: 'قطعه‌یاب', item: url },
+      ],
+    },
+  ],
+};
+---
+
+<Layout title={`${title} | کرین یدک`} description={description} jsonLd={jsonLd}>
+  <section class="bg-white border-b border-steel-300 px-4 py-6 md:py-8">
+    <div class="max-w-5xl mx-auto">
+      <Breadcrumb surface items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'قطعه‌یاب' }]} />
+      <h1 class="text-2xl md:text-3xl font-black text-steel-900 mb-2 tracking-tight">قطعه‌یاب: کد فنی، مدل یا عکس پلاک</h1>
+      <p class="text-base text-steel-600 leading-8 max-w-3xl">
+        کد را از روی پلاک یا فاکتور قدیمی همان‌طور که هست تایپ کنید — خط تیره، فاصله، ارقام فارسی یا صفحه‌کلید انگلیسی فرقی
+        نمی‌کند. اگر کد را ندارید یا پیدا نشد، عکس پلاک را بفرستید.
+      </p>
+    </div>
+  </section>
+
+  <section class="px-4 py-8 md:py-10 bg-steel-50">
+    <div class="max-w-5xl mx-auto">
+      <h2 class="text-2xl font-bold text-steel-900 mb-3">۱. کد یا مدل را جستجو کنید</h2>
+      <SearchBox id="part-finder-search" tone="light" placeholder="مثلاً SAGA1-L12 یا ساگا" class="mb-3" />
+      <p class="text-xs text-steel-600 leading-6">
+        نتیجه‌ی جستجو تأیید سازگاری نیست: پیش از صدور پیش‌فاکتور، کد درخواستی را با پلاک دستگاه شما تطبیق می‌دهیم.
+      </p>
+    </div>
+  </section>
+
+  <section class="px-4 py-8 md:py-10 bg-white border-y border-steel-200" aria-labelledby="plate-h">
+    <div class="max-w-5xl mx-auto">
+      <h2 id="plate-h" class="text-xl font-bold text-steel-900 mb-2">روی پلاک دنبال چه بگردیم؟</h2>
+      <p class="text-sm text-steel-700 leading-7 mb-4">
+        پلاک فلزی یا برچسب روی بدنه‌ی دستگاه را پیدا کنید. اگر رنگ یا روغن رویش را گرفته، با پارچه‌ی خشک تمیزش کنید و از روبه‌رو،
+        بی فلاش، عکس بگیرید. این چهار ردیف بیشترین کمک را می‌کنند:
+      </p>
+      <div class="overflow-x-auto">
+        <table class="cy-compare w-full text-sm">
+          <thead><tr><th scope="col">روی پلاک</th><th scope="col">چه می‌گوید</th><th scope="col">نمونه</th></tr></thead>
+          <tbody>
+            {plate.map((r) => (
+              <tr><th scope="row" class="font-mono" dir="ltr">{r.field}</th><td>{r.where}</td><td class="font-mono" dir="ltr">{r.example}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-xs text-steel-500 mt-2">نمونه‌ها از پلاک واقعی گیرنده‌ی ریموت ساگا L12.</p>
+    </div>
+  </section>
+
+  <section class="px-4 py-8 md:py-10 bg-steel-50">
+    <div class="max-w-5xl mx-auto bg-white rounded-md p-5 md:p-8 border border-steel-300 border-s-4 border-s-action">
+      <InquiryForm
+        heading="۲. عکس پلاک یا قطعه را بفرستید"
+        intro="کد را نمی‌دانید یا در سایت نیست؟ عکس پلاک و چند خط توضیح کافی است؛ کارشناس کد را می‌خواند، قطعه‌ی سازگار را پیدا می‌کند و با شما تماس می‌گیرد."
+        skuLabel="کد فنی یا مدل، اگر خوانا است (اختیاری)"
+        messageLabel="برند و مدل دستگاه، و قطعه‌ای که لازم دارید"
+        messagePlaceholder="مثلاً: جرثقیل سقفی دماگ ۵ تن، گیرنده‌ی ریموت سوخته؛ یا: موتور بالابر، پلاکش در عکس"
+        submitLabel="ارسال برای شناسایی قطعه"
+      />
+    </div>
+  </section>
+</Layout>
