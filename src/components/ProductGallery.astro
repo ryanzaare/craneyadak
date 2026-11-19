@@ -47,11 +47,13 @@ const firstFieldIndex = gallery.findIndex((img) => img.source === 'field');
 // ⚠️ نسبت قاب از md = نسبت تصویر اول (کارفرما، ۲۴ آبان ۱۴۰۵: «اندازه‌ی قاب و عکس نمی‌خواند»). قاب ثابت ۴:۳ برای عکس‌های
 // مربعی SAGA1-L12 دو نوار خالی ۶۰px کنار عکس می‌گذاشت. نسبت از mediaDetails وردپرس است (پیش از بارگذاری HTML معلوم ⇒ CLS
 // صفر)، بین ۳:۴ و ۳:۲ محدود می‌شود تا یک عکس خیلی باریک/پهن قاب را به هم نریزد؛ بی‌ابعاد = ۴:۳ قبلی.
-// زیر md همان ۳:۲ می‌ماند — آنجا تصمیم Frontend v2 است: کد، قیمت و دکمه‌ی اصلی باید در صفحه‌ی اول ۳۹۰×۸۱۲ جا شوند.
+// ⚠️ موبایل هم (کارفرما، ۲۸ و ۲۹ آبان ۱۴۰۵: «اندازه‌ی عکس در موبایل درست نیست»): قاب ۳:۲ ثابت زیر md عکس مربعی را
+// ۲۲۷×۲۲۷ وسط قاب ۳۴۱×۲۲۷ با دو نوار خالی ۵۷px می‌نشاند. تصمیم پیشین Frontend v2 (کد و دکمه‌ی اصلی در صفحه‌ی اول ۳۹۰×۸۱۲)
+// فدای عکس کامل شد به خواست کارفرما؛ دکمه‌ها در نوار پایین موبایل (ActionBar) همیشه دیده می‌شوند.
 const first = gallery[0];
 const firstRatio = first?.width && first?.height ? Math.min(1.5, Math.max(0.75, first.width / first.height)) : 4 / 3;
 const frameRatio = `${Math.round(firstRatio * 1000)} / 1000`;
-// ⚠️ sizes = عرض *نمایش واقعی* عکس، نه عرض قاب (۲۵ آبان ۱۴۰۵). زیر md قاب ۳:۲ است و عکس مربعی object-contain فقط به
+// ⚠️ sizes = عرض *نمایش واقعی* عکس، نه عرض قاب (۲۵ آبان ۱۴۰۵؛ از ۲۹ آبان موبایل = تمام عرض منهای حاشیه). پیش‌تر زیر md قاب ۳:۲ بود و عکس مربعی object-contain فقط به
 // ارتفاع قاب، یعنی ~۶۲٪ عرض صفحه، نمایش داده می‌شود؛ «100vw» مرورگر را به نسخه‌ی ۹۰۰px (۵۳KB) می‌فرستاد به‌جای ۴۵۰px
 // (۱۸KB). نتیجه: Performance موبایل صفحه‌ی محصول ۰٫۹۸ و گیت Lighthouse (≥۰٫۹۹) سه انتشار پشت سر هم را شکست. از md قاب ستون
 // ۵/۱۲ است (حداکثر ۴۹۰px).
@@ -68,7 +70,7 @@ const frameRatio = `${Math.round(firstRatio * 1000)} / 1000`;
       (تصمیم ۱ کارفرما). */}
   {/* ⚠️ بی‌عکس (کارفرما، ۴ آبان ۱۴۰۵): قاب کوتاه‌تر ۲:۱ / ۱۶:۹ — قاب خالی ۴:۳ در دسکتاپ ~۳۷۰px فضای مرده بود. نسبت ثابت
       می‌ماند (CLS صفر)؛ با اولین عکس، خودکار ۳:۲ / ۴:۳. */}
-  <figure id="gallery-figure" style={hasImages ? `--gallery-ar: ${frameRatio}` : undefined} class:list={['bg-white bg-blueprint rounded-lg border border-steel-300 overflow-hidden relative m-0 touch-pan-y', hasImages ? 'aspect-[3/2] md:aspect-(--gallery-ar)' : 'aspect-[2/1] md:aspect-[16/9]']}>
+  <figure id="gallery-figure" style={hasImages ? `--gallery-ar: ${frameRatio}` : undefined} class:list={['bg-white bg-blueprint rounded-lg border border-steel-300 overflow-hidden relative m-0 touch-pan-y', hasImages ? 'aspect-(--gallery-ar)' : 'aspect-[2/1] md:aspect-[16/9]']}>
     {['top-2 start-2 border-t border-s', 'top-2 end-2 border-t border-e', 'bottom-2 start-2 border-b border-s', 'bottom-2 end-2 border-b border-e'].map((corner) => (
       <span class={`absolute z-10 w-2 h-2 border-steel-400 pointer-events-none print:hidden ${corner}`} aria-hidden="true" />
     ))}
@@ -81,7 +83,7 @@ const frameRatio = `${Math.round(firstRatio * 1000)} / 1000`;
             width={900}
             height={900}
             eager={index === 0}
-            sizes="(max-width: 767px) 62vw, (max-width: 1279px) 40vw, 490px"
+            sizes="(max-width: 767px) calc(100vw - 2rem), (max-width: 1279px) 40vw, 490px"
             class="w-full h-full object-contain"
           />
         </div>

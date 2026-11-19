@@ -12,10 +12,7 @@ categories: [remote-control]
 gallery:
   - { file: images/saga1-l12-saga-studio-01.jpg, alt: ریموت کنترل جرثقیل سقفی ساگا مدل SAGA1-L12 به همراه گیرنده رادیویی }
   - { file: images/saga1-l12-saga-overview-02.jpg, alt: مشخصات کلیدی ریموت کنترل جرثقیل سقفی ساگا مدل SAGA1-L12 }
-  - { file: images/saga1-l12-saga-anatomy-03.jpg, alt: کالبدشکافی و معرفی اجزای دستک فرستنده ریموت کنترل ساگا SAGA1-L12 }
   - { file: images/saga1-l12-saga-dimensions-04.jpg, alt: ابعاد، وزن و مشخصات فنی فرستنده و گیرنده ریموت کنترل ساگا SAGA1-L12 }
-  - { file: images/saga1-l12-saga-comparison-05.jpg, alt: جدول مقایسه ریموت کنترل جرثقیل ساگا SAGA1-L12 با مدل‌های L10 و L12-1 }
-  - { file: images/saga1-l12-saga-application-06.jpg, alt: نحوه عملکرد کلیدهای دو سرعته و نصب ریموت کنترل ساگا SAGA1-L12 روی جرثقیل سقفی }
   - { file: images/saga1-l12-saga-rf-switching-07.jpg, alt: منحنی عملکرد کلید دو پله‌ای و باند فرکانسی ریموت کنترل ساگا SAGA1-L12 }
   - { file: images/saga1-l12-saga-troubleshooting-08.jpg, alt: جدول عیب‌یابی، نشانه‌های خرابی و برنامه بازرسی دوره‌ای ریموت کنترل ساگا SAGA1-L12 }
 specs:

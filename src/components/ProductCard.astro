@@ -45,7 +45,9 @@ const btn = 'relative z-10 inline-flex items-center justify-center min-h-11 px-3
     • هاور لمسی: بالا رفتن ۲px + قاب action + سایه‌ی نرم — فقط transform/box-shadow (بی‌پرش چیدمان؛ کاهش حرکت سراسری خاموشش می‌کند).
     • پیوند کل کارت با ::before روی عنوان؛ دکمه‌های عمل relative z-10 روی آن. data-*های سبد = قرارداد §7. */}
 <article class="h-full bg-white rounded-md border border-steel-300 overflow-hidden flex flex-col relative transition-all duration-150 hover:-translate-y-0.5 hover:border-action hover:shadow-[0_6px_16px_rgba(15,23,42,0.08)]">
-  <div class="aspect-[4/3] bg-steel-50 bg-blueprint relative flex items-center justify-center overflow-hidden border-b border-steel-200">
+  {/* ⚠️ موبایل مربع (کارفرما، ۲۹ آبان ۱۴۰۵ — اسکرین‌شات کارت «محصولات مرتبط»): کارت تک‌ستونه‌ی موبایل ۳۴۳px عرض دارد و
+      قاب ۴:۳ عکس مربعی را ۲۵۷px وسط قاب با دو نوار خالی ۴۳px می‌نشاند. از md (چندستونه) همان ۴:۳ تصمیم ۴ آبان. */}
+  <div class="aspect-square md:aspect-[4/3] bg-steel-50 bg-blueprint relative flex items-center justify-center overflow-hidden border-b border-steel-200">
     {image ? (
       <RemoteImage src={image.url} alt={image.altText || product.name} width={600} height={600} eager={eager}
         sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" class="w-full h-full object-contain p-4" />

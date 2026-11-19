@@ -1,7 +1,7 @@
 // scripts/content/content.test.mjs — npm run test:content
 // قاعده‌ی ۶: هر قاعده‌ی lint روی ورودی خرابِ شناخته‌شده قرمز می‌شود و روی ورودی سالم سبز.
-import { compileContent, parseFaq, parseParts, parseHeading, extractDirectives, imageSize } from './compile.mjs';
-import { lintDoc, norm } from './lint.mjs';
+import { compileContent, parseFaq, parseParts, parseHeading, extractDirectives, imageSize, plainText as lintText } from './compile.mjs';
+import { lintDoc, norm, shingles } from './lint.mjs';
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -111,6 +111,21 @@ hasNot('خود فایل با خودش مقایسه نمی‌شود', lintDoc(g, 
 const prod = compileContent(GOOD.replace('kind: article', 'kind: product'), { file: 'p.md' });
 has('محصول بی گالری', lintDoc(prod, {}), 'gallery');
 has('محصول بی برند', lintDoc(prod, {}), 'product');
+
+console.log('── هرگز تکرار (کارفرما، ۲۹ آبان ۱۴۰۵)');
+{
+  const asset = (file, role) => ({ file, abs: `/nope/${file}`, alt: 'تصویر آزمون قطعه', role, width: 800, height: 800 });
+  const base = compileContent(GOOD.replace('kind: article', 'kind: product'), { file: 'p.md' });
+  const withAssets = (assets) => ({ ...base, assets });
+  has('همان تصویر در گالری و متن = خطا (همان باگ صفحه‌ی L12)', lintDoc(withAssets([asset('images/a.jpg', 'gallery'), asset('images/a.jpg', 'inline')]), {}), 'image-dup');
+  has('همان تصویر دو بار در گالری = خطا', lintDoc(withAssets([asset('images/a.jpg', 'gallery'), asset('images/a.jpg', 'gallery')]), {}), 'image-dup');
+  hasNot('تصویرهای متفاوت = سالم', lintDoc(withAssets([asset('images/a.jpg', 'gallery'), asset('images/b.jpg', 'inline')]), {}), 'image-dup');
+  const other = { file: 'o.md', kind: 'product', slug: 'o', primaryKeyword: 'دیگر', cover: 'name:images/a.jpg', shingles: new Set() };
+  has('تصویر اول گالری مشترک با محصول دیگر = خطا', lintDoc(withAssets([asset('images/a.jpg', 'gallery')]), { registry: [other] }), 'cover-dup');
+  const copy = { ...other, cover: null, shingles: shingles(lintText(base)) };
+  has('متن کپی‌شده در صفحه‌ی دیگر = خطا', lintDoc(base, { registry: [copy] }), 'text-dup');
+  hasNot('متن مستقل = سالم', lintDoc(base, { registry: [{ ...copy, shingles: shingles('متنی کاملاً دیگر درباره‌ی گیرنده با واژه‌های خودش که هیچ جمله‌ی مشترکی ندارد و فقط برای آزمون نوشته شده است') }] }), 'text-dup');
+}
 
 if (failed) {
   console.error(`\n❌ ${failed} مورد ناموفق`);

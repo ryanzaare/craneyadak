@@ -12,7 +12,8 @@
 import { globSync, existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { compileFile } from './compile.mjs';
-import { lintDoc } from './lint.mjs';
+import { lintDoc, shingles, assetKey } from './lint.mjs';
+import { plainText } from './compile.mjs';
 import { publishDoc, authHeader, restBase } from './publish.mjs';
 
 const ROOT = 'content';
@@ -60,7 +61,11 @@ if (!targets.length) {
 }
 
 const docs = all.map((f) => compileFile(f));
-const registry = docs.map((d) => ({ file: d.file, kind: d.meta.kind, slug: d.meta.slug, primaryKeyword: d.meta.primaryKeyword }));
+// shingles و cover برای نگهبان «هرگز تکرار» (lint.mjs): متن و تصویر اول هر صفحه با همه‌ی صفحه‌های دیگر مقایسه می‌شود.
+const registry = docs.map((d) => {
+  const g0 = d.meta.kind === 'product' ? d.assets.find((a) => a.role === 'gallery') : null;
+  return { file: d.file, kind: d.meta.kind, slug: d.meta.slug, primaryKeyword: d.meta.primaryKeyword, shingles: shingles(plainText(d)), cover: g0 ? assetKey(g0) : null };
+});
 
 // نشانی‌های معتبر برای لینک داخلی: هر صفحه‌ی ساخته‌شده در dist/ + هر صفحه‌ای که در مخزن محتوا تعریف شده.
 const routes = new Set(docs.filter((d) => ROUTE[d.meta.kind] && d.meta.slug).map((d) => ROUTE[d.meta.kind](d.meta)));

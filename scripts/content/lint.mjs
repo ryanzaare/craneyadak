@@ -12,7 +12,37 @@
 // ⚠️ «هم‌نوع‌خواری» این‌جا فقط یک چیز را می‌سنجد که از فایل قابل‌سنجش است: دو صفحه با یک کلیدواژه‌ی اصلی. هم‌پوشانی
 // معنایی بین نیت‌ها (مثلاً «قیمت» و «خرید») را ماشین نمی‌فهمد — آن تصمیم نویسنده است و در frontmatter (`intent`) ثبت می‌شود.
 // ---------------------------------------------------------------------------
+import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { KINDS, plainText } from './compile.mjs';
+
+/* ───────── «هرگز تکرار» (کارفرما، ۲۹ آبان ۱۴۰۵) ─────────
+   «هیچ چیز تکرار نشود؛ عکس‌هایی که داخل متن آمده‌اند از گالری محصول بروند» و «اگر تضمین کنی تکراری نباشد، ریموت،
+   فرستنده و گیرنده را جدا می‌فروشم». تضمین = آزمون، نه قول. سه قاعده (هر سه خطا):
+   ۱) image-dup: یک تصویر (همان فایل یا همان بایت‌ها) دو بار در یک صفحه — گالری + متن، یا دو بار در متن.
+   ۲) cover-dup: تصویر اول گالری (og:image و تنها image در JSON-LD) دو محصول یکی است — گوگل دو صفحه را یک کالا می‌بیند.
+   ۳) text-dup: ≥ ۱۵٪ از عبارت‌های ۸ واژه‌ای یک صفحه عیناً در صفحه‌ی دیگر — محتوای تکراری بین فرستنده/گیرنده/ست.
+      ⚠️ چرا ۸ واژه و ۱۵٪: عبارت کوتاه («ریموت کنترل ساگا L12») ناگزیر تکرار می‌شود؛ ۸ واژه‌ی پشت سر هم یعنی جمله‌ی
+      کپی‌شده. آستانه روی دو متن مستقل واقعی (محصول L12 و مقاله‌ی جفت کردن) صفر است. */
+export function shingles(text, n = 8) {
+  const w = norm(text).replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+  const out = new Set();
+  for (let i = 0; i + n <= w.length; i++) out.add(w.slice(i, i + n).join(' '));
+  return out;
+}
+/** سهم عبارت‌های مشترک نسبت به متن کوتاه‌تر (۰ تا ۱). */
+export function overlap(a, b) {
+  if (!a.size || !b.size) return 0;
+  const [small, big] = a.size <= b.size ? [a, b] : [b, a];
+  let n = 0;
+  for (const s of small) if (big.has(s)) n++;
+  return n / small.size;
+}
+export const TEXT_DUP_MAX = 0.15;
+/** اثر انگشت فایل تصویر (یا نام، اگر فایل نیست — نبودش را قاعده‌ی asset-missing جدا می‌گیرد). */
+export function assetKey(a) {
+  return a.abs && existsSync(a.abs) ? createHash('sha256').update(readFileSync(a.abs)).digest('hex') : `name:${a.file}`;
+}
 
 export const SITE_SUFFIX = ' | کرین یدک';
 export const TITLE_MAX = 60;
@@ -121,6 +151,16 @@ export function lintDoc(doc, ctx = {}) {
     if (a.width && Math.max(a.width, a.height) > 1600) warn('asset-size', `${a.file} ${a.width}×${a.height} — ضلع بلند بیش از ۱۶۰۰px`);
   }
   for (const f of doc.missingAssets ?? []) err('asset-missing', `فایل تصویر ${f} کنار محتوا نیست`);
+  {
+    const seen = new Map();
+    for (const a of doc.assets) {
+      const k = assetKey(a);
+      const prev = seen.get(k);
+      if (prev)
+        err('image-dup', `تصویر ${a.file} (${a.role === 'gallery' ? 'گالری' : 'متن'}) تکرار ${prev.file} (${prev.role === 'gallery' ? 'گالری' : 'متن'}) است — هر تصویر یک بار در صفحه؛ تصویر داخل متن از گالری برود`);
+      else seen.set(k, a);
+    }
+  }
   const hasTable = doc.blocks.some((b) => /<table/.test(b.body ?? '') || b.type === 'table');
   if (!inline.length && !hasTable && !doc.blocks.some((b) => b.type === 'media')) err('visual', 'هیچ تصویر، جدول یا ویدیویی در متن نیست (قاعده‌ی کارفرما: عناصر بصری)');
 
@@ -150,6 +190,18 @@ export function lintDoc(doc, ctx = {}) {
     if (!Array.isArray(m.categories) || !m.categories.length) err('product', 'categories (اسلاگ دسته) ندارد');
     if (!gallery.length) err('gallery', 'gallery خالی است — محصول بی‌تصویر noindex می‌ماند');
     for (const s of m.specs ?? []) if (!s?.label || !s?.value) err('specs', `ردیف مشخصه‌ی ناقص: ${JSON.stringify(s)}`);
+  }
+
+  // ── تکرار بین صفحه‌ها ──
+  const mine = shingles(text);
+  const cover = m.kind === 'product' ? gallery[0] && assetKey(gallery[0]) : null;
+  for (const o of ctx.registry ?? []) {
+    if (o.file === doc.file) continue;
+    if (o.shingles) {
+      const r = overlap(mine, o.shingles);
+      if (r >= TEXT_DUP_MAX) err('text-dup', `${Math.round(r * 100)}٪ عبارت‌های ۸ واژه‌ای با ${o.file} یکی است (سقف ${TEXT_DUP_MAX * 100}٪) — متن هر صفحه باید خودش باشد`);
+    }
+    if (cover && o.cover && o.cover === cover) err('cover-dup', `تصویر اول گالری با ${o.file} یکی است — og:image و image در JSON-LD هر محصول باید یکتا باشد`);
   }
 
   const words = text.split(/\s+/).filter(Boolean).length;
