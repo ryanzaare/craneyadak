@@ -7,8 +7,8 @@
             "label": "کد فنی (SKU / Part Number)",
             "name": "sku",
             "type": "text",
-            "instructions": "کد فنی داخلی فروشگاه — معادل product.sku در فرانت‌اند فعلی.",
-            "required": 1,
+            "instructions": "اختیاری. فقط کدی که روی پلاک یا کاتالوگ سازنده‌ی همین کالا دیده می‌شود (مثلاً SAGA1-L12 RX). اگر روی کالا کدی نیست، خالی بگذارید — کد حدسی هرگز (حدود نیمی از کالاها کد فنی ندارند).",
+            "required": 0,
             "wrapper": {
                 "width": "50"
             },
@@ -301,5 +301,5 @@
     "graphql_types": [
         "CraneProduct"
     ],
-    "modified": 1787194346
+    "modified": 1795102359
 }

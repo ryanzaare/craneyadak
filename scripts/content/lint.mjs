@@ -186,6 +186,10 @@ export function lintDoc(doc, ctx = {}) {
   // ── محصول ──
   if (m.kind === 'product') {
     if (!m.sku) warn('product', 'sku ندارد');
+    // برچسب اصالت (۲۹ آبان ۱۴۰۵): ادعای تجاری کارفرما؛ فقط دو مقدار افزونه (cyh_authenticity_choices). نبودش = هشدار، چون
+    // کارت و صفحه‌ی محصول بی برچسب «اصلی» منتشر می‌شود (فرستنده و گیرنده‌ی L12).
+    if (m.authenticity === undefined) warn('authenticity', 'authenticity (original یا non_original) ندارد — برچسب «اصلی» نمایش داده نمی‌شود');
+    else if (!['original', 'non_original'].includes(m.authenticity)) err('authenticity', `authenticity «${m.authenticity}» مجاز نیست — original یا non_original`);
     if (!m.brand) err('product', 'brand (اسلاگ برند) ندارد');
     if (!Array.isArray(m.categories) || !m.categories.length) err('product', 'categories (اسلاگ دسته) ندارد');
     if (!gallery.length) err('gallery', 'gallery خالی است — محصول بی‌تصویر noindex می‌ماند');

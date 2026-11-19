@@ -111,6 +111,8 @@ hasNot('خود فایل با خودش مقایسه نمی‌شود', lintDoc(g, 
 const prod = compileContent(GOOD.replace('kind: article', 'kind: product'), { file: 'p.md' });
 has('محصول بی گالری', lintDoc(prod, {}), 'gallery');
 has('محصول بی برند', lintDoc(prod, {}), 'product');
+has('محصول بی برچسب اصالت = هشدار', lintDoc(prod, {}), 'authenticity', 'warn');
+has('برچسب اصالت ناشناخته = خطا', lintDoc(compileContent(GOOD.replace('kind: article', 'kind: product\nauthenticity: genuine'), { file: 'p.md' }), {}), 'authenticity');
 
 console.log('── هرگز تکرار (کارفرما، ۲۹ آبان ۱۴۰۵)');
 {

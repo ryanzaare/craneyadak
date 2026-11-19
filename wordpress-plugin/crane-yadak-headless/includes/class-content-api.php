@@ -144,6 +144,17 @@ function cyh_content_import( $payload, $opt = [] ) {
 				$cat_ids[] = (int) $t->term_id;
 			}
 
+			// ── برچسب اصالت (۲۹ آبان ۱۴۰۵) ── فرستنده و گیرنده‌ی L12 از فایل بی برچسب «اصلی» منتشر شدند؛ برچسب ادعای
+			// تجاری کارفرماست و در فایل محتوا ثبت می‌شود. فقط دو مقدار مجاز؛ هر مقدار دیگر = خطا پیش از هر نوشتن (نه نیمه‌نوشتن).
+			$authenticity = null;
+			if ( isset( $product['authenticity'] ) ) {
+				$authenticity = (string) $product['authenticity'];
+				if ( ! in_array( $authenticity, [ 'original', 'non_original' ], true ) ) {
+					$fail( 'برچسب اصالت «' . esc_html( $authenticity ) . '» مجاز نیست — original یا non_original.' );
+					continue;
+				}
+			}
+
 			// ── ۳. پیدا کردن یا ساختن ──
 			list( $target, $post_type, $raw_id ) = cyh_content_locate( $kind, $slug );
 			$post = (array) ( $entity['_post'] ?? [] );
@@ -228,6 +239,10 @@ function cyh_content_import( $payload, $opt = [] ) {
 				if ( isset( $product['sku'] ) ) {
 					$what[] = 'کد فنی';
 					$apply && update_field( 'sku', sanitize_text_field( (string) $product['sku'] ), $target );
+				}
+				if ( null !== $authenticity ) {
+					$what[] = 'اصالت';
+					$apply && update_field( 'authenticity', $authenticity, $target );
 				}
 				if ( $brand_id ) {
 					$what[] = 'برند';

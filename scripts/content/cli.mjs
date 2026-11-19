@@ -92,7 +92,7 @@ for (const file of targets) {
           // content: '' — همه‌ی متن در بلوک‌هاست؛ متن قدیمی ویرایشگر پاک می‌شود (پشتیبانش در متای _cyh_content_backup).
           _post: { title: m.title, excerpt: m.excerpt, status: m.status ?? 'publish', content: '' },
           ...(m.kind === 'product'
-            ? { _product: { sku: m.sku ?? '', brand: m.brand, categories: m.categories, specs: m.specs ?? [], gallery: (m.gallery ?? []).map((g) => ({ file: g.file, alt: g.alt })) } }
+            ? { _product: { sku: m.sku ?? '', ...(m.authenticity ? { authenticity: m.authenticity } : {}), brand: m.brand, categories: m.categories, specs: m.specs ?? [], gallery: (m.gallery ?? []).map((g) => ({ file: g.file, alt: g.alt })) } }
             : {}),
           blocks: doc.blocks,
         },
