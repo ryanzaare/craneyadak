@@ -61,6 +61,7 @@ export async function publishDoc(doc, payload, opt) {
     byName.set(name, { ...a, name, buf, sha256: createHash('sha256').update(buf).digest('hex') });
   }
   const urls = new Map();
+  const pending = new Set(); // dry-run: تصاویری که apply بارگذاری خواهد کرد
   if (byName.size) {
     const lookup = await call(f, `${base}/crane-yadak/v1/content/media`, { method: 'POST', headers: json, body: JSON.stringify({ files: [...byName.values()].map(({ name, sha256 }) => ({ name, sha256 })) }) }, 'وضعیت تصاویر');
     const answered = new Set((lookup.files ?? []).map((r) => r.name));
@@ -78,6 +79,7 @@ export async function publishDoc(doc, payload, opt) {
         continue;
       }
       if (!apply) {
+        pending.add(r.name);
         log(`   🖼  ${r.name} — بارگذاری می‌شود`);
         continue;
       }
@@ -111,6 +113,20 @@ export async function publishDoc(doc, payload, opt) {
   }
   // ⚠️ در apply هیچ نشانگری نباید بماند — <img src="{{asset:…}}"> روی سایت یعنی تصویر شکسته.
   if (apply && unresolved.size) throw new Error(`نشانی این تصاویر پیدا نشد: ${[...unresolved].join('، ')}`);
+
+  // ⚠️ dry-run و تصویر گالری تازه (۲۹ آبان ۱۴۰۵): dry-run تصویری بارگذاری نمی‌کند، پس سرور گالری محصول تازه را «در
+  // کتابخانه نیست» رد می‌کرد و workflow پیش از apply می‌ایستاد — اولین محصول با عکس تازه (فرستنده و گیرنده‌ی L12)
+  // هرگز منتشر نمی‌شد. در dry-run همان ردیف‌ها از گالری ارسالی برداشته و جدا گزارش می‌شوند؛ apply هرگز چنین نمی‌کند
+  // (آنجا پیش از این مرحله بارگذاری شده‌اند و هر کمبودی خطای واقعی است).
+  if (!apply && pending.size) {
+    for (const entity of Object.values(resolved.products ?? {})) {
+      const g = entity?._product?.gallery;
+      if (!Array.isArray(g)) continue;
+      const kept = g.filter((x) => !pending.has(path.posix.basename(typeof x === 'string' ? x : x.file ?? '')));
+      if (kept.length !== g.length) log(`   🖼  گالری: ${g.length - kept.length} تصویر تازه در apply بارگذاری و پیوست می‌شود`);
+      entity._product.gallery = kept;
+    }
+  }
 
   // ── ۳. ورود ──
   const { _source, _assets, ...body } = resolved;

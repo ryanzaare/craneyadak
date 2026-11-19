@@ -82,6 +82,17 @@ await rejects(publishDoc(doc, payload, { fetch: server({ 'a.jpg': 'exists', 'b.j
   ok(!s.calls.some((c) => c.url.endsWith('/content/import')), 'و ورود اصلاً فراخوانده نمی‌شود');
 }
 
+{
+  // dry-run با تصویر گالری تازه: سرور نباید آن را «در کتابخانه نیست» ببیند (باگ انتشار فرستنده/گیرنده‌ی L12).
+  const gdoc = { assets: [{ file: 'images/new.jpg', abs: '/x/images/new.jpg', alt: 'تازه', role: 'gallery' }, { file: 'images/old.jpg', abs: '/x/images/old.jpg', alt: 'قدیم', role: 'gallery' }] };
+  const gpay = { _source: 'x', _assets: [], products: { p: { _product: { gallery: [{ file: 'images/new.jpg', alt: 'تازه' }, { file: 'images/old.jpg', alt: 'قدیم' }] }, blocks: [] } } };
+  const dry = await publishDoc(gdoc, gpay, { fetch: server({ 'new.jpg': 'missing', 'old.jpg': 'exists' }).fetch, base, auth: 'x', read });
+  ok(JSON.stringify(dry.sent.payload.products.p._product.gallery) === JSON.stringify([{ file: 'images/old.jpg', alt: 'قدیم' }]), 'dry-run: تصویر گالری تازه به سرور نمی‌رود، تصویر موجود می‌رود');
+  const wet = await publishDoc(gdoc, gpay, { fetch: server({ 'new.jpg': 'missing', 'old.jpg': 'exists' }).fetch, base, auth: 'x', read, apply: true });
+  ok(wet.sent.payload.products.p._product.gallery.length === 2, 'apply: گالری کامل (تصویر تازه پیش از ورود بارگذاری شده)');
+  ok(gpay.products.p._product.gallery.length === 2, 'payload ورودی دست نخورد (کپی، نه جهش)');
+}
+
 if (failed) {
   console.error(`\n❌ ${failed} مورد ناموفق`);
   process.exit(1);
