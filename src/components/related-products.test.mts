@@ -24,5 +24,10 @@ t('محصول نمایشی هرگز', relatedProductsForPost({ title: 'SAGA1-L12
 t('کد فنی کوتاه/خالی نشانه نیست', relatedProductsForPost({ title: 'ab', bodyHtml: 'ab' }, [P('s', { sku: 'ab' }), P('n', { sku: null })], cats).length === 0);
 t('سقف تعداد', relatedProductsForPost({ title: 'x', bodyHtml: '<a href="/categories/brake/brake-wheel-disc/">d</a>' }, Array.from({ length: 9 }, (_, i) => P(`p${i}`, { categorySlugs: ['brake-wheel-disc'] })), cats).length === 4);
 
+const tx = P('saga-saga1-l12-transmitter', { brandNameFa: 'ساگا', categorySlugs: ['remote-control'] });
+const set = P('saga-saga1-l12', { sku: 'SAGA1-L12X', brandNameFa: 'ساگا', categorySlugs: ['remote-control'] });
+t('پیوند مستقیم به محصول بی کد فنی (فرستنده‌ی L12) = مرتبط', ids(relatedProductsForPost({ title: 'x', bodyHtml: '<a href="/products/saga-saga1-l12-transmitter/">فرستنده</a>' }, [tx], cats)) === 'saga-saga1-l12-transmitter');
+t('پیوند به فرستنده، ست هم‌پیشوند را مرتبط نمی‌کند', ids(relatedProductsForPost({ title: 'x', bodyHtml: '<a href="/products/saga-saga1-l12-transmitter/">فرستنده</a>' }, [set], cats)) === '');
+
 if (failed) { console.error(`\n❌ ${failed} مورد ناموفق`); process.exit(1); }
 console.log('\nهمه‌ی آزمون‌های محصولات مرتبط مقاله گذشت.');

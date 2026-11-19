@@ -45,12 +45,13 @@ const btn = 'relative z-10 inline-flex items-center justify-center min-h-11 px-3
     • هاور لمسی: بالا رفتن ۲px + قاب action + سایه‌ی نرم — فقط transform/box-shadow (بی‌پرش چیدمان؛ کاهش حرکت سراسری خاموشش می‌کند).
     • پیوند کل کارت با ::before روی عنوان؛ دکمه‌های عمل relative z-10 روی آن. data-*های سبد = قرارداد §7. */}
 <article class="h-full bg-white rounded-md border border-steel-300 overflow-hidden flex flex-col relative transition-all duration-150 hover:-translate-y-0.5 hover:border-action hover:shadow-[0_6px_16px_rgba(15,23,42,0.08)]">
-  {/* ⚠️ موبایل مربع (کارفرما، ۲۹ آبان ۱۴۰۵ — اسکرین‌شات کارت «محصولات مرتبط»): کارت تک‌ستونه‌ی موبایل ۳۴۳px عرض دارد و
-      قاب ۴:۳ عکس مربعی را ۲۵۷px وسط قاب با دو نوار خالی ۴۳px می‌نشاند. از md (چندستونه) همان ۴:۳ تصمیم ۴ آبان. */}
-  <div class="aspect-square md:aspect-[4/3] bg-steel-50 bg-blueprint relative flex items-center justify-center overflow-hidden border-b border-steel-200">
+  {/* ⚠️ قاب مربع در همه‌ی عرض‌ها (کارفرما، ۲۹ آبان ۱۴۰۵ — دو اسکرین‌شات: موبایل «محصولات مرتبط» و دسکتاپ «تازه‌ترین
+      قطعات»): همه‌ی عکس‌های کاتالوگ مربع‌اند و قاب ۴:۳ آن‌ها را با دو نوار خالی وسط قاب می‌نشاند («عکس جا نمی‌شود»).
+      این تصمیم ۴ آبان (۴:۳ تا کارت کوتاه بماند) را کنار می‌گذارد؛ p-2 به‌جای p-4 تا عکس قاب را پر کند. */}
+  <div class="aspect-square bg-steel-50 bg-blueprint relative flex items-center justify-center overflow-hidden border-b border-steel-200">
     {image ? (
       <RemoteImage src={image.url} alt={image.altText || product.name} width={600} height={600} eager={eager}
-        sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" class="w-full h-full object-contain p-4" />
+        sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" class="w-full h-full object-contain p-2" />
     ) : (
       <svg class="w-1/3 h-1/3 text-steel-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.75" role="img" aria-label={`${product.name} — تصویر به‌زودی`}><path d="M5 5h14v14H5zM5 12h14M12 5v14M9 9h6v6H9z" /></svg>
     )}

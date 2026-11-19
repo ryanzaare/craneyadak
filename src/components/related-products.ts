@@ -46,6 +46,11 @@ export function relatedProductsForPost<T extends RelProduct>(
     .filter((p) => !p.isDemo)
     .map((p) => {
       let score = 0;
+      // پیوند مستقیم به خود صفحه‌ی محصول قوی‌ترین نشانه است (۲۹ آبان ۱۴۰۵): فرستنده‌ی L12 کد فنی ندارد و بی این قاعده
+      // مقاله‌ای که مستقیم به آن لینک داده هیچ امتیازی نمی‌داد.
+      // اسلاگ فقط [a-z0-9-] است (lint محتوا)، پس جست‌وجوی رشته‌ای کافی است؛ «/» یا «"» پایانی جلوی تطبیق
+      // «saga-saga1-l12» در «saga-saga1-l12-transmitter» را می‌گیرد.
+      if (html.includes(`/products/${p.slug}/`) || html.includes(`/products/${p.slug}"`)) score += 20;
       const sku = (p.sku ?? '').trim();
       if (sku.length >= 3 && textNorm.includes(norm(sku))) score += 10;
       if (p.categorySlugs.some((c) => linkedCats.has(c))) score += 5;

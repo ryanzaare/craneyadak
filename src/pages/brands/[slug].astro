@@ -20,6 +20,7 @@ import { SITE } from '../../data/site';
 import { BRAND_CLASSES, categoryPath, findCategory } from '../../data/taxonomy';
 import { getBrands, type EnrichedBrand } from '../../lib/brands';
 import { getProductsByBrand, computePrice, productJsonLd, type CraneProduct } from '../../lib/wp';
+import ContentRail from '../../components/ContentRail.astro';
 import ContentBlocks from '../../components/ContentBlocks.astro';
 import { getBlocks } from '../../lib/content-blocks';
 import { brandReadiness, productReadiness, blocksWordCount } from '../../lib/indexability';
@@ -256,7 +257,9 @@ const noindexBrand = !brandReadiness({
   )}
 
   {/* ------------------- هاب برند (محتوای عمیق) ------------------- */}
-  <ContentBlocks blocks={blocks} title={`صفحه‌ی ${brand.nameFa}`} reviewMode={reviewMode} eyebrow="پروفایل برند" />
+  <ContentBlocks blocks={blocks} title={`صفحه‌ی ${brand.nameFa}`} reviewMode={reviewMode} eyebrow="پروفایل برند">
+    <ContentRail slot="rail" />
+  </ContentBlocks>
 
   {/* ---------------------- برندهای هم‌گروه ---------------------- */}
   {siblings.length > 0 && (

@@ -27,6 +27,7 @@ import {
   type Category,
   type Silo,
 } from '../../../data/taxonomy';
+import ContentRail from '../../../components/ContentRail.astro';
 import ContentBlocks from '../../../components/ContentBlocks.astro';
 import Questions from '../../../components/Questions.astro';
 import { getQuestions, questionsJsonLd } from '../../../lib/questions';
@@ -312,7 +313,9 @@ const contact = await getContact();
   </section>
 
   {/* ------------------ راهنمای فنی (محتوای وردپرس) ------------------ */}
-  <ContentBlocks blocks={blocks} title={displayName} reviewMode={reviewMode} eyebrow="راهنمای فنی" />
+  <ContentBlocks blocks={blocks} title={displayName} reviewMode={reviewMode} eyebrow="راهنمای فنی">
+    <ContentRail slot="rail" />
+  </ContentBlocks>
 
   {/* ------------------ پرسش و پاسخ کاربران ------------------ */}
   {/* جایش عمدی است: **بعد از** راهنمای فنی. محتوای تخصصیِ ما اول، محتوای

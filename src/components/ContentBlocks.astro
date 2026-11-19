@@ -34,6 +34,9 @@ const { blocks: rawBlocks, title, reviewMode = false, eyebrow = 'در این ص�
 // ⚠️ بلوک‌های ویدیودار همیشه اول (کارفرما، ۲۵ آبان ۱۴۰۵: «بلوک ویدیو بالای هر محتوا»). مرتب‌سازی پایدار؛ شماره‌گذاری و
 // نوار ناوبری از همین ترتیب ساخته می‌شوند، پس با چیدمان روی صفحه یکی می‌مانند.
 const blocks = videoBlocksFirst(rawBlocks);
+// ستون کناری صفحه (ContentRail، کارفرما ۲۹ آبان ۱۴۰۵): وقتی صفحه آن را می‌دهد، یک ستون چسبان کنار *همه‌ی* بلوک‌ها
+// می‌نشیند و نکته‌ی هر بلوک (aside) زیر خود بلوک می‌آید، نه در ستون جدا — دو ستون کناری روی هم جا نمی‌شوند.
+const hasRail = Astro.slots.has('rail');
 
 let imgAudit = EMPTY_AUDIT;
 const prose = async (html: string) => {
@@ -153,6 +156,8 @@ const rail = (b: ContentBlock): string =>
     <SectionNav sections={nav} eyebrow={eyebrow} ariaLabel={`بخش‌های ${title}`} />
 
     <div class="bg-white">
+      <div class:list={[hasRail && 'max-w-7xl mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] xl:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8 lg:px-4']}>
+      <div class="min-w-0">
       {blocks.map((b, i) => (
         <section
           id={b.anchor}
@@ -175,7 +180,7 @@ const rail = (b: ContentBlock): string =>
               </div>
             )}
 
-            <div class={rail(b)}>
+            <div class={hasRail ? '' : rail(b)}>
             <div class="min-w-0">
 
             {/* ── متن ────────────────────────────────────────────────── */}
@@ -292,20 +297,26 @@ const rail = (b: ContentBlock): string =>
                         m.url ? (
                           <RemoteImage src={m.url} alt={m.alt} width={960} height={540} sizes="(max-width: 768px) 100vw, 768px" class="w-full h-full object-cover" />
                         ) : (
-                          <span class="absolute inset-0 grid grid-cols-[1fr_auto] items-center gap-3 p-4 md:gap-4 md:p-8 bg-gradient-to-l from-steel-900 to-steel-800 text-right" aria-hidden="true">
-                            <span class="flex flex-col gap-2 min-w-0">
+                          /* ⚠️ دکمه‌ی پخش وسط قاب و بزرگ (کارفرما، ۲۹ آبان ۱۴۰۵). نسخه‌ی ۲۵ آبان دکمه را عمداً در ستون متن گذاشته
+                             بود چون وسط قاب روی عنوان می‌نشست؛ حالا عنوان به نوار بالا (یک خط در موبایل، دو خط از md) و عکس قطعه به
+                             گوشه‌ی پایین رفته‌اند تا مرکز قاب فقط مال دکمه باشد. */
+                          <span class="absolute inset-0 bg-gradient-to-l from-steel-900 to-steel-800 text-right" aria-hidden="true">
+                            <span class="absolute top-3 inset-x-4 md:top-6 md:inset-x-8 flex flex-col gap-1">
                               <span class="text-xs font-bold text-accent">ویدیو · {embed?.provider === 'youtube' ? 'یوتیوب' : 'آپارات'}</span>
-                              <span class="text-base md:text-2xl font-black text-white leading-7 md:leading-10 line-clamp-2 md:line-clamp-3">{label}</span>
-                              <span class="hidden sm:flex items-center gap-2 mt-1 text-xs text-steel-300"><Logo inverse class="w-6 h-6" /> کرین یدک</span>
-                              {/* دکمه‌ی پخش در ستون متن، نه وسط قاب: وسط قاب روی عنوان می‌نشست (preview، ۲۵ آبان). */}
-                              <span class="mt-1 md:mt-2 inline-flex items-center gap-2 self-start rounded-full bg-action text-white text-sm font-bold ps-3 pe-4 py-2 group-hover:bg-accent-ink transition-colors">
-                                <svg viewBox="0 0 24 24" class="w-5 h-5" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
-                                پخش ویدیو
+                              <span class="text-sm md:text-2xl font-black text-white leading-6 md:leading-10 line-clamp-1 md:line-clamp-2">{label}</span>
+                            </span>
+                            <span class="absolute inset-0 grid place-items-center">
+                              <span class="flex flex-col items-center gap-2">
+                                <span class="w-16 h-16 md:w-24 md:h-24 rounded-full bg-action text-white grid place-items-center shadow-lg ring-8 ring-white/10 group-hover:bg-accent-ink group-hover:scale-105 transition">
+                                  <svg viewBox="0 0 24 24" class="w-8 h-8 md:w-11 md:h-11 translate-x-0.5" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+                                </span>
+                                <span class="hidden md:block text-base font-bold text-white">پخش ویدیو</span>
                               </span>
                             </span>
+                            <span class="absolute bottom-3 end-4 md:bottom-6 md:end-8 hidden sm:flex items-center gap-2 text-xs text-steel-300"><Logo inverse class="w-6 h-6" /> کرین یدک</span>
                             {coverImage && (
-                              <span class="w-24 h-24 sm:w-28 sm:h-28 md:w-48 md:h-48 rounded-md bg-white p-1.5 md:p-2 shadow-sm">
-                                <RemoteImage src={coverImage.url} alt="" width={240} height={240} sizes="(max-width: 768px) 112px, 192px" class="w-full h-full object-contain" />
+                              <span class="absolute bottom-3 start-4 md:bottom-6 md:start-8 w-14 h-14 sm:w-20 sm:h-20 md:w-32 md:h-32 rounded-md bg-white p-1 md:p-1.5 shadow-sm">
+                                <RemoteImage src={coverImage.url} alt="" width={240} height={240} sizes="(max-width: 768px) 80px, 128px" class="w-full h-full object-contain" />
                               </span>
                             )}
                           </span>
@@ -313,8 +324,8 @@ const rail = (b: ContentBlock): string =>
                       );
                       const play = (
                         <span class="absolute inset-0 grid place-items-center pointer-events-none" aria-hidden="true">
-                          <span class="w-16 h-16 rounded-full bg-action text-white grid place-items-center shadow-sm group-hover:scale-110 transition-transform">
-                            <svg viewBox="0 0 24 24" class="w-7 h-7 translate-x-0.5" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+                          <span class="w-16 h-16 md:w-24 md:h-24 rounded-full bg-action text-white grid place-items-center shadow-lg group-hover:scale-105 transition-transform">
+                            <svg viewBox="0 0 24 24" class="w-8 h-8 md:w-11 md:h-11 translate-x-0.5" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
                           </span>
                         </span>
                       );
@@ -354,7 +365,7 @@ const rail = (b: ContentBlock): string =>
 
             {/* ── ستون کناری ─────────────────────────────────────────── */}
             {b.asideHtml !== '' && (
-              <aside class="mt-8 lg:mt-0 lg:sticky lg:top-(--sticky-off) rounded-md bg-white lg:bg-steel-50/70 border border-steel-200 p-5">
+              <aside class:list={['mt-8 rounded-md bg-white border border-steel-200 p-5', !hasRail && 'lg:mt-0 lg:sticky lg:top-(--sticky-off) lg:bg-steel-50/70']}>
                 <p class="flex items-center gap-2 text-xs font-bold text-accent-ink mb-2">
                   <span class="w-1.5 h-1.5 rounded-md bg-action" aria-hidden="true"></span>
                   نکته
@@ -366,6 +377,13 @@ const rail = (b: ContentBlock): string =>
           </div>
         </section>
       ))}
+      </div>
+      {hasRail && (
+        <aside class="hidden lg:block pt-16 pb-16" aria-label="دسترسی سریع">
+          <div class="sticky top-(--sticky-off) space-y-4"><slot name="rail" /></div>
+        </aside>
+      )}
+      </div>
     </div>
   </>
 )}

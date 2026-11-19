@@ -15,10 +15,10 @@ const bare = Astro.props.bare ?? false;
 
 {
   warranty && (
-    <div class:list={[bare ? 'mt-4 lg:mt-0' : 'mt-5 pt-4 border-t border-steel-300']} data-warranty>
-      <p class="text-sm font-bold text-steel-900 mb-1">ضمانت</p>
-      <p class="text-sm text-steel-800 leading-7">{warranty.headline}</p>
-      <details class="mt-2 text-xs text-steel-600 leading-6">
+    <div class:list={[bare ? 'mt-3 lg:mt-0 rounded-md border border-steel-200 border-s-4 border-s-action bg-white p-4 md:p-5' : 'mt-5 pt-4 border-t border-steel-300']} data-warranty>
+      <p class:list={['font-bold text-steel-900 mb-1', bare ? 'text-xl' : 'text-sm']}>ضمانت</p>
+      <p class:list={['text-steel-800', bare ? 'text-base leading-8' : 'text-sm leading-7']}>{warranty.headline}</p>
+      <details class:list={['mt-2 text-steel-600', bare ? 'text-sm leading-7' : 'text-xs leading-6']}>
         <summary class="cursor-pointer font-bold">موارد خارج از ضمانت</summary>
         <ul class="list-disc pr-5 mt-1">
           {warranty.exclusions.map((e) => <li>{e}</li>)}

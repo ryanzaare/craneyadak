@@ -17,6 +17,8 @@ import { relatedProductsForPost } from '../../components/related-products';
 import { getAllProducts } from '../../lib/wp';
 import { ALL_CATEGORIES } from '../../data/taxonomy';
 import ContentBlocks from '../../components/ContentBlocks.astro';
+import ContentRail from '../../components/ContentRail.astro';
+import { productPath } from '../../lib/wp';
 import { getBlocks } from '../../lib/content-blocks';
 
 export async function getStaticPaths() {
@@ -170,5 +172,7 @@ const jsonLd = {
   </section>
 
   {/* بلوک‌های مقاله (سیستم محتوا): ویدیو، جدول، FAQ، کادرها — همان سبک صفحه‌ی محصول و دسته. */}
-  <ContentBlocks blocks={blocks} title={post.title} eyebrow="در این مقاله" />
+  <ContentBlocks blocks={blocks} title={post.title} eyebrow="در این مقاله">
+    <ContentRail slot="rail" relatedProduct={related[0] ? { name: related[0].name, href: productPath(related[0]), image: related[0].images[0] ?? null } : null} />
+  </ContentBlocks>
 </Layout>

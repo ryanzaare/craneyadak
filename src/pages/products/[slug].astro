@@ -22,6 +22,8 @@ import ProductGallery from '../../components/ProductGallery.astro';
 import PartNumber from '../../components/PartNumber.astro';
 import AuthenticityBadge from '../../components/AuthenticityBadge.astro';
 import TrustBadges from '../../components/TrustBadges.astro';
+import ContentRail from '../../components/ContentRail.astro';
+import { relatedGuidesForProduct } from '../../lib/related-guides';
 import WarrantyNotice from '../../components/WarrantyNotice.astro';
 import StockPill from '../../components/StockPill.astro';
 import BuyBox from '../../components/BuyBox.astro';
@@ -194,6 +196,7 @@ import { getContact } from '../../lib/site-options';
    `const` هویست می‌شود اما تا نقطه‌ی اعلان در ناحیه‌ی مرده‌ی
    زمانی (TDZ) است و دسترسی به آن خطا می‌دهد. */
 const contact = await getContact();
+const guides = await relatedGuidesForProduct(product.slug);
 
 // خط همراه «تماس فوری» (فاز ۳): جعبه‌ی خرید و نوار پایین؛ ثابت ۰۲۱ در فوتر و صفحه‌ی تماس می‌ماند.
 const mobile = mobileLine(contact);
@@ -294,7 +297,9 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
             {/* شبکه‌ی ۲×۲ تمام‌عرض (بازبینی ۱ آبان ۱۴۰۵) به‌جای قرص‌های ناهم‌عرض: لبه‌ها با قاب خرید بالا هم‌ترازند. */}
             {/* شبکه‌ی «خط مو» سوئیسی (فاز ۳): gap-px روی زمینه‌ی steel-200 = خطوط ۱px یکدست بین خانه‌ها، بی‌دوبرابرشدن
                 مرز. ⚠️ تعداد فرد: خانه‌ی آخر دو ستون را می‌گیرد، وگرنه یک خانه‌ی خالی خاکستری می‌ماند. */}
-            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-steel-200 border border-steel-200 rounded-md overflow-hidden" role="list" aria-label="مشخصات کلیدی">
+            {/* عنوان دیده‌شده (کارفرما، ۲۹ آبان ۱۴۰۵) — پیش‌تر فقط aria-label داشت و شبکه برای خریدار بی‌نام بود. */}
+            <h2 id="key-specs-h" class="text-base font-bold text-steel-900 mb-2">مشخصات کلیدی</h2>
+            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-px bg-steel-200 border border-steel-200 rounded-md overflow-hidden" role="list" aria-labelledby="key-specs-h">
               {keySpecs.map((spec, i) => (
                 <li class:list={['bg-white px-3 py-2 flex items-baseline justify-between gap-2', keySpecs.length % 2 === 1 && i === keySpecs.length - 1 && 'sm:col-span-2']}>
                   <span class="text-steel-600 text-xs shrink-0">{spec.label}</span>
@@ -381,9 +386,10 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
 
   {/* ── ۷) اعتماد و ضمانت — یک‌بار در کل صفحه (§4b) ── */}
   {(hasTrust || hasWarranty) && (
-    <section class="bg-white px-4 md:px-6 py-6 border-b border-steel-300 print:hidden" aria-label="تضمین‌ها">
-      <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-10">
-        <TrustBadges variant="compact" authenticity={product.authenticity} />
+    <section class="bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:hidden" aria-labelledby="trust-h">
+      <h2 id="trust-h" class="max-w-7xl mx-auto text-xl font-bold text-steel-900 mb-4">تضمین‌های خرید</h2>
+      <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-3 items-start">
+        <TrustBadges variant="cards" authenticity={product.authenticity} />
         <WarrantyNotice categorySlugs={product.categorySlugs} bare />
       </div>
     </section>
@@ -443,7 +449,9 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
   )}
 
   {/* بلوک‌های محتوای اختیاری محصول — پس از توضیحات ویرایشگر و پیش از پرسش‌ها (محتوای تخصصی پیش از محتوای کاربر). */}
-  <ContentBlocks blocks={otherBlocks} title={product.name} eyebrow="در این صفحه" coverImage={videoCover} />
+  <ContentBlocks blocks={otherBlocks} title={product.name} eyebrow="در این صفحه" coverImage={videoCover}>
+    <ContentRail slot="rail" product={{ name: product.name, sku: product.sku, image: product.images[0] ?? null }} guides={guides} />
+  </ContentBlocks>
 
   <Questions
     questions={questions}

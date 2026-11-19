@@ -18,7 +18,7 @@
 import { TRUST_BADGES, compactTrustBadges } from '../data/trust';
 
 interface Props {
-  variant?: 'footer' | 'compact';
+  variant?: 'footer' | 'compact' | 'cards';
   class?: string;
   /** اصالت محصول (فقط صفحه‌ی محصول): نشان‌های `onlyIfAuthenticity` فقط با برچسب مطابق می‌آیند. */
   authenticity?: 'original' | 'non_original' | null;
@@ -101,7 +101,26 @@ const compactBadges = compactTrustBadges(authenticity);
         </div>
       </div>
     </section>
-  ) : compactBadges.length === 0 ? null : (
+  ) : variant === 'cards' ? (compactBadges.length === 0 ? null : (
+    /* ⚠️ کارت‌ها (کارفرما، ۲۹ آبان ۱۴۰۵: «ضمانت و ارسال کوچک‌اند، باید بزرگ‌تر باشند»): نسخه‌ی compact عنوان xs و
+       آیکن ۲۰px داشت و توضیح فقط در title (هاور — روی موبایل هرگز دیده نمی‌شد). همان داده و همان قاعده‌ی «فقط
+       تأییدشده»، با آیکن ۴۴px، عنوان text-base و توضیح دیده‌شده. */
+    <ul role="list" class={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${className}`}>
+      {compactBadges.map((badge) => (
+        <li class="flex items-start gap-3 rounded-md border border-steel-200 bg-steel-50 p-4">
+          <span class="w-11 h-11 shrink-0 rounded-md bg-white border border-steel-200 text-accent-ink flex items-center justify-center" aria-hidden="true">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d={badge.icon} />
+            </svg>
+          </span>
+          <span class="min-w-0">
+            <span class="block text-base font-bold text-steel-900 leading-7">{badge.title}</span>
+            <span class="block text-sm text-steel-600 leading-6">{badge.description}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  )) : compactBadges.length === 0 ? null : (
     /* ⚠️ فقط نشان‌های *تاییدشده*.
        نسخه‌ی قبل هر چهار نشان را در جعبه‌ی خرید نشان می‌داد، بدون هیچ
        قید و شرطی — در حالی که هر چهار مورد `verified: false` هستند.
