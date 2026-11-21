@@ -86,29 +86,30 @@ const btn = 'relative z-10 inline-flex items-center justify-center min-h-11 px-3
       <p class="text-xs text-steel-600 leading-6 line-clamp-1"><span class="font-bold">{keySpec.label}:</span> <span dir="auto">{keySpec.value}</span></p>
     )}
 
-    <div class="mt-auto pt-3 border-t border-steel-200 flex flex-wrap items-end justify-between gap-2">
-      <div class="min-w-0 space-y-1">
+    {/* ⚠️ دو ردیف ثابت (کارفرما، ۳۰ آبان ۱۴۰۵ — دو کارت کنار هم، دو چیدمان): پیش‌تر وضعیت/قیمت و دکمه‌ها در یک
+        flex-wrap بودند؛ «+ استعلام» کوتاه در یک خط جا می‌شد و «✓ در سبد استعلام» بلند به خط دوم می‌رفت — هر کارت شکل
+        خودش را می‌گرفت. حالا ردیف ۱ همیشه وضعیت و قیمت، ردیف ۲ همیشه دکمه‌ها در شبکه‌ی هم‌عرض. */}
+    <div class="mt-auto pt-3 border-t border-steel-200 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2 min-h-8">
         <StockPill status={product.stockStatus} />
         <PriceTag price={price} />
       </div>
-      <div class="flex items-center gap-1">
-        {price.payable ? (
-          <button type="button" class={`${btn} bg-action text-white hover:bg-accent-strong`}
-            data-cart-add={product.slug} {...basket} data-guard-until={price.validUntil} data-payable-only aria-label={`افزودن ${product.name} به سبد خرید`}>
-            <span data-basket-label>+ سبد</span>
+      {price.payable ? (
+        <button type="button" class={`${btn} w-full bg-action text-white hover:bg-accent-strong`}
+          data-cart-add={product.slug} {...basket} data-guard-until={price.validUntil} data-payable-only aria-label={`افزودن ${product.name} به سبد خرید`}>
+          <span data-basket-label>+ سبد</span>
+        </button>
+      ) : (
+        <div class:list={['grid gap-2', inquiryHref ? 'grid-cols-2' : 'grid-cols-1']}>
+          {inquiryHref && (
+            <a href={inquiryHref} target="_blank" rel="noopener noreferrer" class={`${btn} bg-action text-white hover:bg-accent-strong`} aria-label={`استعلام قیمت ${product.name} در واتساپ`}>واتساپ</a>
+          )}
+          <button type="button" class={`${btn} ${inquiryHref ? 'border border-action text-accent-ink bg-white hover:bg-accent-soft' : 'bg-action text-white hover:bg-accent-strong'}`}
+            data-quote-add={product.slug} data-quote-mode="rfq" {...basket} aria-label={`افزودن ${product.name} به سبد استعلام`}>
+            <span data-basket-label class="truncate">+ استعلام</span>
           </button>
-        ) : (
-          <>
-            {inquiryHref && (
-              <a href={inquiryHref} target="_blank" rel="noopener noreferrer" class={`${btn} bg-action text-white hover:bg-accent-strong`} aria-label={`استعلام قیمت ${product.name} در واتساپ`}>واتساپ</a>
-            )}
-            <button type="button" class={`${btn} ${inquiryHref ? 'text-accent-ink hover:text-accent-strong hover:underline' : 'bg-action text-white hover:bg-accent-strong'}`}
-              data-quote-add={product.slug} data-quote-mode="rfq" {...basket} aria-label={`افزودن ${product.name} به سبد استعلام`}>
-              <span data-basket-label>+ استعلام</span>
-            </button>
-          </>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   </div>
 </article>

@@ -1,0 +1,91 @@
+---
+// src/pages/fault-finder.astro — یابنده‌ی قطعه بر اساس علائم خرابی (O9، کارفرما ۳۰ آبان ۱۴۰۵: «بعدی: fault finder»)
+// ---------------------------------------------------------------------------
+// خریدار زبان «کد» ندارد، زبان «نشانه» دارد («چراغ دستک قرمز می‌زند»، «دهانه‌ی قلاب باز شده»). این صفحه نشانه را به
+// معنی، اقدام و دسته‌ی قطعه وصل می‌کند. ⚠️ فقط از src/data/faults.ts — هر ردیف با منبع و بند دقیق، دیده‌شده روی صفحه
+// (E-E-A-T و قاعده‌ی ۲). فیلتر گروه‌ها بی جاوااسکریپت: پیوند لنگر؛ همه‌ی متن در HTML برای گوگل.
+// ⚠️ هشدار ایمنی صریح بالای صفحه: این صفحه جای بازرسی شخص صلاحیت‌دار را نمی‌گیرد.
+// ---------------------------------------------------------------------------
+import Layout from '../layouts/Layout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { SITE } from '../data/site';
+import { FAULT_GROUPS, FAULT_SOURCES } from '../data/faults';
+import { findCategory, categoryPath } from '../data/taxonomy';
+
+const title = 'یابنده‌ی قطعه از روی علائم خرابی جرثقیل سقفی';
+const description = 'نشانه‌ی خرابی جرثقیل سقفی را پیدا کنید: معنی آن طبق دفترچه‌ی سازنده یا استاندارد OSHA، اقدام لازم و دسته‌ی قطعه‌ی مرتبط؛ ریموت، سیم‌بکسل، قلاب، ترمز و برق.';
+const url = `${SITE.url}/fault-finder/`;
+const count = FAULT_GROUPS.reduce((n, g) => n + g.faults.length, 0);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'WebPage', '@id': `${url}#webpage`, url, name: title, description, inLanguage: 'fa-IR' },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: `${SITE.url}/` },
+        { '@type': 'ListItem', position: 2, name: 'یابنده‌ی خرابی', item: url },
+      ],
+    },
+  ],
+};
+---
+
+<Layout title={`${title} | کرین یدک`} description={description} jsonLd={jsonLd}>
+  <section class="bg-white border-b border-steel-300 px-4 py-6 md:py-8">
+    <div class="max-w-5xl mx-auto">
+      <Breadcrumb surface items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'یابنده‌ی خرابی' }]} />
+      <h1 class="text-2xl md:text-3xl font-black text-steel-900 mb-2 tracking-tight">یابنده‌ی قطعه از روی علائم خرابی</h1>
+      <p class="text-base text-steel-600 leading-8 max-w-3xl">
+        {count.toLocaleString('fa-IR')} نشانه‌ی رایج خرابی در جرثقیل سقفی، هر کدام با معنی، اقدام و قطعه‌ی مرتبط — فقط آنچه
+        دفترچه‌ی سازنده یا استاندارد OSHA 1910.179 گفته است، با شماره‌ی بند.
+      </p>
+      <div class="mt-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-900 leading-7" role="note">
+        <strong>هشدار ایمنی:</strong> این صفحه راهنمای شناسایی است، نه بازرسی. جرثقیلی که یکی از این نشانه‌ها را دارد تا بررسی
+        شخص صلاحیت‌دار با بار کار نکند.
+      </div>
+      <nav class="mt-5 flex flex-wrap gap-2" aria-label="گروه‌های خرابی">
+        {FAULT_GROUPS.map((g) => (
+          <a href={`#${g.id}`} class="inline-flex items-center min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-800 hover:border-action">{g.title} <span class="ms-2 text-xs text-steel-500">{g.faults.length.toLocaleString('fa-IR')}</span></a>
+        ))}
+      </nav>
+    </div>
+  </section>
+
+  <div class="px-4 py-8 bg-steel-50">
+    <div class="max-w-5xl mx-auto space-y-10">
+      {FAULT_GROUPS.map((g) => (
+        <section id={g.id} class="scroll-mt-(--anchor-off)" aria-labelledby={`${g.id}-h`}>
+          <h2 id={`${g.id}-h`} class="text-xl md:text-2xl font-bold text-steel-900 mb-4">{g.title}</h2>
+          <ul class="space-y-3" role="list">
+            {g.faults.map((f) => {
+              const cat = findCategory(f.category);
+              const src = FAULT_SOURCES[f.source];
+              return (
+                <li class="rounded-md border border-steel-300 bg-white p-4 md:p-5 border-s-4 border-s-action">
+                  <h3 class="text-base md:text-xl font-bold text-steel-900 leading-8">{f.symptom}</h3>
+                  <dl class="mt-2 grid gap-2 text-sm leading-7 md:grid-cols-2">
+                    <div><dt class="font-bold text-steel-900">معنی</dt><dd class="text-steel-700">{f.meaning}</dd></div>
+                    <div><dt class="font-bold text-steel-900">اقدام</dt><dd class="text-steel-700">{f.action}</dd></div>
+                  </dl>
+                  <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                    {cat && <a href={categoryPath(cat)} class="font-bold text-accent-ink hover:underline">قطعه: {cat.name} ←</a>}
+                    {f.guide && <a href={f.guide} class="font-bold text-accent-ink hover:underline">راهنما ←</a>}
+                    <span class="text-xs text-steel-500">منبع: <a href={src.url} rel="noopener" target="_blank" class="underline">{src.title}</a> — <span dir="ltr">{f.ref}</span></span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+
+      <section class="rounded-md border border-steel-300 bg-white p-5 md:p-6" aria-labelledby="ff-more">
+        <h2 id="ff-more" class="text-xl font-bold text-steel-900 mb-2">نشانه‌ی شما در فهرست نیست؟</h2>
+        <p class="text-sm text-steel-700 leading-7 mb-4">عکس قطعه و پلاک دستگاه را بفرستید؛ کارشناس قطعه را شناسایی می‌کند.</p>
+        <a href="/part-finder/" class="inline-flex items-center min-h-11 px-5 rounded-md bg-action text-white text-sm font-bold hover:bg-accent-strong">قطعه‌یاب: عکس پلاک را بفرستید</a>
+      </section>
+    </div>
+  </div>
+</Layout>

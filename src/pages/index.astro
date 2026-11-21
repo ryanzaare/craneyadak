@@ -276,10 +276,6 @@ const jsonLd = {
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
               ارسال عکس پلاک در واتساپ
             </a>
-            {/* قطعه‌یاب (کارفرما، ۲۹ آبان ۱۴۰۵: «در صفحه‌ی اصلی نیست»): همان کار با فرم سایت، برای کسی که واتساپ نمی‌خواهد. */}
-            <a href="/part-finder/" class="mt-2 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md bg-steel-900 text-sm font-bold text-white hover:bg-steel-800">
-              ارسال عکس پلاک در قطعه‌یاب
-            </a>
             {/* «تماس مستقیم با پشتیبانی» (کارفرما، ۴ آبان ۱۴۰۵): شماره‌گیری مستقیم خط همراه از تنظیمات وردپرس — هرگز ثابت در کد. */}
             {mobile && (
               <a href={mobile.href} class="mt-2 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-500">
@@ -306,6 +302,43 @@ const jsonLd = {
   {/* ════════════════════ ۲) ۷ گروه فنی و ۳۱ دسته ════════════════════
       هر ۳۱ دسته، زیر گروه خودش، در شبکه‌ی خط مو. صفحه‌ی اصلی به تمام صفحات دسته لینک مستقیم دارد (عمق خزش ۲) و هر نام
       دسته یک عبارت جستجوی واقعی است. شمار کالا فقط کنار دسته‌ی دارای کالا — «۰ قطعه» بیست‌وچند بار نویز است. */}
+  {/* ════════════════════ قطعه‌یاب — بخش مستقل ════════════════════
+      ⚠️ کارفرما (۳۰ آبان ۱۴۰۵): «یک دکمه‌ی سیاه برای قطعه‌یاب کافی نیست؛ بخش اختصاصی با عنوان و توضیح، جای خودش».
+      دکمه‌ی ۲۹ آبان از کارت «کد فنی را نمی‌دانید؟» برداشته شد. ⚠️ کادر جستجوی دوم نه: هیرو همین بالا جستجو دارد؛ این بخش
+      سه راه پیدا کردن قطعه را توضیح می‌دهد و به /part-finder/ می‌برد. */}
+  <section class="bg-white px-4 py-10 md:py-12 border-b border-steel-300" aria-labelledby="pf-heading">
+    <div class="max-w-7xl mx-auto grid gap-8 lg:grid-cols-12 items-center">
+      <div class="lg:col-span-5">
+        <p class="text-sm font-bold text-accent-ink mb-2">قطعه‌یاب کرین یدک</p>
+        <h2 id="pf-heading" class="text-2xl md:text-3xl font-black text-steel-900 leading-[1.5]">قطعه را با کد فنی، مدل یا عکس پلاک پیدا کنید</h2>
+        <p class="mt-3 text-base text-steel-700 leading-8">
+          کد را همان‌طور که روی پلاک یا فاکتور قدیمی است تایپ کنید — خط تیره، فاصله و ارقام فارسی فرقی نمی‌کند. اگر کد را
+          ندارید، عکس پلاک را بفرستید؛ کارشناس کد را می‌خواند و پیش از پیش‌فاکتور با دستگاه شما تطبیق می‌دهد.
+        </p>
+        <div class="mt-5 flex flex-wrap gap-3">
+          <a href="/part-finder/" class="inline-flex items-center justify-center min-h-12 px-6 rounded-md bg-action text-white text-base font-bold hover:bg-accent-strong">باز کردن قطعه‌یاب</a>
+          <a href="/fault-finder/" class="inline-flex items-center justify-center min-h-12 px-6 rounded-md border border-steel-300 text-base font-bold text-steel-900 hover:border-steel-500">از روی علائم خرابی</a>
+          {waPlate && (
+            <a href={waPlate} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center min-h-12 px-6 rounded-md border border-steel-300 text-base font-bold text-steel-900 hover:border-steel-500">عکس پلاک در واتساپ</a>
+          )}
+        </div>
+      </div>
+      <ol class="lg:col-span-7 grid gap-3 sm:grid-cols-3" role="list">
+        {[
+          { n: '۱', t: 'کد یا مدل را جستجو کنید', d: 'جستجو با غلط تایپی و صفحه‌کلید اشتباه هم نزدیک‌ترین نتیجه را نشان می‌دهد.' },
+          { n: '۲', t: 'یا عکس پلاک را بفرستید', d: 'MODEL، S/N و ولتاژ روی پلاک کافی است؛ تا ۳ عکس، بی ثبت‌نام.' },
+          { n: '۳', t: 'تطبیق پیش از پیش‌فاکتور', d: 'کد درخواستی پیش از صدور پیش‌فاکتور با پلاک دستگاه شما تطبیق داده می‌شود.' },
+        ].map((step) => (
+          <li class="rounded-md border border-steel-300 bg-steel-50 p-5 border-s-4 border-s-action">
+            <span class="w-9 h-9 grid place-items-center rounded-md bg-steel-900 text-white font-bold mb-3" aria-hidden="true">{step.n}</span>
+            <h3 class="text-base font-bold text-steel-900 leading-7">{step.t}</h3>
+            <p class="mt-1 text-sm text-steel-600 leading-7">{step.d}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
   <section class="bg-steel-50 px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="silos-heading">
     <div class="max-w-7xl mx-auto">
       <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
