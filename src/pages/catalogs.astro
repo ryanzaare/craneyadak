@@ -1,0 +1,85 @@
+---
+// src/pages/catalogs.astro — کاتالوگ و دفترچه‌های PDF سازنده‌ها (کارفرما، ۳۰ آبان ۱۴۰۵)
+// ---------------------------------------------------------------------------
+// داده: CPT cyh_catalog (src/lib/catalogs.ts). گروه‌بندی به تفکیک برند؛ هر سند: نوع، زبان، حجم، محصولات مرتبط، دانلود.
+// ⚠️ تا اولین سند واقعی noindex (صفحه‌ی خالی = محتوای نازک)؛ با اولین PDF خودکار ایندکس‌پذیر.
+// ⚠️ پیوند دانلود مستقیم به فایل وردپرس است، `download` نه: PDF در مرورگر باز شود تا خریدار پیش از ذخیره ببیند.
+// ---------------------------------------------------------------------------
+import Layout from '../layouts/Layout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { SITE } from '../data/site';
+import { getCatalogs, DOC_TYPE_LABEL, LANG_LABEL, formatSize } from '../lib/catalogs';
+import { getAllProducts, productPath } from '../lib/wp';
+
+const catalogs = await getCatalogs();
+const products = new Map((await getAllProducts()).map((p) => [p.slug, p]));
+const byBrand = new Map<string, typeof catalogs>();
+for (const c of catalogs) {
+  const k = c.brandName ?? 'سایر';
+  byBrand.set(k, [...(byBrand.get(k) ?? []), c]);
+}
+const title = 'کاتالوگ و دفترچه‌ی قطعات جرثقیل سقفی';
+const description = 'دانلود کاتالوگ، دفترچه‌ی راهنما و دیتاشیت PDF سازندگان قطعات جرثقیل سقفی، به تفکیک برند، با پیوند به محصول مرتبط در کرین یدک.';
+const url = `${SITE.url}/catalogs/`;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    { '@type': 'CollectionPage', '@id': `${url}#webpage`, url, name: title, description, inLanguage: 'fa-IR' },
+    { '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'صفحه اصلی', item: `${SITE.url}/` },
+      { '@type': 'ListItem', position: 2, name: 'کاتالوگ‌ها', item: url },
+    ] },
+  ],
+};
+---
+
+<Layout title={`${title} | کرین یدک`} description={description} jsonLd={jsonLd} noindex={catalogs.length === 0}>
+  <section class="bg-white border-b border-steel-300 px-4 py-6 md:py-8">
+    <div class="max-w-5xl mx-auto">
+      <Breadcrumb surface items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'کاتالوگ‌ها' }]} />
+      <h1 class="text-2xl md:text-3xl font-black text-steel-900 mb-2 tracking-tight">کاتالوگ و دفترچه‌ی سازندگان</h1>
+      <p class="text-base text-steel-600 leading-8 max-w-3xl">
+        فایل‌های PDF اصلی سازندگان — کاتالوگ، دفترچه‌ی راهنما و دیتاشیت — به تفکیک برند. هر سند به صفحه‌ی محصول مرتبطش
+        پیوند دارد و روی همان صفحه هم دانلودشدنی است.
+      </p>
+    </div>
+  </section>
+
+  <div class="px-4 py-8 bg-steel-50">
+    <div class="max-w-5xl mx-auto space-y-10">
+      {catalogs.length === 0 && (
+        <div class="rounded-md border border-steel-300 bg-white p-6">
+          <p class="text-base font-bold text-steel-900 mb-1">کاتالوگ‌ها به‌زودی این‌جا قرار می‌گیرند.</p>
+          <p class="text-sm text-steel-700 leading-7">تا آن زمان، کاتالوگ هر قطعه را از <a href="/part-finder/" class="font-bold text-accent-ink hover:underline">قطعه‌یاب</a> یا واتساپ بخواهید.</p>
+        </div>
+      )}
+      {[...byBrand.entries()].map(([brand, list]) => (
+        <section aria-label={`کاتالوگ‌های ${brand}`}>
+          <h2 class="text-xl md:text-2xl font-bold text-steel-900 mb-4">{brand}</h2>
+          <ul class="grid gap-3 md:grid-cols-2" role="list">
+            {list.map((c) => (
+              <li class="rounded-md border border-steel-300 bg-white p-4 flex flex-col gap-3">
+                <div class="flex items-start gap-3">
+                  <span class="w-11 h-11 shrink-0 rounded-md bg-red-50 text-red-700 grid place-items-center text-xs font-black" aria-hidden="true">PDF</span>
+                  <span class="min-w-0">
+                    <span class="block text-base font-bold text-steel-900 leading-7">{c.title}</span>
+                    <span class="block text-xs text-steel-600 mt-0.5">{DOC_TYPE_LABEL[c.docType]} · {LANG_LABEL[c.language]}{formatSize(c.size) && ` · ${formatSize(c.size)}`}</span>
+                  </span>
+                </div>
+                {c.productSlugs.some((s) => products.has(s)) && (
+                  <p class="text-sm text-steel-700 leading-7">
+                    <span class="font-bold">برای:</span>{' '}
+                    {c.productSlugs.filter((s) => products.has(s)).map((s, i) => (
+                      <>{i > 0 && '، '}<a href={productPath(products.get(s)!)} class="text-accent-ink hover:underline">{products.get(s)!.name}</a></>
+                    ))}
+                  </p>
+                )}
+                <a href={c.url} target="_blank" rel="noopener" class="mt-auto inline-flex items-center justify-center min-h-11 rounded-md bg-action text-white text-sm font-bold hover:bg-accent-strong">مشاهده و دانلود PDF</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  </div>
+</Layout>

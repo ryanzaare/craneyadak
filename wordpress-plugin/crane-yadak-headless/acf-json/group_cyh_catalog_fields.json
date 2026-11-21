@@ -1,0 +1,124 @@
+{
+    "key": "group_cyh_catalog_fields",
+    "title": "Catalog Fields",
+    "fields": [
+        {
+            "key": "field_cyh_catalog_file",
+            "label": "فایل PDF",
+            "name": "file",
+            "type": "file",
+            "instructions": "فقط PDF واقعی سازنده (کاتالوگ، دفترچه، دیتاشیت). حداکثر ۲۰ مگابایت.",
+            "required": 1,
+            "return_format": "array",
+            "library": "all",
+            "mime_types": "pdf",
+            "max_size": 20,
+            "wrapper": {
+                "width": "50"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "file"
+        },
+        {
+            "key": "field_cyh_catalog_doc_type",
+            "label": "نوع سند",
+            "name": "doc_type",
+            "type": "select",
+            "choices": {
+                "catalog": "کاتالوگ",
+                "manual": "دفترچه‌ی راهنما",
+                "datasheet": "دیتاشیت"
+            },
+            "default_value": "catalog",
+            "required": 1,
+            "return_format": "value",
+            "wrapper": {
+                "width": "25"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "docType"
+        },
+        {
+            "key": "field_cyh_catalog_language",
+            "label": "زبان",
+            "name": "language",
+            "type": "select",
+            "choices": {
+                "en": "انگلیسی",
+                "fa": "فارسی",
+                "other": "دیگر"
+            },
+            "default_value": "en",
+            "required": 1,
+            "return_format": "value",
+            "wrapper": {
+                "width": "25"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "language"
+        },
+        {
+            "key": "field_cyh_catalog_brand",
+            "label": "برند",
+            "name": "brand",
+            "type": "relationship",
+            "instructions": "برند سازنده‌ی این سند.",
+            "required": 1,
+            "post_type": [
+                "brand"
+            ],
+            "filters": [
+                "search"
+            ],
+            "max": 1,
+            "return_format": "object",
+            "wrapper": {
+                "width": "50"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "brand"
+        },
+        {
+            "key": "field_cyh_catalog_products",
+            "label": "محصولات مرتبط (اختیاری)",
+            "name": "products",
+            "type": "relationship",
+            "instructions": "دکمه‌ی «دانلود کاتالوگ» در صفحه‌ی همین محصولات نشان داده می‌شود. خالی = فقط در صفحه‌ی کاتالوگ‌ها.",
+            "required": 0,
+            "post_type": [
+                "product"
+            ],
+            "filters": [
+                "search"
+            ],
+            "return_format": "object",
+            "wrapper": {
+                "width": "50"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "products"
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "cyh_catalog"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "active": true,
+    "show_in_rest": 1,
+    "show_in_graphql": 1,
+    "graphql_field_name": "catalogFields",
+    "graphql_types": [
+        "CraneCatalog"
+    ],
+    "modified": 1795255561
+}

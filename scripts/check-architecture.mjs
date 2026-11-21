@@ -312,6 +312,7 @@ const ALLOWED_GROUPS = {
   brandFields: 'هویت برند',
   siteOptionsFields: 'تنظیمات سایت',
   authorProfile: 'E-E-A-T نویسنده',
+  catalogFields: 'کاتالوگ و دفترچه‌ی PDF سازنده (/catalogs/ و دکمه‌ی دانلود محصول)',
 };
 
 const groups = {};

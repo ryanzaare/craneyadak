@@ -31,6 +31,8 @@
 // نمی‌گیرد و نیت «مرور کاتالوگ» را می‌گیرد.
 // ---------------------------------------------------------------------------
 import Layout from '../layouts/Layout.astro';
+import { FAULT_GROUPS } from '../data/faults';
+import { getCatalogs, DOC_TYPE_LABEL } from '../lib/catalogs';
 import SearchBox from '../components/SearchBox.astro';
 import AuthorityBlock from '../components/AuthorityBlock.astro';
 import ProductCard from '../components/ProductCard.astro';
@@ -82,6 +84,8 @@ const STEPS = [
 const quickSuggestions = getQuickSuggestions();
 // اعتماد: فقط ادعای verified (trust.ts — همان قاعده‌ی JSON-LD)؛ نشان وابسته به اصالت روی صفحه‌ی اصلی معنا ندارد.
 const trust = TRUST_BADGES.filter((b) => b.verified && !b.onlyIfAuthenticity);
+const faultCount = FAULT_GROUPS.reduce((n, g) => n + g.faults.length, 0);
+const latestCatalogs = (await getCatalogs()).slice(0, 4);
 const waPlate = contact.whatsappHref ? `${contact.whatsappHref}?text=${encodeURIComponent('سلام، عکس پلاک قطعه را برای شناسایی می‌فرستم.')}` : null;
 
 /* پرسش‌های متداول و مختصات/لینک‌ها از وردپرس. تا پیش از این، گروه فیلد
@@ -317,7 +321,6 @@ const jsonLd = {
         </p>
         <div class="mt-5 flex flex-wrap gap-3">
           <a href="/part-finder/" class="inline-flex items-center justify-center min-h-12 px-6 rounded-md bg-action text-white text-base font-bold hover:bg-accent-strong">باز کردن قطعه‌یاب</a>
-          <a href="/fault-finder/" class="inline-flex items-center justify-center min-h-12 px-6 rounded-md border border-steel-300 text-base font-bold text-steel-900 hover:border-steel-500">از روی علائم خرابی</a>
           {waPlate && (
             <a href={waPlate} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center min-h-12 px-6 rounded-md border border-steel-300 text-base font-bold text-steel-900 hover:border-steel-500">عکس پلاک در واتساپ</a>
           )}
@@ -338,6 +341,54 @@ const jsonLd = {
       </ol>
     </div>
   </section>
+
+  {/* ════════════════════ یابنده‌ی خرابی — بخش مستقل ════════════════════
+      کارفرما (۳۰ آبان ۱۴۰۵): «بخش اختصاصی برای fault finder؛ هم‌نوع‌خواری در صفحه‌ی اصلی نباشد». ⚠️ نیت جدا از بخش قطعه‌یاب
+      بالا: آن «کد/پلاک دارم»، این «فقط نشانه را می‌بینم». متن هیچ نشانه‌ای این‌جا تکرار نمی‌شود (همان متن روی /fault-finder/
+      = محتوای تکراری)؛ فقط گروه‌ها و شمارشان از همان داده (src/data/faults.ts)، پس عدد هرگز از صفحه‌ی مقصد جدا نمی‌شود. */}
+  <section class="bg-steel-900 text-white px-4 py-10 md:py-12 border-b border-steel-800" aria-labelledby="ff-heading">
+    <div class="max-w-7xl mx-auto grid gap-8 lg:grid-cols-12 items-center">
+      <div class="lg:col-span-5">
+        <p class="text-sm font-bold text-accent mb-2">یابنده‌ی خرابی</p>
+        <h2 id="ff-heading" class="text-2xl md:text-3xl font-black leading-[1.5]">کد را نمی‌دانید، ولی نشانه‌ی خرابی را می‌بینید؟</h2>
+        <p class="mt-3 text-base text-steel-300 leading-8">
+          از روی آنچه پای جرثقیل می‌بینید — چراغ دستک، سیم‌بکسل، قلاب، ترمز — معنی نشانه، اقدام لازم و قطعه‌ی مرتبط را
+          پیدا کنید. هر مورد با منبع: دفترچه‌ی سازنده یا استاندارد OSHA.
+        </p>
+        <a href="/fault-finder/" class="mt-5 inline-flex items-center justify-center min-h-12 px-6 rounded-md bg-action text-white text-base font-bold hover:bg-accent-strong">{faultCount.toLocaleString('fa-IR')} نشانه‌ی خرابی را ببینید</a>
+      </div>
+      <ul class="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-3" role="list">
+        {FAULT_GROUPS.map((g) => (
+          <li>
+            <a href={`/fault-finder/#${g.id}`} class="flex h-full flex-col justify-between gap-2 rounded-md border border-white/15 bg-white/[0.06] p-4 hover:border-accent">
+              <span class="text-base font-bold">{g.title}</span>
+              <span class="text-sm text-steel-300">{g.faults.length.toLocaleString('fa-IR')} نشانه ←</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  {/* ════════════════════ کاتالوگ‌ها — فقط با اولین PDF واقعی ════════════════════ */}
+  {latestCatalogs.length > 0 && (
+    <section class="bg-white px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="catalogs-home-h">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex flex-wrap items-end justify-between gap-2 mb-4">
+          <h2 id="catalogs-home-h" class="text-xl md:text-2xl font-bold text-steel-900">کاتالوگ و دفترچه‌ی سازندگان</h2>
+          <a href="/catalogs/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline">همه‌ی کاتالوگ‌ها ←</a>
+        </div>
+        <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="list">
+          {latestCatalogs.map((c) => (
+            <li><a href={c.url} target="_blank" rel="noopener" class="flex h-full items-start gap-3 rounded-md border border-steel-300 bg-steel-50 p-4 hover:border-action">
+              <span class="w-10 h-10 shrink-0 rounded-md bg-red-50 text-red-700 grid place-items-center text-xs font-black" aria-hidden="true">PDF</span>
+              <span class="min-w-0"><span class="block text-sm font-bold text-steel-900 leading-6">{c.title}</span><span class="block text-xs text-steel-600">{c.brandName ?? ''} · {DOC_TYPE_LABEL[c.docType]}</span></span>
+            </a></li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )}
 
   <section class="bg-steel-50 px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="silos-heading">
     <div class="max-w-7xl mx-auto">

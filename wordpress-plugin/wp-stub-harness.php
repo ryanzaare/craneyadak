@@ -947,6 +947,21 @@ do_action( 'graphql_register_types', null );
 
 $errors = [];
 
+// کاتالوگ‌ها (۳.۳۲.۰): نوع نوشته با نام GraphQL که src/lib/catalogs.ts می‌خواند، و گروه ACF با فایل PDF اجباری.
+$cat_pt = $GLOBALS['cyh_test_post_types']['cyh_catalog'] ?? null;
+if ( ! $cat_pt || 'craneCatalog' !== ( $cat_pt['graphql_single_name'] ?? '' ) || 'craneCatalogs' !== ( $cat_pt['graphql_plural_name'] ?? '' ) || empty( $cat_pt['show_in_graphql'] ) ) {
+	$errors[] = 'نوع نوشته‌ی cyh_catalog با craneCatalog/craneCatalogs در GraphQL ثبت نشده';
+} else {
+	echo "✓ کاتالوگ: cyh_catalog با craneCatalog/craneCatalogs در GraphQL ثبت شد\n";
+}
+$cat_group = json_decode( (string) file_get_contents( __DIR__ . '/crane-yadak-headless/acf-json/group_cyh_catalog_fields.json' ), true );
+$cat_file  = array_values( array_filter( $cat_group['fields'] ?? [], fn( $f ) => 'file' === ( $f['name'] ?? '' ) ) )[0] ?? [];
+if ( 1 !== (int) ( $cat_file['required'] ?? 0 ) || 'pdf' !== ( $cat_file['mime_types'] ?? '' ) ) {
+	$errors[] = 'فیلد فایل کاتالوگ اجباری و فقط PDF نیست (درس datasheet ساختگی)';
+} else {
+	echo "✓ کاتالوگ: فایل PDF اجباری\n";
+}
+
 if ( empty( $GLOBALS['cyh_test_options_pages']['crane-site-settings'] ) ) {
 	$errors[] = 'ACF Options Page ثبت نشد (crane-site-settings)';
 }
