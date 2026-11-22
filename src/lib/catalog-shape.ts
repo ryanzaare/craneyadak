@@ -6,6 +6,8 @@ export interface Catalog {
   slug: string;
   title: string;
   url: string;
+  /** نسخه‌ی هم‌دامنه برای دانلود مستقیم (src/pages/catalogs/files/[slug].pdf.ts). */
+  localUrl: string;
   /** بایت؛ null اگر وردپرس نداد. */
   size: number | null;
   docType: CatalogDocType;
@@ -50,6 +52,7 @@ export function normalizeCatalog(n: RawCatalog): Catalog | null {
     slug: n.slug,
     title,
     url,
+    localUrl: `/catalogs/files/${n.slug}.pdf`,
     size: typeof file?.fileSize === 'number' ? file.fileSize : null,
     docType,
     language: (['fa', 'en', 'other'].includes(lg) ? lg : 'other') as Catalog['language'],

@@ -380,7 +380,7 @@ const jsonLd = {
         </div>
         <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="list">
           {latestCatalogs.map((c) => (
-            <li><a href={c.url} target="_blank" rel="noopener" class="flex h-full items-start gap-3 rounded-md border border-steel-300 bg-steel-50 p-4 hover:border-action">
+            <li><a href={c.localUrl} download={`${c.title}.pdf`} class="flex h-full items-start gap-3 rounded-md border border-steel-300 bg-steel-50 p-4 hover:border-action">
               <span class="w-10 h-10 shrink-0 rounded-md bg-red-50 text-red-700 grid place-items-center text-xs font-black" aria-hidden="true">PDF</span>
               <span class="min-w-0"><span class="block text-sm font-bold text-steel-900 leading-6">{c.title}</span><span class="block text-xs text-steel-600">{c.brandName ?? ''} · {DOC_TYPE_LABEL[c.docType]}</span></span>
             </a></li>
