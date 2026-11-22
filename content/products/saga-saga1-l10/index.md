@@ -12,6 +12,7 @@ authenticity: original
 categories: [remote-control]
 gallery:
   - { file: images/saga1-l10-studio-01.jpg, alt: ریموت کنترل جرثقیل ساگا SAGA1-L10 با فرستنده‌ی ۸ کلید و گیرنده }
+  - { file: images/saga1-l10-receiver-infographic-02.jpg, alt: گیرنده ریموت ساگا SAGA1-L10 RX با آنتن بیرونی و پلاک نقشه سیم‌بندی }
 specs:
   - { label: کلیدهای حرکت, value: ۸ کلید دو پله + کلید استارت چرخشی + توقف اضطراری }
   - { label: تعداد حرکت, value: تا ۴ حرکت دوطرفه }
@@ -22,6 +23,8 @@ specs:
   - { label: وزن فرستنده, value: حدود ۲۱۰ گرم بدون باتری }
   - { label: ابعاد گیرنده, value: ۱۶۷ × ۱۵۴ × ۸۸ میلی‌متر }
   - { label: وزن گیرنده, value: حدود ۱۴۰۰ گرم بدون کابل }
+  - { label: حفاظت گیرنده, value: NEMA 4 (IP65) }
+  - { label: آنتن گیرنده, value: بیرونی، روی بدنه }
   - { label: توان ارسال, value: کمتر از ۱۰ میلی‌وات }
   - { label: تعداد کد شناسه, value: بیش از ۴٫۳ میلیارد (۳۲ بیتی) }
   - { label: تغذیه فرستنده, value: ۲ عدد باتری قلمی AA }

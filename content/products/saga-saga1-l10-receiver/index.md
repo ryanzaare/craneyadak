@@ -18,6 +18,9 @@ specs:
   - { label: ترمینال‌ها, value: ۲۴ — ۲۱ خروجی و تغذیه، ۳ رزرو (SPARE) }
   - { label: ابعاد, value: ۱۶۷ × ۱۵۴ × ۸۸ میلی‌متر }
   - { label: وزن, value: حدود ۱۴۰۰ گرم بدون کابل }
+  - { label: درجه حفاظت, value: NEMA 4 (IP65) }
+  - { label: آنتن, value: بیرونی، روی بدنه }
+  - { label: رله‌ی خروجی, value: 10A در 125VAC · 5A در 250VAC · 8A در 30VAC }
   - { label: شناسه, value: "FCC ID: NCT048L10" }
 sources:
   - { title: "SAGAMATIC — SAGA1-L10 Series", url: "https://www.sagaradio.com.tw/products_detail/73" }
