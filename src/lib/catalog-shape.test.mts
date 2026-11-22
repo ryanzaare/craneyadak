@@ -8,7 +8,7 @@ t('سند سالم نگاشت می‌شود', !!c && c.title === 'دفترچه S
 t('بی فایل = حذف (درس datasheet ساختگی)', normalizeCatalog({ ...good, catalogFields: { ...good.catalogFields, file: null } }) === null);
 t('فایل غیر PDF = حذف', normalizeCatalog({ ...good, catalogFields: { ...good.catalogFields, file: { node: { mediaItemUrl: 'https://x/y.jpg', mimeType: 'image/jpeg' } } } }) === null);
 t('نشانی http (نه https) = حذف', normalizeCatalog({ ...good, catalogFields: { ...good.catalogFields, file: { node: { mediaItemUrl: 'http://x/y.pdf' } } } }) === null);
-t('بی عنوان = حذف', normalizeCatalog({ ...good, title: '  ' }) === null);
+t('بی عنوان ← «نوع + برند» (اولین کاتالوگ زنده بی عنوان ذخیره شد)', normalizeCatalog({ ...good, title: null })?.title === 'دفترچه‌ی راهنما ساگا');
 t('نوع ناشناخته ← کاتالوگ', normalizeCatalog({ ...good, catalogFields: { ...good.catalogFields, docType: 'weird' } })?.docType === 'catalog');
 t('حجم', formatSize(2516582) === `${(2.4).toLocaleString('fa-IR')} مگابایت` && formatSize(null) === null);
 if (failed) { console.error(`\n❌ ${failed}`); process.exit(1); }

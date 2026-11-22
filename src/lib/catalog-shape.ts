@@ -37,17 +37,21 @@ export function normalizeCatalog(n: RawCatalog): Catalog | null {
   const f = n.catalogFields;
   const file = f?.file?.node;
   const url = file?.mediaItemUrl ?? '';
-  if (!n.slug || !n.title?.trim() || !/^https:\/\/.+\.pdf$/i.test(url)) return null;
+  if (!n.slug || !/^https:\/\/.+\.pdf$/i.test(url)) return null;
   if (file?.mimeType && file.mimeType !== 'application/pdf') return null;
   const dt = one(f?.docType);
   const lg = one(f?.language);
   const brand = f?.brand?.nodes?.[0];
+  // ⚠️ عنوان خالی (۱ آذر ۱۴۰۵): اولین کاتالوگ زنده بی عنوان ذخیره شد و نسخه‌ی اول کل سند را کنار می‌گذاشت — فایل واقعی
+  // روی سایت نیامد. وردپرس عنوان را اجباری نمی‌کند؛ پس عنوان از داده‌ی خود سند ساخته می‌شود («کاتالوگ ساگا»)، نه حدس.
+  const docType = (['catalog', 'manual', 'datasheet'].includes(dt) ? dt : 'catalog') as CatalogDocType;
+  const title = n.title?.trim() || [DOC_TYPE_LABEL[docType], brand?.title].filter(Boolean).join(' ');
   return {
     slug: n.slug,
-    title: n.title.trim(),
+    title,
     url,
     size: typeof file?.fileSize === 'number' ? file.fileSize : null,
-    docType: (['catalog', 'manual', 'datasheet'].includes(dt) ? dt : 'catalog') as CatalogDocType,
+    docType,
     language: (['fa', 'en', 'other'].includes(lg) ? lg : 'other') as Catalog['language'],
     brandSlug: brand?.slug ?? null,
     brandName: brand?.title ?? null,
