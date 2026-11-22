@@ -284,6 +284,13 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
                 <svg id="wish-icon" class="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.6a4.3 4.3 0 017.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" /></svg>
                 <span id="wish-label">افزودن به علاقه‌مندی‌ها</span>
               </button>
+              {/* مقایسه (O8، ایده‌ی دیجی‌کالا): فهرست در localStorage (src/scripts/compare.ts)؛ پس از افزودن، پیوند به /compare/. */}
+              <button type="button" data-compare-toggle={product.slug} aria-pressed="false"
+                class="inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
+                <svg class="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 4v16M15 4v16M4 9h5M15 15h5" /></svg>
+                <span data-compare-label>افزودن به مقایسه</span>
+              </button>
+              <a href="/compare/" data-compare-link hidden class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline">مقایسه (<span data-compare-count>0</span>) ←</a>
               {/* ابزار کار واقعی: خرید صنعتی چندنفره است — اشتراک‌گذاری با همکار و چاپ مشخصات برای تأیید داخلی. */}
               <button type="button" id="share-product" data-title={product.name} data-url={canonical}
                 class="inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
@@ -603,4 +610,26 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
       else if (label) label.textContent = 'خطا — دوباره تلاش کنید';
     });
   }
+</script>
+
+<script>
+  import { readCompare, writeCompare, COMPARE_MAX } from '../../scripts/compare';
+  const btn = document.querySelector<HTMLButtonElement>('[data-compare-toggle]');
+  const link = document.querySelector<HTMLAnchorElement>('[data-compare-link]');
+  const sync = () => {
+    if (!btn || !link) return;
+    const list = readCompare();
+    const on = list.includes(btn.dataset.compareToggle!);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.querySelector('[data-compare-label]')!.textContent = on ? 'در مقایسه ✓' : 'افزودن به مقایسه';
+    link.hidden = list.length === 0;
+    link.querySelector('[data-compare-count]')!.textContent = list.length.toLocaleString('fa-IR');
+  };
+  btn?.addEventListener('click', () => {
+    const slug = btn.dataset.compareToggle!;
+    const list = readCompare();
+    writeCompare(list.includes(slug) ? list.filter((s) => s !== slug) : [...list, slug].slice(-COMPARE_MAX));
+    sync();
+  });
+  sync();
 </script>
