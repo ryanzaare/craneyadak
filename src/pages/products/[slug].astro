@@ -397,7 +397,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
 
   {/* ── ۷) اعتماد و ضمانت — یک‌بار در کل صفحه (§4b) ── */}
   {(hasTrust || hasWarranty) && (
-    <section class="bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:hidden" aria-labelledby="trust-h">
+    <section class="cv-below bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:hidden" aria-labelledby="trust-h">
       <h2 id="trust-h" class="max-w-7xl mx-auto text-xl font-bold text-steel-900 mb-4">تضمین‌های خرید</h2>
       <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-3 items-start">
         <TrustBadges variant="cards" authenticity={product.authenticity} />
@@ -411,7 +411,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
       نشان دهد»). پشت زبانه‌ی دوم پنهان بود و دیده نمی‌شد؛ تصمیم ۳ پیشین («دقیقاً دو زبانه») با این خواسته جایگزین شد.
       محصولات مرتبط حالا کارت‌های دیده‌شده در «ادامه‌ی مسیر» (ExploreMore) پایین صفحه‌اند — یک فهرست، یک جا. */}
   {product.technicalSpecs.length > 0 && (
-    <section id="specs" class="bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:py-4 scroll-mt-(--anchor-off)" aria-labelledby="specs-heading">
+    <section id="specs" class="cv-below bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:py-4 scroll-mt-(--anchor-off)" aria-labelledby="specs-heading">
       <div class="max-w-4xl mx-auto">
         <h2 id="specs-heading" class="text-xl font-bold text-steel-900 mb-3">مشخصات فنی</h2>
         <SpecTable caption={`جدول مشخصات فنی ${product.name}`} sticky rows={product.technicalSpecs.map((s) => ({ label: s.label, value: s.value }))} />
@@ -421,7 +421,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
 
   {/* ── کاتالوگ و دفترچه (اختیاری) — فقط اگر در وردپرس سندی به این محصول پیوند خورده ── */}
   {catalogs.length > 0 && (
-    <section id="catalogs" class="bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:hidden scroll-mt-(--anchor-off)" aria-labelledby="catalogs-heading">
+    <section id="catalogs" class="cv-below bg-white px-4 md:px-6 py-8 border-b border-steel-300 print:hidden scroll-mt-(--anchor-off)" aria-labelledby="catalogs-heading">
       <div class="max-w-4xl mx-auto">
         <h2 id="catalogs-heading" class="text-xl font-bold text-steel-900 mb-3">کاتالوگ و دفترچه</h2>
         <ul class="grid gap-3 sm:grid-cols-2" role="list">
