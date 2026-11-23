@@ -193,6 +193,10 @@ export function lintDoc(doc, ctx = {}) {
     if (!m.brand) err('product', 'brand (اسلاگ برند) ندارد');
     if (!Array.isArray(m.categories) || !m.categories.length) err('product', 'categories (اسلاگ دسته) ندارد');
     if (!gallery.length) err('gallery', 'gallery خالی است — محصول بی‌تصویر noindex می‌ماند');
+    // ⚠️ کارفرما (۲ آذر ۱۴۰۵): «گفته بودم هر محصول باید عکس، نمودار و جدول داخل متن داشته باشد؛ چرا برای L10 نه؟». L10
+    // با چند جدول ولی بی هیچ تصویر داخل متن منتشر شد — قاعده فقط «یک عنصر بصری» می‌خواست. حالا محصول هر دو را لازم دارد.
+    if (!inline.length) err('product-visual', 'محصول هیچ تصویر یا نمودار داخل متن ندارد — دست‌کم یکی کنار بخش مربوط');
+    if (!hasTable) err('product-visual', 'محصول هیچ جدولی در متن ندارد — دست‌کم یک جدول (مقایسه، سازگاری، ترمینال…)');
     for (const s of m.specs ?? []) if (!s?.label || !s?.value) err('specs', `ردیف مشخصه‌ی ناقص: ${JSON.stringify(s)}`);
   }
 
