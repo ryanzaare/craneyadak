@@ -38,7 +38,7 @@ const mobile = mobileLine(contact);
 
 {/* ⚠️ سطح گرافیت: نارنجی متن = accent (۴٫۹:۱ روی steel-900)، نه accent-ink (۲٫۴:۱ — Lighthouse فاز ۰ گرفت؛
     از پیش از مهاجرت بود، چون crane-orange هم همان accent-ink بود). */}
-{/* ⚠️ پیوندهای فوتر min-h-6 (۲۴px، ۱ آذر ۱۴۰۵): با افزودن «کاتالوگ‌ها» Accessibility موبایل ۰٫۹۶ شد (target-size — پیوند متنی ۲۰px با فاصله‌ی ۶px). */}
+{/* ⚠️ پیوندهای فوتر min-h-8 (۳۲px؛ min-h-6 در ۱ آذر کافی نبود — target-size صفحه‌ی اصلی موبایل باز ۰٫۹۷، ۲ آذر): با افزودن «کاتالوگ‌ها» Accessibility موبایل ۰٫۹۶ شد (target-size — پیوند متنی ۲۰px با فاصله‌ی ۶px). */}
 <footer class="bg-steel-900 text-steel-300 mt-auto" role="contentinfo">
   {/* ⚠️ نوار نشان‌های اعتماد از اینجا حذف شد — و حذفش درست بود.
       آن نوار چهار نشان را روی *هر صفحه‌ی سایت* نشان می‌داد که هر چهار
@@ -104,7 +104,7 @@ const mobile = mobileLine(contact);
         <ul class="space-y-1.5 text-sm">
           {footerSilos.map((silo) => (
             <li>
-              <a href={siloPath(silo)} class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">
+              <a href={siloPath(silo)} class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">
                 {silo.name}
               </a>
             </li>
@@ -119,19 +119,19 @@ const mobile = mobileLine(contact);
       <nav aria-labelledby="footer-links">
         <h2 id="footer-links" class="text-white font-bold mb-2 text-sm">دسترسی سریع</h2>
         <ul class="space-y-1.5 text-sm">
-          <li><a href="/brands" class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">برندهای جهانی</a></li>
-          <li><a href="/about" class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">درباره کرین یدک</a></li>
-          <li><a href="/contact" class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">تماس با ما</a></li>
+          <li><a href="/brands" class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">برندهای جهانی</a></li>
+          <li><a href="/about" class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">درباره کرین یدک</a></li>
+          <li><a href="/contact" class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">تماس با ما</a></li>
           {/* پیگیری در فوتر است نه در منوی اصلی: کاربری دنبالش می‌گردد که
               قبلاً درخواست ثبت کرده — یعنی می‌داند دنبال چه می‌گردد و
               پایین صفحه را نگاه می‌کند. جای آن در ناوبری اصلی، فضای
               گران‌قیمت را از مسیرهای کشف محصول می‌گرفت. */}
-          <li><a href="/track" class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">پیگیری درخواست</a></li>
-          <li><a href="/account" class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">حساب کاربری</a></li>
-          <li><a href="/part-finder/" class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">قطعه‌یاب (کد یا عکس پلاک)</a></li>
-          <li><a href="/fault-finder/" class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">یابنده‌ی قطعه از روی خرابی</a></li>
-          <li><a href="/catalogs/" class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">کاتالوگ و دفترچه‌ها</a></li>
-          <li><a href="/blog" class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">مقالات و آموزش‌ها</a></li>
+          <li><a href="/track" class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">پیگیری درخواست</a></li>
+          <li><a href="/account" class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">حساب کاربری</a></li>
+          <li><a href="/part-finder/" class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">قطعه‌یاب (کد یا عکس پلاک)</a></li>
+          <li><a href="/fault-finder/" class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">یابنده‌ی قطعه از روی خرابی</a></li>
+          <li><a href="/catalogs/" class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">کاتالوگ و دفترچه‌ها</a></li>
+          <li><a href="/blog" class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">مقالات و آموزش‌ها</a></li>
           <li class="pt-1.5">
             {/* کانال‌های پیام‌رسان کنار اینستاگرام. در فروش B2B صنعتی
                 ایران، واتساپ و تلگرام مسیر واقعی ارسال عکس پلاک دستگاه و
@@ -189,7 +189,7 @@ const mobile = mobileLine(contact);
         <nav aria-label="صفحات حقوقی">
           <ul class="flex flex-wrap gap-x-4 gap-y-1" role="list">
             {legalPages.map((page) => (
-              <li><a href={`/legal/${page.slug}`} class="inline-flex items-center min-h-6 hover:text-accent transition-colors focus:outline-none focus:text-accent">{page.label}</a></li>
+              <li><a href={`/legal/${page.slug}`} class="inline-flex items-center min-h-8 hover:text-accent transition-colors focus:outline-none focus:text-accent">{page.label}</a></li>
             ))}
           </ul>
         </nav>

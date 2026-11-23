@@ -67,11 +67,18 @@ const icon = 'inline-flex items-center justify-center w-11 h-11 rounded-md borde
     const primary = document.querySelector('[data-primary-action]');
     if (bar && primary && 'IntersectionObserver' in window) {
       // دکمه‌ی اصلی در دید = نوار پنهان. «off-screen» هم بالا را می‌شمارد (کاربر از آن گذشته).
-      new IntersectionObserver(([e]) => {
-        const hide = !!e?.isIntersecting;
+      // ⚠️ فوتر هم (۲ آذر ۱۴۰۵): نوار ثابت روی پیوندهای پایین فوتر می‌نشست — target-size «تا حدی پوشیده». دکمه‌ی اصلی
+      // یا فوتر در دید = نوار پنهان.
+      const seen = new Map<Element, boolean>();
+      const foot = document.querySelector('footer');
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) seen.set(e.target, e.isIntersecting);
+        const hide = [...seen.values()].some(Boolean);
         bar.classList.toggle('translate-y-full', hide);
         bar.toggleAttribute('inert', hide);
-      }).observe(primary);
+      });
+      io.observe(primary);
+      if (foot) io.observe(foot);
     }
   </script>
 

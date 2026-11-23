@@ -25,7 +25,8 @@ const callHref = mobileLine(contact)?.href ?? contact.telHref;
 ---
 
 <nav
-  class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-steel-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] grid grid-cols-3"
+  data-mobile-cta
+  class="md:hidden fixed bottom-0 inset-x-0 z-40 transition-transform duration-150 bg-white border-t border-steel-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] grid grid-cols-3"
   style="padding-bottom: env(safe-area-inset-bottom, 0px);"
   aria-label="راه‌های ارتباطی سریع"
 >
@@ -63,3 +64,16 @@ const callHref = mobileLine(contact)?.href ?? contact.telHref;
     <span class="text-xs font-bold">تلگرام</span>
   </a>
 </nav>
+
+<script>
+  /* ⚠️ کنار رفتن روی فوتر (۲ آذر ۱۴۰۵): انتشار با Accessibility موبایل ۰٫۹۷ شکست خورد — target-size گفت پیوندهای فوتر
+     صفحه‌ی اصلی «تا حدی پوشیده»اند: همین نوار ثابت روی ردیف‌های پایین فوتر می‌نشست. وقتی فوتر دیده می‌شود نوار پایین
+     می‌رود (فوتر همان تماس، واتساپ و تلگرام را دارد). IntersectionObserver، نه scroll. */
+  {
+    const bar = document.querySelector<HTMLElement>('[data-mobile-cta]');
+    const foot = document.querySelector('footer');
+    if (bar && foot && 'IntersectionObserver' in window) {
+      new IntersectionObserver(([e]) => { bar.style.transform = e.isIntersecting ? 'translateY(110%)' : ''; }).observe(foot);
+    }
+  }
+</script>
