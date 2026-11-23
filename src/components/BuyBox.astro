@@ -104,7 +104,9 @@ const quickCount = (mobile ? 1 : 0) + (inquiryHref ? 1 : 0);
   {/* ── ردیف ۳: پیوندهای کمکی زیر خط مو ── */}
   {/* بی‌پیوند (قلم استعلامی بدون اسلات) = بی‌ردیف؛ وگرنه یک خط موی تنها زیر دکمه‌ها می‌ماند (راهنمای سبک، فاز ۳). */}
   {(price.payable || Astro.slots.has('links')) && (
-    <div class="flex flex-wrap gap-x-5 border-t border-steel-200">
+    <div class="flex flex-wrap gap-2 pt-4 mt-1 border-t border-steel-200">
+      {/* ⚠️ دکمه‌های هم‌اندازه با فاصله (کارفرما، ۲ آذر ۱۴۰۵: «قابلیتی مثل مقایسه فقط یک متن ریز است؛ خودم پیدایش نکردم»).
+          پیش‌تر پیوند متنی xs در یک خط با gap-x-5. */}
       {price.payable && (
         <button type="button" class={link}
           {...hook({ 'data-quote-add': slug, 'data-quote-mode': 'cart', ...basket, 'data-guard-until': price.validUntil, 'data-payable-only': true })}>

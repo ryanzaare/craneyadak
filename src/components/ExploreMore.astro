@@ -32,6 +32,8 @@ export interface Props {
   skipGuides?: boolean;
   /** مقاله‌ی جاری — در «راهنماهای پیشنهادی» نمی‌آید. */
   articleSlug?: string;
+  /** صفحه‌ای که خودش فهرست دسته‌ها را دارد (صفحه‌ی اصلی) — «مرور کاتالوگ» تکرار نشود. */
+  skipCatalog?: boolean;
   /** صفحه‌ی محصول: این کالا در «بازدیدهای اخیر» ثبت شود. */
   recordSelf?: { href: string; name: string; image: string | null } | null;
 }
@@ -43,6 +45,7 @@ const {
   guides: givenGuides,
   skipGuides = false,
   articleSlug,
+  skipCatalog = false,
   recordSelf = null,
 } = Astro.props;
 
@@ -105,6 +108,7 @@ const selfAttr = recordSelf ? JSON.stringify(recordSelf) : undefined;
       <ul class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" role="list" data-recent-list></ul>
     </div>
 
+    {!skipCatalog && (
     <div>
       <h2 class="text-xl font-bold text-steel-900 mb-4">مرور کاتالوگ</h2>
       <ul class="flex flex-wrap gap-2" role="list">
@@ -116,6 +120,7 @@ const selfAttr = recordSelf ? JSON.stringify(recordSelf) : undefined;
         <li><a href="/fault-finder/" class="inline-flex items-center min-h-11 px-4 rounded-md border border-steel-900 text-steel-900 text-sm font-bold hover:bg-steel-100">یابنده‌ی قطعه از روی خرابی ←</a></li>
       </ul>
     </div>
+    )}
   </div>
 </section>
 

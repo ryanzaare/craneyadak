@@ -429,4 +429,20 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
 
   guard();
   render();
+
+  /* سینی شناور مقایسه — فقط وقتی فهرست مقایسه پر است، با <script src> به فایل خام public/scripts/compare-tray.js.
+     ⚠️ هر راه دیگر (import ایستا/پویا، کامپوننت، inline) اندازه‌گیری شد و Lighthouse موبایل را ۰٫۹۸ کرد — دلیل کامل در
+     همان فایل. با هر تغییر آن فایل ?v= را بالا ببر (نامش هش ندارد). کلید = src/scripts/compare.ts. */
+  const loadTray = () => {
+    let has = false;
+    try { has = (localStorage.getItem('cy-compare-v1') ?? '[]') !== '[]'; } catch { /* حالت خصوصی */ }
+    if (!has || document.getElementById('cy-tray-js')) return;
+    const el = document.createElement('script');
+    el.id = 'cy-tray-js';
+    el.src = '/scripts/compare-tray.js?v=1';
+    document.head.appendChild(el);
+  };
+  window.addEventListener('cy-compare', loadTray);
+  window.addEventListener('storage', loadTray);
+  loadTray();
 </script>

@@ -35,10 +35,13 @@ const { sku, label = 'کد فنی (Part Number)', id, compact = false } = Astro.
     dir="ltr"
     aria-label={compact ? `${label}: ${sku}` : undefined}
   >{sku}</code>
-  {/* ⚠️ هدف لمسی ≥۴۴px (min-h-11): انگشت روی کف کارگاه، نه موس. */}
+  {/* ⚠️ هدف لمسی ≥۴۴px (min-h-11): انگشت روی کف کارگاه، نه موس.
+      ⚠️ invisible، نه hidden (۲ آذر ۱۴۰۵، اندازه‌گیری‌شده): با hidden دکمه ۷۱ms پس از رنگ‌آمیزی با جاوااسکریپت جا باز می‌کرد،
+      ردیف کد فنی از ۱۱۷ به ۲۰۴px پهن می‌شد و ردیف برند را به خط بعد هل می‌داد ⇒ CLS ۰٫۱۹۴ و Lighthouse موبایل ۰٫۹۰ در
+      صفحه‌ی L10. invisible جایش را از اول نگه می‌دارد (و تا ظاهر نشده، نه فوکوس می‌گیرد نه صفحه‌خوان آن را می‌خواند). */}
   <button
     type="button"
-    class="copy-sku hidden items-center gap-1 min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong underline-offset-4 hover:underline transition-colors rounded px-2 print:hidden"
+    class="copy-sku invisible inline-flex items-center gap-1 min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong underline-offset-4 hover:underline transition-colors rounded px-2 print:hidden"
     data-target={`sku-${id}`}
     data-sku={sku}
   >
@@ -56,9 +59,12 @@ const { sku, label = 'کد فنی (Part Number)', id, compact = false } = Astro.
     // دکمه فقط وقتی ظاهر می‌شود که API کپی واقعاً در دسترس باشد.
     // (clipboard فقط در context امن — https یا localhost — کار می‌کند؛
     //  نمایش دکمه‌ای که در http کار نمی‌کند بدتر از نبودنش است.)
-    if (!navigator.clipboard) return;
-    button.classList.remove('hidden');
-    button.classList.add('inline-flex');
+    // بی clipboard (فقط http ناامن — سایت منتشرشده https است) جای رزروشده هم برداشته می‌شود.
+    if (!navigator.clipboard) {
+      button.classList.replace('inline-flex', 'hidden');
+      return;
+    }
+    button.classList.remove('invisible');
 
     const label = button.querySelector('.copy-label');
     const status = document.getElementById(`sku-status-${button.dataset.target?.replace('sku-', '')}`);

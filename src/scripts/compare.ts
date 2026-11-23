@@ -18,4 +18,6 @@ export function writeCompare(slugs: string[]): void {
   } catch {
     /* حالت خصوصی */
   }
+  // سینی مقایسه‌ی شناور (public/scripts/compare-tray.js) و دکمه‌های صفحه با همین رویداد هم‌زمان می‌شوند.
+  window.dispatchEvent(new CustomEvent('cy-compare'));
 }

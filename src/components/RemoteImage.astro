@@ -50,6 +50,11 @@ const {
 // فقط URL مطلق http(s) قابل بهینه‌سازی است. مقدار نامعتبر نباید بیلد را
 // بشکند — تصویر نداشتن یک واقعیت عملیاتی است، نه خطای کد.
 const isRemote = typeof src === 'string' && /^https?:\/\//i.test(src);
+// ⚠️ پله‌ی ۰٫۷۵ (۲ آذر ۱۴۰۵، اندازه‌گیری‌شده): با [۰٫۵، ۱، ۱٫۵] گوشی‌های میان‌چگالی بین ۴۵۰w و ۹۰۰w گیر می‌کردند. موبایل
+// Lighthouse (۴۱۲px × DPR ۱٫۷۵ ⇒ ~۶۶۵px لازم) ۹۰۰w = ۵۳KB می‌گرفت، و همان تصویر LCP صفحه‌ی محصول است؛ LCP ۲٫۱–۲٫۳s و
+// امتیاز روی مرز ۰٫۹۸/۰٫۹۹ می‌لرزید. پله‌ی ۶۷۵w همین را می‌بندد.
+// ⚠️ fallbackFormat حذف شد: آن ویژگیِ <Picture> است نه <Image>، و این‌جا فقط به‌صورت ویژگی نامعتبر HTML روی هر <img>
+// چاپ می‌شد (fallbackFormat="webp") — بی‌اثر و بایت هدر.
 ---
 
 {isRemote ? (
@@ -58,10 +63,9 @@ const isRemote = typeof src === 'string' && /^https?:\/\//i.test(src);
     alt={alt}
     width={width}
     height={height}
-    widths={[width / 2, width, width * 1.5].map((w) => Math.round(w))}
+    widths={[width / 2, width * 0.75, width, width * 1.5].map((w) => Math.round(w))}
     sizes={sizes}
     format="avif"
-    fallbackFormat="webp"
     quality={72}
     loading={eager ? 'eager' : 'lazy'}
     decoding={eager ? 'sync' : 'async'}

@@ -32,7 +32,6 @@
 // ---------------------------------------------------------------------------
 import Layout from '../layouts/Layout.astro';
 import { FAULT_GROUPS } from '../data/faults';
-import { getCatalogs, DOC_TYPE_LABEL } from '../lib/catalogs';
 import SearchBox from '../components/SearchBox.astro';
 import AuthorityBlock from '../components/AuthorityBlock.astro';
 import ProductCard from '../components/ProductCard.astro';
@@ -40,7 +39,7 @@ import { mobileLine } from '../components/contact-mobile';
 import { SITE } from '../data/site';
 import { TRUST_BADGES, ENAMAD } from '../data/trust';
 import { getFaqs, getSiteOptions, getContact, getAdvantages } from '../lib/site-options';
-import { categoryPath, siloPath, ALL_CATEGORIES, SILOS, BRAND_CLASSES } from '../data/taxonomy';
+import { categoryPath, siloPath, ALL_CATEGORIES, SILOS } from '../data/taxonomy';
 import HighWearParts from '../components/HighWearParts.astro';
 import { getQuickSuggestions, QUICK_LINKS_LABEL } from '../data/popular-searches';
 import { getBrands } from '../lib/brands';
@@ -85,7 +84,6 @@ const quickSuggestions = getQuickSuggestions();
 // اعتماد: فقط ادعای verified (trust.ts — همان قاعده‌ی JSON-LD)؛ نشان وابسته به اصالت روی صفحه‌ی اصلی معنا ندارد.
 const trust = TRUST_BADGES.filter((b) => b.verified && !b.onlyIfAuthenticity);
 const faultCount = FAULT_GROUPS.reduce((n, g) => n + g.faults.length, 0);
-const latestCatalogs = (await getCatalogs()).slice(0, 4);
 const waPlate = contact.whatsappHref ? `${contact.whatsappHref}?text=${encodeURIComponent('سلام، عکس پلاک قطعه را برای شناسایی می‌فرستم.')}` : null;
 
 /* پرسش‌های متداول و مختصات/لینک‌ها از وردپرس. تا پیش از این، گروه فیلد
@@ -228,7 +226,7 @@ const jsonLd = {
 
 ---
 
-<Layout title={title} description={description} jsonLd={jsonLd} explore={{ excludeProducts: featured.map((p) => p.slug) }}>
+<Layout title={title} description={description} jsonLd={jsonLd} explore={{ skipProducts: true, skipCatalog: true }}>
   {/* ════════════════════ ۱) هیرو بنتو ════════════════════
       سه سلول در یک شبکه‌ی «خط مو» (gap-px روی steel-300): جستجو (عمل اصلی — بیشتر بازدیدکننده‌ها کد فنی دارند)،
       عکس پلاک در واتساپ (کسی که کد را نمی‌داند)، فهرست چندقلمی (مدیر خرید با فهرست توقف برنامه‌ریزی‌شده).
@@ -306,119 +304,33 @@ const jsonLd = {
   {/* ════════════════════ ۲) ۷ گروه فنی و ۳۱ دسته ════════════════════
       هر ۳۱ دسته، زیر گروه خودش، در شبکه‌ی خط مو. صفحه‌ی اصلی به تمام صفحات دسته لینک مستقیم دارد (عمق خزش ۲) و هر نام
       دسته یک عبارت جستجوی واقعی است. شمار کالا فقط کنار دسته‌ی دارای کالا — «۰ قطعه» بیست‌وچند بار نویز است. */}
-  {/* ════════════════════ قطعه‌یاب — بخش مستقل ════════════════════
-      ⚠️ کارفرما (۳۰ آبان ۱۴۰۵): «یک دکمه‌ی سیاه برای قطعه‌یاب کافی نیست؛ بخش اختصاصی با عنوان و توضیح، جای خودش».
-      دکمه‌ی ۲۹ آبان از کارت «کد فنی را نمی‌دانید؟» برداشته شد. ⚠️ کادر جستجوی دوم نه: هیرو همین بالا جستجو دارد؛ این بخش
-      سه راه پیدا کردن قطعه را توضیح می‌دهد و به /part-finder/ می‌برد. */}
-  <section class="bg-white px-4 py-10 md:py-12 border-b border-steel-300" aria-labelledby="pf-heading">
-    <div class="max-w-7xl mx-auto grid gap-8 lg:grid-cols-12 items-center">
-      <div class="lg:col-span-5">
-        <p class="text-sm font-bold text-accent-ink mb-2">قطعه‌یاب کرین یدک</p>
-        <h2 id="pf-heading" class="text-2xl md:text-3xl font-black text-steel-900 leading-[1.5]">قطعه را با کد فنی، مدل یا عکس پلاک پیدا کنید</h2>
-        <p class="mt-3 text-base text-steel-700 leading-8">
-          کد را همان‌طور که روی پلاک یا فاکتور قدیمی است تایپ کنید — خط تیره، فاصله و ارقام فارسی فرقی نمی‌کند. اگر کد را
-          ندارید، عکس پلاک را بفرستید؛ کارشناس کد را می‌خواند و پیش از پیش‌فاکتور با دستگاه شما تطبیق می‌دهد.
-        </p>
-        <div class="mt-5 flex flex-wrap gap-3">
-          <a href="/part-finder/" class="inline-flex items-center justify-center min-h-12 px-6 rounded-md bg-action text-white text-base font-bold hover:bg-accent-strong">باز کردن قطعه‌یاب</a>
-          {waPlate && (
-            <a href={waPlate} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center min-h-12 px-6 rounded-md border border-steel-300 text-base font-bold text-steel-900 hover:border-steel-500">عکس پلاک در واتساپ</a>
-          )}
-        </div>
-      </div>
-      <ol class="lg:col-span-7 grid gap-3 sm:grid-cols-3" role="list">
-        {[
-          { n: '۱', t: 'کد یا مدل را جستجو کنید', d: 'جستجو با غلط تایپی و صفحه‌کلید اشتباه هم نزدیک‌ترین نتیجه را نشان می‌دهد.' },
-          { n: '۲', t: 'یا عکس پلاک را بفرستید', d: 'MODEL، S/N و ولتاژ روی پلاک کافی است؛ تا ۳ عکس، بی ثبت‌نام.' },
-          { n: '۳', t: 'تطبیق پیش از پیش‌فاکتور', d: 'کد درخواستی پیش از صدور پیش‌فاکتور با پلاک دستگاه شما تطبیق داده می‌شود.' },
-        ].map((step) => (
-          <li class="rounded-md border border-steel-300 bg-steel-50 p-5 border-s-4 border-s-action">
-            <span class="w-9 h-9 grid place-items-center rounded-md bg-steel-900 text-white font-bold mb-3" aria-hidden="true">{step.n}</span>
-            <h3 class="text-base font-bold text-steel-900 leading-7">{step.t}</h3>
-            <p class="mt-1 text-sm text-steel-600 leading-7">{step.d}</p>
-          </li>
-        ))}
-      </ol>
-    </div>
-  </section>
-
-  {/* ════════════════════ یابنده‌ی خرابی — بخش مستقل ════════════════════
-      کارفرما (۳۰ آبان ۱۴۰۵): «بخش اختصاصی برای fault finder؛ هم‌نوع‌خواری در صفحه‌ی اصلی نباشد». ⚠️ نیت جدا از بخش قطعه‌یاب
-      بالا: آن «کد/پلاک دارم»، این «فقط نشانه را می‌بینم». متن هیچ نشانه‌ای این‌جا تکرار نمی‌شود (همان متن روی /fault-finder/
-      = محتوای تکراری)؛ فقط گروه‌ها و شمارشان از همان داده (src/data/faults.ts)، پس عدد هرگز از صفحه‌ی مقصد جدا نمی‌شود. */}
-  <section class="bg-steel-900 text-white px-4 py-10 md:py-12 border-b border-steel-800" aria-labelledby="ff-heading">
-    <div class="max-w-7xl mx-auto grid gap-8 lg:grid-cols-12 items-center">
-      <div class="lg:col-span-5">
-        <p class="text-sm font-bold text-accent mb-2">یابنده‌ی خرابی</p>
-        <h2 id="ff-heading" class="text-2xl md:text-3xl font-black leading-[1.5]">کد را نمی‌دانید، ولی نشانه‌ی خرابی را می‌بینید؟</h2>
-        <p class="mt-3 text-base text-steel-300 leading-8">
-          از روی آنچه پای جرثقیل می‌بینید — چراغ دستک، سیم‌بکسل، قلاب، ترمز — معنی نشانه، اقدام لازم و قطعه‌ی مرتبط را
-          پیدا کنید. هر مورد با منبع: دفترچه‌ی سازنده یا استاندارد OSHA.
-        </p>
-        <a href="/fault-finder/" class="mt-5 inline-flex items-center justify-center min-h-12 px-6 rounded-md bg-action text-white text-base font-bold hover:bg-accent-strong">{faultCount.toLocaleString('fa-IR')} نشانه‌ی خرابی را ببینید</a>
-      </div>
-      <ul class="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-3" role="list">
-        {FAULT_GROUPS.map((g) => (
-          <li>
-            <a href={`/fault-finder/#${g.id}`} class="flex h-full flex-col justify-between gap-2 rounded-md border border-white/15 bg-white/[0.06] p-4 hover:border-accent">
-              <span class="text-base font-bold">{g.title}</span>
-              <span class="text-sm text-steel-300">{g.faults.length.toLocaleString('fa-IR')} نشانه ←</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
-  </section>
-
-  {/* ════════════════════ کاتالوگ‌ها — فقط با اولین PDF واقعی ════════════════════ */}
-  {latestCatalogs.length > 0 && (
-    <section class="bg-white px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="catalogs-home-h">
-      <div class="max-w-7xl mx-auto">
-        <div class="flex flex-wrap items-end justify-between gap-2 mb-4">
-          <h2 id="catalogs-home-h" class="text-xl md:text-2xl font-bold text-steel-900">کاتالوگ و دفترچه‌ی سازندگان</h2>
-          <a href="/catalogs/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline">همه‌ی کاتالوگ‌ها ←</a>
-        </div>
-        <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="list">
-          {latestCatalogs.map((c) => (
-            <li><a href={c.localUrl} download={`${c.title}.pdf`} class="flex h-full items-start gap-3 rounded-md border border-steel-300 bg-steel-50 p-4 hover:border-action">
-              <span class="w-10 h-10 shrink-0 rounded-md bg-red-50 text-red-700 grid place-items-center text-xs font-black" aria-hidden="true">PDF</span>
-              <span class="min-w-0"><span class="block text-sm font-bold text-steel-900 leading-6">{c.title}</span><span class="block text-xs text-steel-600">{c.brandName ?? ''} · {DOC_TYPE_LABEL[c.docType]}</span></span>
-            </a></li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  )}
-
-  <section class="bg-steel-50 px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="silos-heading">
+  {/* ════════════════════ ابزارهای کرین یدک — یک بخش، چهار ابزار ════════════════════
+      ⚠️ کارفرما (۲ آذر ۱۴۰۵): «سرم گیج می‌رود؛ هیچ‌وقت نمی‌فهمم هر قابلیت کجاست؛ قابلیت‌های تازه را خوب نشان نداده‌ایم».
+      سه بخش بلند جدا (قطعه‌یاب ۱۰۷۱px، یابنده‌ی خرابی ۸۹۹px، کاتالوگ در موبایل) به یک بخش با چهار کارت هم‌اندازه رفت:
+      هر ابزار عنوان، توضیح یک‌خطی و دکمه‌ی خودش را دارد (خواسته‌ی ۳۰ آبان: «جای خودش، با عنوان و توضیح») — ولی چشم یک‌جا
+      همه را می‌بیند. هم‌نوع‌خواری نه: متن هیچ نشانه‌ی خرابی یا مرحله‌ای از صفحه‌ی مقصد تکرار نمی‌شود. */}
+  <section class="bg-white px-4 py-10 md:py-14 border-b border-steel-300" aria-labelledby="tools-heading">
     <div class="max-w-7xl mx-auto">
-      <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
-        <div>
-          <h2 id="silos-heading" class="text-xl md:text-2xl font-bold text-steel-900">دسته‌بندی قطعات جرثقیل سقفی</h2>
-          <p class="mt-1 text-sm text-steel-600 leading-7">{fa(ALL_CATEGORIES.length)} دسته قطعه در {fa(SILOS.length)} گروه فنی — از روی گروه پیش بروید یا مستقیم کد فنی را جستجو کنید.</p>
-        </div>
-        <a href="/categories/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">فهرست کامل ←</a>
-      </div>
-      <ul class={hairlineGrid(presence.all.length)} role="list">
-        {presence.all.map(({ silo, categories }, i) => (
-          <li class={`${hairlineCell(i, presence.all.length)} flex flex-col relative transition-all duration-150 hover:ring-2 hover:ring-inset hover:ring-action hover:z-10`}>
-            <a href={siloPath(silo)} class="flex items-center gap-3 px-4 py-3 border-b border-steel-200 hover:bg-steel-50">
-              <span class="w-9 h-9 shrink-0 grid place-items-center rounded bg-steel-100 text-steel-700" aria-hidden="true">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={silo.icon} /></svg>
+      <h2 id="tools-heading" class="text-2xl md:text-3xl font-black text-steel-900">قطعه‌ی درست را سریع پیدا کنید</h2>
+      <p class="mt-2 mb-6 text-base md:text-xl text-steel-600 leading-8 max-w-3xl">چهار ابزار کرین یدک برای خریدار قطعه‌ی جرثقیل — از کد پلاک تا نشانه‌ی خرابی.</p>
+      {/* موبایل: شبکه‌ی ۲×۲ آیکن‌دار بی توضیح (الگوی میان‌برهای دیجی‌کالا) — یک ستونِ چهار کارت ۱۲۳۳px بود و ابزار چهارم
+          زیر سه اسکرول گم می‌شد. توضیح از sm به بعد. */}
+      <ul class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4" role="list">
+        {[
+          { href: '/part-finder/', title: 'قطعه‌یاب', body: 'کد فنی یا مدل را تایپ کنید، یا عکس پلاک را بفرستید.', cta: 'جستجوی کد یا ارسال پلاک', icon: 'M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z' },
+          { href: '/fault-finder/', title: 'یابنده‌ی خرابی', body: `کد را نمی‌دانید؟ از ${fa(faultCount)} نشانه‌ی خرابی به قطعه برسید.`, cta: 'از روی نشانه', icon: 'M12 9v3.75m0 3.75h.008M10.3 3.86L1.82 18a1.875 1.875 0 001.64 2.81h16.97a1.875 1.875 0 001.64-2.81L13.7 3.86a1.875 1.875 0 00-3.4 0z' },
+          { href: '/compare/', title: 'مقایسه‌ی قطعات', body: 'تا ۴ قطعه‌ی هم‌دسته را کنار هم، مشخصه به مشخصه ببینید.', cta: 'مقایسه کنید', icon: 'M9 4v16M15 4v16M4 9h5M15 15h5' },
+          { href: '/catalogs/', title: 'کاتالوگ و دفترچه', body: 'PDF اصلی سازندگان، به تفکیک برند — دانلود مستقیم.', cta: 'دانلود کاتالوگ', icon: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z' },
+        ].map((t) => (
+          <li>
+            <a href={t.href} class="group flex h-full flex-col gap-2 sm:gap-3 rounded-lg border-2 border-steel-200 bg-steel-50 p-4 sm:p-5 md:p-6 hover:border-action hover:bg-white transition-colors">
+              <span class="w-11 h-11 sm:w-12 sm:h-12 rounded-md bg-action text-white grid place-items-center" aria-hidden="true">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={t.icon} /></svg>
               </span>
-              <h3 class="flex-1 min-w-0 font-bold text-sm leading-6 text-steel-900">{silo.name}</h3>
-              <span class="shrink-0 text-xs text-steel-600">{fa(categories.length)} دسته</span>
+              <h3 class="text-base sm:text-xl font-black text-steel-900">{t.title}</h3>
+              <p class="hidden sm:block text-base text-steel-700 leading-8">{t.body}</p>
+              <span class="mt-auto inline-flex items-center gap-1 text-sm sm:text-base font-bold text-accent-ink group-hover:underline">{t.cta} ←</span>
             </a>
-            <ul class="px-4 py-2 [&_a]:flex [&_a]:items-center [&_a]:justify-between [&_a]:gap-2 [&_a]:min-h-9 [&_a]:text-sm [&_a]:text-steel-700 [&_a:hover]:text-accent-ink" role="list">
-              {categories.map(({ category, count }) => (
-                <li>
-                  <a href={categoryPath({ ...category, silo })}>
-                    <span>{category.name}</span>
-                    {count > 0 && <span class="text-xs font-bold text-steel-900 tabular-nums">{fa(count)} قطعه</span>}
-                  </a>
-                </li>
-              ))}
-            </ul>
           </li>
         ))}
       </ul>
@@ -435,8 +347,11 @@ const jsonLd = {
           <h2 id="featured-heading" class="text-xl md:text-2xl font-bold text-steel-900">{featuredTitle}</h2>
           <a href="/products/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">همه‌ی قطعات ←</a>
         </div>
-        <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" role="list">
-          {featured.slice(0, 3).map((product, i) => <li><ProductCard product={product} eager={i === 0} /></li>)}
+        {/* موبایل: یک ردیف افقی قابل‌کشیدن (الگوی دیجی‌کالا، کارفرما ۲ آذر ۱۴۰۵) — سه کارت تمام‌عرض پشت هم ۱۹۶۹px بود.
+            ⚠️ بی eager: این بخش در هیچ عرضی بالای تا نیست و تصویر eager با فونت (عنصر LCP متنی) پهنای باند هم‌زمان
+            می‌گرفت — Lighthouse موبایل ۰٫۹۸ شد (۲ آذر ۱۴۰۵). */}
+        <ul class="flex sm:grid overflow-x-auto sm:overflow-visible snap-x snap-mandatory sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 -mx-4 px-4 sm:mx-0 sm:px-0 pb-2 no-scrollbar" role="list">
+          {featured.slice(0, 3).map((product) => <li class="w-[78vw] max-w-80 sm:w-auto sm:max-w-none shrink-0 snap-start"><ProductCard product={product} /></li>)}
           {featured.length < 3 && (
             <li class:list={["bg-steel-50 border border-steel-300 border-s-4 border-s-action rounded-md p-6 flex flex-col gap-5 self-start", featured.length === 1 && "lg:col-span-2"]}>
               {/* ⚠️ self-start، نه کشیدن تا قد کارت محصول با justify-between (کارفرما، ۴ آبان ۱۴۰۵): همان ~۱۴۰px حفره را می‌ساخت.
@@ -478,6 +393,43 @@ const jsonLd = {
     </section>
   )}
 
+  <section class="bg-steel-50 px-4 py-8 md:py-10 border-b border-steel-300" aria-labelledby="silos-heading">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 mb-4">
+        <div>
+          <h2 id="silos-heading" class="text-xl md:text-2xl font-bold text-steel-900">دسته‌بندی قطعات جرثقیل سقفی</h2>
+          <p class="mt-1 text-sm text-steel-600 leading-7">{fa(ALL_CATEGORIES.length)} دسته قطعه در {fa(SILOS.length)} گروه فنی — از روی گروه پیش بروید یا مستقیم کد فنی را جستجو کنید.</p>
+        </div>
+        <a href="/categories/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">فهرست کامل ←</a>
+      </div>
+      <ul class={hairlineGrid(presence.all.length)} role="list">
+        {presence.all.map(({ silo, categories }, i) => (
+          <li class={`${hairlineCell(i, presence.all.length)} flex flex-col relative transition-all duration-150 hover:ring-2 hover:ring-inset hover:ring-action hover:z-10`}>
+            <a href={siloPath(silo)} class="flex items-center gap-3 px-4 py-3 border-b border-steel-200 hover:bg-steel-50">
+              <span class="w-9 h-9 shrink-0 grid place-items-center rounded bg-steel-100 text-steel-700" aria-hidden="true">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d={silo.icon} /></svg>
+              </span>
+              <h3 class="flex-1 min-w-0 font-bold text-sm leading-6 text-steel-900">{silo.name}</h3>
+              <span class="shrink-0 text-xs text-steel-600">{fa(categories.length)} دسته</span>
+            </a>
+            {/* ⚠️ زیر md پنهان (کارفرما، ۲ آذر ۱۴۰۵: «شلوغی سرم را گیج می‌کند»): ۳۱ پیوند دسته در موبایل بخش را ۱۸۸۰px می‌کرد؛
+                ردیف گروه به صفحه‌ی گروه می‌برد که همان فهرست را دارد. */}
+            <ul class="hidden md:block px-4 py-2 [&_a]:flex [&_a]:items-center [&_a]:justify-between [&_a]:gap-2 [&_a]:min-h-9 [&_a]:text-sm [&_a]:text-steel-700 [&_a:hover]:text-accent-ink" role="list">
+              {categories.map(({ category, count }) => (
+                <li>
+                  <a href={categoryPath({ ...category, silo })}>
+                    <span>{category.name}</span>
+                    {count > 0 && <span class="text-xs font-bold text-steel-900 tabular-nums">{fa(count)} قطعه</span>}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
   {/* ════════════════════ ۴) قطعات مصرفی و پرتعویض (وردپرس) ════════════════════ */}
   <HighWearParts />
 
@@ -517,29 +469,17 @@ const jsonLd = {
         </div>
         <a href="/brands/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline underline-offset-4">همه برندها ←</a>
       </div>
-      <div class="space-y-5">
-        {(['oem', 'control', 'electrical'] as const).map((brandClass) => {
-          const list = brandsByClass(brandClass);
-          return list.length > 0 && (
-            <div>
-              <h3 class="text-xs font-bold text-steel-600 mb-2">{BRAND_CLASSES[brandClass].name} <span class="font-normal">({fa(list.length)})</span></h3>
-              {/* ظاهر کاشی در global.css (.cy-brand-tile) — کلاس روی هر ۱۹ کاشی ~۵KB بود. */}
-              <ul class="cy-brand-tile grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" role="list">
-                {list.map((brand) => (
-                  <li class="bg-white border border-steel-200 rounded-md overflow-hidden">
-                    <a href={`/brands/${brand.slug}/`} title={brand.seoAnchor ?? undefined}>
-                      <span><b dir="ltr">{brand.logoText}</b><i>{brand.country}</i></span>
-                      <span>{brand.nameFa}</span>
-                    </a>
-                  </li>
-                ))}
-                {/* ⚠️ (۴ آبان ۱۴۰۵، کارفرما) کاشی‌های جدا با قاب خودشان، نه شبکه‌ی خط مو: ردیف ناقص (مثل اشنایدر تنها) دیگر
-                    ۵ خانه‌ی خالیِ قاب‌دار نمی‌سازد — فقط فضای سفید. کاشی‌ها هم بزرگ‌تر (۴ ستون در دسکتاپ، نه ۶). */}
-              </ul>
-            </div>
-          );
-        })}
-      </div>
+      {/* یک شبکه‌ی فشرده به‌جای سه گروه با عنوان (کارفرما، ۲ آذر ۱۴۰۵ — بخش ۹۲۱px). نوع برند زیر نام هر کاشی هست. */}
+      <ul class="cy-brand-tile flex sm:grid overflow-x-auto sm:overflow-visible snap-x sm:grid-cols-3 lg:grid-cols-6 gap-3 -mx-4 px-4 sm:mx-0 sm:px-0 pb-2 no-scrollbar" role="list">
+        {(['oem', 'control', 'electrical'] as const).flatMap((c) => brandsByClass(c)).map((brand) => (
+          <li class="w-40 sm:w-auto shrink-0 snap-start bg-white border border-steel-200 rounded-md overflow-hidden">
+            <a href={`/brands/${brand.slug}/`} title={brand.seoAnchor ?? undefined}>
+              <span><b dir="ltr">{brand.logoText}</b><i>{brand.country}</i></span>
+              <span>{brand.nameFa}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   </section>
 

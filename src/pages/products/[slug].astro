@@ -280,23 +280,23 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
             <Fragment slot="links">
               {/* علاقه‌مندی — وارد نشده: به ورود می‌رود و بعد به همین صفحه برمی‌گردد. ⚠️ idهای wish-* را اسکریپت پایین می‌خواند. */}
               <button type="button" id="wish-toggle" data-wish-slug={product.slug} aria-pressed="false"
-                class="inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
+                class="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-800 hover:border-action hover:text-accent-ink">
                 <svg id="wish-icon" class="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.6a4.3 4.3 0 017.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" /></svg>
                 <span id="wish-label">افزودن به علاقه‌مندی‌ها</span>
               </button>
               {/* مقایسه (O8، ایده‌ی دیجی‌کالا): فهرست در localStorage (src/scripts/compare.ts)؛ پس از افزودن، پیوند به /compare/. */}
               <button type="button" data-compare-toggle={product.slug} aria-pressed="false"
-                class="inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
+                class="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border-2 border-action bg-white text-sm font-bold text-accent-ink hover:bg-accent-soft aria-pressed:bg-action aria-pressed:text-white">
                 <svg class="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 4v16M15 4v16M4 9h5M15 15h5" /></svg>
                 <span data-compare-label>افزودن به مقایسه</span>
               </button>
-              <a href="/compare/" data-compare-link hidden class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:underline">مقایسه (<span data-compare-count>0</span>) ←</a>
+              <a href="/compare/" data-compare-link hidden class="inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-steel-900 text-white text-sm font-bold hover:bg-steel-800">مشاهده‌ی مقایسه (<span data-compare-count>0</span>) ←</a>
               {/* ابزار کار واقعی: خرید صنعتی چندنفره است — اشتراک‌گذاری با همکار و چاپ مشخصات برای تأیید داخلی. */}
               <button type="button" id="share-product" data-title={product.name} data-url={canonical}
-                class="inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
+                class="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-800 hover:border-action hover:text-accent-ink">
                 <span id="share-label">اشتراک‌گذاری</span>
               </button>
-              <button type="button" id="print-product" class="hidden lg:inline-flex items-center gap-1.5 min-h-11 text-sm font-bold text-steel-700 hover:text-steel-900">
+              <button type="button" id="print-product" class="hidden lg:inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-800 hover:border-action hover:text-accent-ink">
                 چاپ مشخصات
               </button>
             </Fragment>
@@ -306,7 +306,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         {/* ── ۵) چیپ‌های مشخصه‌ی کلیدی (حداکثر ۴) → جدول کامل ──
             جدول فشرده‌ی شش‌ردیفی کنار خرید حذف شد: همان مشخصات سه بار تکرار می‌شد (§3). */}
         {keySpecs.length > 0 && (
-          <div class="md:col-start-1 md:col-span-7 md:row-start-3">
+          <div class="md:col-start-1 md:col-span-7 md:row-start-3 mt-6">
             {/* شبکه‌ی ۲×۲ تمام‌عرض (بازبینی ۱ آبان ۱۴۰۵) به‌جای قرص‌های ناهم‌عرض: لبه‌ها با قاب خرید بالا هم‌ترازند. */}
             {/* شبکه‌ی «خط مو» سوئیسی (فاز ۳): gap-px روی زمینه‌ی steel-200 = خطوط ۱px یکدست بین خانه‌ها، بی‌دوبرابرشدن
                 مرز. ⚠️ تعداد فرد: خانه‌ی آخر دو ستون را می‌گیرد، وگرنه یک خانه‌ی خالی خاکستری می‌ماند. */}
@@ -625,6 +625,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
     link.hidden = list.length === 0;
     link.querySelector('[data-compare-count]')!.textContent = list.length.toLocaleString('fa-IR');
   };
+  window.addEventListener('cy-compare', sync); // سینی شناور «خالی کردن» هم دکمه را به‌روز کند
   btn?.addEventListener('click', () => {
     const slug = btn.dataset.compareToggle!;
     const list = readCompare();
