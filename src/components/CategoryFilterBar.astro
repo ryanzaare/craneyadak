@@ -1,145 +1,168 @@
 ---
-// src/components/CategoryFilterBar.astro
+// src/components/CategoryFilterBar.astro — فیلتر فروشگاه (بازطراحی ۳ آذر ۱۴۰۵؛ مرجع: دیجی‌کالا)
 // ---------------------------------------------------------------------------
-// نوار فیلتر *بالای* فهرست صفحه‌ی دسته (Frontend v2، فاز ۲ — تصمیم ۲ کارفرما، docs/frontend-v2.md §10).
-// جایگزین نوار کناری CategoryFilters (حذف شد — قاعده‌ی ۴).
+// کارفرما: «فیلترهای فروشگاه خیلی محدود است؛ با دیجی‌کالا مقایسه کن» (backlog O28). نسخه‌ی قبل یک نوار چیپ افقی بود
+// با فیلتر تخصصی پشت یک <details> بسته. حالا:
+//   • دسکتاپ (lg+): ستون کناری راست با گروه‌های تاشونده — همیشه دیده می‌شود، فهرست کنارش.
+//   • موبایل: دکمه‌ی «فیلترها (n)» برگه‌ی تمام‌صفحه باز می‌کند؛ پایینش «نمایش n کالا». فیلتر زنده اعمال می‌شود.
+//   • گروه‌ها: موجودی و قیمت، «فقط کالای اصل»، دسته (آرشیو)، برند، مشخصه‌های وردپرس + خودکار (src/data/filters.ts
+//     allFacets — «نوع» ست/فرستنده/گیرنده از همین‌جا می‌آید). شمار کالای هر گزینه کنارش.
+//   • چیپ فیلترهای فعال بالای فهرست، هر کدام با ×، و «حذف همه».
+//   • مرتب‌سازی همه‌جا (پیش از این فقط آرشیو)، شمار نتیجه‌ی برجسته، جابه‌جایی نمای کارت/جدول.
+// همه‌چیز ترکیب‌پذیر و در URL (stock، orig، brand، cat، f_<id>، max_<id>، sort، view) تا نشانی فیلترشده قابل
+// اشتراک با همکار باشد — خرید صنعتی چندنفره است. منطق خالص و آزموده: ./category-filter.ts.
 //
-//   • سه چیپ «همه / موجود / استعلامی» — همیشه، با شمار هر کدام.
-//   • چیپ برند — فقط برندهایی که در *همین* دسته محصول دارند، و فقط وقتی ≥۲ برند است (یک برند چیزی را باریک
-//     نمی‌کند؛ چیپی که همه را نشان می‌دهد شلوغی است).
-//   • مشخصه‌های تخصصی (categoryMeta.spec_facets در وردپرس) داخل «فیلتر تخصصی» تاشونده — همان منطق قبلی:
-//     مشخصه‌ای که هنوز داده‌ی کافی ندارد فیلتر نمی‌شود، فقط یک خط توضیح.
-//   • جابه‌جایی نما: «کارت» (پیش‌فرض، ProductCard) / «جدول» (ProductRow، ?view=list).
-//
-// همه‌چیز ترکیب‌پذیر و در URL (stock، brand، f_<id>، max_<id>، view) تا نشانی فیلترشده قابل اشتراک با
-// همکار باشد — خرید صنعتی چندنفره است. منطق خالص و آزموده: ./category-filter.ts.
-// ⚠️ نوار از ابتدا دیده می‌شود، نه hidden تا اسکریپت: نسخه‌ی اول پنهان بود و نمایانی‌اش با JS فهرست را پایین
-// می‌راند — CLS موبایل ۰٫۱۰۲ روی build زنده (Lighthouse فاز ۲). بدون JS چیپ‌ها بی‌اثرند و فهرست کامل است.
+// ⚠️ CLS: هیچ چیزی با جاوااسکریپت جا باز نمی‌کند. ستون کناری از HTML اولیه در جایش است؛ برگه‌ی موبایل با CSS پنهان
+// است (position:fixed، نه در جریان صفحه). نسخه‌ی اول نوار با hidden-تا-JS، CLS موبایل ۰٫۱۰۲ ساخته بود.
+// ⚠️ بی‌جاوااسکریپت: فهرست کامل دیده می‌شود؛ گزینه‌ها بی‌اثرند و دکمه‌ی «فیلترها» کاری نمی‌کند.
+// نتیجه‌ها (کارت‌ها/جدول) در slot پیش‌فرض می‌آیند و صفت‌هایشان از src/lib/filter-attrs.ts.
 // ---------------------------------------------------------------------------
-import { resolveFacets } from '../data/filters';
-import { getCategoryFacets } from '../lib/category-facets';
+import type { ResolvedFacet } from '../data/filters';
 import { BRANDS } from '../data/taxonomy';
 import { computePrice, type CraneProduct } from '../lib/wp';
 
 interface Props {
   products: CraneProduct[];
-  /** صفحه‌ی دسته: فیلتر تخصصی همان دسته. آرشیو /products/ ندارد (مشخصه‌ها بین دسته‌ها هم‌معنا نیستند). */
-  categorySlug?: string;
-  /** آرشیو /products/ (فاز ۳): چیپ دسته — فقط دسته‌های دارای کالا، از ۲ دسته. */
+  /** فیلترهای مشخصه (وردپرس + خودکار) — همان آرایه‌ای که صفت‌های data-spec کارت‌ها از آن ساخته شده. */
+  facets: ResolvedFacet[];
+  /** آرشیو /products/: گروه دسته — فقط دسته‌های دارای کالا، از ۲ دسته. */
   categories?: { slug: string; name: string; count: number }[];
-  /** آرشیو: مرتب‌سازی (مرتبط‌ترین/جدیدترین/ارزان‌ترین/گران‌ترین). */
-  sortable?: boolean;
 }
 
-const { products, categorySlug, categories = [], sortable = false } = Astro.props;
+const { products, facets, categories = [] } = Astro.props;
 
-const specFacets = categorySlug ? resolveFacets(products, await getCategoryFacets(categorySlug)) : [];
 const brandCounts = new Map<string, number>();
 for (const p of products) if (p.brandSlug) brandCounts.set(p.brandSlug, (brandCounts.get(p.brandSlug) ?? 0) + 1);
 const brands = BRANDS.filter((b) => brandCounts.has(b.slug));
-const showBrands = brands.length >= 2;
 
 const inStock = products.filter((p) => p.stockStatus === 'in_stock').length;
 const rfq = products.filter((p) => !computePrice(p).payable).length;
-const usefulSpecs = specFacets.filter((f) => (f.kind === 'range' ? f.min !== f.max : f.values.length >= 2));
-const pendingSpecs = specFacets.filter((f) => !usefulSpecs.includes(f)).map((f) => f.label);
+const originals = products.filter((p) => p.authenticity === 'original').length;
+const usefulSpecs = facets.filter((f) => (f.kind === 'range' ? f.min !== f.max : f.values.length >= 2));
 
 const fa = (n: number) => n.toLocaleString('fa-IR');
-const chip =
-  'inline-flex items-center gap-1.5 min-h-11 px-3 rounded border border-steel-300 bg-white text-sm font-bold text-steel-700 cursor-pointer ' +
-  'hover:border-steel-400 has-[:checked]:bg-steel-900 has-[:checked]:text-white has-[:checked]:border-steel-900 has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-accent';
+const opt = 'flex items-center gap-3 min-h-11 px-1 cursor-pointer rounded hover:bg-steel-50';
+const box = 'w-5 h-5 shrink-0 accent-action';
+const group = 'border-b border-steel-200 [&[open]>summary_svg]:rotate-180';
+const summary = 'flex items-center justify-between gap-2 min-h-12 px-4 cursor-pointer list-none text-base font-bold text-steel-900 [&::-webkit-details-marker]:hidden';
+const chev = '<svg class="w-5 h-5 text-steel-500 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>';
 ---
 
-<div data-category-filters class="flex flex-col gap-3 mb-4">
-  {/* ⚠️ موبایل: یک ردیف افقی قابل‌کشیدن (کارفرما، ۴ آبان ۱۴۰۵ — سه ردیف ~۱۹۰px اولین صفحه را می‌گرفت)؛ از sm همان ردیف
-      شکستنی. py-1 تا قاب فوکوس چیپ‌ها زیر overflow بریده نشود. محتوای قابل‌کشیدن خودش فوکوس‌پذیر است (axe:
-      scrollable-region-focusable). */}
-  <div class="flex flex-nowrap sm:flex-wrap items-center gap-x-4 gap-y-2 overflow-x-auto sm:overflow-visible whitespace-nowrap no-scrollbar py-1 -my-1">
-    <fieldset class="flex flex-nowrap sm:flex-wrap gap-2 shrink-0">
-      <legend class="sr-only">وضعیت موجودی و قیمت</legend>
-      <label class={chip}><input type="radio" name="cat-stock" value="all" class="sr-only" checked />همه <span class="tabular-nums font-normal">{fa(products.length)}</span></label>
-      <label class={chip}><input type="radio" name="cat-stock" value="in" class="sr-only" />موجود <span class="tabular-nums font-normal">{fa(inStock)}</span></label>
-      <label class={chip}><input type="radio" name="cat-stock" value="rfq" class="sr-only" />استعلامی <span class="tabular-nums font-normal">{fa(rfq)}</span></label>
-    </fieldset>
+<div data-category-filters class="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-6 lg:items-start">
+  {/* ── گروه‌های فیلتر: ستون کناری دسکتاپ / برگه‌ی موبایل (.cat-panel در global.css) ── */}
+  <aside data-cat-panel id="cat-panel" class="cat-panel bg-white lg:rounded-lg lg:border lg:border-steel-300 lg:sticky lg:top-(--sticky-off)" aria-label="فیلترها">
+    <div class="flex items-center justify-between gap-3 px-4 min-h-14 border-b border-steel-300">
+      <p class="text-xl font-bold text-steel-900">فیلترها</p>
+      <button type="button" data-cat-clear hidden class="text-sm font-bold text-accent-ink hover:underline underline-offset-4 min-h-11 px-1">حذف همه</button>
+      <button type="button" data-cat-close class="lg:hidden w-11 h-11 grid place-items-center rounded-full hover:bg-steel-100" aria-label="بستن فیلترها">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    </div>
 
-    {showBrands && (
-      <fieldset class="flex flex-nowrap sm:flex-wrap gap-2 shrink-0">
-        <legend class="sr-only">برند</legend>
-        {brands.map((b) => (
-          <label class={chip}><input type="checkbox" data-cat-brand value={b.slug} class="sr-only" />{b.nameFa} <span class="tabular-nums font-normal">{fa(brandCounts.get(b.slug) ?? 0)}</span></label>
-        ))}
-      </fieldset>
-    )}
+    <div class="cat-panel-body">
+      {/* کلیدهای سریع — مثل «فقط کالاهای موجود» دیجی‌کالا. */}
+      <div class="px-4 py-3 border-b border-steel-200 space-y-1">
+        <label class={opt}><input type="checkbox" data-cat-instock class={box} /><span class="flex-1 text-base text-steel-900">فقط کالای موجود</span><span class="text-sm text-steel-600 tabular-nums">{fa(inStock)}</span></label>
+        {originals > 0 && (
+          <label class={opt}><input type="checkbox" data-cat-original class={box} /><span class="flex-1 text-base text-steel-900">فقط کالای اصل</span><span class="text-sm text-steel-600 tabular-nums">{fa(originals)}</span></label>
+        )}
+        {rfq > 0 && rfq < products.length && (
+          <label class={opt}><input type="checkbox" data-cat-rfq class={box} /><span class="flex-1 text-base text-steel-900">فقط استعلامی (بدون قیمت آنلاین)</span><span class="text-sm text-steel-600 tabular-nums">{fa(rfq)}</span></label>
+        )}
+      </div>
 
-    {categories.length >= 2 && (
-      <fieldset class="flex flex-nowrap sm:flex-wrap gap-2 shrink-0">
-        <legend class="sr-only">دسته</legend>
-        {categories.map((c) => (
-          <label class={chip}><input type="checkbox" data-cat-category value={c.slug} class="sr-only" />{c.name} <span class="tabular-nums font-normal">{fa(c.count)}</span></label>
-        ))}
-      </fieldset>
-    )}
+      {categories.length >= 2 && (
+        <details class={group} open>
+          <summary class={summary}>دسته <Fragment set:html={chev} /></summary>
+          <fieldset class="px-4 pb-3"><legend class="sr-only">دسته</legend>
+            {categories.map((c) => (
+              <label class={opt}><input type="checkbox" data-cat-category value={c.slug} class={box} /><span class="flex-1 text-base text-steel-800">{c.name}</span><span class="text-sm text-steel-600 tabular-nums">{fa(c.count)}</span></label>
+            ))}
+          </fieldset>
+        </details>
+      )}
 
-    {sortable && (
-      <label class="shrink-0 inline-flex items-center gap-2 text-sm font-bold text-steel-700">
-        مرتب‌سازی
-        <select data-cat-sort class="min-h-11 rounded border border-steel-300 bg-white px-2 text-sm font-bold text-steel-900">
+      {brands.length >= 2 && (
+        <details class={group} open>
+          <summary class={summary}>برند <Fragment set:html={chev} /></summary>
+          <fieldset class="px-4 pb-3"><legend class="sr-only">برند</legend>
+            {brands.map((b) => (
+              <label class={opt}><input type="checkbox" data-cat-brand value={b.slug} class={box} /><span class="flex-1 text-base text-steel-800">{b.nameFa}</span><span class="text-sm text-steel-600 tabular-nums">{fa(brandCounts.get(b.slug) ?? 0)}</span></label>
+            ))}
+          </fieldset>
+        </details>
+      )}
+
+      {usefulSpecs.map((facet, i) => (
+        <details class={group} open={i < 3}>
+          <summary class={summary}>
+            <span>{facet.label}{facet.unit && <span class="font-normal text-steel-600 text-sm"> ({facet.unit})</span>}</span>
+            <Fragment set:html={chev} />
+          </summary>
+          <fieldset class="px-4 pb-3"><legend class="sr-only">{facet.label}</legend>
+            {facet.hint && <p class="text-sm text-steel-600 leading-7 mb-2">{facet.hint}</p>}
+            {facet.kind === 'checkbox' ? (
+              facet.values.map((value) => (
+                <label class={opt}>
+                  <input type="checkbox" data-cat-spec={facet.id} data-label={facet.label} value={value} class={box} />
+                  <span class="flex-1 text-base text-steel-800 leading-7 text-right" dir="auto">{value}</span>
+                  <span class="text-sm text-steel-600 tabular-nums">{fa(facet.valueCounts[value] ?? 0)}</span>
+                </label>
+              ))
+            ) : (
+              <div class="pt-1">
+                <label class="sr-only" for={`range-${facet.id}`}>حداکثر {facet.label}</label>
+                <input id={`range-${facet.id}`} type="range" data-cat-range={facet.id} data-label={facet.label} min={facet.min ?? 0} max={facet.max ?? 100}
+                  value={facet.max ?? 100} step="any" class="w-full accent-action" />
+                <p class="flex justify-between text-sm text-steel-700 tabular-nums mt-1">
+                  <span>{facet.min}</span><span>تا <strong data-range-out={facet.id} class="text-steel-900">{facet.max}</strong></span>
+                </p>
+              </div>
+            )}
+          </fieldset>
+        </details>
+      ))}
+    </div>
+
+    {/* پایین برگه‌ی موبایل — فیلترها زنده‌اند؛ این دکمه فقط می‌بندد و شمار را نشان می‌دهد. */}
+    <div class="lg:hidden p-3 border-t border-steel-300 bg-white">
+      <button type="button" data-cat-apply class="w-full min-h-12 rounded-md bg-action text-white text-base font-bold hover:bg-accent-ink">
+        نمایش <span data-cat-count-btn class="tabular-nums">{fa(products.length)}</span> کالا
+      </button>
+    </div>
+  </aside>
+
+  <div class="min-w-0">
+    {/* نوار بالای فهرست: شمار، دکمه‌ی فیلتر موبایل، مرتب‌سازی، نما. */}
+    <div class="flex items-center gap-2 mb-3">
+      <button type="button" data-cat-open aria-controls="cat-panel" aria-expanded="false"
+        class="lg:hidden inline-flex items-center gap-2 min-h-11 px-4 rounded-md border-2 border-steel-900 bg-white text-sm font-bold text-steel-900">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h18M6 12h12M10 19h4" /></svg>
+        فیلترها<span data-cat-badge hidden class="min-w-5 h-5 px-1 rounded-full bg-action text-white text-xs grid place-items-center tabular-nums"></span>
+      </button>
+      <p class="hidden lg:block text-base text-steel-700"><strong data-cat-count class="text-steel-900 font-bold tabular-nums">{fa(products.length)}</strong> کالا</p>
+      <label class="ms-auto inline-flex items-center gap-2 text-sm font-bold text-steel-700">
+        <span class="hidden sm:inline">مرتب‌سازی:</span>
+        <select data-cat-sort aria-label="مرتب‌سازی" class="min-h-11 rounded-md border border-steel-300 bg-white px-2 text-sm font-bold text-steel-900">
           <option value="relevant">مرتبط‌ترین</option>
           <option value="newest">جدیدترین</option>
           <option value="cheapest">ارزان‌ترین</option>
           <option value="expensive">گران‌ترین</option>
         </select>
       </label>
-    )}
-
-    {/* جابه‌جایی نما — aria-pressed. ⚠️ کارت پیش‌فرض و اول (راست) است (کارفرما، ۳ آبان ۱۴۰۵ — جای «جدول پیش‌فرض» §4)؛
-        HTML اولیه هم کارت را نشان می‌دهد تا بی‌JS و بی‌پرش (CLS) همان پیش‌فرض دیده شود. */}
-    <div class="ms-auto shrink-0 inline-flex rounded border border-steel-300 overflow-hidden" role="group" aria-label="نوع نمایش">
-      <button type="button" data-cat-view-btn="grid" aria-pressed="true" class="min-h-11 px-3 text-sm font-bold text-steel-700 aria-pressed:bg-steel-900 aria-pressed:text-white">کارت</button>
-      <button type="button" data-cat-view-btn="list" aria-pressed="false" class="min-h-11 px-3 text-sm font-bold text-steel-700 border-s border-steel-300 aria-pressed:bg-steel-900 aria-pressed:text-white">جدول</button>
-    </div>
-  </div>
-
-  {/* فقط با دست‌کم یک مشخصه‌ی کارآمد (کارفرما، ۴ آبان ۱۴۰۵): جعبه‌ی خالیِ «فیلتر تخصصی» یک ردیف کامل بی‌فایده بود. */}
-  {usefulSpecs.length > 0 && (
-    <details class="bg-white border border-steel-300 rounded">
-      <summary class="cursor-pointer min-h-11 flex items-center px-3 text-sm font-bold text-steel-900">فیلتر تخصصی</summary>
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 p-3 border-t border-steel-200">
-        {usefulSpecs.map((facet) => (
-          <fieldset>
-            <legend class="text-xs font-bold text-steel-900 mb-1">
-              {facet.label}{facet.unit && <span class="font-normal text-steel-600"> ({facet.unit})</span>}
-            </legend>
-            {facet.hint && <p class="text-xs text-steel-600 leading-5 mb-2">{facet.hint}</p>}
-            {facet.kind === 'checkbox' ? (
-              facet.values.map((value) => (
-                <label class="flex items-center gap-2 min-h-11 cursor-pointer">
-                  <input type="checkbox" data-cat-spec={facet.id} value={value} class="w-4 h-4 accent-steel-900" />
-                  <span class="text-sm text-steel-700 truncate" dir="auto">{value}</span>
-                </label>
-              ))
-            ) : (
-              <div>
-                <label class="sr-only" for={`range-${facet.id}`}>حداکثر {facet.label}</label>
-                <input id={`range-${facet.id}`} type="range" data-cat-range={facet.id} min={facet.min ?? 0} max={facet.max ?? 100}
-                  value={facet.max ?? 100} step="any" class="w-full accent-steel-900" />
-                <p class="flex justify-between text-xs text-steel-600 tabular-nums mt-1">
-                  <span>{facet.min}</span><span>تا <strong data-range-out={facet.id} class="text-steel-900">{facet.max}</strong></span>
-                </p>
-              </div>
-            )}
-          </fieldset>
-        ))}
-        {pendingSpecs.length > 0 && (
-          <p class="text-xs text-steel-600 leading-5 sm:col-span-2 lg:col-span-3">
-            فیلتر روی <strong class="text-steel-800">{pendingSpecs.join('، ')}</strong> تعریف شده و به‌محض ثبت این مشخصات برای چند قطعه فعال می‌شود.
-          </p>
-        )}
+      {/* ⚠️ کارت پیش‌فرض و اول است (کارفرما، ۳ آبان ۱۴۰۵)؛ HTML اولیه هم کارت را نشان می‌دهد تا بی‌پرش (CLS). */}
+      <div class="shrink-0 inline-flex rounded-md border border-steel-300 overflow-hidden" role="group" aria-label="نوع نمایش">
+        <button type="button" data-cat-view-btn="grid" aria-pressed="true" class="min-h-11 px-3 text-sm font-bold text-steel-700 bg-white aria-pressed:bg-steel-900 aria-pressed:text-white">کارت</button>
+        <button type="button" data-cat-view-btn="list" aria-pressed="false" class="min-h-11 px-3 text-sm font-bold text-steel-700 bg-white border-s border-steel-300 aria-pressed:bg-steel-900 aria-pressed:text-white">جدول</button>
       </div>
-    </details>
-  )}
+    </div>
+    <p class="lg:hidden text-sm text-steel-700 mb-3"><strong data-cat-count class="text-steel-900 font-bold tabular-nums">{fa(products.length)}</strong> کالا</p>
 
-  <button type="button" data-cat-clear hidden class="self-start inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4">حذف همه‌ی فیلترها</button>
+    {/* چیپ فیلترهای فعال — با جاوااسکریپت پر می‌شود؛ خالی = بی‌ارتفاع (CLS صفر تا کاربر فیلتری نزند). */}
+    <ul data-cat-active class="flex flex-wrap gap-2 empty:hidden mb-3" role="list" aria-label="فیلترهای فعال"></ul>
+
+    <slot />
+  </div>
 </div>
 
 <script>
@@ -147,12 +170,19 @@ const chip =
 
   const root = document.querySelector<HTMLElement>('[data-category-filters]');
   if (root) {
+    const fa = (n: number) => n.toLocaleString('fa-IR');
     const items = [...document.querySelectorAll<HTMLElement>('[data-cat-item]')];
     const views = [...document.querySelectorAll<HTMLElement>('[data-cat-view]')];
-    const countEl = document.querySelector<HTMLElement>('[data-cat-count]');
+    const counts = [...root.querySelectorAll<HTMLElement>('[data-cat-count], [data-cat-count-btn]')];
     const emptyEl = document.querySelector<HTMLElement>('[data-cat-empty]');
+    const panel = root.querySelector<HTMLElement>('[data-cat-panel]')!;
+    const openBtn = root.querySelector<HTMLButtonElement>('[data-cat-open]');
+    const badge = root.querySelector<HTMLElement>('[data-cat-badge]');
+    const activeList = root.querySelector<HTMLElement>('[data-cat-active]')!;
     const clear = root.querySelector<HTMLButtonElement>('[data-cat-clear]');
-    const stockRadios = [...root.querySelectorAll<HTMLInputElement>('input[name="cat-stock"]')];
+    const inStockBox = root.querySelector<HTMLInputElement>('[data-cat-instock]');
+    const rfqBox = root.querySelector<HTMLInputElement>('[data-cat-rfq]');
+    const origBox = root.querySelector<HTMLInputElement>('[data-cat-original]');
     const brandBoxes = [...root.querySelectorAll<HTMLInputElement>('[data-cat-brand]')];
     const specBoxes = [...root.querySelectorAll<HTMLInputElement>('[data-cat-spec]')];
     const ranges = [...root.querySelectorAll<HTMLInputElement>('[data-cat-range]')];
@@ -167,25 +197,30 @@ const chip =
       return {
         stock: el.dataset.stock ?? '', priced: el.dataset.priced === '1', brand: el.dataset.brand ?? '', specs,
         categories: (el.dataset.categories ?? '').split(' ').filter(Boolean), price, modified: el.dataset.modified ?? '',
+        original: el.dataset.original === '1',
       };
     };
     const itemData = new Map(items.map((el) => [el, data(el)]));
 
-    const read = (): FilterState => {
-      const s: FilterState = { ...EMPTY, specs: {}, ranges: {}, cats: [] };
-      s.cats = catBoxes.filter((b) => b.checked).map((b) => b.value);
-      s.sort = (sortEl?.value as SortMode) ?? 'relevant';
-      s.stock = (stockRadios.find((r) => r.checked)?.value as FilterState['stock']) ?? 'all';
-      s.brands = brandBoxes.filter((b) => b.checked).map((b) => b.value);
-      for (const b of specBoxes) if (b.checked) (s.specs[b.dataset.catSpec!] ??= []).push(b.value);
-      for (const r of ranges) if (r.value !== r.max) s.ranges[r.dataset.catRange!] = Number(r.value);
-      s.view = viewBtns.find((b) => b.getAttribute('aria-pressed') === 'true')?.dataset.catViewBtn === 'list' ? 'list' : 'grid';
-      return s;
-    };
+    // «موجود» و «استعلامی» دو کلید جدا در رابط‌اند ولی در وضعیت یک فیلد (stock) — هم‌زمان روشن شدنشان را مهار کن.
+    const read = (): FilterState => ({
+      ...EMPTY,
+      stock: inStockBox?.checked ? 'in' : rfqBox?.checked ? 'rfq' : 'all',
+      original: !!origBox?.checked,
+      brands: brandBoxes.filter((b) => b.checked).map((b) => b.value),
+      cats: catBoxes.filter((b) => b.checked).map((b) => b.value),
+      specs: specBoxes.reduce<Record<string, string[]>>((acc, b) => { if (b.checked) (acc[b.dataset.catSpec!] ??= []).push(b.value); return acc; }, {}),
+      ranges: ranges.reduce<Record<string, number>>((acc, r) => { if (r.value !== r.max) acc[r.dataset.catRange!] = Number(r.value); return acc; }, {}),
+      sort: (sortEl?.value as SortMode) ?? 'relevant',
+      view: viewBtns.find((b) => b.getAttribute('aria-pressed') === 'true')?.dataset.catViewBtn === 'list' ? 'list' : 'grid',
+    });
 
     const write = (s: FilterState) => {
-      for (const r of stockRadios) r.checked = r.value === s.stock;
+      if (inStockBox) inStockBox.checked = s.stock === 'in';
+      if (rfqBox) rfqBox.checked = s.stock === 'rfq';
+      if (origBox) origBox.checked = s.original;
       for (const b of brandBoxes) b.checked = s.brands.includes(b.value);
+      for (const b of catBoxes) b.checked = s.cats.includes(b.value);
       for (const b of specBoxes) b.checked = (s.specs[b.dataset.catSpec!] ?? []).includes(b.value);
       for (const r of ranges) {
         const v = s.ranges[r.dataset.catRange!];
@@ -194,11 +229,10 @@ const chip =
         if (out) out.textContent = r.value;
       }
       for (const b of viewBtns) b.setAttribute('aria-pressed', String(b.dataset.catViewBtn === s.view));
-      for (const b of catBoxes) b.checked = s.cats.includes(b.value);
       if (sortEl) sortEl.value = s.sort;
     };
 
-    /** ترتیب DOM هر نما (جدول و کارت) — مرتب‌سازی پایدار؛ «مرتبط‌ترین» ترتیب build را برمی‌گرداند. */
+    /** ترتیب DOM هر نما — مرتب‌سازی پایدار؛ «مرتبط‌ترین» ترتیب build را برمی‌گرداند. */
     const original = new Map(items.map((el, i) => [el, i]));
     const reorder = (mode: SortMode) => {
       for (const v of views) {
@@ -208,6 +242,32 @@ const chip =
         own.sort((a, b) => compareItems(itemData.get(a)!, itemData.get(b)!, mode) || original.get(a)! - original.get(b)!);
         for (const el of own) list.appendChild(el);
       }
+    };
+
+    // چیپ‌های فعال: هر کدام یک کنترل را خاموش می‌کند. متن از برچسب خود کنترل، پس همیشه با نوار هم‌خوان است.
+    const textOf = (el: HTMLInputElement) => el.closest('label')?.querySelector('span')?.textContent?.trim() ?? el.value;
+    const renderChips = () => {
+      const on: { label: string; off: () => void }[] = [];
+      for (const b of [inStockBox, rfqBox, origBox]) if (b?.checked) on.push({ label: textOf(b), off: () => (b.checked = false) });
+      for (const b of [...catBoxes, ...brandBoxes]) if (b.checked) on.push({ label: textOf(b), off: () => (b.checked = false) });
+      for (const b of specBoxes) if (b.checked) on.push({ label: `${b.dataset.label}: ${b.value}`, off: () => (b.checked = false) });
+      for (const r of ranges) if (r.value !== r.max) on.push({ label: `${r.dataset.label}: تا ${r.value}`, off: () => (r.value = r.max) });
+      activeList.replaceChildren(...on.map((c) => {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'inline-flex items-center gap-2 min-h-10 ps-3 pe-2 rounded-full border border-action bg-accent-soft text-sm font-bold text-accent-ink hover:bg-white';
+        btn.setAttribute('aria-label', `حذف فیلتر ${c.label}`);
+        btn.textContent = c.label;
+        const x = document.createElement('span');
+        x.setAttribute('aria-hidden', 'true'); x.className = 'text-base leading-none'; x.textContent = '×';
+        btn.appendChild(x);
+        btn.addEventListener('click', () => { c.off(); apply(); });
+        li.appendChild(btn);
+        return li;
+      }));
+      if (badge) { badge.hidden = on.length === 0; badge.textContent = fa(on.length); }
+      return on.length;
     };
 
     const apply = (push = true) => {
@@ -220,21 +280,37 @@ const chip =
       }
       for (const v of views) v.hidden = v.dataset.catView !== s.view;
       reorder(s.sort);
-      if (countEl) countEl.textContent = shown.size.toLocaleString('fa-IR');
+      for (const c of counts) c.textContent = fa(shown.size);
       if (emptyEl) emptyEl.hidden = shown.size !== 0;
-      // «پاک کردن فیلترها» فقط برای فیلتر واقعی — نما و مرتب‌سازی را نادیده بگیر (نمای پیش‌فرض = grid).
-      const q = toQuery({ ...s, view: 'grid', sort: 'relevant' });
-      if (clear) clear.hidden = q === '';
+      const n = renderChips();
+      if (clear) clear.hidden = n === 0;
       if (push) {
         const qs = toQuery(s);
         history.replaceState(null, '', location.pathname + (qs ? `?${qs}` : '') + location.hash);
       }
     };
 
+    // ── برگه‌ی موبایل ──
+    const mq = matchMedia('(min-width: 1024px)');
+    let lastFocus: HTMLElement | null = null;
+    const setOpen = (open: boolean) => {
+      panel.toggleAttribute('data-open', open);
+      openBtn?.setAttribute('aria-expanded', String(open));
+      document.documentElement.style.overflow = open && !mq.matches ? 'hidden' : '';
+      if (open) { lastFocus = document.activeElement as HTMLElement; panel.querySelector<HTMLElement>('[data-cat-close]')?.focus(); }
+      else lastFocus?.focus();
+    };
+    openBtn?.addEventListener('click', () => setOpen(true));
+    for (const b of root.querySelectorAll('[data-cat-close], [data-cat-apply]')) b.addEventListener('click', () => setOpen(false));
+    panel.addEventListener('keydown', (e) => { if (e.key === 'Escape' && panel.hasAttribute('data-open')) setOpen(false); });
+    mq.addEventListener('change', () => { if (mq.matches && panel.hasAttribute('data-open')) setOpen(false); });
+
     write(parseState(new URLSearchParams(location.search)));
     apply(false);
 
-    for (const el of [...stockRadios, ...brandBoxes, ...specBoxes, ...catBoxes]) el.addEventListener('change', () => apply());
+    inStockBox?.addEventListener('change', () => { if (inStockBox.checked && rfqBox) rfqBox.checked = false; apply(); });
+    rfqBox?.addEventListener('change', () => { if (rfqBox.checked && inStockBox) inStockBox.checked = false; apply(); });
+    for (const el of [origBox, ...brandBoxes, ...specBoxes, ...catBoxes]) el?.addEventListener('change', () => apply());
     sortEl?.addEventListener('change', () => apply());
     for (const r of ranges) r.addEventListener('input', () => {
       const out = root.querySelector<HTMLElement>(`[data-range-out="${r.dataset.catRange}"]`);
@@ -246,7 +322,8 @@ const chip =
       apply();
     });
     clear?.addEventListener('click', () => {
-      write({ ...EMPTY, specs: {}, ranges: {}, cats: [], view: read().view, sort: read().sort });
+      const s = read();
+      write({ ...EMPTY, view: s.view, sort: s.sort });
       apply();
     });
   }

@@ -284,7 +284,7 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
                 <svg id="wish-icon" class="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.6a4.3 4.3 0 017.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" /></svg>
                 <span id="wish-label">افزودن به علاقه‌مندی‌ها</span>
               </button>
-              {/* مقایسه (O8، ایده‌ی دیجی‌کالا): فهرست در localStorage (src/scripts/compare.ts)؛ پس از افزودن، پیوند به /compare/. */}
+              {/* مقایسه (O8، ایده‌ی دیجی‌کالا): فهرست در localStorage (src/scripts/compare.ts)؛ «مشاهده‌ی مقایسه» برگه‌ی رو باز می‌کند. */}
               <button type="button" data-compare-toggle={product.slug} aria-pressed="false"
                 class="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border-2 border-action bg-white text-sm font-bold text-accent-ink hover:bg-accent-soft aria-pressed:bg-action aria-pressed:text-white">
                 <svg class="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 4v16M15 4v16M4 9h5M15 15h5" /></svg>
@@ -626,6 +626,15 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
     link.querySelector('[data-compare-count]')!.textContent = list.length.toLocaleString('fa-IR');
   };
   window.addEventListener('cy-compare', sync); // سینی شناور «خالی کردن» هم دکمه را به‌روز کند
+  window.addEventListener('storage', sync); // تغییر از داخل برگه‌ی روی مقایسه (iframe = سند دیگر)
+  // «مشاهده‌ی مقایسه» برگه‌ی رو را روی همین صفحه باز می‌کند (کارفرما ۳ آذر: صفحه را ترک نکند). سینی با اولین
+  // افزودن بار می‌شود و cyOpenCompare را می‌گذارد؛ اگر هنوز نرسیده، همان پیوند عادی /compare/.
+  link?.addEventListener('click', (e) => {
+    const open = (window as unknown as { cyOpenCompare?: () => void }).cyOpenCompare;
+    if (!open || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    open();
+  });
   btn?.addEventListener('click', () => {
     const slug = btn.dataset.compareToggle!;
     const list = readCompare();

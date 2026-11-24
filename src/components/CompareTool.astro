@@ -1,0 +1,232 @@
+---
+// src/components/CompareTool.astro — ابزار مقایسه (بازطراحی ۳ آذر ۱۴۰۵؛ مرجع: دیجی‌کالا)
+// ---------------------------------------------------------------------------
+// شکایت کارفرما از نسخه‌ی قبل، و پاسخ هر کدام:
+//   ۱) «وقتی وارد صفحه می‌شوی راه ساده‌ای برای افزودن کالا نیست» ⇒ ستون خالی «+ افزودن کالا» کنار ستون‌ها و
+//      پیشنهادهای هم‌دسته با تصویر، یک کلیک.
+//   ۲) «جعبه‌ی جستجو ندارد» ⇒ جستجوی نام، کد فنی و برند روی همان /compare-index.json (بی درخواست تازه).
+//   ۳) «نسخه‌ی موبایل خیلی بد است» ⇒ در موبایل برچسب هر مشخصه یک ردیف تمام‌عرض *بالای* مقدارهاست (نه ستون
+//      سوم که دو ستون محصول را له کند) و دو محصول کنار هم دیده می‌شوند؛ بیشتر از دو = کشیدن افقی، برچسب ثابت.
+//   ۴) «با کلیک روی مقایسه صفحه‌ی تازه باز می‌شود» ⇒ همین کامپوننت در /compare/embed/ هم هست و سینی شناور
+//      (public/scripts/compare-tray.js) آن را در یک برگه‌ی رو (dialog + iframe) روی همان صفحه باز می‌کند.
+// به‌علاوه: «فقط تفاوت‌ها» (ردیف‌های یکسان پنهان) و برجسته‌کردن ردیف‌های متفاوت.
+// ⚠️ مقدار نبوده «—»، نه حدس (قاعده‌ی ۲). داده فقط مشخصات ثبت‌شده در وردپرس.
+// ⚠️ embed: پیوند محصول‌ها target="_top" تا صفحه‌ی محصول در پنجره‌ی اصلی باز شود، نه داخل iframe.
+// ---------------------------------------------------------------------------
+export interface Props {
+  embed?: boolean;
+}
+const { embed = false } = Astro.props;
+---
+
+<div data-cmp data-embed={embed ? '1' : undefined} class="cmp">
+  <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+    <div class="relative flex-1">
+      <label for="cmp-q" class="sr-only">جستجوی کالا برای افزودن به مقایسه</label>
+      <svg class="absolute top-1/2 -translate-y-1/2 right-3 w-5 h-5 text-steel-500 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" /></svg>
+      <input id="cmp-q" data-cmp-q type="search" autocomplete="off" placeholder="افزودن کالا: نام، کد فنی یا برند"
+        class="w-full min-h-12 rounded-md border-2 border-steel-300 bg-white pr-11 pl-4 text-base text-steel-900 placeholder:text-steel-500 focus:border-action focus:outline-none"
+        role="combobox" aria-expanded="false" aria-controls="cmp-results" aria-autocomplete="list" />
+      <ul id="cmp-results" data-cmp-results hidden role="listbox" aria-label="نتیجه‌های جستجو"
+        class="absolute z-30 top-full mt-1 inset-x-0 max-h-80 overflow-y-auto rounded-md border border-steel-300 bg-white shadow-lg"></ul>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <label class="inline-flex items-center gap-2 min-h-11 px-3 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-800 cursor-pointer select-none">
+        <input type="checkbox" data-cmp-diff class="w-4 h-4 accent-action" /> فقط تفاوت‌ها
+      </label>
+      <button type="button" data-cmp-share hidden class="inline-flex items-center gap-2 min-h-11 px-3 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-800 hover:border-action">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+        <span data-cmp-share-label>کپی پیوند</span>
+      </button>
+    </div>
+  </div>
+
+  <p data-cmp-status class="sr-only" role="status" aria-live="polite"></p>
+  <div data-cmp-grid class="cmp-scroll"></div>
+
+  <div data-cmp-suggest hidden class="mt-8">
+    <h2 class="text-xl font-bold text-steel-900 mb-3" data-cmp-suggest-h>پیشنهاد برای مقایسه</h2>
+    <ul class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" role="list" data-cmp-suggest-list></ul>
+  </div>
+</div>
+
+<style is:global>
+  /* ⚠️ چیدمان مقایسه با CSS grid، نه <table>: در موبایل برچسب باید یک ردیف تمام‌عرض بالای مقدارها باشد و در
+     دسکتاپ ستون کناری — <table> فقط یکی از این دو را بی دست‌کاری display می‌دهد و آن دست‌کاری خواندن صفحه‌خوان را
+     می‌شکند. نقش‌های ARIA (table/row/cell) معنای جدول را نگه می‌دارند. --n = شمار ستون‌ها (محصول‌ها + خانه‌ی خالی). */
+  .cmp-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .cmp-table { --col: max(44vw, 10rem); min-width: calc(var(--n) * var(--col)); }
+  .cmp-row { border-bottom: 1px solid var(--color-steel-200); }
+  .cmp-label {
+    position: sticky; right: 0; width: calc(100vw - 2rem); max-width: 100%;
+    padding: 0.75rem 0.25rem 0.25rem; font-size: var(--text-sm); font-weight: 700; color: var(--color-steel-600);
+  }
+  .cmp-vals { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); }
+  .cmp-vals > div { padding: 0.25rem 0.75rem 0.875rem; font-size: var(--text-sm); line-height: 1.75; color: var(--color-steel-900); overflow-wrap: anywhere; }
+  .cmp-vals > div + div { border-inline-start: 1px solid var(--color-steel-200); }
+  .cmp-row[data-diff] .cmp-label { color: var(--color-accent-ink); }
+  .cmp-row[data-diff] .cmp-vals > div { font-weight: 700; }
+  .cmp-head { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 2px solid var(--color-steel-300); }
+  @media (min-width: 768px) {
+    .cmp-table { --col: 13rem; min-width: calc(12rem + var(--n) * var(--col)); }
+    .cmp-row, .cmp-head { display: grid; grid-template-columns: 12rem minmax(0, 1fr); }
+    .cmp-label { position: sticky; right: 0; width: auto; background: var(--color-steel-50); padding: 0.875rem 1rem; z-index: 1; }
+    .cmp-vals > div { padding: 0.875rem 1rem; }
+    .cmp-head > .cmp-corner { background: #fff; position: sticky; right: 0; z-index: 2; }
+  }
+</style>
+
+<script>
+  import { readCompare, writeCompare, COMPARE_MAX } from '../scripts/compare';
+  type P = { slug: string; name: string; href: string; sku: string | null; brand: string | null; categories: string[]; image: string | null; specs: [string, string][] };
+  // خط تیره‌ی نشکن در کد فنی داخل نام (U+2011) — همان دلیل Baskets.astro: «SAGA1-L12» سر خط نشکند و وارونه خوانده نشود.
+  const nb = (s: string) => s.replace(/([A-Za-z0-9])-([A-Za-z0-9])/g, '$1\u2011$2');
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+  // جستجوی فارسی: ی/ک عربی، نیم‌فاصله و فاصله یکسان؛ کد فنی بی خط تیره هم پیدا شود (SAGA1L10 = SAGA1-L10).
+  const norm = (s: string) => s.toLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[‌\s_-]+/g, '');
+
+  const root = document.querySelector<HTMLElement>('[data-cmp]');
+  if (root) {
+    const embed = root.dataset.embed === '1';
+    const target = embed ? ' target="_top"' : '';
+    const q = root.querySelector<HTMLInputElement>('[data-cmp-q]')!;
+    const results = root.querySelector<HTMLElement>('[data-cmp-results]')!;
+    const grid = root.querySelector<HTMLElement>('[data-cmp-grid]')!;
+    const diffBox = root.querySelector<HTMLInputElement>('[data-cmp-diff]')!;
+    const share = root.querySelector<HTMLButtonElement>('[data-cmp-share]')!;
+    const status = root.querySelector<HTMLElement>('[data-cmp-status]')!;
+    const suggest = root.querySelector<HTMLElement>('[data-cmp-suggest]')!;
+
+    const fromUrl = (new URLSearchParams(location.search).get('p') ?? '').split(',').map((s) => s.trim()).filter((s) => /^[a-z0-9-]+$/.test(s));
+    if (fromUrl.length) writeCompare(fromUrl.slice(0, COMPARE_MAX));
+
+    const all: P[] = await fetch('/compare-index.json').then((r) => (r.ok ? r.json() : [])).catch(() => []);
+    const bySlug = new Map(all.map((p) => [p.slug, p]));
+    const picked = () => readCompare().map((s) => bySlug.get(s)).filter((p): p is P => !!p);
+
+    // رتبه: هم‌دسته اول (مقایسه‌ی ریموت با سیم‌بکسل بی‌معناست)، و درون دسته هر چه برچسب مشخصه‌ی مشترک بیشتر، بالاتر —
+    // ست ریموت L10 کنار ست L12 می‌آید، نه کنار گیرنده‌ی تنها (هر سه یک دسته‌اند؛ آزموده ۳ آذر ۱۴۰۵).
+    function candidates(): P[] {
+      const sel = picked();
+      const cats = new Set(sel.flatMap((p) => p.categories));
+      const labels = new Set(sel.flatMap((p) => p.specs.map(([l]) => l)));
+      const score = (p: P) => (p.categories.some((c) => cats.has(c)) ? 1000 : 0) + p.specs.filter(([l]) => labels.has(l)).length;
+      return all.filter((p) => !sel.some((x) => x.slug === p.slug)).map((p) => [p, score(p)] as const).sort((a, b) => b[1] - a[1]).map(([p]) => p);
+    }
+
+    function add(slug: string) {
+      const list = readCompare();
+      if (list.includes(slug)) return;
+      if (list.length >= COMPARE_MAX) { status.textContent = `حداکثر ${COMPARE_MAX.toLocaleString('fa-IR')} کالا؛ اول یکی را حذف کنید.`; return; }
+      writeCompare([...list, slug]);
+      status.textContent = `${bySlug.get(slug)?.name ?? ''} به مقایسه افزوده شد`;
+      q.value = ''; closeResults(); render();
+    }
+
+    const thumb = (p: P, size: string) => p.image
+      ? `<img src="${esc(p.image)}" alt="" width="160" height="160" loading="lazy" class="${size} object-contain shrink-0 bg-white">`
+      : `<span class="${size} shrink-0 rounded bg-steel-100"></span>`;
+
+    function render() {
+      const sel = picked();
+      history.replaceState(null, '', sel.length ? `?p=${sel.map((p) => p.slug).join(',')}` : location.pathname);
+      share.hidden = sel.length === 0;
+      const full = sel.length >= COMPARE_MAX;
+      const n = sel.length + (full ? 0 : 1);
+
+      const head = sel.map((p) => `<div role="columnheader" class="relative p-3 md:p-4 flex flex-col items-center text-center gap-2">
+          <button type="button" data-cmp-remove="${esc(p.slug)}" aria-label="حذف ${esc(p.name)} از مقایسه"
+            class="absolute top-1 left-1 w-11 h-11 grid place-items-center rounded-full text-steel-600 hover:bg-steel-100 hover:text-steel-900">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg></button>
+          ${thumb(p, 'w-20 h-20 md:w-28 md:h-28')}
+          <a href="${esc(p.href)}"${target} class="text-sm md:text-base font-bold text-steel-900 leading-7 hover:text-accent-ink line-clamp-3">${esc(nb(p.name))}</a>
+          ${p.sku ? `<span class="font-mono text-xs text-steel-600" dir="ltr">${esc(p.sku)}</span>` : ''}
+        </div>`).join('') + (full ? '' : `<div role="columnheader" class="p-3 md:p-4">
+          <button type="button" data-cmp-focus class="w-full h-full min-h-40 rounded-lg border-2 border-dashed border-steel-300 text-steel-700 hover:border-action hover:text-accent-ink flex flex-col items-center justify-center gap-2 text-sm font-bold">
+            <span class="w-11 h-11 rounded-full bg-steel-100 grid place-items-center text-2xl leading-none" aria-hidden="true">+</span>افزودن کالا</button></div>`);
+
+      if (!sel.length) {
+        grid.innerHTML = `<div class="rounded-lg border-2 border-dashed border-steel-300 bg-white p-6 md:p-10 text-center">
+          <p class="text-xl font-bold text-steel-900">هنوز کالایی برای مقایسه انتخاب نشده</p>
+          <p class="mt-2 text-base text-steel-700 leading-8">نام یا کد فنی را در جعبه‌ی بالا بنویسید، یا از پیشنهادهای پایین یکی را بزنید.</p></div>`;
+      } else {
+        const labels: string[] = [];
+        for (const p of sel) for (const [l] of p.specs) if (!labels.includes(l)) labels.push(l);
+        const rows: [string, (p: P) => string][] = [['برند', (p) => p.brand ?? '—'], ...labels.map((l) => [l, (p: P) => p.specs.find(([x]) => x === l)?.[1] ?? '—'] as [string, (p: P) => string])];
+        const body = rows.map(([l, f]) => {
+          const vals = sel.map(f);
+          const differs = sel.length > 1 && new Set(vals).size > 1;
+          if (diffBox.checked && sel.length > 1 && !differs) return '';
+          return `<div role="row" class="cmp-row"${differs ? ' data-diff' : ''}><div role="rowheader" class="cmp-label">${esc(l)}</div>
+            <div class="cmp-vals">${vals.map((v) => `<div role="cell" dir="auto">${esc(v)}</div>`).join('')}${full ? '' : '<div role="cell" aria-hidden="true"></div>'}</div></div>`;
+        }).join('');
+        grid.innerHTML = `<div role="table" aria-label="مقایسه‌ی ${sel.length.toLocaleString('fa-IR')} کالا" class="cmp-table bg-white rounded-lg border border-steel-300" style="--n:${n}">
+          <div role="row" class="cmp-head"><div class="cmp-corner hidden md:flex items-end p-4 text-sm font-bold text-steel-600">${sel.length.toLocaleString('fa-IR')} کالا</div>
+          <div class="cmp-vals">${head}</div></div>${body || '<p class="p-6 text-steel-700">همه‌ی مشخصه‌های ثبت‌شده یکسان‌اند.</p>'}</div>`;
+      }
+
+      const sug = full ? [] : candidates().slice(0, 8);
+      suggest.hidden = sug.length === 0;
+      suggest.querySelector('[data-cmp-suggest-h]')!.textContent = sel.length ? 'افزودن از همین دسته' : 'پیشنهاد برای مقایسه';
+      suggest.querySelector('[data-cmp-suggest-list]')!.innerHTML = sug.map((p) => `<li><button type="button" data-cmp-add="${esc(p.slug)}"
+          class="w-full h-full flex items-center gap-3 rounded-md border border-steel-300 bg-white p-3 text-right hover:border-action">
+          ${thumb(p, 'w-14 h-14')}<span class="min-w-0 flex-1"><span class="block text-sm font-bold text-steel-900 leading-6 line-clamp-2">${esc(nb(p.name))}</span>
+          <span class="mt-1 inline-block text-sm font-bold text-accent-ink">+ افزودن</span></span></button></li>`).join('');
+    }
+
+    // ── جستجو ──
+    let active = -1;
+    function closeResults() { results.hidden = true; q.setAttribute('aria-expanded', 'false'); active = -1; }
+    function search() {
+      const t = norm(q.value);
+      const list = (t ? candidates().filter((p) => norm(`${p.name} ${p.sku ?? ''} ${p.brand ?? ''}`).includes(t)) : candidates()).slice(0, 8);
+      const full = readCompare().length >= COMPARE_MAX;
+      results.innerHTML = list.length
+        ? list.map((p, i) => `<li role="option" id="cmp-opt-${i}" aria-selected="false"><button type="button" tabindex="-1" data-cmp-add="${esc(p.slug)}" ${full ? 'disabled' : ''}
+            class="w-full flex items-center gap-3 p-3 text-right hover:bg-steel-50 disabled:opacity-50 border-b border-steel-100">
+            ${thumb(p, 'w-12 h-12')}<span class="min-w-0 flex-1"><span class="block text-sm font-bold text-steel-900 leading-6 line-clamp-2">${esc(nb(p.name))}</span>
+            ${p.sku ? `<span class="font-mono text-xs text-steel-600" dir="ltr">${esc(p.sku)}</span>` : ''}</span>
+            <span class="text-sm font-bold text-accent-ink shrink-0">${full ? 'پر است' : '+ افزودن'}</span></button></li>`).join('')
+        : `<li class="p-4 text-sm text-steel-700">کالایی با «${esc(q.value)}» پیدا نشد. <a href="/part-finder/"${target} class="font-bold text-accent-ink hover:underline">قطعه‌یاب ←</a></li>`;
+      results.hidden = false; q.setAttribute('aria-expanded', 'true'); active = -1;
+    }
+    q.addEventListener('input', search);
+    q.addEventListener('focus', search);
+    q.addEventListener('keydown', (e) => {
+      const opts = [...results.querySelectorAll<HTMLElement>('[role=option]')];
+      // ⚠️ Escape با فهرست باز فقط فهرست را می‌بندد؛ بی stopPropagation برگه‌ی رو (embed) هم بسته می‌شد.
+      if (e.key === 'Escape') { if (!results.hidden) e.stopPropagation(); closeResults(); return; }
+      if (!opts.length || results.hidden) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        active = (active + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length;
+        opts.forEach((o, i) => o.setAttribute('aria-selected', String(i === active)));
+        opts[active].scrollIntoView({ block: 'nearest' });
+        q.setAttribute('aria-activedescendant', opts[active].id);
+      } else if (e.key === 'Enter' && active >= 0) {
+        e.preventDefault();
+        opts[active].querySelector<HTMLButtonElement>('button')?.click();
+      }
+    });
+    document.addEventListener('click', (e) => { if (!root.querySelector('.relative')!.contains(e.target as Node)) closeResults(); });
+
+    root.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      const rm = t.closest<HTMLElement>('[data-cmp-remove]')?.dataset.cmpRemove;
+      const ad = t.closest<HTMLElement>('[data-cmp-add]')?.dataset.cmpAdd;
+      if (rm) { writeCompare(readCompare().filter((s) => s !== rm)); status.textContent = 'از مقایسه حذف شد'; render(); }
+      if (ad) add(ad);
+      if (t.closest('[data-cmp-focus]')) { q.focus(); q.scrollIntoView({ block: 'center' }); }
+    });
+    diffBox.addEventListener('change', render);
+    share.addEventListener('click', async () => {
+      const url = `${location.origin}/compare/${location.search}`;
+      const label = share.querySelector('[data-cmp-share-label]')!;
+      try { await navigator.clipboard.writeText(url); label.textContent = 'کپی شد ✓'; } catch { label.textContent = 'کپی نشد'; }
+      setTimeout(() => (label.textContent = 'کپی پیوند'), 2000);
+    });
+    // فهرست در پنجره‌ی دیگر (صفحه‌ی محصول زیر برگه‌ی رو، زبانه‌ی دیگر) عوض شد ⇒ همین‌جا هم.
+    window.addEventListener('storage', render);
+    render();
+  }
+</script>

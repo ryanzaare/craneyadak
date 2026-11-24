@@ -1,0 +1,47 @@
+---
+// src/pages/compare/embed.astro — مقایسه داخل برگه‌ی رو (iframe)، بی سرصفحه و فوتر
+// ---------------------------------------------------------------------------
+// کارفرما (۳ آذر ۱۴۰۵): «با کلیک روی مقایسه صفحه‌ی تازه باز می‌شود؛ کاربر نمی‌خواهد صفحه‌ی فعلی را ترک کند».
+// سینی شناور (public/scripts/compare-tray.js) این صفحه را در یک <dialog> روی همان صفحه باز می‌کند. همان
+// CompareTool صفحه‌ی /compare/ — یک منطق، دو قاب.
+// ⚠️ چرا iframe و نه کد مقایسه داخل هر صفحه: هر بایت JS همه‌صفحه‌ای صفحه‌ی محصول را از مرز Lighthouse ۰٫۹۹ رد
+// می‌کند (backlog O23). iframe فقط وقتی کاربر برگه را باز می‌کند بار می‌شود.
+// ⚠️ noindex و بی Layout: صفحه‌ی کمکی است، نه مقصد جستجو. prune-noindex-sitemap آن را از sitemap برمی‌دارد.
+// دکمه‌ی بستن با postMessage به پنجره‌ی والد (فقط هم‌مبدأ، در compare-tray.js سنجیده می‌شود).
+// ---------------------------------------------------------------------------
+import CompareTool from '../../components/CompareTool.astro';
+import '../../styles/global.css';
+---
+
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>مقایسه‌ی قطعات | کرین یدک</title>
+    <link rel="preload" href="/fonts/Vazirmatn-fa-400-900.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
+  </head>
+  <body class="bg-steel-50 font-sans text-steel-900">
+    <div class="sticky top-0 z-40 bg-white border-b border-steel-300 px-4 py-2 flex items-center justify-between gap-3">
+      <h1 class="text-xl font-bold text-steel-900">مقایسه‌ی قطعات</h1>
+      <button type="button" data-cmp-close class="inline-flex items-center gap-2 min-h-11 px-3 rounded-md border border-steel-300 text-sm font-bold text-steel-800 hover:border-action">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" /></svg>
+        بستن
+      </button>
+    </div>
+    <main class="px-4 py-5">
+      <CompareTool embed />
+    </main>
+    <script>
+      document.querySelector('[data-cmp-close]')?.addEventListener('click', () => {
+        // بیرون از iframe (باز شدن مستقیم نشانی) بستن یعنی رفتن به صفحه‌ی کامل مقایسه.
+        if (window.parent !== window) window.parent.postMessage({ type: 'cy-compare-close' }, location.origin);
+        else location.href = `/compare/${location.search}`;
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && window.parent !== window) window.parent.postMessage({ type: 'cy-compare-close' }, location.origin);
+      });
+    </script>
+  </body>
+</html>

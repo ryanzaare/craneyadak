@@ -16,7 +16,8 @@ import ProductCard from '../../../components/ProductCard.astro';
 import CategoryFilterBar from '../../../components/CategoryFilterBar.astro';
 import ProductRow from '../../../components/ProductRow.astro';
 import EmptyState from '../../../components/EmptyState.astro';
-import { resolveFacets, specValue } from '../../../data/filters';
+import { allFacets } from '../../../data/filters';
+import { filterAttrs } from '../../../lib/filter-attrs';
 import { getCategoryFacets } from '../../../lib/category-facets';
 import { buildTitle, buildDescription } from '../../../lib/seo-meta';
 import { SITE } from '../../../data/site';
@@ -203,30 +204,10 @@ const jsonLd = {
   ],
 };
 
-// فیلترهای تخصصی همین دسته — مقادیر از خودِ محصولات استخراج می‌شوند.
-const categoryFacets = await getCategoryFacets(category.slug);
-const catFacets = resolveFacets(products, categoryFacets);
-
-/** صفت‌های داده روی هر کارت تا فیلتر سمت کلاینت بتواند بخواندشان. */
-function catAttrs(product: typeof products[number]) {
-  const attrs: Record<string, string> = {
-    'data-cat-item': '',
-    // ⚠️ هر محصول دو بار در DOM است (نمای جدول و کارت)؛ شمار نتیجه با slug یکتا می‌شود.
-    'data-slug': product.slug,
-    'data-brand': product.brandSlug ?? '',
-    'data-stock': product.stockStatus,
-    'data-buymode': product.buyMode,
-    // «دارای قیمت» از قیمت *موثر* می‌آید (با احتساب تخفیف فعال)، نه از
-    // buyMode. محصولی می‌تواند حالت استعلام داشته باشد ولی قیمت پایه هم
-    // داشته باشد؛ computePrice تنها مرجع قیمت در کل پروژه است.
-    'data-priced': computePrice(product).payable ? '1' : '0',
-  };
-  for (const f of catFacets) {
-    const raw = specValue(product, f.specLabel);
-    if (raw) attrs[`data-spec-${f.id}`] = raw;
-  }
-  return attrs;
-}
+// فیلترهای مشخصه: تعریف‌شده در وردپرس + خودکار از برچسب‌های مشترک (src/data/filters.ts allFacets). مقادیر از خودِ
+// محصولات. صفت‌های داده‌ی کارت‌ها از همین آرایه (src/lib/filter-attrs.ts) — یک منبع برای نوار و کارت.
+const catFacets = allFacets(products, await getCategoryFacets(category.slug));
+const catAttrs = (product: typeof products[number]) => filterAttrs(product, catFacets);
 import { getContact } from '../../../lib/site-options';
 
 /* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
@@ -262,13 +243,8 @@ const contact = await getContact();
         a11y ۰٫۹۸ روی remote-control (build زنده‌ی 558f2e3). H2 دیدنی همان تکراری‌ای بود که فاز ۳ حذف کرد؛ پس sr-only. */}
     <h2 id="products-list-heading" class="sr-only">{`فهرست قطعات ${displayName}`}</h2>
     <div class="max-w-7xl mx-auto">
-      {products.length > 0 && (
-        <p class="text-sm text-steel-600 mb-3"><strong data-cat-count class="text-steel-900 font-bold tabular-nums">{products.length.toLocaleString('fa-IR')}</strong> قطعه</p>
-      )}
-
       {products.length > 0 ? (
-        <>
-          <CategoryFilterBar products={products} categorySlug={category.slug} />
+        <CategoryFilterBar products={products} facets={catFacets}>
 
           {/* نمای جدول — دوم؛ کارت پیش‌فرض است (کارفرما، ۳ آبان ۱۴۰۵): کد · نام · برند · مشخصه‌ی کلیدی · موجودی · قیمت · افزودن سریع. */}
           <div data-cat-view="list" hidden>
@@ -297,7 +273,7 @@ const contact = await getContact();
             <EmptyState title="هیچ قطعه‌ای با این فیلترها پیدا نشد." text="فیلترها را کمتر کنید یا کد فنی و عکس پلاک را بفرستید تا معادل مناسب را پیدا کنیم."
               whatsappHref={contact.whatsappHref} telHref={contact.telHref} />
           </div>
-        </>
+        </CategoryFilterBar>
       ) : (
         /* حالت خالیِ صادقانه — هیچ محصول ساختگی ساخته نمی‌شود، هیچ «به‌زودی» با تاریخ. */
         <EmptyState

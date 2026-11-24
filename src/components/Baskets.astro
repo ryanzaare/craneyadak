@@ -28,48 +28,53 @@
 // می‌سنجد (cyh_product_pricing).
 // ---------------------------------------------------------------------------
 const drawerClass = 'fixed inset-0 z-50 print:hidden';
-// Frontend v2 فاز ۴: ریل ۴px روی لبه‌ی داخلی کشو (border-s منطقی = راست در RTL، همان لبه‌ای که به صفحه باز می‌شود).
-const panelClass = 'absolute inset-y-0 left-0 w-full max-w-md bg-white border-s-4 border-s-action shadow-2xl flex flex-col';
-const headClass = 'flex items-center justify-between gap-3 px-4 py-3 bg-steel-900 text-white shrink-0';
-const closeClass = 'p-2 -m-2 hover:text-accent focus:outline-none focus:ring-2 focus:ring-white rounded';
-const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40';
+// بازطراحی ۳ آذر ۱۴۰۵ (کارفرما: «سبد استعلام و خرید را هم بازطراحی کن»؛ «خوانایی سایت ضعیف است»). پیش از این:
+// سرصفحه‌ی گرافیتی، متن‌های ۱۲–۱۳px، ورودی تعداد ۶۴px، ✕ ریز، و فرمی که فقط placeholder داشت (برچسب با اولین حرف
+// ناپدید می‌شد) با ورودی‌های ۱۴px که در iOS صفحه را زوم می‌کرد (زیر ۱۶px). حالا: سرصفحه‌ی سفید با جابه‌جای دو سبد،
+// ردیف‌های بزرگ، دکمه‌ی −/+ ۴۴px، «حذف» با برچسب، برچسب دیدنی بالای هر فیلد، ورودی ۱۶px.
+// ⚠️ این نشانه‌گذاری روی *همه‌ی* صفحه‌هاست؛ هر بایت آن در مسیر بحرانی LCP صفحه‌ی محصول است (backlog O23). کلاس‌های
+// تکراری در ثابت‌ها، و قلم‌های سبد با جاوااسکریپت ساخته می‌شوند.
+const panelClass = 'absolute inset-y-0 left-0 w-full max-w-md bg-white shadow-2xl flex flex-col';
+const headClass = 'flex items-center justify-between gap-3 px-4 min-h-16 border-b border-steel-300 shrink-0';
+const closeClass = 'w-11 h-11 grid place-items-center rounded-full text-steel-700 hover:bg-steel-100';
+const switchClass = 'flex-1 min-h-11 rounded-md text-sm font-bold text-steel-700 aria-pressed:bg-white aria-pressed:text-steel-900 aria-pressed:shadow';
+const inputClass = 'w-full min-h-12 text-base text-steel-900 bg-white border border-steel-300 rounded-md px-3 focus:outline-none focus:border-action focus:ring-2 focus:ring-accent/30';
+const labelClass = 'block text-sm font-bold text-steel-800 mb-1';
+const noteClass = 'text-sm leading-7 text-steel-700 bg-steel-50 border border-steel-200 rounded-md p-3';
+const warnClass = 'text-sm leading-7 text-amber-900 bg-amber-50 border border-amber-200 rounded-md p-3 mb-4';
+const primaryClass = 'flex items-center justify-center w-full min-h-12 bg-action text-white rounded-md text-base font-bold hover:bg-accent-strong focus:outline-none focus:ring-4 focus:ring-accent/40';
+const emptyClass = 'text-base text-steel-700 leading-8 text-center py-10';
+const x = '<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+const head = (kind: 'cart' | 'quote', title: string) => `<div class="${headClass}"><h2 id="${kind}-title" class="text-xl font-bold text-steel-900">${title}</h2>` +
+  `<button type="button" class="${closeClass}" aria-label="بستن" data-basket-close>${x}</button></div>` +
+  `<div class="flex gap-1 p-1 m-4 mb-0 rounded-lg bg-steel-100" role="group" aria-label="سبدها">` +
+  `<button type="button" class="${switchClass}" data-basket-switch="cart" aria-pressed="${kind === 'cart'}">سبد خرید (<span data-basket-n="cart">۰</span>)</button>` +
+  `<button type="button" class="${switchClass}" data-basket-switch="quote" aria-pressed="${kind === 'quote'}">سبد استعلام (<span data-basket-n="quote">۰</span>)</button></div>`;
 ---
 
 {/* ═══ سبد خرید ═══ */}
 <div id="cart-drawer" hidden class={drawerClass} role="dialog" aria-modal="true" aria-labelledby="cart-title" data-basket-drawer="cart">
   <div class="absolute inset-0 bg-steel-900/60" data-basket-close></div>
   <div class={panelClass}>
-    <div class={headClass}>
-      <h2 id="cart-title" class="font-bold">سبد خرید</h2>
-      <button type="button" class={closeClass} aria-label="بستن" data-basket-close>
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-      </button>
-    </div>
-
+    <Fragment set:html={head('cart', 'سبد خرید')} />
     <div class="flex-1 overflow-y-auto p-4">
       {/* پیام جابه‌جایی: قلمی که اعتبار قیمتش گذشت به سبد استعلام رفت. */}
-      <p id="cart-notice" hidden class="text-xs leading-6 text-amber-900 bg-amber-50 border border-amber-200 rounded-md p-3 mb-4" role="status" aria-live="polite"></p>
-
-      <ul id="cart-items" role="list" class="space-y-2"></ul>
-      <p id="cart-empty" class="text-sm text-steel-600 leading-7 text-center py-8">
-        سبد خرید خالی است.
-      </p>
-
-      <div id="cart-footer" hidden class="mt-5 space-y-3">
-        {/* ⚠️ عدد قیمت عمداً در کشو نیست. سبد در localStorage است و قیمتش
-            ممکن است از build چند روز پیش باشد؛ مبلغ قطعی را سرور در صفحه‌ی
-            پرداخت می‌دهد و همان را محترم می‌شمارد (تصمیم کارفرما). نشان‌دادن
-            دو عدد متفاوت در دو صفحه، همان «قیمت تغییر کرد» است که ممنوع شد. */}
-        <p class="text-xs text-steel-600 leading-6 bg-steel-50 border border-steel-300 rounded-md p-3">
-          مبلغ نهایی در صفحه‌ی پرداخت اعلام می‌شود. پرداخت آنلاین فقط بهای
-          قطعه است؛ هزینه‌ی ارسال پس‌کرایه است.
-        </p>
-        {/* ⚠️ پرداخت مهمان ندارد (تصمیم کارفرما): بدون توکن، مستقیم به ورود/ثبت‌نام
-            و بعد برگشت به /checkout. سرور هم ۴۰۱ می‌دهد؛ این فقط راه را کوتاه می‌کند. */}
-        <a id="cart-checkout" href="/checkout" class="block text-center w-full bg-action text-white py-3 rounded-md font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
-          ادامه جهت تسویه‌حساب
-        </a>
+      <p id="cart-notice" hidden class={warnClass} role="status" aria-live="polite"></p>
+      <ul id="cart-items" role="list" class="divide-y divide-steel-200"></ul>
+      <div id="cart-empty" class={emptyClass}>
+        <p class="text-xl font-bold text-steel-900 mb-2">سبد خرید خالی است</p>
+        <p>قطعه‌های قیمت‌دار را از صفحه‌ی هر قطعه به سبد بیفزایید.</p>
+        <a href="/products/" class="inline-flex items-center min-h-11 mt-3 px-4 rounded-md border border-steel-300 text-sm font-bold text-steel-900 hover:border-action">مشاهده‌ی فروشگاه ←</a>
       </div>
+    </div>
+    {/* پایین ثابت — دکمه‌ی پرداخت همیشه دیده می‌شود، هر چقدر فهرست بلند باشد. */}
+    <div id="cart-footer" hidden class="shrink-0 p-4 border-t border-steel-300 space-y-3 bg-white">
+      {/* ⚠️ عدد قیمت عمداً در کشو نیست. سبد در localStorage است و قیمتش ممکن است از build چند روز پیش باشد؛ مبلغ
+          قطعی را سرور در صفحه‌ی پرداخت می‌دهد و همان را محترم می‌شمارد (تصمیم کارفرما). دو عدد متفاوت در دو صفحه همان
+          «قیمت تغییر کرد» است که ممنوع شد. */}
+      <p class={noteClass}>مبلغ نهایی در صفحه‌ی پرداخت اعلام می‌شود. پرداخت آنلاین فقط بهای قطعه است؛ هزینه‌ی ارسال پس‌کرایه است.</p>
+      {/* ⚠️ پرداخت مهمان ندارد (تصمیم کارفرما): بدون توکن، مستقیم به ورود/ثبت‌نام و بعد برگشت به /checkout. */}
+      <a id="cart-checkout" href="/checkout" class={primaryClass}>ادامه جهت تسویه‌حساب</a>
     </div>
   </div>
 </div>
@@ -78,44 +83,32 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
 <div id="quote-drawer" hidden class={drawerClass} role="dialog" aria-modal="true" aria-labelledby="quote-title" data-basket-drawer="quote">
   <div class="absolute inset-0 bg-steel-900/60" data-basket-close></div>
   <div class={panelClass}>
-    <div class={headClass}>
-      <h2 id="quote-title" class="font-bold">سبد استعلام</h2>
-      <button type="button" class={closeClass} aria-label="بستن" data-basket-close>
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-      </button>
-    </div>
-
+    <Fragment set:html={head('quote', 'سبد استعلام')} />
     <div class="flex-1 overflow-y-auto p-4">
-      <p class="text-xs text-steel-600 leading-6 bg-steel-50 border border-steel-300 rounded-md p-3 mb-4">
-        پس از ثبت، کارشناس سازگاری فنی را بررسی و پیش‌فاکتور رسمی صادر می‌کند.
-      </p>
-      <p id="quote-notice" hidden class="text-xs leading-6 text-amber-900 bg-amber-50 border border-amber-200 rounded-md p-3 mb-4" role="status" aria-live="polite"></p>
+      <p id="quote-notice" hidden class={warnClass} role="status" aria-live="polite"></p>
+      <ul id="quote-items" role="list" class="divide-y divide-steel-200"></ul>
+      <div id="quote-empty" class={emptyClass}>
+        <p class="text-xl font-bold text-steel-900 mb-2">سبد استعلام خالی است</p>
+        <p>از صفحه‌ی هر قطعه «افزودن به سبد استعلام» یا «دریافت پیش‌فاکتور» را بزنید.</p>
+        <a href="/part-finder/" class="inline-flex items-center min-h-11 mt-3 px-4 rounded-md border border-steel-300 text-sm font-bold text-steel-900 hover:border-action">قطعه را نمی‌شناسید؟ قطعه‌یاب ←</a>
+      </div>
 
-      <ul id="quote-items" role="list" class="space-y-2"></ul>
-      <p id="quote-empty" class="text-sm text-steel-600 leading-7 text-center py-8">
-        سبد استعلام خالی است. از صفحه‌ی هر قطعه، «افزودن به سبد استعلام» یا
-        «دریافت پیش‌فاکتور» را بزنید.
-      </p>
-
-      {/* فرم — فقط همان چیزی که برای تماس لازم است.
-          ⚠️ عمداً بدون ثبت‌نام و رمز عبور: مهندس نت وسط توقف خط تولید
-          حساب کاربری نمی‌سازد. هر فیلد اضافه یک دلیل برای رها کردن است. */}
-      <form id="quote-form" class="mt-5 space-y-2" hidden>
+      {/* فرم — فقط همان چیزی که برای تماس لازم است. ⚠️ عمداً بدون ثبت‌نام و رمز عبور: مهندس نت وسط توقف خط تولید
+          حساب کاربری نمی‌سازد. هر فیلد اضافه یک دلیل برای رها کردن است. ⚠️ برچسب دیدنی، نه فقط placeholder. */}
+      <form id="quote-form" class="mt-4 pt-4 border-t-2 border-steel-200 space-y-4" hidden>
+        <p class={noteClass}>پس از ثبت، کارشناس سازگاری فنی را بررسی و پیش‌فاکتور رسمی صادر می‌کند.</p>
         <label class="cyh-honeypot" aria-hidden="true">
           وب‌سایت <input type="text" name="website" tabindex="-1" autocomplete="off" />
         </label>
-        <input type="text" name="name" required autocomplete="name" placeholder="نام و نام خانوادگی" class={inputClass} />
-        <input type="tel" name="phone" required autocomplete="tel" inputmode="tel" dir="ltr" placeholder="شماره تماس" class={`${inputClass} text-right`} />
-        <input type="text" name="organization" autocomplete="organization" placeholder="نام شرکت یا کارخانه (اختیاری)" class={inputClass} />
-        <textarea name="note" rows="2" placeholder="توضیح یا مدل دستگاه (اختیاری)" class={`${inputClass} resize-y`}></textarea>
-        <button type="submit" id="quote-submit" class="w-full bg-action text-white py-3 rounded-md font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px]">
-          ثبت درخواست پیش‌فاکتور
-        </button>
+        <div><label for="q-name" class={labelClass}>نام و نام خانوادگی</label><input id="q-name" type="text" name="name" required autocomplete="name" class={inputClass} /></div>
+        <div><label for="q-phone" class={labelClass}>شماره تماس</label><input id="q-phone" type="tel" name="phone" required autocomplete="tel" inputmode="tel" dir="ltr" placeholder="۰۹۱۲…" class={`${inputClass} text-right`} /></div>
+        <div><label for="q-org" class={labelClass}>نام شرکت یا کارخانه <span class="font-normal text-steel-600">(اختیاری)</span></label><input id="q-org" type="text" name="organization" autocomplete="organization" class={inputClass} /></div>
+        <div><label for="q-note" class={labelClass}>توضیح یا مدل دستگاه <span class="font-normal text-steel-600">(اختیاری)</span></label><textarea id="q-note" name="note" rows="2" class={`${inputClass} py-2 resize-y`}></textarea></div>
+        <button type="submit" id="quote-submit" class={primaryClass}>ثبت درخواست پیش‌فاکتور</button>
       </form>
-      {/* ⚠️ پیام بیرون از فرم است. در QuoteBasket.astro داخل فرم بود و فرم با
-          خالی‌شدن سبد پنهان می‌شود — یعنی پیام «ثبت شد، کد رهگیری …» درست
-          در لحظه‌ی موفقیت ناپدید می‌شد. */}
-      <p id="quote-msg" class="mt-2 text-xs leading-6" role="status" aria-live="polite"></p>
+      {/* ⚠️ پیام بیرون از فرم است: فرم با خالی‌شدن سبد پنهان می‌شود و پیام «ثبت شد، کد رهگیری …» درست در لحظه‌ی
+          موفقیت ناپدید می‌شد (QuoteBasket.astro قدیمی). */}
+      <p id="quote-msg" class="mt-3 text-sm leading-7" role="status" aria-live="polite"></p>
     </div>
   </div>
 </div>
@@ -149,7 +142,9 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
 
   /* ─── کشوها ─── */
   function openDrawer(kind: BasketKind) {
-    lastOpener = document.activeElement as HTMLElement | null;
+    // جابه‌جایی بین دو کشو بازگشت فوکوس را به دکمه‌ی پنهان‌شده نبرد — فقط بازکننده‌ی بیرون از کشو ثبت شود.
+    const active = document.activeElement as HTMLElement | null;
+    if (!active?.closest('[data-basket-drawer]')) lastOpener = active;
     for (const d of document.querySelectorAll<HTMLElement>('[data-basket-drawer]')) {
       d.hidden = d.dataset.basketDrawer !== kind;
     }
@@ -172,6 +167,9 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeDrawers();
   });
+  // جابه‌جای «سبد خرید | سبد استعلام» بالای هر کشو — خریدار هر دو سبد را بی بستن و یافتن دکمه‌ی دیگر در هدر می‌بیند.
+  document.querySelectorAll<HTMLElement>('[data-basket-switch]').forEach((b) =>
+    b.addEventListener('click', () => { if (b.getAttribute('aria-pressed') !== 'true') openDrawer(b.dataset.basketSwitch as BasketKind); }));
   $('cart-open')?.addEventListener('click', () => openDrawer('cart'));
   $('quote-open')?.addEventListener('click', () => openDrawer('quote'));
 
@@ -183,58 +181,67 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
   }
 
   /* ─── رندر ─── */
+  // ردیف قلم سبد. ⚠️ textContent نه innerHTML — نام و کد از localStorage است و دست‌کاری‌پذیر.
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: string) => {
+    const e = document.createElement(tag);
+    e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  };
+  const STEP = 'w-11 h-11 grid place-items-center text-xl font-bold text-steel-900 hover:bg-steel-100 disabled:text-steel-400 disabled:hover:bg-transparent';
   function renderList(kind: BasketKind, list: BasketItem[]) {
     const ul = $(`${kind}-items`);
     if (!ul) return;
     ul.textContent = '';
     for (const item of list) {
-      const li = document.createElement('li');
-      li.className = 'flex items-start gap-2 border border-steel-300 rounded-md p-2.5';
-
-      const info = document.createElement('div');
-      info.className = 'min-w-0 flex-1';
-      const name = document.createElement('a');
-      name.href = `/products/${encodeURIComponent(item.slug)}`;
-      name.className = 'block text-sm font-bold text-steel-900 leading-6 hover:text-accent-ink';
-      // textContent نه innerHTML — نام از localStorage است و دست‌کاری‌پذیر.
-      name.textContent = item.name || item.slug;
-      info.appendChild(name);
+      const label = item.name || item.slug;
+      // ⚠️ خط تیره‌ی کد فنی با «خط تیره‌ی نشکن» (U+2011): وگرنه «SAGA1-L10» سر خط می‌شکند و در متن راست‌به‌چپ
+      // «‎-SAGA1 / L10» خوانده می‌شود (دیده‌شده ۳ آذر ۱۴۰۵). U+2011 در unicode-range فونت Vazirmatn هست.
+      const shown = label.replace(/([A-Za-z0-9])-([A-Za-z0-9])/g, '$1\u2011$2');
+      const li = el('li', 'py-4 first:pt-0');
+      const name = el('a', 'block text-base font-bold text-steel-900 leading-7 hover:text-accent-ink', shown);
+      name.href = `/products/${encodeURIComponent(item.slug)}/`;
+      li.appendChild(name);
+      const meta = el('div', 'flex flex-wrap items-center gap-2 mt-1');
       if (item.sku) {
-        const sku = document.createElement('p');
-        sku.className = 'text-xs text-steel-600 font-mono';
+        const sku = el('span', 'text-sm text-steel-600 font-mono', item.sku);
         sku.dir = 'ltr';
-        sku.textContent = item.sku;
-        info.appendChild(sku);
+        meta.appendChild(sku);
       }
       if (kind === 'quote') {
-        /* برچسب مسیر، بدون عدد: قلم قیمت‌دار که برای پیش‌فاکتور آمده،
-           از قلمی که قیمتش را کارشناس تعیین می‌کند جداست. */
+        /* برچسب مسیر، بدون عدد: قلم قیمت‌دار که برای پیش‌فاکتور آمده، از قلمی که قیمتش را کارشناس تعیین می‌کند جداست. */
         const priced = item.mode === 'cart';
-        const tag = document.createElement('span');
-        tag.className = priced
-          ? 'inline-block mt-1 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5'
-          : 'inline-block mt-1 text-xs font-bold text-steel-700 bg-steel-50 border border-steel-300 rounded px-1.5 py-0.5';
-        tag.textContent = priced ? 'قیمت‌دار' : 'نیازمند استعلام';
-        info.appendChild(tag);
+        meta.appendChild(el('span', priced
+          ? 'text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5'
+          : 'text-xs font-bold text-steel-700 bg-steel-100 border border-steel-300 rounded px-2 py-0.5', priced ? 'قیمت‌دار' : 'نیازمند استعلام'));
       }
+      li.appendChild(meta);
 
-      const qty = document.createElement('input');
-      qty.type = 'number';
-      qty.min = '1';
-      qty.max = '9999';
+      // −/+ به‌جای ورودی عددی ۶۴px: انگشت روی کف کارگاه. ورودی وسط برای تایپ مستقیم ۲۰۰ عدد هم می‌ماند.
+      const row = el('div', 'flex items-center justify-between gap-3 mt-3');
+      const stepper = el('div', 'inline-flex items-center rounded-md border border-steel-300 overflow-hidden');
+      const minus = el('button', STEP, '−');
+      const plus = el('button', STEP, '+');
+      const qty = el('input', 'w-14 h-11 text-center text-base font-bold text-steel-900 border-x border-steel-300 tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none');
+      minus.type = plus.type = 'button';
+      minus.setAttribute('aria-label', `کم کردن تعداد ${label}`);
+      plus.setAttribute('aria-label', `افزودن تعداد ${label}`);
+      minus.disabled = item.qty <= 1;
+      qty.type = 'number'; qty.min = '1'; qty.max = '9999'; qty.inputMode = 'numeric';
       qty.value = String(item.qty);
-      qty.className = 'w-16 shrink-0 text-sm border border-steel-300 rounded px-2 py-1 text-center';
-      qty.setAttribute('aria-label', `تعداد ${item.name || item.slug}`);
+      qty.setAttribute('aria-label', `تعداد ${label}`);
       qty.addEventListener('change', () => setQty(store, kind, item.slug, qty.value));
+      minus.addEventListener('click', () => setQty(store, kind, item.slug, String(item.qty - 1)));
+      plus.addEventListener('click', () => setQty(store, kind, item.slug, String(item.qty + 1)));
+      stepper.append(minus, qty, plus);
 
-      const del = document.createElement('button');
+      const del = el('button', 'inline-flex items-center gap-1.5 min-h-11 px-3 rounded-md text-sm font-bold text-steel-700 hover:text-red-700 hover:bg-red-50');
       del.type = 'button';
-      del.className = 'shrink-0 text-steel-600 hover:text-red-700 p-1 focus:outline-none focus:ring-2 focus:ring-accent rounded';
-      del.setAttribute('aria-label', `حذف ${item.name || item.slug}`);
-      del.textContent = '✕';
+      del.setAttribute('aria-label', `حذف ${label}`);
+      del.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.35 9m-4.78 0L9.26 9m9.97-3.21c.34.05.68.11 1.02.17m-1.02-.17L18.16 19.67A2.25 2.25 0 0115.92 21.75H8.08a2.25 2.25 0 01-2.24-2.08L4.77 5.79m14.46 0a48.1 48.1 0 00-3.48-.4m-12 .56c.34-.06.68-.11 1.02-.17m0 0a48.1 48.1 0 013.48-.4m7.5 0v-.92c0-1.18-.91-2.16-2.09-2.2a51.96 51.96 0 00-3.32 0c-1.18.04-2.09 1.02-2.09 2.2v.92m7.5 0a48.67 48.67 0 00-7.5 0"/></svg>حذف';
       del.addEventListener('click', () => removeItem(store, kind, item.slug));
-
-      li.append(info, qty, del);
+      row.append(stepper, del);
+      li.appendChild(row);
       ul.appendChild(li);
     }
   }
@@ -260,6 +267,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
       renderList(kind, list);
       const count = $(`${kind}-count`);
       if (count) count.textContent = list.length.toLocaleString('fa-IR');
+      for (const n of document.querySelectorAll<HTMLElement>(`[data-basket-n="${kind}"]`)) n.textContent = list.length.toLocaleString('fa-IR');
       const opener = $(`${kind}-open`);
       if (opener) opener.hidden = list.length === 0;
       const empty = $(`${kind}-empty`);
@@ -351,7 +359,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
   const msg = $('quote-msg');
   const say = (text: string, good = false) => {
     if (!msg) return;
-    msg.className = `text-xs leading-6 font-bold ${good ? 'text-green-700' : 'text-red-700'}`;
+    msg.className = `mt-3 text-sm leading-7 font-bold ${good ? 'text-green-700' : 'text-red-700'}`;
     msg.textContent = text;
   };
 
@@ -439,7 +447,7 @@ const inputClass = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.
     if (!has || document.getElementById('cy-tray-js')) return;
     const el = document.createElement('script');
     el.id = 'cy-tray-js';
-    el.src = '/scripts/compare-tray.js?v=1';
+    el.src = '/scripts/compare-tray.js?v=2';
     document.head.appendChild(el);
   };
   window.addEventListener('cy-compare', loadTray);

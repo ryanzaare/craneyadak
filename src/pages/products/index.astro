@@ -37,6 +37,8 @@ import { getContact } from '../../lib/site-options';
 import { fa } from '../../components/catalog-presence';
 import { SITE } from '../../data/site';
 import { productReadiness } from '../../lib/indexability';
+import { allFacets } from '../../data/filters';
+import { filterAttrs } from '../../lib/filter-attrs';
 
 const all = await getAllProducts();
 
@@ -98,23 +100,11 @@ const jsonLd = {
   ],
 };
 
-/**
- * داده‌ی فیلتر روی هر ردیف/کارت — CategoryFilterBar می‌خواند (همان نوار صفحه‌ی دسته؛ فاز ۳).
- * ⚠️ هر محصول دو بار در DOM است (جدول و کارت)؛ شمار نتیجه با data-slug یکتا می‌شود.
- */
-function facetAttrs(p: (typeof products)[number]) {
-  const price = computePrice(p);
-  return {
-    'data-cat-item': '',
-    'data-slug': p.slug,
-    'data-brand': p.brandSlug ?? '',
-    'data-categories': p.categorySlugs.join(' '),
-    'data-stock': p.stockStatus,
-    'data-priced': price.payable ? '1' : '0',
-    'data-price': price.payable && price.effective !== null ? String(price.effective) : '',
-    'data-modified': p.modified ?? '',
-  };
-}
+// فیلترهای مشخصه‌ی آرشیو: فقط خودکار (برچسب‌های مشترک؛ src/data/filters.ts) — فیلتر وردپرس مال یک دسته است.
+// ⚠️ پیش از ۳ آذر ۱۴۰۵ آرشیو هیچ فیلتر مشخصه‌ای نداشت («مشخصه‌ها بین دسته‌ها هم‌معنا نیستند»). فیلتر خودکار فقط
+// برچسبی را می‌گیرد که مقدارش بین کالاها مشترک است، پس هم‌معنایی را خود داده تضمین می‌کند.
+const facets = allFacets(products, []);
+const facetAttrs = (p: (typeof products)[number]) => filterAttrs(p, facets);
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexArchive} explore={{ skipProducts: true }}>
@@ -139,9 +129,7 @@ function facetAttrs(p: (typeof products)[number]) {
         <EmptyState title="هنوز محصولی منتشر نشده است." text="کاتالوگ در حال تکمیل است. کد فنی یا عکس پلاک را بفرستید تا مستقیم استعلام کنیم."
           whatsappHref={contact.whatsappHref} telHref={contact.telHref} />
       ) : (
-        <>
-          <p class="text-sm text-steel-600 mb-3"><strong data-cat-count class="text-steel-900 font-bold tabular-nums">{fa(products.length)}</strong> قطعه</p>
-          <CategoryFilterBar products={products} categories={categoryChips} sortable />
+        <CategoryFilterBar products={products} facets={facets} categories={categoryChips}>
 
           <div data-cat-view="list" hidden>
             <div class="hidden lg:grid lg:grid-cols-[7rem_9rem_1fr_7rem_10rem_8rem_9rem_auto] gap-x-4 px-3 py-2 text-xs font-bold text-steel-600 bg-steel-100 border border-steel-300 border-b-0 rounded-t">
@@ -166,7 +154,7 @@ function facetAttrs(p: (typeof products)[number]) {
             <EmptyState title="هیچ قطعه‌ای با این فیلترها پیدا نشد." text="فیلترها را کمتر کنید یا کد فنی و عکس پلاک را بفرستید تا معادل مناسب را پیدا کنیم."
               whatsappHref={contact.whatsappHref} telHref={contact.telHref} />
           </div>
-        </>
+        </CategoryFilterBar>
       )}
     </div>
   </section>

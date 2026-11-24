@@ -25,9 +25,10 @@ import { SITE } from '../../data/site';
 
 const title = `پرداخت | ${SITE.name}`;
 const description = 'بررسی سفارش، نشانی ارسال و پرداخت آنلاین.';
-const input = 'w-full text-sm border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40 aria-[invalid=true]:border-red-600';
+const input = 'w-full min-h-12 text-base text-steel-900 bg-white border border-steel-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-4 focus:ring-accent/40 aria-[invalid=true]:border-red-600';
 const label = 'block text-sm font-bold text-steel-900 mb-1';
-const err = 'text-xs text-red-700 font-bold mt-1';
+// ⚠️ ۳ آذر ۱۴۰۵ (کارفرما: «خوانایی ضعیف»): ورودی ۱۶px (زیر آن iOS هنگام فوکوس صفحه را زوم می‌کند) و پیام‌ها ۱۵px نه ۱۳px.
+const err = 'text-sm text-red-700 font-bold mt-1';
 ---
 
 <Layout explore={false} title={title} description={description} noindex>
@@ -55,7 +56,7 @@ const err = 'text-xs text-red-700 font-bold mt-1';
 
       <form id="co-form" hidden novalidate class="grid md:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
         <div class="min-w-0 space-y-6">
-          <p id="co-saved-note" hidden class="text-xs text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2 leading-6">
+          <p id="co-saved-note" hidden class="text-sm text-emerald-900 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2 leading-6">
             مشخصات از آخرین سفارش شما پر شد. اگر چیزی عوض شده ویرایشش کنید؛ با پرداخت موفق دوباره ذخیره می‌شود.
             (حذف مشخصات ذخیره‌شده: <a href="/account/settings" class="underline font-bold">تنظیمات حساب</a>)
           </p>
@@ -107,12 +108,12 @@ const err = 'text-xs text-red-700 font-bold mt-1';
               (checkout.test.mts مقایسه می‌کند). همه پس‌کرایه‌اند: در جمع ۰. */}
           <fieldset class="bg-white border border-steel-300 border-s-4 border-s-action rounded-md p-5 space-y-3" aria-describedby="ship-help" id="ship-group">
             <legend class="font-bold text-steel-900 px-1">روش ارسال</legend>
-            <p id="ship-help" class="text-xs text-steel-600 leading-6">هزینه‌ی ارسال در همه‌ی روش‌ها <strong>پس‌کرایه</strong> است و هنگام تحویل به شرکت حمل پرداخت می‌شود.</p>
+            <p id="ship-help" class="text-sm text-steel-700 leading-7">هزینه‌ی ارسال در همه‌ی روش‌ها <strong>پس‌کرایه</strong> است و هنگام تحویل به شرکت حمل پرداخت می‌شود.</p>
             <div class="space-y-2 text-sm text-steel-900">
-              <label class="flex items-start gap-2"><input type="radio" name="shipping" value="tipax" class="mt-1" /><span>تیپاکس</span></label>
-              <label class="flex items-start gap-2"><input type="radio" name="shipping" value="bus" class="mt-1" /><span>اتوبوس</span></label>
-              <label class="flex items-start gap-2"><input type="radio" name="shipping" value="freight" class="mt-1" /><span>باربری</span></label>
-              <label class="flex items-start gap-2"><input type="radio" name="shipping" value="air" class="mt-1" /><span>ارسال هوایی (پس‌کرایه - مشروط به وضعیت نرمال مرزها و پروازها)</span></label>
+              <label class="flex items-center gap-3 min-h-12 px-3 rounded-md border border-steel-300 bg-white cursor-pointer has-[:checked]:border-action has-[:checked]:bg-accent-soft"><input type="radio" name="shipping" value="tipax" class="w-5 h-5 shrink-0 accent-action" /><span>تیپاکس</span></label>
+              <label class="flex items-center gap-3 min-h-12 px-3 rounded-md border border-steel-300 bg-white cursor-pointer has-[:checked]:border-action has-[:checked]:bg-accent-soft"><input type="radio" name="shipping" value="bus" class="w-5 h-5 shrink-0 accent-action" /><span>اتوبوس</span></label>
+              <label class="flex items-center gap-3 min-h-12 px-3 rounded-md border border-steel-300 bg-white cursor-pointer has-[:checked]:border-action has-[:checked]:bg-accent-soft"><input type="radio" name="shipping" value="freight" class="w-5 h-5 shrink-0 accent-action" /><span>باربری</span></label>
+              <label class="flex items-center gap-3 min-h-12 px-3 rounded-md border border-steel-300 bg-white cursor-pointer has-[:checked]:border-action has-[:checked]:bg-accent-soft"><input type="radio" name="shipping" value="air" class="w-5 h-5 shrink-0 accent-action" /><span>ارسال هوایی (پس‌کرایه - مشروط به وضعیت نرمال مرزها و پروازها)</span></label>
             </div>
             <p class={err} data-error="shipping"></p>
           </fieldset>
@@ -120,7 +121,7 @@ const err = 'text-xs text-red-700 font-bold mt-1';
           <fieldset class="bg-white border border-steel-300 border-s-4 border-s-action rounded-md p-5 space-y-3">
             <legend class="font-bold text-steel-900 px-1">فاکتور رسمی</legend>
             <label class="flex items-start gap-2 text-sm font-bold text-steel-900">
-              <input id="inv-wanted" type="checkbox" class="mt-1" />
+              <input id="inv-wanted" type="checkbox" class="mt-1 w-5 h-5 shrink-0 accent-action" />
               <span>درخواست فاکتور رسمی <span class="font-normal text-steel-600">(ارزش افزوده‌ی <span id="inv-rate">…</span>٪ به مبلغ اضافه می‌شود)</span></span>
             </label>
 
@@ -178,11 +179,11 @@ const err = 'text-xs text-red-700 font-bold mt-1';
             <div class="flex justify-between gap-2"><dt>ارسال</dt><dd id="co-ship" class="text-left">پس‌کرایه</dd></div>
             <div class="flex justify-between gap-2 font-bold text-base border-t border-steel-300 pt-2"><dt>قابل پرداخت</dt><dd id="co-total" class="tabular-nums"></dd></div>
           </dl>
-          <p id="co-ship-note" hidden class="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 leading-6"></p>
-          <p id="co-expiry" class="text-xs text-steel-600 leading-6"></p>
+          <p id="co-ship-note" hidden class="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 leading-6"></p>
+          <p id="co-expiry" class="text-sm text-steel-700 leading-7"></p>
 
-          <label class="flex items-start gap-2 text-xs leading-6 text-steel-800">
-            <input id="co-terms" type="checkbox" class="mt-1" />
+          <label class="flex items-start gap-3 text-sm leading-7 text-steel-800">
+            <input id="co-terms" type="checkbox" class="mt-1 w-5 h-5 shrink-0 accent-action" />
             <span>
               <a href="/legal/terms" target="_blank" class="text-accent-ink underline">قوانین و مقررات</a>،
               <a href="/legal/returns" target="_blank" class="text-accent-ink underline">رویه‌ی بازگشت کالا</a> و
@@ -194,7 +195,7 @@ const err = 'text-xs text-red-700 font-bold mt-1';
           <button id="co-submit" type="submit" class="w-full bg-action text-white py-3 rounded-md font-bold hover:bg-accent-strong transition-colors focus:outline-none focus:ring-4 focus:ring-accent/40 min-h-[48px] disabled:opacity-60">
             پرداخت آنلاین
           </button>
-          <p id="co-msg" class="text-xs leading-6 font-bold text-red-700" role="alert"></p>
+          <p id="co-msg" class="text-sm leading-7 font-bold text-red-700" role="alert"></p>
         </aside>
       </form>
     </div>
@@ -451,7 +452,7 @@ const err = 'text-xs text-red-700 font-bold mt-1';
       name.className = 'font-bold text-steel-900 leading-6';
       name.textContent = l.name;
       const meta = document.createElement('p');
-      meta.className = 'text-xs text-steel-600';
+      meta.className = 'text-sm text-steel-600';
       const authLabel = l.authenticity === 'original' ? 'اصلی' : l.authenticity === 'non_original' ? 'غیر اصلی' : '';
       meta.textContent = `${l.qty.toLocaleString('fa-IR')} × ${rial(l.unit)}${authLabel ? ` — اصالت: ${authLabel}` : ''}`;
       left.append(name, meta);

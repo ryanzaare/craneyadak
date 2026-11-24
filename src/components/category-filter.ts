@@ -21,6 +21,8 @@ export interface ItemData {
   price: number | null;
   /** تاریخ ISO آخرین ویرایش برای «جدیدترین». */
   modified: string;
+  /** اصالت ثبت‌شده‌ی «اصلی» در وردپرس. ثبت‌نشده = false (ادعای اصالت باید صریح باشد). */
+  original: boolean;
 }
 
 export type SortMode = 'relevant' | 'newest' | 'cheapest' | 'expensive';
@@ -34,10 +36,12 @@ export interface FilterState {
   view: 'list' | 'grid';
   cats: string[];
   sort: SortMode;
+  /** «فقط کالای اصل» (کارفرما ۳ آذر ۱۴۰۵، الگوی دیجی‌کالا). */
+  original: boolean;
 }
 
 // ⚠️ نمای پیش‌فرض «کارت» (کارفرما، ۳ آبان ۱۴۰۵): ردیف جدولی برای ویترین فروشگاه کوچک بود. پس فقط جدول در URL می‌آید.
-export const EMPTY: FilterState = { stock: 'all', brands: [], specs: {}, ranges: {}, view: 'grid', cats: [], sort: 'relevant' };
+export const EMPTY: FilterState = { stock: 'all', brands: [], specs: {}, ranges: {}, view: 'grid', cats: [], sort: 'relevant', original: false };
 
 /** اولین عدد یک مقدار مشخصه، با ارقام فارسی/عربی — «۱۶ mm» → 16. */
 export function firstNumber(raw: string): number | null {
@@ -52,6 +56,7 @@ export function firstNumber(raw: string): number | null {
 export function matches(item: ItemData, s: FilterState): boolean {
   if (s.stock === 'in' && item.stock !== 'in_stock') return false;
   if (s.stock === 'rfq' && item.priced) return false;
+  if (s.original && !item.original) return false;
   if (s.brands.length && !s.brands.includes(item.brand)) return false;
   if (s.cats.length && !s.cats.some((c) => item.categories.includes(c))) return false;
   for (const [id, values] of Object.entries(s.specs)) {
@@ -97,6 +102,7 @@ export function parseState(p: URLSearchParams): FilterState {
     view: p.get('view') === 'list' ? 'list' : 'grid',
     cats: many(p, 'cat'),
     sort: sort && SORTS.includes(sort) ? sort : 'relevant',
+    original: p.get('orig') === '1',
   };
   for (const [k, v] of p) {
     if (k.startsWith('f_') && v) (s.specs[k.slice(2)] ??= []).push(v);
@@ -112,6 +118,7 @@ export function parseState(p: URLSearchParams): FilterState {
 export function toQuery(s: FilterState): string {
   const p = new URLSearchParams();
   if (s.stock !== 'all') p.set('stock', s.stock);
+  if (s.original) p.set('orig', '1');
   for (const b of s.brands) p.append('brand', b);
   for (const c of s.cats) p.append('cat', c);
   for (const [id, values] of Object.entries(s.specs)) for (const v of values) p.append(`f_${id}`, v);

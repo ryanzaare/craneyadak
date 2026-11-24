@@ -11,7 +11,7 @@ const eq = (name: string, got: unknown, want: unknown) => {
   if (!ok) failed++;
 };
 
-const item = (o: Partial<ItemData>): ItemData => ({ stock: 'in_stock', priced: false, brand: 'saga', specs: {}, categories: [], price: null, modified: '', ...o });
+const item = (o: Partial<ItemData>): ItemData => ({ stock: 'in_stock', priced: false, brand: 'saga', specs: {}, categories: [], price: null, modified: '', original: false, ...o });
 const S = (o: Partial<FilterState>): FilterState => ({ ...EMPTY, ...o, specs: { ...(o.specs ?? {}) }, ranges: { ...(o.ranges ?? {}) } });
 
 console.log('── چیپ موجودی');
@@ -28,6 +28,12 @@ eq('مشخصه: قلم بدون آن مشخصه حذف', matches(item({ specs: {
 eq('بازه: بیشتر از سقف حذف', matches(item({ specs: { len: '۱۶ mm' } }), S({ ranges: { len: 10 } })), false);
 // نبودِ داده دلیل ناسازگاری نیست — همان رفتار نوار کناری قبلی.
 eq('بازه: قلم بدون مقدار حذف نمی‌شود', matches(item({ specs: {} }), S({ ranges: { len: 10 } })), true);
+
+console.log('── فقط کالای اصل (۳ آذر ۱۴۰۵)');
+eq('«فقط اصل» → اصلی می‌ماند، ثبت‌نشده حذف', [matches(item({ original: true }), S({ original: true })), matches(item({ original: false }), S({ original: true }))], [true, false]);
+eq('خاموش → همه', matches(item({ original: false }), S({})), true);
+eq('URL رفت‌وبرگشت orig=1', parseState(new URLSearchParams(toQuery(S({ original: true })))).original, true);
+eq('orig=0 یا خراب ⇒ خاموش', [parseState(new URLSearchParams('orig=0')).original, parseState(new URLSearchParams('orig=yes')).original], [false, false]);
 
 console.log('── دسته (آرشیو /products/ — فاز ۳)');
 eq('دسته: هرکدام از انتخاب‌ها', [matches(item({ categories: ['remote-control', 'x'] }), S({ cats: ['remote-control'] })), matches(item({ categories: ['brake'] }), S({ cats: ['remote-control'] }))], [true, false]);

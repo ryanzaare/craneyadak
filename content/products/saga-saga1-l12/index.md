@@ -34,6 +34,7 @@ specs:
   - { label: عمر باتری, value: تا حدود ۳ ماه }
   - { label: جنس بدنه, value: پلاستیک تقویت‌شده با الیاف شیشه }
   - { label: کنترل فرکانس, value: کریستال کوارتز (VHF یا UHF) }
+  - { label: نوع, value: ست کامل؛ فرستنده و گیرنده }
 sources:
   - { title: "SAGAMATIC — SAGA1-L12 Series (صفحه‌ی رسمی سازنده)", url: "https://www.sagaradio.com.tw/products_detail/68" }
   - { title: "SAGAMATIC — SAGA1-L10 Series (برای مقایسه)", url: "https://www.sagaradio.com.tw/products_detail/73" }

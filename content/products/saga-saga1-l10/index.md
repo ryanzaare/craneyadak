@@ -31,6 +31,7 @@ specs:
   - { label: تغذیه فرستنده, value: ۲ عدد باتری قلمی AA }
   - { label: عمر باتری, value: تا حدود ۳ ماه }
   - { label: جنس بدنه, value: پلاستیک تقویت‌شده با الیاف شیشه }
+  - { label: نوع, value: ست کامل؛ فرستنده و گیرنده }
 sources:
   - { title: "SAGAMATIC — SAGA1-L10 Series (صفحه‌ی رسمی سازنده)", url: "https://www.sagaradio.com.tw/products_detail/73" }
   - { title: "کاتالوگ Saga Radio Remote Controls — Conductix-Wampfler، ص ۱۰–۱۱", url: "/catalogs/" }

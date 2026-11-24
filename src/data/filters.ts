@@ -105,6 +105,8 @@ export interface ResolvedFacet extends SpecFacet {
   max: number | null;
   /** چند محصول این مشخصه را دارند. */
   count: number;
+  /** شمار محصول هر مقدار (checkbox) — کنار گزینه نمایش داده می‌شود. */
+  valueCounts: Record<string, number>;
 }
 
 /** عدد ابتدای یک مقدار مشخصات — «۱۶ mm» → 16 */
@@ -147,10 +149,13 @@ export function resolveFacets(products: CraneProduct[], facets: SpecFacet[]): Re
         min: Math.min(...nums),
         max: Math.max(...nums),
         count: nums.length,
+        valueCounts: {},
       });
     } else {
       const unique = [...new Set(raw)].sort((a, b) => a.localeCompare(b, 'fa'));
-      out.push({ ...facet, values: unique, min: null, max: null, count: raw.length });
+      const valueCounts: Record<string, number> = {};
+      for (const v of raw) valueCounts[v] = (valueCounts[v] ?? 0) + 1;
+      out.push({ ...facet, values: unique, min: null, max: null, count: raw.length, valueCounts });
     }
   }
 
@@ -168,3 +173,48 @@ export function resolveFacets(products: CraneProduct[], facets: SpecFacet[]): Re
 
 /* ~~hasUsefulFilters~~ حذف شد (Frontend v2، فاز ۲): چیدمان دوستونی نوار کناری که این تابع از له‌شدنش
    جلوگیری می‌کرد دیگر وجود ندارد — فیلتر حالا نواری بالای فهرست است (CategoryFilterBar.astro). */
+
+/* -------------------------------------------------------------------------
+   فیلترهای خودکار از برچسب‌های مشترک مشخصات (کارفرما ۳ آذر ۱۴۰۵: «فیلترهای فروشگاه خیلی محدود است؛ با دیجی‌کالا
+   مقایسه کن»). تا امروز فقط فیلترهایی که دستی در وردپرس (categoryMeta.spec_facets) تعریف شده بودند دیده می‌شدند،
+   و آرشیو /products/ هیچ فیلتر مشخصه‌ای نداشت.
+   ⚠️ قاعده‌ی «مفید بودن» — اندازه‌گیری‌شده روی ۶ محصول واقعی: بیشتر مقدارهای مشخصات متن آزاد و یکتا برای هر
+   محصول‌اند (وزن «حدود ۲۱۰ گرم بدون باتری»، ابعاد). فیلتری که هر گزینه‌اش دقیقاً یک کالا است فیلتر نیست، فهرست
+   است و فقط شلوغی می‌آورد. پس برچسب فقط وقتی فیلتر می‌شود که (۱) دست‌کم ۲ مقدار متفاوت داشته باشد و (۲) دست‌کم یک
+   مقدارش بین ≥۲ کالا مشترک باشد؛ مقدار بلندتر از ۶۰ نویسه یعنی جمله، نه گزینه. امروز: «نوع» و «درجه حفاظت».
+   ⚠️ شناسه از خود برچسب (هش پایدار) تا پیوند فیلترشده با افزودن کالای تازه نشکند.
+------------------------------------------------------------------------- */
+const MAX_AUTO = 8;
+const MAX_VALUE_LEN = 60;
+
+/** هش کوتاه پایدار (FNV-1a، base36) — شناسه‌ی URL فیلتر خودکار. */
+export function labelId(label: string): string {
+  let h = 0x811c9dc5;
+  for (const ch of label.trim()) { h ^= ch.codePointAt(0)!; h = Math.imul(h, 0x01000193) >>> 0; }
+  return `a${h.toString(36)}`;
+}
+
+export function autoFacets(products: Pick<CraneProduct, 'technicalSpecs'>[], excludeLabels: Iterable<string> = []): SpecFacet[] {
+  const skip = new Set([...excludeLabels].map((l) => l.trim()));
+  const byLabel = new Map<string, Map<string, number>>();
+  for (const p of products) {
+    for (const { label, value } of p.technicalSpecs) {
+      const l = label.trim(); const v = value.trim();
+      if (!l || !v || skip.has(l)) continue;
+      const m = byLabel.get(l) ?? new Map<string, number>();
+      m.set(v, (m.get(v) ?? 0) + 1);
+      byLabel.set(l, m);
+    }
+  }
+  return [...byLabel.entries()]
+    .filter(([, vals]) => vals.size >= 2 && [...vals.values()].some((n) => n >= 2) && [...vals.keys()].every((v) => v.length <= MAX_VALUE_LEN))
+    .map(([l, vals]) => ({ l, cover: [...vals.values()].reduce((a, b) => a + b, 0) }))
+    .sort((a, b) => b.cover - a.cover || a.l.localeCompare(b.l, 'fa'))
+    .slice(0, MAX_AUTO)
+    .map(({ l }) => ({ id: labelId(l), label: l, specLabel: l, kind: 'checkbox' as const }));
+}
+
+/** فیلترهای وردپرس + خودکار (بی تکرار برچسب)، با داده‌ی واقعی. هم نوار فیلتر و هم صفت‌های داده‌ی کارت از همین. */
+export function allFacets(products: CraneProduct[], wpFacets: SpecFacet[]): ResolvedFacet[] {
+  return resolveFacets(products, [...wpFacets, ...autoFacets(products, wpFacets.map((f) => f.specLabel))]);
+}

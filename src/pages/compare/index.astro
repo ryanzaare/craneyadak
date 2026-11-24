@@ -1,0 +1,29 @@
+---
+// src/pages/compare/index.astro — مقایسه‌ی کنار هم محصولات (O8؛ کارفرما: ایده‌ی دیجی‌کالا)
+// ---------------------------------------------------------------------------
+// انتخاب از دکمه‌ی «افزودن به مقایسه» صفحه‌ی محصول (localStorage، حداکثر ۴) یا نشانی ?p=a,b (قابل اشتراک).
+// داده از /compare-index.json (فقط این صفحه می‌خواند). هر ردیف یک مشخصه با همان برچسب وردپرس؛ مقدارِ نبوده «—»، نه حدس.
+// ⚠️ noindex: محتوای این صفحه به انتخاب کاربر بسته است و برای گوگل صفحه‌ی خالی است؛ مقایسه‌ی ایندکس‌پذیر همان جدول‌های
+// مقایسه‌ی داخل صفحه‌ی محصول است (L10/L12).
+// رابط و منطق: src/components/CompareTool.astro (مشترک با /compare/embed/ که سینی شناور در برگه‌ی رو باز می‌کند).
+// ---------------------------------------------------------------------------
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import CompareTool from '../../components/CompareTool.astro';
+---
+
+<Layout title="مقایسه‌ی قطعات جرثقیل سقفی | کرین یدک" description="مقایسه‌ی مشخصات فنی قطعات جرثقیل سقفی کنار هم." noindex={true} explore={{ skipGuides: true }}>
+  <section class="bg-white border-b border-steel-300 px-4 py-6 md:py-8">
+    <div class="max-w-7xl mx-auto">
+      <Breadcrumb surface items={[{ label: 'صفحه اصلی', href: '/' }, { label: 'مقایسه' }]} />
+      <h1 class="text-2xl md:text-3xl font-black text-steel-900 mb-2">مقایسه‌ی قطعات</h1>
+      <p class="text-base text-steel-700 leading-8">تا ۴ قطعه را کنار هم، مشخصه به مشخصه ببینید. کالا را همین‌جا جستجو کنید یا از پیشنهادها بزنید.</p>
+    </div>
+  </section>
+
+  <section class="px-4 py-6 md:py-8 bg-steel-50 min-h-[40vh]">
+    <div class="max-w-7xl mx-auto">
+      <CompareTool />
+    </div>
+  </section>
+</Layout>

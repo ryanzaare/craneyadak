@@ -13,6 +13,7 @@
 //   پس Baskets فقط وقتی فهرست مقایسه پر است این فایل را با یک <script src> می‌افزاید؛ بازدید اول (و Lighthouse) هیچ
 //   بایتی از آن نمی‌گیرد. ⚠️ چون این فایل باندل نمی‌شود: (الف) کلاس‌های Tailwind آن با @source در global.css دیده
 //   می‌شوند — آن خط را برندار؛ (ب) نام فایل هش ندارد، پس با هر تغییر ?v= را در Baskets.astro بالا ببر.
+//   (ج) کلاس cy-cmp-sheet در global.css است (برگه‌ی رو).
 //   کلید و پالایش اسلاگ عیناً همان src/scripts/compare.ts است (۴ = COMPARE_MAX) — اگر آنجا عوض شد، این‌جا هم.
 // ---------------------------------------------------------------------------
 (() => {
@@ -28,6 +29,33 @@
       return 0;
     }
   };
+  // ── برگه‌ی رو (کارفرما ۳ آذر ۱۴۰۵: «کاربر نمی‌خواهد صفحه‌ی فعلی را ترک کند») ──
+  // /compare/embed/ در iframe داخل <dialog>؛ فقط با باز کردن ساخته و بار می‌شود. پیوند /compare/ برای کلیک وسط و
+  // بی‌جاوااسکریپت می‌ماند. ⚠️ پیام بستن فقط از همین مبدأ پذیرفته می‌شود.
+  let dlg = null;
+  const openSheet = () => {
+    if (!dlg) {
+      dlg = document.createElement('dialog');
+      dlg.setAttribute('aria-label', 'مقایسه‌ی قطعات');
+      dlg.className = 'cy-cmp-sheet';
+      const fr = document.createElement('iframe');
+      fr.title = 'مقایسه‌ی قطعات';
+      dlg.appendChild(fr);
+      dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); }); // کلیک روی پس‌زمینه
+      dlg.addEventListener('close', () => { document.documentElement.style.overflow = ''; });
+      document.body.appendChild(dlg);
+      window.addEventListener('message', (e) => {
+        if (e.origin === location.origin && e.data && e.data.type === 'cy-compare-close' && dlg.open) dlg.close();
+      });
+    }
+    // هر بار تازه: فهرست ممکن است از آخرین باز شدن عوض شده باشد.
+    dlg.querySelector('iframe').src = '/compare/embed/';
+    document.documentElement.style.overflow = 'hidden';
+    dlg.showModal();
+    dlg.querySelector('iframe').focus();
+  };
+  window.cyOpenCompare = openSheet;
+
   let tray = null;
   const sync = () => {
     const n = location.pathname.startsWith('/compare') ? 0 : count();
@@ -47,6 +75,11 @@
         '<button type="button" class="w-11 h-11 grid place-items-center rounded-full hover:bg-steel-800" aria-label="خالی کردن فهرست مقایسه">' +
         '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>' +
         '</button></div>';
+      tray.querySelector('a').addEventListener('click', (e) => {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return; // زبانه‌ی تازه = همان صفحه‌ی کامل
+        e.preventDefault();
+        openSheet();
+      });
       tray.querySelector('button').addEventListener('click', () => {
         try { localStorage.setItem(KEY, '[]'); } catch { /* حالت خصوصی */ }
         window.dispatchEvent(new CustomEvent('cy-compare'));

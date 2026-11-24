@@ -26,7 +26,7 @@
     "test:design-tokens": "node scripts/check-design-tokens.test.mjs",
     "test:inquiry": "node --experimental-strip-types --no-warnings src/components/inquiry-message.test.mts",
     "test:search": "node --experimental-strip-types --no-warnings src/lib/search-score.test.mts",
-    "test:catfilter": "node --experimental-strip-types --no-warnings src/components/category-filter.test.mts",
+    "test:catfilter": "node --experimental-strip-types --no-warnings src/components/category-filter.test.mts && node --experimental-strip-types --no-warnings src/data/filters.test.mts",
     "test:mobile": "node --experimental-strip-types --no-warnings src/components/contact-mobile.test.mts",
     "test:related": "node --experimental-strip-types --no-warnings src/components/related-products.test.mts",
     "test:toc": "node --experimental-strip-types --no-warnings src/components/toc.test.mts",

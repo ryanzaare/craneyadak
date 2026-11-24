@@ -184,8 +184,11 @@ const rail = (b: ContentBlock): string =>
             <div class="min-w-0">
 
             {/* ── متن ────────────────────────────────────────────────── */}
+            {/* ⚠️ text-base در موبایل (کارفرما ۳ آذر ۱۴۰۵: «خوانایی سایت ضعیف است»). text-xl (۲۰px) روی ستون ۳۴۳px فقط ~۲۸
+                نویسه در هر خط جا می‌داد: چشم هر دو سه کلمه به خط بعد می‌پرید و یک پاراگراف چهارخطی ده خط می‌شد. ۱۶px
+                با فاصله‌ی خط ۲ ≈ ۴۰ نویسه — بازه‌ی خوانای فارسی در موبایل. دسکتاپ همان ۲۰px با سقف ۷۰ نویسه. */}
             {b.type === 'text' && (
-              <div class="prose-crane max-w-[70ch] text-xl text-steel-700 leading-9" set:html={bodies[i]} />
+              <div class="prose-crane max-w-[70ch] text-base md:text-xl text-steel-700 leading-8 md:leading-9" set:html={bodies[i]} />
             )}
 
             {/* ── جدول ───────────────────────────────────────────────── */}
