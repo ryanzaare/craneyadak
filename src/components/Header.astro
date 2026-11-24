@@ -95,9 +95,9 @@ const navLinks = [
         جستجوی دوباره نداشت. «جستجو در ورودی اصلی است و کد فنی می‌فهمد» (§2 اصل ۱).
         یک فرم، دو جا: زیر xl ردیف کامل زیر لوگو (order-last + basis-full در flex-wrap)، از xl کنار لوگو. یک فرم
         یعنی یک landmark جستجو و یک id — نه دو فرم که یکی همیشه پنهان است.
-        ⚠️ عمداً فرم سادهٔ GET بدون جاوااسکریپت و بدون فهرست پیشنهاد: SearchBox آرایه‌ی ساختاری را در HTML هر صفحه
-        inline می‌کند و اسکریپت می‌آورد — روی *هر* صفحه یعنی وزن اضافه برای همه. پیشنهاد آنی و تحمل خط‌تیره/فاصله
-        کار فاز ۲ (جستجو) است. نتیجه در /search/ با Pagefind (پارامتر q همان است که search.astro می‌خواند). */}
+        ⚠️ این فرم تنها جستجوی سایت است (O32، ۴ آذر ۱۴۰۵؛ SearchBox هیرو/قطعه‌یاب/صفحه‌ی جستجو حذف شد). بی‌جاوااسکریپت
+        فرم ساده‌ی GET به /search/ است؛ با اولین تماس، src/scripts/search-overlay.ts بار می‌شود و نتیجه را درجا زیر همین
+        ورودی نشان می‌دهد (Enter دیگر صفحه را عوض نمی‌کند). ماژول تنبل است تا هیچ بایتی در مسیر بحرانی LCP نباشد. */}
     {/* ردیف جستجو + «خط ویژه تامین» (فاز ۳): زیر xl ردیف دوم تمام‌عرض؛ از xl کنار لوگو. قرص تلفن در همین ردیف است، نه
         در ردیف اول: در lg ردیف اول (لوگو + ناوبری + آیکن‌ها) جای ۲۳۰px دیگر ندارد و flex-wrap ناوبری را می‌شکست.
         ⚠️ xl:basis-0: با basis-auto عرض محتوای جستجو + قرص مبنای شکستن خط بود و ناوبری در ۱۲۸۰px به ردیف دوم می‌رفت
@@ -399,11 +399,43 @@ const navLinks = [
     }
   }
 
-  /* میان‌بر «/» → جستجو (جستجوی بزرگ صفحه‌ی اصلی اگر هست، وگرنه هدر). نه وقتی کاربر در فیلدی تایپ می‌کند. */
+  /* جستجوی فوری (O32): ماژول پنل فقط با اولین تماس با ورودی (لمس، فوکوس، تایپ) بار می‌شود — نه در مسیر بحرانی
+     هیچ صفحه‌ای (backlog O23). بی‌جاوااسکریپت یا تا رسیدن ماژول، همان فرم GET به /search/ کار می‌کند. */
+  {
+    const input = document.getElementById('header-search') as HTMLInputElement | null;
+    if (input) {
+      // ⚠️ تگ <script> تزریقی، نه import(): Vite هر import() — حتی با نشانی متغیر و @vite-ignore — را با __vitePreload
+      // می‌پیچد و تکه‌ی preload-helper را ایستا به همین اسکریپت می‌افزاید (درخواست تازه روی همه‌ی صفحه‌ها ⇒
+      // Lighthouse ۰٫۹۸؛ اندازه‌گیری‌شده ۴ آذر ۱۴۰۵). باندل (IIFE) را astro.config.mjs با esbuild می‌سازد و خودش ورودی
+      // #header-search را سوار می‌کند.
+      let asked = false;
+      const go = () => {
+        if (asked) return;
+        asked = true;
+        const el = document.createElement('script');
+        el.src = __SEARCH_URL__;
+        el.async = true;
+        document.head.appendChild(el);
+      };
+      for (const ev of ['pointerdown', 'focus', 'keydown'] as const) input.addEventListener(ev, go, { once: true });
+      // دکمه‌های «جستجوی کد» صفحه‌ی اصلی و قطعه‌یاب: همین ورودی را فوکوس می‌کنند (یک جستجو در کل سایت). فوکوس داخل
+      // همان رویداد کلیک تا صفحه‌کلید موبایل باز شود.
+      document.addEventListener('click', (e) => {
+        if (!(e.target as HTMLElement).closest('[data-focus-search]')) return;
+        window.scrollTo({ top: 0 });
+        input.focus();
+      });
+      // صفحه‌ی /search/: عبارت در ورودی هدر (دیگر جعبه‌ی دوم ندارد).
+      const q = location.pathname.startsWith('/search') ? new URLSearchParams(location.search).get('q') : null;
+      if (q && !input.value) input.value = q;
+    }
+  }
+
+  /* میان‌بر «/» → جستجو (ورودی هدر — تنها جستجوی سایت). نه وقتی کاربر در فیلدی تایپ می‌کند. */
   document.addEventListener('keydown', (e) => {
     if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
     if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return;
-    const box = document.querySelector<HTMLInputElement>('[data-slash-target]') ?? document.querySelector<HTMLInputElement>('#header-search');
+    const box = document.querySelector<HTMLInputElement>('#header-search');
     if (box) { e.preventDefault(); box.focus(); }
   });
 

@@ -30,3 +30,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** نشانی باندل جستجوی فوری با هش محتوا (astro.config.mjs، O32) — هدر فقط با اولین تماس با ورودی import می‌کند. */
+declare const __SEARCH_URL__: string;

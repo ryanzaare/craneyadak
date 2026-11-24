@@ -13,7 +13,6 @@
 // ---------------------------------------------------------------------------
 import Layout from '../layouts/Layout.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import SearchBox from '../components/SearchBox.astro';
 import InquiryForm from '../components/InquiryForm.astro';
 import { SITE } from '../data/site';
 
@@ -66,8 +65,11 @@ const jsonLd = {
   <section class="px-4 py-8 md:py-10 bg-steel-50">
     <div class="max-w-5xl mx-auto">
       <h2 class="text-2xl font-bold text-steel-900 mb-3">۱. کد یا مدل را جستجو کنید</h2>
-      <SearchBox id="part-finder-search" tone="light" placeholder="مثلاً SAGA1-L12 یا ساگا" class="mb-3" />
-      <p class="text-xs text-steel-600 leading-6">
+      {/* ⚠️ جعبه‌ی جستجوی جدا حذف شد (کارفرما ۴ آذر ۱۴۰۵: «جستجوی سایت و قطعه‌یاب چه فرقی دارند؟ تکرار را حذف کن»).
+          همان موتور بود؛ حالا تنها جستجو ورودی هدر است که نتیجه را درجا نشان می‌دهد. کار ویژه‌ی این صفحه عکس پلاک است. */}
+      <p class="text-base text-steel-700 leading-8 mb-3">کد را در جستجوی بالای صفحه بنویسید — نتیجه همان‌جا، با تصویر و وضعیت موجودی، نشان داده می‌شود.</p>
+      <button type="button" data-focus-search class="inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-md bg-action text-white text-base font-bold hover:bg-accent-strong mb-3"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" /></svg>جستجوی کد یا مدل</button>
+      <p class="text-sm text-steel-600 leading-7">
         نتیجه‌ی جستجو تأیید سازگاری نیست: پیش از صدور پیش‌فاکتور، کد درخواستی را با پلاک دستگاه شما تطبیق می‌دهیم.
       </p>
     </div>

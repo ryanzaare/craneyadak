@@ -32,7 +32,6 @@
 // ---------------------------------------------------------------------------
 import Layout from '../layouts/Layout.astro';
 import { FAULT_GROUPS } from '../data/faults';
-import SearchBox from '../components/SearchBox.astro';
 import AuthorityBlock from '../components/AuthorityBlock.astro';
 import ProductCard from '../components/ProductCard.astro';
 import { mobileLine } from '../components/contact-mobile';
@@ -250,7 +249,12 @@ const jsonLd = {
             <p class="mt-3 mb-5 text-sm md:text-base text-steel-700 leading-7 md:leading-8 max-w-2xl text-right">
               کد فنی، عکس پلاک دستگاه یا عکس قطعه‌ی فرسوده کافی است — سازگاری را <strong class="font-bold text-steel-900">پیش از صدور پیش‌فاکتور</strong> بررسی می‌کنیم.
             </p>
-            <SearchBox id="hero-search" tone="light" slash />
+            {/* ⚠️ جعبه‌ی جستجوی دوم حذف شد (کارفرما ۴ آذر ۱۴۰۵: «تکرارها را حذف کن»): ورودی هدر درست بالای همین‌جاست و
+                حالا خودش نتیجه را درجا نشان می‌دهد (O32). این دکمه همان ورودی را فوکوس می‌کند — یک جستجو در کل سایت. */}
+            <div class="flex flex-wrap gap-2">
+              <button type="button" data-focus-search class="inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-md bg-action text-white text-base font-bold hover:bg-accent-strong"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" /></svg>جستجوی کد فنی یا نام قطعه</button>
+              <a href="/part-finder/" class="inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-md border-2 border-steel-900 bg-white text-base font-bold text-steel-900 hover:bg-steel-100">ارسال عکس پلاک</a>
+            </div>
             {/* موبایل: یک ردیف قابل‌کشیدن (کارفرما، ۴ آبان ۱۴۰۵ — پنج چیپ هر کدام یک خط، ~۲۳۰px)؛ از md شکستنی. */}
             <div class="mt-3 flex flex-nowrap md:flex-wrap items-center gap-2 text-sm overflow-x-auto md:overflow-visible whitespace-nowrap no-scrollbar py-1 -my-1">
               <span class="text-steel-600 shrink-0">{QUICK_LINKS_LABEL}</span>

@@ -853,3 +853,14 @@
 @media (min-width: 1024px) {
   .cat-panel-body { max-height: calc(100vh - var(--sticky-off, 6rem) - 5rem); overflow-y: auto; }
 }
+
+/* ---- پنل جستجوی فوری (src/scripts/search-overlay.ts؛ O32، ۴ آذر ۱۴۰۵) ----
+   موبایل: تمام‌صفحه زیر هدر (--sp-hb = لبه‌ی پایین هدر، با اسکریپت)، روی نوارهای پایین؛ اسکرول صفحه قفل.
+   دسکتاپ: قاب ۴۰rem زیر ورودی (--sp-top/--sp-right). هر دو fixed — بیرون از جریان صفحه، بی CLS. */
+.cy-search-panel { position: fixed; z-index: 80; inset: var(--sp-hb, 0) 0 0 0; background: #fff; border-top: 1px solid var(--color-steel-300); }
+.cy-search-inner { height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 1023px) { html.cy-search-open { overflow: hidden; } }
+@media (min-width: 1024px) {
+  .cy-search-panel { inset: var(--sp-top) var(--sp-right) auto auto; width: min(40rem, 92vw); border: 1px solid var(--color-steel-300); border-radius: 0.5rem; box-shadow: 0 20px 50px rgb(0 0 0 / 0.18); overflow: hidden; }
+  .cy-search-inner { height: auto; max-height: min(70vh, 40rem); }
+}

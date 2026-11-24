@@ -56,6 +56,7 @@
   },
   "devDependencies": {
     "@lhci/cli": "^0.15.1",
+    "esbuild": "0.28.1",
     "marked": "18.1.2",
     "pagefind": "^1.0.0",
     "yaml": "2.9.1"

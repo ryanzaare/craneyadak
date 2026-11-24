@@ -95,6 +95,7 @@ const RETIRED = [
   { term: 'group_cyh_category_content', why: 'کلید گروه ACF categoryContent — حذف شد' },
   { term: 'compose-image', why: 'compositor برنامه‌ای تصویر — به تصمیم کارفرما حذف شد' },
   { term: 'compositor.config', why: 'پیکربندی compositor — حذف شد' },
+  { term: 'SearchBox.astro', why: 'سه جعبه‌ی جستجوی جدا (هیرو، قطعه‌یاب، /search/) — با جستجوی فوری ورودی هدر (search-overlay.ts) جایگزین شد (۴ آذر ۱۴۰۵)' },
   { term: 'QuoteBasket.astro', why: 'سبد تکی با برچسب «سفارش/استعلام» — با Baskets.astro (دو سبد جدا) جایگزین شد' },
 ];
 

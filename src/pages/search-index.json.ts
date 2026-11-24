@@ -31,12 +31,31 @@
 // اضافه نمی‌کند.
 // ---------------------------------------------------------------------------
 
-import { buildProductIndex } from '../lib/search-index';
+// ⚠️ (۴ آذر ۱۴۰۵، O32) حالا *همه‌ی* لایه‌ها: ساختار (سیلو/دسته/برند) + محصولات با تصویر ۱۶۰px، موجودی و اصالت.
+// تنها مصرف‌کننده‌ها پنل جستجوی فوری (src/scripts/search-overlay.ts) و صفحه‌ی /search/ هستند و هر دو فقط با تعامل
+// کاربر واکشی می‌کنند. لایه‌ی ساختاری دیگر در HTML هیچ صفحه‌ای inline نیست (SearchBox.astro حذف شد) — پس این فایل
+// تنها منبع است. نشانی‌های ساختاری «/» پایانی می‌گیرند (هر کلیک بی‌آن یک ۳۰۱ اضافه بود).
+import { getImage } from 'astro:assets';
+import { buildProductIndex, buildStructuralIndex } from '../lib/search-index';
 import { getAllProducts } from '../lib/wp';
+import { withTrailingSlash } from '../lib/urls.mjs';
 
 export async function GET() {
-  const products = await getAllProducts();
-  const index = buildProductIndex(products);
+  const products = (await getAllProducts()).filter((p) => !p.isDemo);
+  const extras = new Map(
+    await Promise.all(products.map(async (p) => [p.slug, {
+      image: p.images[0] ? (await getImage({ src: p.images[0].url, width: 160, height: 160, format: 'avif', inferSize: false })).src : undefined,
+      stock: p.stockStatus,
+      original: p.authenticity === 'original' || undefined,
+    }] as const)),
+  );
+  // شمار کالای هر دسته — حالت خالی پنل فقط دسته‌های دارای کالا را پیشنهاد می‌دهد (۲۷ دسته‌ی خالی وعده‌ی توخالی‌اند).
+  const catCount = new Map<string, number>();
+  for (const p of products) for (const c of p.categorySlugs) catCount.set(c, (catCount.get(c) ?? 0) + 1);
+  const index = [
+    ...buildProductIndex(products).map((e) => ({ ...e, ...extras.get(e.href.split('/')[2] ?? '') })),
+    ...buildStructuralIndex().map((e) => ({ ...e, href: withTrailingSlash(e.href), ...(e.kind === 'category' ? { count: catCount.get(e.href.split('/')[3] ?? '') ?? 0 } : {}) })),
+  ];
 
   return new Response(JSON.stringify(index), {
     headers: {

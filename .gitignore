@@ -27,3 +27,5 @@ Thumbs.db
 craneyadak-final.zip
 /*.zip
 !wordpress-plugin/*.zip
+# باندل جستجوی فوری — astro.config.mjs در هر build/dev با esbuild می‌سازد (O32)
+public/scripts/search-overlay.js

@@ -12,6 +12,31 @@ import sitemap from '@astrojs/sitemap';
 // Pagefind درباره‌ی «صفحه بدون <html>» مربوط به همین‌هاست و
 // `scripts/check-pagefind.mjs` تعدادشان را با همین فهرست تطبیق می‌دهد.
 import { LEGACY_REDIRECTS, SITE_ORIGIN } from './src/data/legacy-redirects.mjs';
+import { buildSync } from 'esbuild';
+import { createHash } from 'node:crypto';
+
+// ═══ جستجوی فوری (O32، ۴ آذر ۱۴۰۵): باندل جدا، بیرون از گراف ماژول Vite ═══
+// ⚠️ چرا نه import() پویا از اسکریپت هدر (اندازه‌گیری‌شده): Vite هر import() را با __vitePreload می‌پیچد و تکه‌ی
+// preload-helper را *ایستا* به اسکریپت هدر می‌افزاید — حتی با modulePreload:false. یعنی یک درخواست JS عمق‌دو روی
+// همه‌ی صفحه‌ها؛ Lighthouse موبایل صفحه‌ی محصول ۰٫۹۸ شد (۱۶⇒۱۷ درخواست، LCP ۲٫۱⇒۲٫۳s؛ backlog O23).
+// پس src/scripts/search-overlay.ts همین‌جا با esbuild به public/scripts/search-overlay.js باندل می‌شود (gitignore شده،
+// در هر build/dev تازه) و هدر فقط با اولین تماس با ورودی یک تگ <script> به آن می‌افزاید (import() را Vite می‌پیچد).
+// نشانی ?v=<هش محتوا> دارد: فایل در public/ است و کش بلند _astro/ را ندارد، ولی نسخه‌ی کهنه هم نباید بماند.
+const searchBundle = buildSync({
+  entryPoints: ['src/scripts/search-overlay.ts'],
+  bundle: true,
+  minify: true,
+  format: 'iife',
+  target: 'es2020',
+  outfile: 'public/scripts/search-overlay.js',
+  write: false,
+});
+const searchCode = searchBundle.outputFiles[0].contents;
+await import('node:fs').then((fs) => {
+  fs.mkdirSync('public/scripts', { recursive: true });
+  fs.writeFileSync('public/scripts/search-overlay.js', searchCode);
+});
+const SEARCH_URL = `/scripts/search-overlay.js?v=${createHash('sha256').update(searchCode).digest('hex').slice(0, 10)}`;
 
 // https://astro.build/config
 export default defineConfig({
@@ -88,6 +113,7 @@ export default defineConfig({
   ],
 
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    define: { __SEARCH_URL__: JSON.stringify(SEARCH_URL) },
   }
 });
