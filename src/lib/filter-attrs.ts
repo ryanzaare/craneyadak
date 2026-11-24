@@ -7,7 +7,8 @@
 import { specValue, type ResolvedFacet } from '../data/filters';
 import { computePrice, type CraneProduct } from './wp';
 
-export function filterAttrs(p: CraneProduct, facets: ResolvedFacet[]): Record<string, string> {
+/** docs = اسلاگ کالاهایی که کاتالوگ PDF پیوندشده دارند (getCatalogs) — فیلتر «دارای کاتالوگ». */
+export function filterAttrs(p: CraneProduct, facets: ResolvedFacet[], docs: ReadonlySet<string> = new Set()): Record<string, string> {
   const price = computePrice(p);
   const attrs: Record<string, string> = {
     'data-cat-item': '',
@@ -21,6 +22,10 @@ export function filterAttrs(p: CraneProduct, facets: ResolvedFacet[]): Record<st
     'data-modified': p.modified ?? '',
     // فقط «اصلی» ثبت‌شده؛ ثبت‌نشده هرگز اصل حساب نمی‌شود (ادعای اصالت باید صریح باشد).
     'data-original': p.authenticity === 'original' ? '1' : '0',
+    // «جستجو در نتایج»: نام و کد فنی، همان چیزی که خریدار تایپ می‌کند.
+    'data-text': `${p.name} ${p.sku ?? ''}`.trim(),
+    'data-discount': price.payable && price.onSale ? '1' : '0',
+    'data-catalog': docs.has(p.slug) ? '1' : '0',
   };
   for (const f of facets) {
     const raw = specValue(p, f.specLabel);

@@ -39,6 +39,7 @@ import { SITE } from '../../data/site';
 import { productReadiness } from '../../lib/indexability';
 import { allFacets } from '../../data/filters';
 import { filterAttrs } from '../../lib/filter-attrs';
+import { getCatalogs } from '../../lib/catalogs';
 
 const all = await getAllProducts();
 
@@ -104,7 +105,8 @@ const jsonLd = {
 // ⚠️ پیش از ۳ آذر ۱۴۰۵ آرشیو هیچ فیلتر مشخصه‌ای نداشت («مشخصه‌ها بین دسته‌ها هم‌معنا نیستند»). فیلتر خودکار فقط
 // برچسبی را می‌گیرد که مقدارش بین کالاها مشترک است، پس هم‌معنایی را خود داده تضمین می‌کند.
 const facets = allFacets(products, []);
-const facetAttrs = (p: (typeof products)[number]) => filterAttrs(p, facets);
+const docSlugs = new Set((await getCatalogs()).flatMap((c) => c.productSlugs));
+const facetAttrs = (p: (typeof products)[number]) => filterAttrs(p, facets, docSlugs);
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd} noindex={noindexArchive} explore={{ skipProducts: true }}>
@@ -129,7 +131,7 @@ const facetAttrs = (p: (typeof products)[number]) => filterAttrs(p, facets);
         <EmptyState title="هنوز محصولی منتشر نشده است." text="کاتالوگ در حال تکمیل است. کد فنی یا عکس پلاک را بفرستید تا مستقیم استعلام کنیم."
           whatsappHref={contact.whatsappHref} telHref={contact.telHref} />
       ) : (
-        <CategoryFilterBar products={products} facets={facets} categories={categoryChips}>
+        <CategoryFilterBar products={products} facets={facets} categories={categoryChips} docCount={products.filter((p) => docSlugs.has(p.slug)).length}>
 
           <div data-cat-view="list" hidden>
             <div class="hidden lg:grid lg:grid-cols-[7rem_9rem_1fr_7rem_10rem_8rem_9rem_auto] gap-x-4 px-3 py-2 text-xs font-bold text-steel-600 bg-steel-100 border border-steel-300 border-b-0 rounded-t">

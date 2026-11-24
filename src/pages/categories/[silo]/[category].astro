@@ -18,6 +18,7 @@ import ProductRow from '../../../components/ProductRow.astro';
 import EmptyState from '../../../components/EmptyState.astro';
 import { allFacets } from '../../../data/filters';
 import { filterAttrs } from '../../../lib/filter-attrs';
+import { getCatalogs } from '../../../lib/catalogs';
 import { getCategoryFacets } from '../../../lib/category-facets';
 import { buildTitle, buildDescription } from '../../../lib/seo-meta';
 import { SITE } from '../../../data/site';
@@ -207,7 +208,10 @@ const jsonLd = {
 // فیلترهای مشخصه: تعریف‌شده در وردپرس + خودکار از برچسب‌های مشترک (src/data/filters.ts allFacets). مقادیر از خودِ
 // محصولات. صفت‌های داده‌ی کارت‌ها از همین آرایه (src/lib/filter-attrs.ts) — یک منبع برای نوار و کارت.
 const catFacets = allFacets(products, await getCategoryFacets(category.slug));
-const catAttrs = (product: typeof products[number]) => filterAttrs(product, catFacets);
+const docSlugs = new Set((await getCatalogs()).flatMap((c) => c.productSlugs));
+const catAttrs = (product: typeof products[number]) => filterAttrs(product, catFacets, docSlugs);
+// گروه «دسته» در صفحه‌ی دسته = پیوند به دسته‌های هم‌سیلو (فیلتر این دسته بی‌معناست؛ راه دسته‌ی کناری است — الگوی دیجی‌کالا).
+const relatedCats = [{ name: category.name, href: categoryPath({ ...category, silo }), current: true }, ...siblings.map((c) => ({ name: c.name, href: categoryPath({ ...c, silo }), current: false }))];
 import { getContact } from '../../../lib/site-options';
 
 /* ⚠️ اعلان‌های داده‌ی وردپرس بلافاصله بعد از import ها.
@@ -244,7 +248,7 @@ const contact = await getContact();
     <h2 id="products-list-heading" class="sr-only">{`فهرست قطعات ${displayName}`}</h2>
     <div class="max-w-7xl mx-auto">
       {products.length > 0 ? (
-        <CategoryFilterBar products={products} facets={catFacets}>
+        <CategoryFilterBar products={products} facets={catFacets} related={relatedCats} docCount={products.filter((p) => docSlugs.has(p.slug)).length}>
 
           {/* نمای جدول — دوم؛ کارت پیش‌فرض است (کارفرما، ۳ آبان ۱۴۰۵): کد · نام · برند · مشخصه‌ی کلیدی · موجودی · قیمت · افزودن سریع. */}
           <div data-cat-view="list" hidden>

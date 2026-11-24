@@ -2,7 +2,7 @@
 // فیلتر صفحه‌ی دسته (Frontend v2، فاز ۲ — تصمیم ۲ کارفرما، docs/frontend-v2.md §10): چیپ‌های «همه / موجود /
 // استعلامی» + برند + مشخصه، ترکیب‌پذیر و در URL. ورودی خراب عمداً هست (قاعده‌ی ۶)؛ پیش از پیاده‌سازی، روی
 // stub قرمز دیده شد.
-import { matches, parseState, toQuery, compareItems, EMPTY, type FilterState, type ItemData } from './category-filter.ts';
+import { matches, parseState, toQuery, compareItems, money, EMPTY, type FilterState, type ItemData } from './category-filter.ts';
 
 let failed = 0;
 const eq = (name: string, got: unknown, want: unknown) => {
@@ -11,7 +11,7 @@ const eq = (name: string, got: unknown, want: unknown) => {
   if (!ok) failed++;
 };
 
-const item = (o: Partial<ItemData>): ItemData => ({ stock: 'in_stock', priced: false, brand: 'saga', specs: {}, categories: [], price: null, modified: '', original: false, ...o });
+const item = (o: Partial<ItemData>): ItemData => ({ stock: 'in_stock', priced: false, brand: 'saga', specs: {}, categories: [], price: null, modified: '', original: false, text: '', discount: false, catalog: false, ...o });
 const S = (o: Partial<FilterState>): FilterState => ({ ...EMPTY, ...o, specs: { ...(o.specs ?? {}) }, ranges: { ...(o.ranges ?? {}) } });
 
 console.log('── چیپ موجودی');
@@ -34,6 +34,18 @@ eq('«فقط اصل» → اصلی می‌ماند، ثبت‌نشده حذف', 
 eq('خاموش → همه', matches(item({ original: false }), S({})), true);
 eq('URL رفت‌وبرگشت orig=1', parseState(new URLSearchParams(toQuery(S({ original: true })))).original, true);
 eq('orig=0 یا خراب ⇒ خاموش', [parseState(new URLSearchParams('orig=0')).original, parseState(new URLSearchParams('orig=yes')).original], [false, false]);
+
+console.log('── بازه‌ی قیمت، جستجو در نتایج، تخفیف، کاتالوگ (۴ آذر ۱۴۰۵)');
+eq('بازه: داخل/بیرون', [matches(item({ price: 500 }), S({ pmin: 100, pmax: 600 })), matches(item({ price: 700 }), S({ pmax: 600 })), matches(item({ price: 50 }), S({ pmin: 100 }))], [true, false, false]);
+eq('بازه: کالای استعلامی بیرون', matches(item({ price: null }), S({ pmin: 0 })), false);
+eq('بی بازه: استعلامی می‌ماند', matches(item({ price: null }), S({})), true);
+eq('money: ارقام فارسی و جداکننده', [money('۱۲٬۵۰۰٬۰۰۰'), money('12,500'), money(' 300 ')], [12500000, 12500, 300]);
+eq('money: خراب/منفی/خالی ⇒ null', [money('-5'), money('abc'), money(''), money(null), money('1e9')], [null, null, null, null, null]);
+eq('جستجو: کد بی خط تیره و ارقام فارسی', [matches(item({ text: 'ریموت SAGA1-L10' }), S({ q: 'saga1l10' })), matches(item({ text: 'ريموت ساگا' }), S({ q: 'ریموت' })), matches(item({ text: 'L12' }), S({ q: 'L10' }))], [true, true, false]);
+eq('تخفیف و کاتالوگ', [matches(item({ discount: false }), S({ discount: true })), matches(item({ catalog: true }), S({ catalog: true }))], [false, true]);
+const rt = parseState(new URLSearchParams(toQuery(S({ q: 'ساگا', pmin: 100, pmax: 900, discount: true, catalog: true }))));
+eq('URL رفت‌وبرگشت', [rt.q, rt.pmin, rt.pmax, rt.discount, rt.catalog], ['ساگا', 100, 900, true, true]);
+eq('URL خراب: pmin=abc ⇒ null', parseState(new URLSearchParams('pmin=abc&pmax=-1')).pmin, null);
 
 console.log('── دسته (آرشیو /products/ — فاز ۳)');
 eq('دسته: هرکدام از انتخاب‌ها', [matches(item({ categories: ['remote-control', 'x'] }), S({ cats: ['remote-control'] })), matches(item({ categories: ['brake'] }), S({ cats: ['remote-control'] }))], [true, false]);

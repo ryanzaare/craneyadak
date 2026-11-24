@@ -25,11 +25,15 @@ interface Props {
   products: CraneProduct[];
   /** فیلترهای مشخصه (وردپرس + خودکار) — همان آرایه‌ای که صفت‌های data-spec کارت‌ها از آن ساخته شده. */
   facets: ResolvedFacet[];
-  /** آرشیو /products/: گروه دسته — فقط دسته‌های دارای کالا، از ۲ دسته. */
+  /** آرشیو /products/: گروه دسته (چک‌باکس) — دسته‌های دارای کالا. */
   categories?: { slug: string; name: string; count: number }[];
+  /** صفحه‌ی دسته: گروه دسته = پیوند به دسته‌های هم‌سیلو (فیلتر کردن خودِ دسته بی‌معناست). */
+  related?: { name: string; href: string; current: boolean }[];
+  /** شمار کالاهای دارای کاتالوگ PDF (همان مجموعه‌ای که data-catalog کارت‌ها از آن ساخته شده). */
+  docCount?: number;
 }
 
-const { products, facets, categories = [] } = Astro.props;
+const { products, facets, categories = [], related = [], docCount = 0 } = Astro.props;
 
 const brandCounts = new Map<string, number>();
 for (const p of products) if (p.brandSlug) brandCounts.set(p.brandSlug, (brandCounts.get(p.brandSlug) ?? 0) + 1);
@@ -38,9 +42,14 @@ const brands = BRANDS.filter((b) => brandCounts.has(b.slug));
 const inStock = products.filter((p) => p.stockStatus === 'in_stock').length;
 const rfq = products.filter((p) => !computePrice(p).payable).length;
 const originals = products.filter((p) => p.authenticity === 'original').length;
+const prices = products.map((p) => computePrice(p)).filter((x) => x.payable && x.effective !== null).map((x) => x.effective as number);
+const discounted = products.filter((p) => { const st = computePrice(p); return st.payable && st.onSale; }).length;
 const usefulSpecs = facets.filter((f) => (f.kind === 'range' ? f.min !== f.max : f.values.length >= 2));
 
 const fa = (n: number) => n.toLocaleString('fa-IR');
+const pmin = prices.length ? Math.min(...prices) : null;
+const pmax = prices.length ? Math.max(...prices) : null;
+const priceInput = 'w-full min-h-11 rounded-md border border-steel-300 bg-white px-3 text-base text-steel-900 tabular-nums disabled:bg-steel-100 disabled:text-steel-500';
 const opt = 'flex items-center gap-3 min-h-11 px-1 cursor-pointer rounded hover:bg-steel-50';
 const box = 'w-5 h-5 shrink-0 accent-action';
 const group = 'border-b border-steel-200 [&[open]>summary_svg]:rotate-180';
@@ -60,18 +69,56 @@ const chev = '<svg class="w-5 h-5 text-steel-500 transition-transform" fill="non
     </div>
 
     <div class="cat-panel-body">
+      {/* جستجو در نتایج (۴ آذر ۱۴۰۵) — نام یا کد فنی، با ی/ک عربی و خط تیره یکسان (normText). */}
+      <div class="px-4 pt-4 pb-3 border-b border-steel-200">
+        <label for="cat-q" class="block text-base font-bold text-steel-900 mb-2">جستجو در نتایج</label>
+        <input id="cat-q" type="search" data-cat-q autocomplete="off" placeholder="نام یا کد فنی" class={priceInput} />
+      </div>
       {/* کلیدهای سریع — مثل «فقط کالاهای موجود» دیجی‌کالا. */}
       <div class="px-4 py-3 border-b border-steel-200 space-y-1">
         <label class={opt}><input type="checkbox" data-cat-instock class={box} /><span class="flex-1 text-base text-steel-900">فقط کالای موجود</span><span class="text-sm text-steel-600 tabular-nums">{fa(inStock)}</span></label>
         {originals > 0 && (
           <label class={opt}><input type="checkbox" data-cat-original class={box} /><span class="flex-1 text-base text-steel-900">فقط کالای اصل</span><span class="text-sm text-steel-600 tabular-nums">{fa(originals)}</span></label>
         )}
+        {discounted > 0 && (
+          <label class={opt}><input type="checkbox" data-cat-discount class={box} /><span class="flex-1 text-base text-steel-900">فقط تخفیف‌دار</span><span class="text-sm text-steel-600 tabular-nums">{fa(discounted)}</span></label>
+        )}
+        {docCount > 0 && (
+          <label class={opt}><input type="checkbox" data-cat-doc class={box} /><span class="flex-1 text-base text-steel-900">دارای کاتالوگ PDF</span><span class="text-sm text-steel-600 tabular-nums">{fa(docCount)}</span></label>
+        )}
         {rfq > 0 && rfq < products.length && (
           <label class={opt}><input type="checkbox" data-cat-rfq class={box} /><span class="flex-1 text-base text-steel-900">فقط استعلامی (بدون قیمت آنلاین)</span><span class="text-sm text-steel-600 tabular-nums">{fa(rfq)}</span></label>
         )}
       </div>
 
-      {categories.length >= 2 && (
+      {/* بازه‌ی قیمت (۴ آذر ۱۴۰۵، الگوی دیجی‌کالا). ⚠️ همیشه دیده می‌شود تا خریدار بداند هست؛ وقتی هیچ کالای این
+          فهرست قیمت آنلاین ندارد، ورودی‌ها غیرفعال‌اند و دلیلش نوشته شده — فیلتری که همه را حذف کند بدتر از نبودنش است. */}
+      <details class={group} open>
+        <summary class={summary}><span>محدوده‌ی قیمت <span class="text-sm font-normal text-steel-600">(تومان)</span></span><Fragment set:html={chev} /></summary>
+        <div class="px-4 pb-4">
+          <div class="grid grid-cols-2 gap-2">
+            <label class="text-sm font-bold text-steel-700">از<input type="text" inputmode="numeric" data-cat-pmin disabled={!prices.length} placeholder={pmin !== null ? fa(pmin) : '—'} class={`${priceInput} mt-1`} /></label>
+            <label class="text-sm font-bold text-steel-700">تا<input type="text" inputmode="numeric" data-cat-pmax disabled={!prices.length} placeholder={pmax !== null ? fa(pmax) : '—'} class={`${priceInput} mt-1`} /></label>
+          </div>
+          {prices.length === 0 && <p class="mt-2 text-sm text-steel-600 leading-7">کالاهای این فهرست هنوز قیمت آنلاین ندارند و استعلامی‌اند؛ قیمت روز را با استعلام بگیرید.</p>}
+          {prices.length > 0 && rfq > 0 && <p class="mt-2 text-sm text-steel-600 leading-7">با بازه‌ی قیمت، کالاهای استعلامی (بی‌قیمت) کنار می‌روند.</p>}
+        </div>
+      </details>
+
+      {related.length > 0 && (
+        <details class={group} open>
+          <summary class={summary}>دسته‌بندی <Fragment set:html={chev} /></summary>
+          <ul class="px-4 pb-3" role="list">
+            {related.map((c) => (
+              <li>{c.current
+                ? <span class="flex items-center min-h-11 px-1 text-base font-bold text-accent-ink" aria-current="page">{c.name}</span>
+                : <a href={c.href} class="flex items-center min-h-11 px-1 rounded text-base text-steel-800 hover:bg-steel-50 hover:text-accent-ink">{c.name}</a>}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {categories.length >= 1 && (
         <details class={group} open>
           <summary class={summary}>دسته <Fragment set:html={chev} /></summary>
           <fieldset class="px-4 pb-3"><legend class="sr-only">دسته</legend>
@@ -82,7 +129,9 @@ const chev = '<svg class="w-5 h-5 text-steel-500 transition-transform" fill="non
         </details>
       )}
 
-      {brands.length >= 2 && (
+      {/* ⚠️ برند و دسته حتی با یک گزینه (کارفرما ۴ آذر ۱۴۰۵: «فیلتر برند و دسته نیست»): قاعده‌ی قبلی «فقط از ۲ گزینه»
+          منطقی بود ولی خریدار نمی‌فهمید فیلتر برند وجود دارد؛ با رشد کاتالوگ گزینه‌ها خودشان اضافه می‌شوند. */}
+      {brands.length >= 1 && (
         <details class={group} open>
           <summary class={summary}>برند <Fragment set:html={chev} /></summary>
           <fieldset class="px-4 pb-3"><legend class="sr-only">برند</legend>
@@ -166,7 +215,7 @@ const chev = '<svg class="w-5 h-5 text-steel-500 transition-transform" fill="non
 </div>
 
 <script>
-  import { matches, parseState, toQuery, compareItems, EMPTY, type FilterState, type ItemData, type SortMode } from './category-filter';
+  import { matches, parseState, toQuery, compareItems, money, EMPTY, type FilterState, type ItemData, type SortMode } from './category-filter';
 
   const root = document.querySelector<HTMLElement>('[data-category-filters]');
   if (root) {
@@ -183,6 +232,11 @@ const chev = '<svg class="w-5 h-5 text-steel-500 transition-transform" fill="non
     const inStockBox = root.querySelector<HTMLInputElement>('[data-cat-instock]');
     const rfqBox = root.querySelector<HTMLInputElement>('[data-cat-rfq]');
     const origBox = root.querySelector<HTMLInputElement>('[data-cat-original]');
+    const discBox = root.querySelector<HTMLInputElement>('[data-cat-discount]');
+    const docBox = root.querySelector<HTMLInputElement>('[data-cat-doc]');
+    const qEl = root.querySelector<HTMLInputElement>('[data-cat-q]');
+    const pminEl = root.querySelector<HTMLInputElement>('[data-cat-pmin]');
+    const pmaxEl = root.querySelector<HTMLInputElement>('[data-cat-pmax]');
     const brandBoxes = [...root.querySelectorAll<HTMLInputElement>('[data-cat-brand]')];
     const specBoxes = [...root.querySelectorAll<HTMLInputElement>('[data-cat-spec]')];
     const ranges = [...root.querySelectorAll<HTMLInputElement>('[data-cat-range]')];
@@ -198,6 +252,7 @@ const chev = '<svg class="w-5 h-5 text-steel-500 transition-transform" fill="non
         stock: el.dataset.stock ?? '', priced: el.dataset.priced === '1', brand: el.dataset.brand ?? '', specs,
         categories: (el.dataset.categories ?? '').split(' ').filter(Boolean), price, modified: el.dataset.modified ?? '',
         original: el.dataset.original === '1',
+        text: el.dataset.text ?? '', discount: el.dataset.discount === '1', catalog: el.dataset.catalog === '1',
       };
     };
     const itemData = new Map(items.map((el) => [el, data(el)]));
@@ -207,6 +262,11 @@ const chev = '<svg class="w-5 h-5 text-steel-500 transition-transform" fill="non
       ...EMPTY,
       stock: inStockBox?.checked ? 'in' : rfqBox?.checked ? 'rfq' : 'all',
       original: !!origBox?.checked,
+      discount: !!discBox?.checked,
+      catalog: !!docBox?.checked,
+      q: (qEl?.value ?? '').trim(),
+      pmin: pminEl?.disabled ? null : money(pminEl?.value),
+      pmax: pmaxEl?.disabled ? null : money(pmaxEl?.value),
       brands: brandBoxes.filter((b) => b.checked).map((b) => b.value),
       cats: catBoxes.filter((b) => b.checked).map((b) => b.value),
       specs: specBoxes.reduce<Record<string, string[]>>((acc, b) => { if (b.checked) (acc[b.dataset.catSpec!] ??= []).push(b.value); return acc; }, {}),
@@ -219,6 +279,11 @@ const chev = '<svg class="w-5 h-5 text-steel-500 transition-transform" fill="non
       if (inStockBox) inStockBox.checked = s.stock === 'in';
       if (rfqBox) rfqBox.checked = s.stock === 'rfq';
       if (origBox) origBox.checked = s.original;
+      if (discBox) discBox.checked = s.discount;
+      if (docBox) docBox.checked = s.catalog;
+      if (qEl) qEl.value = s.q;
+      if (pminEl && !pminEl.disabled) pminEl.value = s.pmin === null ? '' : fa(s.pmin);
+      if (pmaxEl && !pmaxEl.disabled) pmaxEl.value = s.pmax === null ? '' : fa(s.pmax);
       for (const b of brandBoxes) b.checked = s.brands.includes(b.value);
       for (const b of catBoxes) b.checked = s.cats.includes(b.value);
       for (const b of specBoxes) b.checked = (s.specs[b.dataset.catSpec!] ?? []).includes(b.value);
@@ -248,7 +313,13 @@ const chev = '<svg class="w-5 h-5 text-steel-500 transition-transform" fill="non
     const textOf = (el: HTMLInputElement) => el.closest('label')?.querySelector('span')?.textContent?.trim() ?? el.value;
     const renderChips = () => {
       const on: { label: string; off: () => void }[] = [];
-      for (const b of [inStockBox, rfqBox, origBox]) if (b?.checked) on.push({ label: textOf(b), off: () => (b.checked = false) });
+      for (const b of [inStockBox, rfqBox, origBox, discBox, docBox]) if (b?.checked) on.push({ label: textOf(b), off: () => (b.checked = false) });
+      if (qEl?.value.trim()) on.push({ label: `جستجو: ${qEl.value.trim()}`, off: () => (qEl.value = '') });
+      const lo = money(pminEl?.value), hi = money(pmaxEl?.value);
+      if (lo !== null || hi !== null) on.push({
+        label: `قیمت: ${lo !== null ? `از ${fa(lo)}` : ''}${lo !== null && hi !== null ? ' ' : ''}${hi !== null ? `تا ${fa(hi)}` : ''} تومان`,
+        off: () => { if (pminEl) pminEl.value = ''; if (pmaxEl) pmaxEl.value = ''; },
+      });
       for (const b of [...catBoxes, ...brandBoxes]) if (b.checked) on.push({ label: textOf(b), off: () => (b.checked = false) });
       for (const b of specBoxes) if (b.checked) on.push({ label: `${b.dataset.label}: ${b.value}`, off: () => (b.checked = false) });
       for (const r of ranges) if (r.value !== r.max) on.push({ label: `${r.dataset.label}: تا ${r.value}`, off: () => (r.value = r.max) });
@@ -310,7 +381,12 @@ const chev = '<svg class="w-5 h-5 text-steel-500 transition-transform" fill="non
 
     inStockBox?.addEventListener('change', () => { if (inStockBox.checked && rfqBox) rfqBox.checked = false; apply(); });
     rfqBox?.addEventListener('change', () => { if (rfqBox.checked && inStockBox) inStockBox.checked = false; apply(); });
-    for (const el of [origBox, ...brandBoxes, ...specBoxes, ...catBoxes]) el?.addEventListener('change', () => apply());
+    for (const el of [origBox, discBox, docBox, ...brandBoxes, ...specBoxes, ...catBoxes]) el?.addEventListener('change', () => apply());
+    // جستجو و قیمت: با تایپ (کمی درنگ) — هر کلید یک بار کل فهرست را نمی‌چیند.
+    let typing: number | undefined;
+    for (const el of [qEl, pminEl, pmaxEl]) el?.addEventListener('input', () => { clearTimeout(typing); typing = window.setTimeout(() => apply(), 250); });
+    // قیمت با جداکننده‌ی هزارگان فارسی پس از ترک فیلد: «۱۲۵۰۰۰۰۰» ⇒ «۱۲٬۵۰۰٬۰۰۰».
+    for (const el of [pminEl, pmaxEl]) el?.addEventListener('change', () => { const v = money(el.value); el.value = v === null ? '' : fa(v); apply(); });
     sortEl?.addEventListener('change', () => apply());
     for (const r of ranges) r.addEventListener('input', () => {
       const out = root.querySelector<HTMLElement>(`[data-range-out="${r.dataset.catRange}"]`);
