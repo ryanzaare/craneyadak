@@ -45,9 +45,9 @@ const jsonLd = {
         <strong>هشدار ایمنی:</strong> این صفحه راهنمای شناسایی است، نه بازرسی. جرثقیلی که یکی از این نشانه‌ها را دارد تا بررسی
         شخص صلاحیت‌دار با بار کار نکند.
       </div>
-      <nav class="mt-5 flex flex-wrap gap-2" aria-label="گروه‌های خرابی">
+      <nav class="mt-5 flex flex-wrap gap-2" aria-label="گروه‌های خرابی" data-ff-nav>
         {FAULT_GROUPS.map((g) => (
-          <a href={`#${g.id}`} class="inline-flex items-center min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-800 hover:border-action">{g.title} <span class="ms-2 text-xs text-steel-500">{g.faults.length.toLocaleString('fa-IR')}</span></a>
+          <a href={`#${g.id}`} data-ff-chip={g.id} class="inline-flex items-center min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-800 hover:border-action aria-[current=true]:bg-steel-900 aria-[current=true]:text-white aria-[current=true]:border-steel-900">{g.title} <span class="ms-2 text-xs text-steel-500">{g.faults.length.toLocaleString('fa-IR')}</span></a>
         ))}
       </nav>
     </div>
@@ -89,3 +89,28 @@ const jsonLd = {
     </div>
   </div>
 </Layout>
+
+<script>
+  /* نشانی همراه اسکرول (کارفرما ۶ آذر ۱۴۰۵): با کلیک «ریموت کنترل» نشانی #remote می‌شد و با اسکرول بالا/پایین همان
+     می‌ماند — راهی به /fault-finder/ نبود. حالا گروهِ در دید نشانی را می‌سازد (replaceState، بی پرش و بی ورودی تاریخچه)،
+     بالای صفحه نشانی بی # است، و چیپ همان گروه پررنگ می‌شود. ⚠️ فقط #شناسه‌ی همین صفحه — هیچ نشانی تازه‌ای برای گوگل نیست. */
+  const sections = [...document.querySelectorAll<HTMLElement>('main section[id]')].filter((s) => document.querySelector(`[data-ff-chip="${s.id}"]`));
+  const chips = [...document.querySelectorAll<HTMLElement>('[data-ff-chip]')];
+  let current = '';
+  const set = (id: string) => {
+    if (id === current) return;
+    current = id;
+    history.replaceState(null, '', id ? `#${id}` : location.pathname + location.search);
+    for (const c of chips) c.setAttribute('aria-current', String(c.dataset.ffChip === id));
+  };
+  const onScroll = () => {
+    // گروهی که بالایش از خط ۴۰٪ صفحه‌نما گذشته؛ پیش از اولین گروه = هیچ (نشانی پایه).
+    const line = window.innerHeight * 0.4;
+    let id = '';
+    for (const s of sections) if (s.getBoundingClientRect().top <= line) id = s.id;
+    set(id);
+  };
+  let raf = 0;
+  window.addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(onScroll); }, { passive: true });
+  onScroll();
+</script>

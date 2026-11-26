@@ -62,6 +62,11 @@ const featured = [...new Map([...storefront.onSale, ...storefront.inStock, ...st
 // فهرست تازه‌ترین‌ها را هم دارد؛ با کالای ناموجود/استعلامی همان عنوان ادعای نادرست موجودی می‌شد (قاعده‌ی ۲).
 const featuredTitle = featured.slice(0, 3).every((p) => p.stockStatus === 'in_stock') ? 'موجود در انبار — ارسال سریع' : 'تازه‌ترین قطعات افزوده‌شده';
 const presence = await getCatalogPresence();
+// ⚠️ فقط دسته‌های دارای کالا (ممیزی ۶ آذر ۱۴۰۵، پذیرفته): ۴ چیپ از ۵ به صفحه‌ی خالی می‌رفت و اعتماد خریدار در
+// ۱۰ ثانیه‌ی اول می‌ریخت. با پر شدن دسته‌ها خودکار برمی‌گردند (همان presence که بخش سیلوها می‌خواند — پایین‌تر).
+const quickSuggestionsAll = getQuickSuggestions();
+const filledHrefs = new Set(presence.silos.flatMap((s) => s.categories.map((c) => categoryPath({ ...c.category, silo: s.silo }))));
+const quickSuggestions = quickSuggestionsAll.filter((q) => filledHrefs.has(q.href) || filledHrefs.has(q.href.replace(/\/?$/, '/')));
 const advantages = await getAdvantages();
 const mobile = mobileLine(contact);
 /* آیکن هر مزیت طراحی است، نه محتوا — با ترتیب ردیف‌های پنل جفت می‌شود؛ پنجم به بعد آیکن عمومی. */
@@ -79,7 +84,6 @@ const STEPS = [
   ['تایید و فاکتور مالیاتی', 'پس از تایید و پرداخت، فاکتور رسمی و مالیاتی در صورت درخواست صادر می‌شود.', 'M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6 M9 16h3'],
   ['ارسال سریع', 'ارسال در سریع‌ترین زمان ممکن.', 'M3 8h11v9H3z M14 11h4l3 3v3h-7z M7 20a2 2 0 100-4 2 2 0 000 4z M17 20a2 2 0 100-4 2 2 0 000 4z'],
 ];
-const quickSuggestions = getQuickSuggestions();
 // اعتماد: فقط ادعای verified (trust.ts — همان قاعده‌ی JSON-LD)؛ نشان وابسته به اصالت روی صفحه‌ی اصلی معنا ندارد.
 const trust = TRUST_BADGES.filter((b) => b.verified && !b.onlyIfAuthenticity);
 const faultCount = FAULT_GROUPS.reduce((n, g) => n + g.faults.length, 0);
@@ -243,7 +247,7 @@ const jsonLd = {
         <p class="inline-flex items-center gap-2 text-sm font-bold text-accent mb-3">
           <span class="w-2 h-2 rounded-full bg-accent" aria-hidden="true"></span>تامین قطعات اصل جرثقیل سقفی
         </p>
-        <h1 id="hero-heading" class="text-3xl md:text-4xl font-black leading-[1.45] text-white">
+        <h1 id="hero-heading" class="text-3xl md:text-4xl font-black leading-[1.45] text-white [text-wrap:balance]">
           {/* ⚠️ عبارت هدف صفحه‌ی اصلی «قطعات یدکی جرثقیل سقفی» عیناً در H1 می‌ماند (سئو اولویت اول؛ H1 قبلی هم همین را
               داشت). نیمه‌ی دوم پیام است، نه کلیدواژه. */}
           قطعات یدکی جرثقیل سقفی، <span class="text-accent">با کد فنی درست</span>
@@ -286,10 +290,11 @@ const jsonLd = {
     {/* دسته‌های پرکاربرد — ردیف قابل‌کشیدن موبایل، از md شکستنی. */}
     <div class="border-t border-steel-800">
       <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex flex-nowrap md:flex-wrap items-center gap-2 text-sm overflow-x-auto md:overflow-visible whitespace-nowrap no-scrollbar">
-        <span class="text-steel-400 shrink-0">{QUICK_LINKS_LABEL}</span>
+        <span class="text-steel-300 shrink-0">{QUICK_LINKS_LABEL}</span>
         {quickSuggestions.map((item) => (
           <a href={item.href} class="shrink-0 inline-flex items-center min-h-10 px-3 rounded-full border border-steel-700 text-steel-200 hover:border-steel-400 hover:text-white">{item.label}</a>
         ))}
+        <a href="/categories/" class="shrink-0 inline-flex items-center min-h-10 px-3 font-bold text-white underline underline-offset-4 hover:text-accent">همه‌ی دسته‌ها ←</a>
       </div>
     </div>
   </section>

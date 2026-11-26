@@ -77,6 +77,15 @@ for (const q of ['saga1l12', 'ساگا', 'sag', 'dmeag', 'رکتیفایر', '؟
   eq(`«${q}» هرگز خالی نیست`, always(q).items.length > 0, true);
 }
 
+console.log('── گونه‌های نوشتاری مدل (مدیرعامل ۶ آذر ۱۴۰۵: «ال» به‌جای L، «ساگآ»، «ساگا۱۰»)');
+eq('normalizeFa: «ال ۱۲»/«ال۱۲»/«اِل 12» ⇒ l12', [normalizeFa('ساگا ال ۱۲'), normalizeFa('ساگا ال۱۲'), normalizeFa('ساگا اِل 12')], ['ساگا l12', 'ساگا l12', 'ساگا l12']);
+eq('normalizeFa: واژه‌ی «الکتروموتور ۳» دست نمی‌خورد', normalizeFa('الکتروموتور ۳'), 'الکتروموتور 3');
+eq('normalizeFa: «ساگآ» ⇒ «ساگا»، «ساگا۱۰» ⇒ «ساگا 10»', [normalizeFa('ساگآ'), normalizeFa('ساگا۱۰')], ['ساگا', 'ساگا 10']);
+eq('«ریموت ساگا ال۱۲» ⇒ L12 اول', top('ریموت ساگا ال۱۲'), '/products/saga-saga1-l12/');
+const l10 = productEntry({ slug: 'saga-saga1-l10', name: 'ریموت کنترل ساگا L10', sku: 'SAGA1-L10', brandNameFa: 'ساگا', brandNameEn: 'Saga', oemPartNumbers: [] });
+eq('«ساگا ال ۱۰» ⇒ L10 اول، نه L12', suggest([saga, l10, magnet, category], 'ساگا ال ۱۰', 3)[0]?.href, '/products/saga-saga1-l10/');
+eq('«ساگا ال ۱۲» ⇒ L12 اول، نه L10', suggest([l10, saga, magnet, category], 'ساگا ال ۱۲', 3)[0]?.href, '/products/saga-saga1-l12/');
+
 if (failed) {
   console.error(`\n❌ ${failed} آزمون جستجو شکست خورد.`);
   process.exit(1);
