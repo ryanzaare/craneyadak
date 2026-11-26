@@ -226,81 +226,70 @@ const jsonLd = {
 ---
 
 <Layout title={title} description={description} jsonLd={jsonLd} explore={{ skipProducts: true, skipCatalog: true }}>
-  {/* ════════════════════ ۱) هیرو بنتو ════════════════════
-      سه سلول در یک شبکه‌ی «خط مو» (gap-px روی steel-300): جستجو (عمل اصلی — بیشتر بازدیدکننده‌ها کد فنی دارند)،
-      عکس پلاک در واتساپ (کسی که کد را نمی‌داند)، فهرست چندقلمی (مدیر خرید با فهرست توقف برنامه‌ریزی‌شده).
-      ⚠️ سلول اصلی (بازبینی کارفرما، ۳ آبان ۱۴۰۵): سفیدِ روی سفید بود و کوتاه‌تر از دو سلول کنار — زیر دکمه‌ی جستجو فضای
-      مرده می‌ماند. حالا سطح steel-50 + شبکه‌ی نقطه‌ای + ریل ۴px، و flex-col justify-between با نوار سه‌تایی پایین تا
-      دو ستون هم‌قد بسته شوند. ریل با border-s (منطقی = راست در RTL)، نه border-r. هیچ تصویر یا انیمیشنی — قفل سرعت. */}
-  <section class="bg-white border-b border-steel-300" aria-labelledby="hero-heading">
-    <div class="max-w-7xl mx-auto px-4 md:px-6 py-5 md:py-8">
-      <div class="grid lg:grid-cols-12 gap-px bg-steel-300 border border-steel-300 rounded-md overflow-hidden">
-        <div class="lg:col-span-8 lg:row-span-2 bg-steel-50 bg-blueprint border-s-4 border-s-action p-4 md:p-8 min-w-0 flex flex-col justify-between gap-5">
-          <div>
-            <h1 id="hero-heading" class="text-2xl md:text-3xl lg:text-4xl font-black text-steel-900 leading-[1.5] text-right">
-              مرجع تخصصی تأمین قطعات یدکی <span class="text-accent-ink">جرثقیل سقفی</span>
-            </h1>
-            {/* ⚠️ زیرعنوان بیرون از <h1> (۱۹ آبان ۱۴۰۵): تا پیش از این داخل h1 بود و متن H1 صفحه‌ی اصلی ۲۳ واژه
-                می‌شد («… جرثقیل سقفی ۳۱ دسته قطعه از ۱۹ برند — اصل، قابل ردیابی …»). H1 باید همان عبارت هدف بماند؛
-                ظاهر عوض نشده (همان کلاس‌ها). اعداد از خودِ تاکسونومی و وردپرس، با ارقام فارسی — نه از حدس. */}
-            <p class="text-base md:text-xl font-bold text-steel-600 mt-2 leading-8 text-right">
-              {fa(ALL_CATEGORIES.length)} دسته قطعه از {fa(BRANDS.length)} برند — اصل، قابل ردیابی با کد فنی، با ضمانت اصالت و فاکتور رسمی
-            </p>
-            <p class="mt-3 mb-5 text-sm md:text-base text-steel-700 leading-7 md:leading-8 max-w-2xl text-right">
-              کد فنی، عکس پلاک دستگاه یا عکس قطعه‌ی فرسوده کافی است — سازگاری را <strong class="font-bold text-steel-900">پیش از صدور پیش‌فاکتور</strong> بررسی می‌کنیم.
-            </p>
-            {/* ⚠️ جعبه‌ی جستجوی دوم حذف شد (کارفرما ۴ آذر ۱۴۰۵: «تکرارها را حذف کن»): ورودی هدر درست بالای همین‌جاست و
-                حالا خودش نتیجه را درجا نشان می‌دهد (O32). این دکمه همان ورودی را فوکوس می‌کند — یک جستجو در کل سایت. */}
-            <div class="flex flex-wrap gap-2">
-              <button type="button" data-focus-search class="inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-md bg-action text-white text-base font-bold hover:bg-accent-strong"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" /></svg>جستجوی کد فنی یا نام قطعه</button>
-              <a href="/part-finder/" class="inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-md border-2 border-steel-900 bg-white text-base font-bold text-steel-900 hover:bg-steel-100">ارسال عکس پلاک</a>
-            </div>
-            {/* موبایل: یک ردیف قابل‌کشیدن (کارفرما، ۴ آبان ۱۴۰۵ — پنج چیپ هر کدام یک خط، ~۲۳۰px)؛ از md شکستنی. */}
-            <div class="mt-3 flex flex-nowrap md:flex-wrap items-center gap-2 text-sm overflow-x-auto md:overflow-visible whitespace-nowrap no-scrollbar py-1 -my-1">
-              <span class="text-steel-600 shrink-0">{QUICK_LINKS_LABEL}</span>
-              {quickSuggestions.map((item) => (
-                <a href={item.href} class="shrink-0 inline-flex items-center min-h-9 px-3 rounded border border-steel-300 bg-white text-steel-800 hover:border-steel-500">{item.label}</a>
-              ))}
-            </div>
-          </div>
-          {/* سه تعهد کارفرما (متن خود کارفرما، ۳ آبان ۱۴۰۵؛ «کتبی» به خواست کارفرما حذف شد — همان ادعای تأییدشده‌ی «تعویض در صورت عدم تطابق با کد سفارش») — جای خالی زیر جستجو را می‌گیرد و دو ستون را هم‌قد می‌کند. */}
-          <ul class="border-t border-steel-200 pt-4 grid grid-cols-3 gap-2 text-xs text-steel-700 leading-5" role="list">
-            {['ضمانت تطابق با کد سفارش', 'صدور پیش‌فاکتور رسمی مالیاتی', 'تامین مستقیم و ارسال سریع'].map((t) => (
-              <li class="flex items-start gap-1.5">
-                <svg class="w-4 h-4 shrink-0 text-accent-ink" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                <span class="font-bold">{t}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {waPlate && (
-          <div class="lg:col-span-4 bg-white p-4 md:p-6 flex flex-col">
-            <h2 class="text-base font-bold text-steel-900 leading-7">کد فنی را نمی‌دانید؟</h2>
-            <p class="mt-1 mb-4 text-sm text-steel-700 leading-7">از پلاک مشخصات دستگاه یا خودِ قطعه عکس بگیرید و در واتساپ بفرستید تا قطعه‌ی سازگار شناسایی شود.</p>
-            <a href={waPlate} target="_blank" rel="noopener noreferrer" class="mt-auto inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md bg-whatsapp text-sm font-bold text-steel-950 hover:bg-whatsapp-strong">
-              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
-              ارسال عکس پلاک در واتساپ
+  {/* ════════════════════ ۱) هیرو — بازطراحی ۶ آذر ۱۴۰۵ ════════════════════
+      کارفرما: «هیرو از نظر ظاهر و تجربه ضعیف است؛ خیلی قدیمی به نظر می‌رسد و شلوغ است». نسخه‌ی قبل («بنتو») در یک قاب
+      ۱۲ عنصر داشت: عنوان، زیرعنوان، پاراگراف، دو دکمه، چیپ دسته‌ها، سه تعهد، جعبه‌ی واتساپ با دکمه‌ی تماس، و فرم
+      چندقلمی — و «ارسال عکس پلاک» سه بار (دکمه، جعبه‌ی واتساپ، و بخش ابزارها).
+      حالا: سطح گرافیتی پیوسته با هدر (یک بلوک تیره‌ی یکپارچه، نه قاب سفید روی سفید)، یک پیام، دو عمل:
+        • «جستجوی قطعه» — همان ورودی هدر را فوکوس می‌کند (یک جستجو در کل سایت، O32).
+        • «عکس پلاک در واتساپ» — برای کسی که کد را ندارد (پیوند مستقیم؛ نسخه‌ی کامل در قطعه‌یاب).
+      زیر آن سه عدد/تعهد واقعی (اعداد از تاکسونومی، نه حدس) و چیپ دسته‌های پرکاربرد. فرم چندقلمی به صفحه‌ی تماس رفت
+      (همان فرم که پارامتر parts را می‌خواند) و یک پیوند متنی جایش ماند؛ تماس تلفنی در نوار پایین موبایل و هدر هست.
+      ⚠️ سرعت: بی تصویر و بی انیمیشن — عنصر LCP همان متن است (صفحه‌ی اصلی روی مرز ۰٫۹۹، O23). شبکه‌ی پس‌زمینه گرادیان
+      CSS است (بی درخواست). */}
+  <section class="cy-hero bg-steel-900 text-white" aria-labelledby="hero-heading">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 pt-8 pb-8 md:pt-14 md:pb-12 lg:grid lg:grid-cols-12 lg:gap-10 lg:items-center">
+      <div class="lg:col-span-7">
+        <p class="inline-flex items-center gap-2 text-sm font-bold text-accent mb-3">
+          <span class="w-2 h-2 rounded-full bg-accent" aria-hidden="true"></span>تامین قطعات اصل جرثقیل سقفی
+        </p>
+        <h1 id="hero-heading" class="text-3xl md:text-4xl font-black leading-[1.45] text-white">
+          {/* ⚠️ عبارت هدف صفحه‌ی اصلی «قطعات یدکی جرثقیل سقفی» عیناً در H1 می‌ماند (سئو اولویت اول؛ H1 قبلی هم همین را
+              داشت). نیمه‌ی دوم پیام است، نه کلیدواژه. */}
+          قطعات یدکی جرثقیل سقفی، <span class="text-accent">با کد فنی درست</span>
+        </h1>
+        <p class="mt-4 text-base md:text-xl text-steel-300 leading-8 md:leading-9 max-w-2xl">
+          کد فنی یا عکس پلاک کافی است؛ سازگاری را <strong class="font-bold text-white">پیش از پیش‌فاکتور</strong> بررسی می‌کنیم.
+        </p>
+        <div class="mt-6 flex flex-col sm:flex-row gap-3">
+          <button type="button" data-focus-search class="inline-flex items-center justify-center gap-2 min-h-14 px-6 rounded-md bg-action text-white text-base md:text-xl font-bold hover:bg-accent-ink">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" /></svg>
+            جستجوی قطعه با کد یا نام
+          </button>
+          {waPlate ? (
+            <a href={waPlate} target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 min-h-14 px-6 rounded-md border-2 border-steel-600 text-base md:text-xl font-bold text-white hover:border-white">
+              <svg class="w-6 h-6 text-whatsapp" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
+              عکس پلاک در واتساپ
             </a>
-            {/* «تماس مستقیم با پشتیبانی» (کارفرما، ۴ آبان ۱۴۰۵): شماره‌گیری مستقیم خط همراه از تنظیمات وردپرس — هرگز ثابت در کد. */}
-            {mobile && (
-              <a href={mobile.href} class="mt-2 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-md border border-steel-300 bg-white text-sm font-bold text-steel-900 hover:border-steel-500">
-                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>
-                تماس مستقیم با پشتیبانی
-              </a>
-            )}
-          </div>
-        )}
+          ) : (
+            <a href="/part-finder/" class="inline-flex items-center justify-center gap-2 min-h-14 px-6 rounded-md border-2 border-steel-600 text-base md:text-xl font-bold text-white hover:border-white">ارسال عکس پلاک</a>
+          )}
+        </div>
+        <p class="mt-4 text-sm text-steel-300">فهرست چندقلمی دارید؟ <a href="/contact/" class="font-bold text-white underline underline-offset-4 hover:text-accent">یک‌جا بفرستید، یک پیش‌فاکتور بگیرید</a></p>
+      </div>
 
-        {/* فهرست چندقلمی — جانشین QuickOrder. GET به /contact با name="parts" (فرم تماس از فاز ۳ آن را می‌خواند).
-            بدون جاوااسکریپت کار می‌کند. */}
-        <form action="/contact/" method="get" class:list={['bg-white p-4 md:p-6 flex flex-col', waPlate ? 'lg:col-span-4' : 'lg:col-span-4 lg:row-span-2']}>
-          <h2 class="text-base font-bold text-steel-900 leading-7"><label for="bulk-parts">فهرست چندقلمی، یک پیش‌فاکتور</label></h2>
-          <p id="bulk-parts-hint" class="mt-1 mb-2 text-sm text-steel-700 leading-7">هر کد فنی در یک خط — سازگاری هر قلم بررسی و یک پیش‌فاکتور واحد صادر می‌شود.</p>
-          <textarea id="bulk-parts" name="parts" rows="2" dir="ltr" aria-describedby="bulk-parts-hint" placeholder={'SAGA1-L12\n...'}
-            class="w-full rounded-md border border-steel-300 bg-steel-50 p-2.5 text-sm font-mono leading-6 text-steel-900 placeholder:text-steel-500 focus:border-steel-600 focus:bg-white resize-y max-h-40"></textarea>
-          <button type="submit" class="mt-auto pt-0 inline-flex items-center justify-center min-h-11 px-4 rounded-md bg-action text-white text-sm font-bold hover:bg-accent-strong">درخواست پیش‌فاکتور</button>
-        </form>
+      {/* سه عدد/تعهد واقعی — اعداد از تاکسونومی (ALL_CATEGORIES، BRANDS)، تعهدها متن تأییدشده‌ی کارفرما (۳ آبان ۱۴۰۵). */}
+      <ul class="mt-8 lg:mt-0 lg:col-span-5 grid grid-cols-2 gap-px bg-steel-700 rounded-lg overflow-hidden border border-steel-700" role="list">
+        {[
+          { big: fa(ALL_CATEGORIES.length), small: 'دسته قطعه' },
+          { big: fa(BRANDS.length), small: 'برند جرثقیل و کنترل' },
+          { big: 'اصل', small: 'ضمانت تطابق با کد سفارش' },
+          { big: 'رسمی', small: 'پیش‌فاکتور و فاکتور مالیاتی' },
+        ].map((x) => (
+          <li class="bg-steel-800 p-4 md:p-5">
+            <span class="block text-2xl md:text-3xl font-black text-white tabular-nums">{x.big}</span>
+            <span class="block mt-1 text-sm text-steel-300 leading-6">{x.small}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+    {/* دسته‌های پرکاربرد — ردیف قابل‌کشیدن موبایل، از md شکستنی. */}
+    <div class="border-t border-steel-800">
+      <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex flex-nowrap md:flex-wrap items-center gap-2 text-sm overflow-x-auto md:overflow-visible whitespace-nowrap no-scrollbar">
+        <span class="text-steel-400 shrink-0">{QUICK_LINKS_LABEL}</span>
+        {quickSuggestions.map((item) => (
+          <a href={item.href} class="shrink-0 inline-flex items-center min-h-10 px-3 rounded-full border border-steel-700 text-steel-200 hover:border-steel-400 hover:text-white">{item.label}</a>
+        ))}
       </div>
     </div>
   </section>
@@ -355,7 +344,7 @@ const jsonLd = {
             ⚠️ بی eager: این بخش در هیچ عرضی بالای تا نیست و تصویر eager با فونت (عنصر LCP متنی) پهنای باند هم‌زمان
             می‌گرفت — Lighthouse موبایل ۰٫۹۸ شد (۲ آذر ۱۴۰۵). */}
         <ul class="flex sm:grid overflow-x-auto sm:overflow-visible snap-x snap-mandatory sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 -mx-4 px-4 sm:mx-0 sm:px-0 pb-2 no-scrollbar" role="list">
-          {featured.slice(0, 3).map((product) => <li class="w-[78vw] max-w-80 sm:w-auto sm:max-w-none shrink-0 snap-start"><ProductCard product={product} /></li>)}
+          {featured.slice(0, 3).map((product) => <li class="w-[78vw] max-w-80 sm:w-auto sm:max-w-none shrink-0 snap-start"><ProductCard product={product} sizes="(max-width: 639px) 78vw, (max-width: 1023px) 50vw, 33vw" /></li>)}
           {featured.length < 3 && (
             <li class:list={["bg-steel-50 border border-steel-300 border-s-4 border-s-action rounded-md p-6 flex flex-col gap-5 self-start", featured.length === 1 && "lg:col-span-2"]}>
               {/* ⚠️ self-start، نه کشیدن تا قد کارت محصول با justify-between (کارفرما، ۴ آبان ۱۴۰۵): همان ~۱۴۰px حفره را می‌ساخت.

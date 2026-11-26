@@ -864,3 +864,15 @@
   .cy-search-panel { inset: var(--sp-top) var(--sp-right) auto auto; width: min(40rem, 92vw); border: 1px solid var(--color-steel-300); border-radius: 0.5rem; box-shadow: 0 20px 50px rgb(0 0 0 / 0.18); overflow: hidden; }
   .cy-search-inner { height: auto; max-height: min(70vh, 40rem); }
 }
+
+/* ---- هیرو صفحه‌ی اصلی (۶ آذر ۱۴۰۵) ----
+   شبکه‌ی ۳۲px خط مو + یک هاله‌ی نارنجی کم‌رنگ از گوشه — فقط گرادیان CSS (بی درخواست، بی CLS). عمق می‌دهد بی آن‌که با
+   متن رقابت کند؛ متن همیشه روی steel-900 خالص خوانده می‌شود (هاله در گوشه‌ی دور از متن است). */
+.cy-hero {
+  background-color: var(--color-steel-900);
+  background-image:
+    radial-gradient(60rem 30rem at 0% 0%, rgb(234 88 12 / 0.14), transparent 60%),
+    linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: auto, 32px 32px, 32px 32px;
+}
