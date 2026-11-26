@@ -286,7 +286,9 @@ const contact = await getContact();
           whatsappHref={contact.whatsappHref}
           telHref={contact.telHref}
         >
-          <a href={`/contact/?category=${encodeURIComponent(displayName)}`} class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4">ثبت استعلام</a>
+          {/* ⚠️ بی ?category= (۶ آذر ۱۴۰۵): صفحه‌ی تماس آن را نمی‌خواند و هر دسته‌ی خالی یک نشانی تازه‌ی /contact/ برای
+              گوگل می‌ساخت (۲۷ نشانی تکراری) — همان الگوی «هزاران صفحه‌ی ایندکس‌نشده». نگهبان: scripts/check-crawl-traps.mjs. */}
+          <a href="/contact/" class="inline-flex items-center min-h-11 text-sm font-bold text-accent-ink hover:text-accent-strong hover:underline underline-offset-4">ثبت استعلام</a>
         </EmptyState>
       )}
     </div>
