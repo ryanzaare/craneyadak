@@ -240,6 +240,13 @@ function cyh_content_import( $payload, $opt = [] ) {
 					$what[] = 'کد فنی';
 					$apply && update_field( 'sku', sanitize_text_field( (string) $product['sku'] ), $target );
 				}
+				// ── نام‌های دیگر (قاعده‌ی ۱۱، ۷ آذر ۱۴۰۵): گونه‌های نوشتاری جستجو — هر خط یکی. فقط اگر در فایل هست، تا
+				//    آنچه کارفرما در پنل نوشته با فایل بی aka پاک نشود (همان دام sku: '' در ۳۰ آبان).
+				if ( isset( $product['aka'] ) && is_array( $product['aka'] ) ) {
+					$what[] = 'نام‌های دیگر';
+					$aka = array_values( array_filter( array_map( static fn( $v ) => sanitize_text_field( (string) $v ), $product['aka'] ) ) );
+					$apply && update_field( 'aka', implode( "\n", $aka ), $target );
+				}
 				if ( null !== $authenticity ) {
 					$what[] = 'اصالت';
 					$apply && update_field( 'authenticity', $authenticity, $target );

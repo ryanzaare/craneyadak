@@ -134,6 +134,8 @@ export interface CraneProduct {
    * یا افزونه هنوز قدیمی است. اختیاری است: بدون برچسب چیزی نمایش داده نمی‌شود.
    */
   authenticity: Authenticity | null;
+  /** نام‌های دیگر / گونه‌های نوشتاری جستجو (قاعده‌ی ۱۱، افزونه ۳.۳۳.۰). روی صفحه دیده می‌شوند و در جستجوی سایت. */
+  aka: string[];
 
   /**
    * آخرین تغییر/تأیید مقدار قیمت و پایان اعتبارش (ISO) — از کوئری
@@ -511,6 +513,7 @@ function normalizeProduct(node: RawProductNode): CraneProduct | null {
     buyMode: parseBuyMode(f?.buyMode),
     stockStatus: parseStockStatus(f?.stockStatus),
     authenticity: null,
+    aka: [],
     priceUpdatedAt: null,
     priceValidUntil: null,
 
@@ -1025,19 +1028,61 @@ async function fetchAuthenticity(): Promise<Map<string, Authenticity | null>> {
 
 let authenticityPromise: ReturnType<typeof fetchAuthenticity> | null = null;
 
+/*
+ * نام‌های دیگر (aka) — کوئری اختیاریِ **جدا** (قاعده‌ی ۱۱، ۷ آذر ۱۴۰۵؛ نردبان کوئری): افزونه‌ی پیش از ۳.۳۳.۰ این
+ * فیلد را ندارد؛ شکست = هیچ نام دیگری، سایت سالم. هر خط فیلد یک گونه.
+ */
+const AKA_QUERY = `
+  query CraneAka($first: Int!, $after: String) {
+    craneProducts(first: $first, after: $after, where: { status: PUBLISH }) {
+      pageInfo { hasNextPage endCursor }
+      nodes { slug productFields { aka } }
+    }
+  }
+`;
+
+async function fetchAka(): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (!isWpConfigured()) return map;
+  try {
+    let after: string | null = null;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const data: any = await wpQuery(AKA_QUERY, { first: PAGE_SIZE, after });
+      const conn = data?.craneProducts;
+      if (!conn) break;
+      for (const node of conn.nodes ?? []) {
+        const slug = cleanText(node?.slug);
+        const raw = typeof node?.productFields?.aka === 'string' ? node.productFields.aka : '';
+        const list = [...new Set(raw.split(/\r?\n/).map((v: string) => v.trim()).filter(Boolean))] as string[];
+        if (slug && list.length) map.set(slug, list);
+      }
+      if (!conn.pageInfo?.hasNextPage) break;
+      after = conn.pageInfo.endCursor ?? null;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`\n🔤 «نام‌های دیگر» محصولات خوانده نشد (افزونه‌ی ۳.۳۳.۰ و Sync «Product Fields»؟): ${message.slice(0, 200)}\n`);
+  }
+  return map;
+}
+
+let akaPromise: ReturnType<typeof fetchAka> | null = null;
+
 export async function getAllProducts(): Promise<CraneProduct[]> {
   catalogPromise ??= fetchAllProducts();
   extrasPromise ??= fetchOptionalExtras();
   validityPromise ??= fetchPriceValidity();
   authenticityPromise ??= fetchAuthenticity();
+  akaPromise ??= fetchAka();
 
-  const [products, extras, validity, authenticity] = await Promise.all([
+  const [products, extras, validity, authenticity, aka] = await Promise.all([
     catalogPromise,
     extrasPromise,
     validityPromise,
     authenticityPromise,
+    akaPromise,
   ]);
-  if (extras.size === 0 && validity.size === 0 && authenticity.size === 0) return products;
+  if (extras.size === 0 && validity.size === 0 && authenticity.size === 0 && aka.size === 0) return products;
 
   // ادغام — بدون تغییر آرایه‌ی اصلی.
   return products.map((product) => {
@@ -1048,6 +1093,7 @@ export async function getAllProducts(): Promise<CraneProduct[]> {
       ...(extra ? { community: extra.community, wpId: extra.wpId } : {}),
       ...(v ? { priceUpdatedAt: v.updatedAt, priceValidUntil: v.validUntil } : {}),
       authenticity: authenticity.get(product.slug) ?? null,
+      aka: aka.get(product.slug) ?? [],
     };
   });
 }

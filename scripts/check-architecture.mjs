@@ -313,6 +313,8 @@ const ALLOWED_GROUPS = {
   siteOptionsFields: 'تنظیمات سایت',
   authorProfile: 'E-E-A-T نویسنده',
   catalogFields: 'کاتالوگ و دفترچه‌ی PDF سازنده (/catalogs/ و دکمه‌ی دانلود محصول)',
+  faultFields: 'یابنده‌ی خرابی — هر نشانه با منبع و بند (قاعده‌ی ۱۰، ۷ آذر ۱۴۰۵)',
+  faultGroupFields: 'ترتیب گروه‌های یابنده‌ی خرابی',
 };
 
 const groups = {};
@@ -680,6 +682,33 @@ if (!wf) problems.push('.github/workflows/deploy.yml وجود ندارد.');
 else problems.push(...workflowProblems(wf, read('docs/deployment-guide.md')));
 
 // ═══ گزارش ══════════════════════════════════════════════════════════════
+
+// ───────────────────────────────────────────────────────────────────────────
+// بررسی ۱۰ — قاعده‌ی ۱۰ CLAUDE.md: وردپرس تنها منبع حقیقت محتواست (کارفرما، ۶ آذر ۱۴۰۵: «هرگز تکرار نشود»)
+// ───────────────────────────────────────────────────────────────────────────
+// شکست قبلی: یابنده‌ی خرابی با ۲۵ نشانه در src/data/faults.ts ساخته شد و کارفرما نمی‌توانست ویرایشش کند. هر فایل تازه
+// در src/data/ build را می‌شکند تا آگاهانه تصمیم گرفته شود: پیکربندی/منطق (مجاز با دلیل) یا محتوا (⇒ وردپرس).
+// بدهی‌های محتوایی موجود با برچسب O37 مجازند تا مهاجرت — فهرست کوچک‌شونده است، نه بزرگ‌شونده.
+const DATA_ALLOWED = {
+  'account-menu.ts': 'پیکربندی رابط (پیوندهای منوی حساب)',
+  'filters.ts': 'منطق فیلتر؛ تعریف فیلترها در وردپرس (categoryMeta.spec_facets)',
+  'filters.test.mts': 'آزمون',
+  'legacy-redirects.mjs': 'نقشه‌ی ریدایرکت فنی (CLAUDE.md)',
+  'site.ts': 'پیکربندی سایت (نشانی، نام)؛ تماس از وردپرس',
+  'taxonomy.ts': 'لایه‌ی خواندن تاکسونومی',
+  'taxonomy.generated.ts': 'خروجی build از وردپرس',
+  'popular-searches.ts': 'بدهی O37 — محتوا، باید به وردپرس برود',
+  'trust.ts': 'بدهی O37 — محتوا، باید به وردپرس برود',
+  'warranty.ts': 'بدهی O37 — محتوا، باید به وردپرس برود',
+  'warranty.test.mts': 'آزمون (بدهی O37)',
+};
+export function dataProblems(files) {
+  return files.filter((f) => !DATA_ALLOWED[f]).map((f) => `src/data/${f}: فایل داده‌ی تازه — محتوا جایش وردپرس است (قاعده‌ی ۱۰). اگر واقعاً پیکربندی/منطق است، با دلیل به DATA_ALLOWED بیفزایید.`);
+}
+// خودآزمون روی ورودی خراب (قاعده‌ی ۶): همان فایلی که این قاعده را لازم کرد باید گرفته شود.
+if (dataProblems(['faults.ts', 'site.ts']).length !== 1) problems.push('بررسی ۱۰ کور است: faults.ts را نگرفت');
+problems.push(...dataProblems(globSync('src/data/*').map((f) => path.basename(f))));
+
 if (problems.length) {
   console.error(`❌ ${problems.length} نقض معماری (docs/architecture.md):`);
   for (const p of problems) console.error(`   • ${p}`);

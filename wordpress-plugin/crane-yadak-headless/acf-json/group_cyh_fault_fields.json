@@ -1,0 +1,121 @@
+{
+    "key": "group_cyh_fault_fields",
+    "title": "Fault Fields",
+    "fields": [
+        {
+            "key": "field_cyh_fault_meaning",
+            "label": "معنی (طبق منبع)",
+            "name": "meaning",
+            "type": "textarea",
+            "required": 1,
+            "instructions": "فقط آنچه منبع گفته — قاعده‌ی ۲.",
+            "wrapper": {
+                "width": "100"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "meaning",
+            "rows": 2
+        },
+        {
+            "key": "field_cyh_fault_action",
+            "label": "اقدام (طبق منبع)",
+            "name": "action",
+            "type": "textarea",
+            "required": 1,
+            "instructions": "",
+            "wrapper": {
+                "width": "100"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "action",
+            "rows": 2
+        },
+        {
+            "key": "field_cyh_fault_category",
+            "label": "دسته‌ی قطعه (اسلاگ)",
+            "name": "category",
+            "type": "text",
+            "required": 1,
+            "instructions": "اسلاگ دقیق دسته در وردپرس، مثل remote-control. دسته‌ی ناموجود build را می‌شکند.",
+            "wrapper": {
+                "width": "50"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "category"
+        },
+        {
+            "key": "field_cyh_fault_guide",
+            "label": "راهنمای مرتبط (اختیاری)",
+            "name": "guide",
+            "type": "text",
+            "required": 0,
+            "instructions": "مثل /blog/saga-remote-battery-led/",
+            "wrapper": {
+                "width": "50"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "guide"
+        },
+        {
+            "key": "field_cyh_fault_source_title",
+            "label": "عنوان منبع",
+            "name": "source_title",
+            "type": "text",
+            "required": 1,
+            "instructions": "",
+            "wrapper": {
+                "width": "50"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "sourceTitle"
+        },
+        {
+            "key": "field_cyh_fault_source_url",
+            "label": "نشانی منبع",
+            "name": "source_url",
+            "type": "url",
+            "required": 1,
+            "instructions": "",
+            "wrapper": {
+                "width": "50"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "sourceUrl"
+        },
+        {
+            "key": "field_cyh_fault_source_ref",
+            "label": "بند دقیق منبع",
+            "name": "source_ref",
+            "type": "text",
+            "required": 1,
+            "instructions": "مثل 1910.179(m)(1)(i)",
+            "wrapper": {
+                "width": "100"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "sourceRef"
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "cyh_fault"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "active": true,
+    "show_in_rest": 1,
+    "show_in_graphql": 1,
+    "graphql_field_name": "faultFields",
+    "graphql_types": [
+        "CraneFault"
+    ],
+    "modified": 1795775180
+}

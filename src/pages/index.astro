@@ -31,7 +31,7 @@
 // نمی‌گیرد و نیت «مرور کاتالوگ» را می‌گیرد.
 // ---------------------------------------------------------------------------
 import Layout from '../layouts/Layout.astro';
-import { FAULT_GROUPS } from '../data/faults';
+import { getFaultGroups } from '../lib/faults';
 import AuthorityBlock from '../components/AuthorityBlock.astro';
 import ProductCard from '../components/ProductCard.astro';
 import { mobileLine } from '../components/contact-mobile';
@@ -86,7 +86,7 @@ const STEPS = [
 ];
 // اعتماد: فقط ادعای verified (trust.ts — همان قاعده‌ی JSON-LD)؛ نشان وابسته به اصالت روی صفحه‌ی اصلی معنا ندارد.
 const trust = TRUST_BADGES.filter((b) => b.verified && !b.onlyIfAuthenticity);
-const faultCount = FAULT_GROUPS.reduce((n, g) => n + g.faults.length, 0);
+const faultCount = (await getFaultGroups()).reduce((n, g) => n + g.faults.length, 0); // وردپرس (قاعده‌ی ۱۰)
 const waPlate = contact.whatsappHref ? `${contact.whatsappHref}?text=${encodeURIComponent('سلام، عکس پلاک قطعه را برای شناسایی می‌فرستم.')}` : null;
 
 /* پرسش‌های متداول و مختصات/لینک‌ها از وردپرس. تا پیش از این، گروه فیلد

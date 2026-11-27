@@ -45,7 +45,7 @@
     "test:lhci-changed": "node scripts/lhci-changed.test.mjs",
     "content": "node scripts/content/cli.mjs",
     "test:content": "node scripts/content/content.test.mjs && node scripts/content/publish.test.mjs",
-    "test:faults": "node --experimental-strip-types --no-warnings src/data/faults.test.mts",
+    "test:faults": "node --experimental-strip-types --no-warnings src/lib/faults.test.mts",
     "test:catalogs": "node --experimental-strip-types --no-warnings src/lib/catalog-shape.test.mts"
   },
   "dependencies": {

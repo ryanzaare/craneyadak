@@ -1,0 +1,41 @@
+{
+    "key": "group_cyh_fault_group_fields",
+    "title": "Fault Group Fields",
+    "fields": [
+        {
+            "key": "field_cyh_fault_group_order",
+            "label": "ترتیب نمایش",
+            "name": "order",
+            "type": "number",
+            "required": 1,
+            "instructions": "۱ = اول صفحه",
+            "wrapper": {
+                "width": "100"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "order"
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "taxonomy",
+                "operator": "==",
+                "value": "cyh_fault_group"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "active": true,
+    "show_in_rest": 1,
+    "show_in_graphql": 1,
+    "graphql_field_name": "faultGroupFields",
+    "graphql_types": [
+        "CraneFaultGroup"
+    ],
+    "modified": 1795775180
+}

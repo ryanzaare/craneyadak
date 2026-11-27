@@ -103,6 +103,7 @@ export function buildProductIndex(products: CraneProduct[] = []): SuggestEntry[]
         brandNameFa: p.brandNameFa,
         brandNameEn: p.brandNameEn,
         oemPartNumbers: p.oemCrossReference.map((r) => r.oemPartNumber),
+        aka: p.aka,
       }),
     );
 }

@@ -190,6 +190,13 @@ export function lintDoc(doc, ctx = {}) {
     // کارت و صفحه‌ی محصول بی برچسب «اصلی» منتشر می‌شود (فرستنده و گیرنده‌ی L12).
     if (m.authenticity === undefined) warn('authenticity', 'authenticity (original یا non_original) ندارد — برچسب «اصلی» نمایش داده نمی‌شود');
     else if (!['original', 'non_original'].includes(m.authenticity)) err('authenticity', `authenticity «${m.authenticity}» مجاز نیست — original یا non_original`);
+    // گونه‌های نوشتاری (CLAUDE.md قاعده‌ی ۱۱، کارفرما ۶ آذر ۱۴۰۵ — دائمی): خریدار «ال ۱۰»، «ریسیور»، «ساگا» یا «SAGA»
+    // می‌نویسد. aka روی صفحه دیده می‌شود («نام‌های دیگر») و در جستجوی سایت هست. بی aka = منتشر نمی‌شود. حرف لاتین مدل
+    // (L10) در عنوان ⇒ دست‌کم یک aka با شکل فارسی آن (ال ۱۰).
+    const aka = Array.isArray(m.aka) ? m.aka.filter((v) => typeof v === 'string' && v.trim()) : [];
+    if (aka.length < 2) err('variants', 'aka (نام‌های دیگر / گونه‌های نوشتاری) دست‌کم ۲ گونه لازم است — قاعده‌ی ۱۱');
+    const model = /\b([A-Za-z])-?(\d{1,4})\b/.exec(String(m.title ?? '').replace(/SAGA1-/i, ''));
+    if (model && model[1].toUpperCase() === 'L' && !aka.some((v) => /ال ?[0-9۰-۹]/.test(v))) err('variants', `مدل ${model[0]} در عنوان هست ولی هیچ aka‌ای شکل فارسی «ال …» را ندارد — قاعده‌ی ۱۱`);
     if (!m.brand) err('product', 'brand (اسلاگ برند) ندارد');
     if (!Array.isArray(m.categories) || !m.categories.length) err('product', 'categories (اسلاگ دسته) ندارد');
     if (!gallery.length) err('gallery', 'gallery خالی است — محصول بی‌تصویر noindex می‌ماند');

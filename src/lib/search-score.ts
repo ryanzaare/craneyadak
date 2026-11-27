@@ -125,6 +125,8 @@ export interface ProductSearchInput {
   brandNameFa: string | null;
   brandNameEn: string | null;
   oemPartNumbers: string[];
+  /** نام‌های دیگر از وردپرس (قاعده‌ی ۱۱) — املای بازار، فارسی/لاتین. */
+  aka?: string[];
 }
 
 /** مدخل جستجوی یک محصول. نشانی با «/» پایانی (همان canonical — CLAUDE.md). */
@@ -135,7 +137,7 @@ export function productEntry(p: ProductSearchInput): SuggestEntry {
     href: `/products/${p.slug}/`,
     context: p.brandNameFa ?? 'محصول',
     code: p.sku ?? undefined,
-    haystack: variants([p.name, p.sku ?? '', p.brandNameFa ?? '', p.brandNameEn ?? '', ...p.oemPartNumbers].filter(Boolean)),
+    haystack: variants([p.name, p.sku ?? '', p.brandNameFa ?? '', p.brandNameEn ?? '', ...p.oemPartNumbers, ...(p.aka ?? [])].filter(Boolean)),
   };
 }
 

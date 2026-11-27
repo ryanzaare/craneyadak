@@ -113,6 +113,9 @@ has('محصول بی گالری', lintDoc(prod, {}), 'gallery');
 has('محصول بی برند', lintDoc(prod, {}), 'product');
 has('محصول بی جدول داخل متن (درس L10) = خطا', lintDoc(prod, {}), 'product-visual');
 has('محصول بی برچسب اصالت = هشدار', lintDoc(prod, {}), 'authenticity', 'warn');
+has('محصول بی aka (قاعده‌ی ۱۱) = خطا', lintDoc(prod, {}), 'variants');
+has('مدل L10 در عنوان بی «ال ۱۰» در aka = خطا', lintDoc(compileContent(GOOD.replace('kind: article', 'kind: product\naka: [SAGA L10, ریموت ساگا L10]').replace(/title: .*/, 'title: ریموت ساگا L10'), { file: 'p.md' }), {}), 'variants');
+hasNot('aka با «ال ۱۰» = بی خطای variants', lintDoc(compileContent(GOOD.replace('kind: article', 'kind: product\naka: [ریموت ساگا ال ۱۰, SAGA L10]').replace(/title: .*/, 'title: ریموت ساگا L10'), { file: 'p.md' }), {}), 'variants');
 has('برچسب اصالت ناشناخته = خطا', lintDoc(compileContent(GOOD.replace('kind: article', 'kind: product\nauthenticity: genuine'), { file: 'p.md' }), {}), 'authenticity');
 
 console.log('── هرگز تکرار (کارفرما، ۲۹ آبان ۱۴۰۵)');

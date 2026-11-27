@@ -77,21 +77,24 @@
      هر دو در کاربرد خودشان استاندارد WCAG AA را پاس می‌کنند.
   ------------------------------------------------------------------------- */
 
-  /* سطوح — گرافیت/فولاد ماشین‌کاری‌شده */
-  --color-steel-950: #0E1113;
-  --color-steel-900: #171B1F;
-  --color-steel-800: #232830;
-  --color-steel-700: #343B45;
-  --color-steel-600: #4B5563;
+  /* سطوح — «سنگی گرم» (پالت ب، تصمیم کارفرما ۶ آذر ۱۴۰۵). نام توکن‌ها steel-* ماند تا ۶۰۰+ کاربرد دست نخورد؛ مقدارها
+     از خاکستری فولادی سرد (#171B1F…) به طیف گرم سنگی رفت — همان ساختار «خنثی + یک رنگ عمل»، کمتر سرد و فلزی.
+     کنتراست سنجیده‌شده (WCAG AA): ۵۰۰ روی سفید ۵٫۴، روی ۵۰ ۵٫۲، روی ۱۰۰ ۵٫۰ (پیش‌تر ۴٫۶)؛ ۳۰۰ روی ۹۰۰ ۱۱٫۷؛
+     accent روی ۹۰۰ ۴٫۹؛ سفید روی action ۵٫۲. نارنجی‌ها (action/accent/accent-ink) دست نخوردند. */
+  --color-steel-950: #0C0A09;
+  --color-steel-900: #1C1917;
+  --color-steel-800: #292524;
+  --color-steel-700: #44403C;
+  --color-steel-600: #57534E;
   /* ۲۰۰/۴۰۰/۵۰۰ برای جایگزینی gray-* افزوده شدند (فاز ۰). steel-500 عمداً کمی تیره‌تر از gray-500 است
      (#636C77): متن ثانویه روی steel-100 با gray-500 فقط ۴٫۲:۱ بود (زیر AA)؛ حالا ۴٫۶ روی steel-100،
      ۵٫۰ روی steel-50، ۵٫۳ روی سفید. ⚠️ steel-400 (۲٫۵:۱ روی سفید) فقط برای آیکن/جداکننده یا متن روی گرافیت. */
-  --color-steel-500: #636C77;
-  --color-steel-400: #9AA3AE;
-  --color-steel-300: #CBD2D9;
-  --color-steel-200: #DDE1E6;
-  --color-steel-100: #EDEFF2;
-  --color-steel-50:  #F7F8FA;
+  --color-steel-500: #6F6964;
+  --color-steel-400: #A8A29E;
+  --color-steel-300: #D6D3D1;
+  --color-steel-200: #E7E5E4;
+  --color-steel-100: #F5F5F4;
+  --color-steel-50:  #FAFAF9;
 
   /* سبز رسمی واتساپ (کارفرما، ۴ آبان ۱۴۰۵: «دقیقاً همان سبز آیکن واتساپ»). ⚠️ متن روی آن steel-950 است، نه سفید:
      سفید روی #25D366 فقط ۲:۱ است (زیر AA و گیت a11y=1 لایت‌هاوس)؛ steel-950 حدود ۹:۱. */
@@ -836,7 +839,7 @@
    موبایل: تمام‌صفحه (مثل برگه‌ی کالای دیجی‌کالا)؛ دسکتاپ: قاب بزرگ وسط با پس‌زمینه‌ی تیره. iframe کل قاب را می‌گیرد و
    خودش سرصفحه‌ی «بستن» دارد. */
 .cy-cmp-sheet { padding: 0; border: 0; margin: 0; width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; background: var(--color-steel-50); }
-.cy-cmp-sheet::backdrop { background: rgb(14 17 19 / 0.6); }
+.cy-cmp-sheet::backdrop { background: rgb(12 10 9 / 0.6); }
 .cy-cmp-sheet iframe { display: block; width: 100%; height: 100%; border: 0; }
 @media (min-width: 768px) {
   .cy-cmp-sheet { margin: auto; width: min(72rem, 92vw); height: 86vh; border-radius: 0.5rem; box-shadow: 0 20px 50px rgb(0 0 0 / 0.3); }

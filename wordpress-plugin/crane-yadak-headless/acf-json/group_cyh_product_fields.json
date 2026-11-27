@@ -59,6 +59,20 @@
             "return_format": "value"
         },
         {
+            "key": "field_cyh_product_aka",
+            "label": "نام‌های دیگر (گونه‌های جستجو)",
+            "name": "aka",
+            "type": "textarea",
+            "required": 0,
+            "instructions": "هر گونه در یک خط: املای بازار، فارسی/لاتین، «ال ۱۰» برای L10 (قاعده‌ی ۱۱). روی صفحه دیده می‌شود و جستجوی سایت آن را می‌شناسد.",
+            "wrapper": {
+                "width": "100"
+            },
+            "show_in_graphql": 1,
+            "graphql_field_name": "aka",
+            "rows": 3
+        },
+        {
             "key": "field_cyh_product_buy_mode",
             "label": "روش خرید",
             "name": "buy_mode",
@@ -301,5 +315,5 @@
     "graphql_types": [
         "CraneProduct"
     ],
-    "modified": 1795102359
+    "modified": 1795775180
 }

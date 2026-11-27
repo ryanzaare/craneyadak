@@ -465,6 +465,9 @@ const BAR_PRIMARY = 'inline-flex items-center justify-center min-h-11 px-4 round
         {/* خلاصه از سرصفحه این‌جا آمد: در سرصفحه، اولین صفحه‌ی موبایل را می‌گرفت و همان چیزی را می‌گفت که توضیحات
             کامل می‌گوید (اصل ۵). متن همان است؛ فقط جایش. */}
         {product.summary && <p class="text-base text-steel-800 leading-8 mb-4 font-bold">{product.summary}</p>}
+        {/* نام‌های دیگر (قاعده‌ی ۱۱، ۷ آذر ۱۴۰۵) — گونه‌های نوشتاری همین کالا از وردپرس، *مرئی* (هرگز متن پنهان: اسپم گوگل)؛
+            همان الگوی «نام‌های دیگر» زیر H1 صفحه‌ی دسته. جستجوی سایت همین فهرست را در haystack دارد (search-index.ts). */}
+        {product.aka.length > 0 && <p class="text-sm text-steel-600 leading-7 mb-4">نام‌های دیگر: {product.aka.join('، ')}</p>}
         {/* لینک‌دهی داخلی خودکار روی متن محصول — بلندترین محتوای سایت که بدون این هیچ لینک داخلی نداشت. */}
         {product.bodyHtml && (
           <div

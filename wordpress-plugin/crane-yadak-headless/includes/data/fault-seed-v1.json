@@ -1,0 +1,343 @@
+{
+ "version": 1,
+ "groups": [
+  {
+   "slug": "remote",
+   "name": "ریموت کنترل",
+   "order": 1,
+   "faults": [
+    {
+     "symptom": "چراغ دستک هر ۲ ثانیه یک بار قرمز می‌زند و برد کم شده است",
+     "meaning": "باتری فرستنده ضعیف است.",
+     "action": "دو باتری قلمی AA آلکالاین نو بگذارید؛ باتری شارژی نه.",
+     "category": "remote-control",
+     "guide": "/blog/saga-remote-battery-led/",
+     "source_title": "دفترچه‌ی بهره‌برداری SAGA1-L12 (Gain Electronic)",
+     "source_url": "https://manualshive.com/en/manual/saga/saga1-l12/3412942",
+     "source_ref": "Transmitter Batteries",
+     "order": 1
+    },
+    {
+     "symptom": "با فشار هر کلید، چراغ دستک سریع (حدود هر ۰٫۲ ثانیه) قرمز می‌زند",
+     "meaning": "کلیدی گیر کرده، شستی قارچی رها نشده، یا دستک درست روشن نشده است.",
+     "action": "شستی را بچرخانید و رها کنید، کلیدها را بررسی کنید و دستک را دوباره روشن کنید.",
+     "category": "remote-control",
+     "guide": "/blog/saga-remote-battery-led/",
+     "source_title": "دفترچه‌ی بهره‌برداری SAGA1-L12 (Gain Electronic)",
+     "source_url": "https://manualshive.com/en/manual/saga/saga1-l12/3412942",
+     "source_ref": "Transmitter LED Malfunction Alert (A)",
+     "order": 2
+    },
+    {
+     "symptom": "چراغ دستک کند (هر ۰٫۵ ثانیه) چشمک می‌زند",
+     "meaning": "حافظه‌ی فرستنده معیوب است.",
+     "action": "دستک برای تعمیر به فروشنده؛ در صورت تعویض، فرستنده‌ی هم‌مدل با همان کانال.",
+     "category": "remote-control",
+     "guide": "/blog/saga-remote-battery-led/",
+     "source_title": "دفترچه‌ی بهره‌برداری SAGA1-L12 (Gain Electronic)",
+     "source_url": "https://manualshive.com/en/manual/saga/saga1-l12/3412942",
+     "source_ref": "Transmitter LED Malfunction Alert (B)",
+     "order": 3
+    },
+    {
+     "symptom": "گیرنده هیچ پاسخی نمی‌دهد",
+     "meaning": "دفترچه اولین قدم را قطع و وصل برق اصلی می‌داند.",
+     "action": "برق اصلی را ۲۰ ثانیه قطع و دوباره وصل کنید؛ بعد فیوزها، ولتاژ و جفت بودن دستک.",
+     "category": "remote-control",
+     "guide": "/blog/saga-receiver-installation/",
+     "source_title": "دفترچه‌ی بهره‌برداری SAGA1-L12 (Gain Electronic)",
+     "source_url": "https://manualshive.com/en/manual/saga/saga1-l12/3412942",
+     "source_ref": "Troubleshooting (B)",
+     "order": 4
+    },
+    {
+     "symptom": "برد ریموت کم است یا فرمان قطع و وصل می‌شود",
+     "meaning": "محل نصب گیرنده: داخل تابلو، یا نزدیک اینورتر و کابل قدرت؛ یا باتری ضعیف.",
+     "action": "گیرنده روی تابلو و دور از اینورتر و کابل قدرت؛ باتری دستک را بسنجید.",
+     "category": "remote-control",
+     "guide": "/blog/saga-receiver-installation/",
+     "source_title": "دفترچه‌ی بهره‌برداری SAGA1-L12 (Gain Electronic)",
+     "source_url": "https://manualshive.com/en/manual/saga/saga1-l12/3412942",
+     "source_ref": "Precautions (I), (II)",
+     "order": 5
+    }
+   ]
+  },
+  {
+   "slug": "rope",
+   "name": "سیم‌بکسل",
+   "order": 2,
+   "faults": [
+    {
+     "symptom": "قطر سیم‌بکسل از قطر اسمی کمتر شده است",
+     "meaning": "از نشانه‌های افت محسوس استحکام: از دست رفتن حمایت مغزی، خوردگی درونی یا بیرونی، یا سایش سیم‌های بیرونی.",
+     "action": "سیم‌بکسل به دقت بازرسی و برای تعویض ارزیابی شود.",
+     "category": "wire-rope",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(m)(1)(i)",
+     "order": 1
+    },
+    {
+     "symptom": "سیم‌های بیرونی شکسته دیده می‌شود",
+     "meaning": "تعداد سیم‌های شکسته و پراکندگی یا تمرکز آن‌ها از نشانه‌های افت استحکام است.",
+     "action": "محل و تعداد سیم‌های شکسته ثبت و برای تعویض ارزیابی شود.",
+     "category": "wire-rope",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(m)(1)(ii)",
+     "order": 2
+    },
+    {
+     "symptom": "سیم‌بکسل پیچ‌خوردگی شدید، له‌شدگی، بریدگی یا باز شدن رشته دارد",
+     "meaning": "از شرایطی است که استاندارد نشانه‌ی افت محسوس استحکام می‌داند.",
+     "action": "سیم‌بکسل برای تعویض ارزیابی شود.",
+     "category": "wire-rope",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(m)(1)(vi)",
+     "order": 3
+    },
+    {
+     "symptom": "سرسیم یا اتصال انتهای سیم‌بکسل زنگ‌زده، ترک‌خورده، خم یا ساییده است",
+     "meaning": "اتصال انتهایی معیوب یا سیم‌های شکسته و زنگ‌زده در محل اتصال.",
+     "action": "اتصال انتهایی و سیم‌بکسل برای تعویض ارزیابی شوند.",
+     "category": "wire-rope",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(m)(1)(iv)، (v)",
+     "order": 4
+    }
+   ]
+  },
+  {
+   "slug": "hook",
+   "name": "قلاب",
+   "order": 3,
+   "faults": [
+    {
+     "symptom": "دهانه‌ی قلاب باز شده یا قلاب پیچ خورده است",
+     "meaning": "دهانه‌ی بیش از ۱۵٪ بازتر از حالت عادی یا پیچش بیش از ۱۰ درجه از صفحه‌ی قلاب خم‌نشده.",
+     "action": "قلاب کنار گذاشته شود؛ استاندارد جوشکاری یا صاف کردن را به‌طور کلی توصیه نمی‌کند.",
+     "category": "crane-hook",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(2)(iii)، (l)(3)(iii)(a)",
+     "order": 1
+    },
+    {
+     "symptom": "روی قلاب ترک یا تغییر شکل دیده می‌شود",
+     "meaning": "قلاب ترک‌خورده یا تغییر شکل یافته.",
+     "action": "قلاب کنار گذاشته شود.",
+     "category": "crane-hook",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(2)(iii)، (l)(3)(iii)(a)",
+     "order": 2
+    }
+   ]
+  },
+  {
+   "slug": "brake",
+   "name": "ترمز",
+   "order": 4,
+   "faults": [
+    {
+     "symptom": "لنت، پاول یا جغجغه‌ی ترمز ساییده شده است",
+     "meaning": "سایش بیش از حد اجزای سیستم ترمز از موارد بازرسی دوره‌ای است.",
+     "action": "اجزای ساییده‌ی ترمز بازرسی و تعویض شوند.",
+     "category": "brake-wheel-disc",
+     "guide": "/blog/calibration-brake-pad-demag/",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(3)(v)",
+     "order": 1
+    }
+   ]
+  },
+  {
+   "slug": "electric",
+   "name": "برق و فرمان",
+   "order": 5,
+   "faults": [
+    {
+     "symptom": "کنتاکت‌های کنتاکتور تابلو سوخته یا حفره‌دار است",
+     "meaning": "حفره‌دار شدن یا فرسودگی کنتاکت‌های کنتاکتور فرمان از موارد بازرسی دوره‌ای است.",
+     "action": "کنتاکتور بازرسی و در صورت فرسودگی تعویض شود.",
+     "category": "contactor",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(3)(x)",
+     "order": 1
+    },
+    {
+     "symptom": "لیمیت سوئیچ یا کلیدهای شستی‌دار فرمان درست عمل نمی‌کنند",
+     "meaning": "لیمیت سوئیچ‌ها و ایستگاه‌های شستی‌دار جزو بازرسی دوره‌ای تجهیزات برقی‌اند.",
+     "action": "بازرسی شوند و قطعه‌ی معیوب تعویض شود.",
+     "category": "microswitch",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(3)(x)",
+     "order": 2
+    }
+   ]
+  },
+  {
+   "slug": "chain",
+   "name": "زنجیر بالابر",
+   "order": 6,
+   "faults": [
+    {
+     "symptom": "زنجیر بالابر ساییده، پیچ‌خورده یا کشیده شده، یا حلقه‌ای تغییر شکل داده است",
+     "meaning": "سایش بیش از حد، پیچش، حلقه‌ی تغییر شکل یافته‌ای که کار را مختل کند، یا کشیدگی فراتر از توصیه‌ی سازنده.",
+     "action": "زنجیر و اتصالات انتهایی‌اش بازرسی و طبق توصیه‌ی سازنده تعویض شوند.",
+     "category": "electric-chain-hoist",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(2)(iv)",
+     "order": 1
+    }
+   ]
+  },
+  {
+   "slug": "drum",
+   "name": "درام و قرقره",
+   "order": 7,
+   "faults": [
+    {
+     "symptom": "وقتی قلاب در پایین‌ترین نقطه است، کمتر از دو دور سیم‌بکسل روی درام می‌ماند",
+     "meaning": "استاندارد می‌گوید در پایین‌ترین وضعیت قلاب دست‌کم دو دور سیم‌بکسل باید روی درام بماند و بار نباید پایین‌تر برود.",
+     "action": "بار را پایین‌تر نبرید؛ طول سیم‌بکسل و لیمیت پایین بالابر بررسی شود.",
+     "category": "crane-drum",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(h)(2)(iii)(a)، (n)(3)(viii)",
+     "order": 1
+    },
+    {
+     "symptom": "درام یا قرقره ترک خورده یا ساییده است",
+     "meaning": "درام و قرقره‌ی ترک‌خورده یا ساییده از موارد بازرسی دوره‌ای است.",
+     "action": "درام یا قرقره بازرسی و در صورت ترک یا سایش تعویض شود.",
+     "category": "crane-drum",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(3)(iii)",
+     "order": 2
+    },
+    {
+     "symptom": "شیار قرقره ناصاف است و به سیم‌بکسل آسیب می‌زند",
+     "meaning": "شیار قرقره باید صاف و بی عیبی باشد که به سیم‌بکسل آسیب بزند.",
+     "action": "قرقره بازرسی شود؛ سیم‌بکسل آسیب‌دیده هم ارزیابی شود.",
+     "category": "crane-drum",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(h)(1)(i)",
+     "order": 3
+    }
+   ]
+  },
+  {
+   "slug": "mechanical",
+   "name": "قطعات مکانیکی",
+   "order": 8,
+   "faults": [
+    {
+     "symptom": "بلبرینگ، پین یا شفت ساییده، ترک‌خورده یا تغییر شکل یافته است",
+     "meaning": "قطعات ساییده، ترک‌خورده یا تغییر شکل یافته مانند پین، بلبرینگ و شفت از موارد بازرسی دوره‌ای است.",
+     "action": "قطعه‌ی معیوب تعویض شود.",
+     "category": "bearing",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(3)(iv)",
+     "order": 1
+    },
+    {
+     "symptom": "چرخ‌دنده‌های گیربکس ساییده یا ترک‌خورده است",
+     "meaning": "چرخ‌دنده‌ی ساییده، ترک‌خورده یا تغییر شکل یافته از موارد بازرسی دوره‌ای است.",
+     "action": "گیربکس بازرسی و چرخ‌دنده‌ی معیوب تعویض شود.",
+     "category": "gearbox-motor",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(3)(iv)",
+     "order": 2
+    },
+    {
+     "symptom": "غلتک یا چرخ ساییده، ترک‌خورده یا تغییر شکل یافته است",
+     "meaning": "غلتک‌های ساییده، ترک‌خورده یا تغییر شکل یافته از موارد بازرسی دوره‌ای است.",
+     "action": "چرخ یا غلتک معیوب تعویض شود.",
+     "category": "crane-wheel",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(3)(iv)",
+     "order": 3
+    },
+    {
+     "symptom": "در سازه‌ی پل یا کالسکه ترک، تغییر شکل، خوردگی یا پیچ و پرچ شل دیده می‌شود",
+     "meaning": "اعضای تغییر شکل یافته، ترک‌خورده یا خورده‌شده و پیچ یا پرچ شل از موارد بازرسی دوره‌ای است.",
+     "action": "تا بررسی شخص صلاحیت‌دار با بار کار نشود؛ پیچ‌ها و عضو آسیب‌دیده بررسی شوند.",
+     "category": "end-carriage",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(3)(i)، (ii)",
+     "order": 4
+    },
+    {
+     "symptom": "چرخ‌زنجیر محرک ساییده یا زنجیر محرک کشیده شده است",
+     "meaning": "سایش بیش از حد چرخ‌زنجیر محرک و کشیدگی بیش از حد زنجیر از موارد بازرسی دوره‌ای است.",
+     "action": "چرخ‌زنجیر و زنجیر محرک بازرسی و تعویض شوند.",
+     "category": "electric-chain-hoist",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(j)(3)(viii)",
+     "order": 5
+    }
+   ]
+  },
+  {
+   "slug": "travel",
+   "name": "حرکت پل و کالسکه",
+   "order": 9,
+   "faults": [
+    {
+     "symptom": "پل یا کالسکه در انتهای مسیر بی ضربه‌گیر به توقف‌گاه می‌خورد",
+     "meaning": "استاندارد برای پل و کالسکه ضربه‌گیر یا وسیله‌ی خودکار هم‌ارز می‌خواهد و در انتهای مسیر کالسکه توقف‌گاه.",
+     "action": "ضربه‌گیر آسیب‌دیده یا جاافتاده تعویض شود؛ توقف‌گاه محکم باشد.",
+     "category": "shock-absorber",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(e)(1)(i)، (e)(2)(i)، (e)(3)(i)",
+     "order": 1
+    },
+    {
+     "symptom": "سیم‌بکسل بالابر ممکن است به رساناهای برق‌رسانی پل برخورد کند",
+     "meaning": "اگر رساناهای برق پل و سیم‌بکسل بالابر بتوانند تماس بگیرند، حفاظ لازم است.",
+     "action": "حفاظ بین رسانا و سیم‌بکسل نصب شود.",
+     "category": "busbar-power-line",
+     "guide": "",
+     "source_title": "OSHA 29 CFR 1910.179 — جرثقیل سقفی و دروازه‌ای",
+     "source_url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.179",
+     "source_ref": "1910.179(e)(5)(ii)",
+     "order": 2
+    }
+   ]
+  }
+ ]
+}
